@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bichinho Overlay</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    background: transparent;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    flex-shrink: 0;
+  }
+  #infoLine {
+    margin-top: 10px;
+    min-width: 220px;
+    padding: 6px 14px;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 10px;
+    text-align: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9);
+    transition: opacity .25s ease;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  #infoLine .info-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ov-bar-wrap {
+    display: inline-block;
+    width: 120px; height: 12px;
+    background: rgba(0,0,0,.6);
+    border: 1px solid rgba(255,255,255,.4);
+    border-radius: 5px;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .ov-bar-fill { display: block; height: 100%; width: 0%; transition: width .4s ease; }
+  .ov-hunger { background: linear-gradient(90deg,#f97316,#fbbf24); }
+  .ov-energy { background: linear-gradient(90deg,#3b82f6,#60a5fa); }
+  .ov-xp { background: linear-gradient(90deg,#a855f7,#d8b4fe); }
+  #infoLine .info-txt { display: inline-block; min-width: 90px; text-align: left; }
+  #speechBubble {
+    position: absolute;
+    width: 250px;
+    max-width: 80%;
+    background: rgba(0,0,0,.88);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 14px;
+    padding: 8px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    display: none;
+    z-index: 12;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    transform: translate(-50%, -100%);
+  }
+  #speechBubble.show { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="pet"></canvas>
+  <div id="infoLine"></div>
+  <div id="speechBubble"></div>
+</div>
+
+<script>
+const room = new URLSearchParams(location.search).get("room") || "";
+const cv = document.getElementById("pet");
+const ctx = cv.getContext("2d");
+
+// ---- desenho (mesmas coordenadas do bichinho.html, sem fundo/chão) ----
+const BASE_W = 720, BASE_H = 820;
+const FEET_Y = 780; // linha dos pés (sombra) dentro do canvas lógico
+let scale = 1;
+
+function resizeCanvas() {
+  const w = window.innerWidth, h = window.innerHeight;
+  scale = Math.min(w / BASE_W, h / (BASE_H + 60));
+  cv.width = BASE_W * scale;
+  cv.height = BASE_H * scale;
+  cv.style.width = (BASE_W * scale) + "px";
+  cv.style.height = (BASE_H * scale) + "px";
+  draw();
+}
+window.addEventListener("resize", resizeCanvas);
+
+// ---- estado do mascote ----
+let pet = {
+  active: false, phase: "ovo-estelar", level: 0,
+  hunger: 100, energy: 100, xp: 0, xp_next: 0,
+  hatch_points: 0, hatch_need: 1000,
+  batalhas_disponiveis: 0, bag_max: 3,
+  battle_wins: 0,
+  anim: "idle", hatched: false,
+  battle: { state: "idle", boss_name: "", boss_hp: 0, boss_max_hp: 0, timer: 0, next_in: 900, color: "" },
+};
+
+let animFrame = 0, lastAnimTs = 0;
+let eggWobble = 0, hatchAnim = 0, hitFlash = 0, evolveAnim = 0;
+
+// ---- desenho ----
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  ctx.scale(scale, scale);
+  if (!pet.hatched && (pet.level || 0) === 0) drawEgg();
+  else drawCreature();
+  drawShadows();
+  ctx.restore();
+}
+
+function levelPhase() {
+  const lv = pet.level || 0;
+  if (lv >= 100) return 5;
+  if (lv >= 51) return 4;
+  if (lv >= 31) return 3;
+  if (lv >= 11) return 2;
+  return lv >= 1 ? 1 : 0;
+}
+
+function drawShadows() {
+  const s = levelPhase() || 1;
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const ps = sizes[s] || 1;
+  const r = 130 * (0.6 + ps * 0.4);
+  ctx.fillStyle = "rgba(0,0,0,.3)";
+  ctx.beginPath();
+  ctx.ellipse(BASE_W / 2, FEET_Y, r, 18 * (0.6 + ps * 0.4), 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawEgg() {
+  const cx = BASE_W / 2, cy = FEET_Y - 110;
+  const wob = Math.sin(eggWobble * 10) * 8 * eggWobble;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(wob * 0.05);
+  ctx.fillStyle = "#f5f0e0";
+  ctx.beginPath();
+  ctx.moveTo(0, -120);
+  ctx.bezierCurveTo(70, -110, 90, -30, 80, 40);
+  ctx.bezierCurveTo(72, 90, 40, 110, 0, 110);
+  ctx.bezierCurveTo(-40, 110, -72, 90, -80, 40);
+  ctx.bezierCurveTo(-90, -30, -70, -110, 0, -120);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#cfc6a8";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,.6)";
+  ctx.beginPath();
+  ctx.ellipse(-24, -55, 14, 22, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  const pct = pet.hatch_points / Math.max(1, pet.hatch_need);
+  ctx.strokeStyle = "#8a7f5a";
+  ctx.lineWidth = 3;
+  const cracks = Math.floor(pct * 6);
+  for (let i = 0; i < cracks; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 60, Math.sin(a) * 55);
+    ctx.lineTo(Math.cos(a + 0.4) * 90, Math.sin(a + 0.4) * 75);
+    ctx.stroke();
+  }
+  if (eggWobble > 0) eggWobble -= 0.05;
+  ctx.restore();
+}
+
+function drawCreature() {
+  const phase = levelPhase() || 1;
+  const cx = BASE_W / 2;
+  const feetY = FEET_Y;
+  const bounce = Math.abs(Math.sin(animFrame * 0.2)) * 12;
+  const asleep = pet.anim === "sleep";
+  const eating = pet.anim === "eat";
+  ctx.save();
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const s = sizes[phase] || 1;
+  ctx.translate(cx, feetY - 95 * s - (asleep ? 20 : bounce));
+  ctx.scale(s, s);
+  if (asleep) ctx.rotate(0.06);
+
+  const colors = {
+    1: { body: "#7ec8e3", belly: "#d7f0fa", accent: "#3a8fb0" },
+    2: { body: "#8ee38e", belly: "#e0f8d0", accent: "#3aa85a" },
+    3: { body: "#f0a24a", belly: "#ffe0b0", accent: "#d1602a" },
+    4: { body: "#c084fc", belly: "#f3e8ff", accent: "#7c3aed" },
+    5: { body: "#ffd54d", belly: "#fff8e1", accent: "#ff9800" },
+  };
+  const C = colors[phase] || colors[1];
+
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(-60, 10, 34, 14);
+  ctx.fillRect(-76, 2, 18, 22);
+
+  ctx.fillStyle = C.body;
+  ctx.beginPath();
+  ctx.moveTo(0, -90);
+  ctx.bezierCurveTo(55, -85, 75, -10, 62, 45);
+  ctx.bezierCurveTo(50, 80, 25, 95, 0, 95);
+  ctx.bezierCurveTo(-25, 95, -50, 80, -62, 45);
+  ctx.bezierCurveTo(-75, -10, -55, -85, 0, -90);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = C.accent;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.fillStyle = C.belly;
+  ctx.beginPath();
+  ctx.ellipse(0, 25, 40, 48, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = C.accent;
+  const step = eating ? 0 : (Math.sin(animFrame * 0.3) * 6);
+  ctx.fillRect(-30, 82 + step * 0.4, 26, 18);
+  ctx.fillRect(8, 82 - step * 0.4, 26, 18);
+
+  if (asleep) {
+    ctx.strokeStyle = "#1a2a3a";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-38, -38); ctx.lineTo(-16, -38); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(16, -38); ctx.lineTo(38, -38); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("z", 60 + Math.sin(animFrame * 0.1) * 6, -80);
+    ctx.fillText("Z", 78 + Math.sin(animFrame * 0.1 + 1) * 6, -102);
+  } else {
+    ctx.fillStyle = "#1a2a3a";
+    ctx.beginPath(); ctx.arc(-27, -38, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(27, -38, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(-24, -41, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, -41, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.fillStyle = "#8a4a3a";
+  if (eating) {
+    ctx.fillRect(-14, -6, 28, 12);
+    ctx.fillStyle = C.belly;
+    ctx.fillRect(-10, -2, 20, 4);
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, -4, 8, 0, Math.PI);
+    ctx.fill();
+  }
+
+  if (phase >= 2) {
+    ctx.fillStyle = C.accent;
+    ctx.beginPath(); ctx.moveTo(-40, -80); ctx.lineTo(-60, -120); ctx.lineTo(-22, -85); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(40, -80); ctx.lineTo(60, -120); ctx.lineTo(22, -85); ctx.closePath(); ctx.fill();
+  }
+  if (phase >= 3) {
+    ctx.fillStyle = "#d1602a";
+    ctx.fillRect(-14, -130, 12, 40);
+    ctx.fillRect(2, -130, 12, 40);
+    ctx.fillRect(-10, -138, 20, 10);
+  }
+
+  if (hitFlash > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${hitFlash})`;
+    ctx.beginPath(); ctx.arc(0, 0, 110, 0, Math.PI * 2); ctx.fill();
+    hitFlash -= 0.02;
+  }
+  if (evolveAnim > 0) {
+    ctx.globalAlpha = evolveAnim;
+    ctx.strokeStyle = "#ffe066";
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(0, -10, 130 + (1 - evolveAnim) * 60, 0, Math.PI * 2); ctx.stroke();
+    evolveAnim -= 0.02;
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+// ---- linha de info rotativa (5s) ----
+const INFO_EL = document.getElementById("infoLine");
+let infoIdx = 0;
+
+function infoSlides() {
+  const slides = [
+    { key: "hunger", render: () => `<span class="info-bar"><span class="ov-bar-wrap"><span class="ov-bar-fill ov-hunger" style="width:${pet.hunger}%"></span></span><span class="info-txt">${Math.round(pet.hunger)}%</span></span>` },
+    { key: "energy", render: () => `<span class="info-bar"><span class="ov-bar-wrap"><span class="ov-bar-fill ov-energy" style="width:${pet.energy}%"></span></span><span class="info-txt">${Math.round(pet.energy)}%</span></span>` },
+    { key: "level", render: () => {
+        const pct = pet.xp_next > 0 ? Math.min(100, (pet.xp / pet.xp_next) * 100) : 100;
+        return `<span class="info-bar"><span class="ov-bar-wrap"><span class="ov-bar-fill ov-xp" style="width:${pct}%"></span></span><span class="info-txt">Lv ${pet.level} · ${pet.xp}${pet.xp_next ? "/" + pet.xp_next : ""}</span></span>`;
+      } },
+    { key: "bag", render: () => `<span class="info-txt">🎒 ${pet.batalhas_disponiveis}/${pet.bag_max}</span>` },
+    { key: "hatch", render: () => (pet.level || 0) < 1 ? `<span class="info-txt">🥚 ${pet.hatch_points}/${pet.hatch_need}</span>` : null },
+    { key: "wins", render: () => `<span class="info-txt">🏆 ${pet.battle_wins}</span>` },
+  ];
+  return slides.filter(s => s.render() !== null);
+}
+
+function renderInfo() {
+  const slides = infoSlides();
+  if (!slides.length) { INFO_EL.textContent = ""; return; }
+  if (infoIdx >= slides.length) infoIdx = 0;
+  INFO_EL.innerHTML = slides[infoIdx].render();
+}
+
+function startInfoRotation() {
+  renderInfo();
+  setInterval(() => { infoIdx++; renderInfo(); }, 5000);
+}
+
+let speechTimer = null;
+function showSpeechBubble(text, ms) {
+  const el = document.getElementById("speechBubble");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add("show");
+  positionSpeechBubble();
+  if (speechTimer) clearTimeout(speechTimer);
+  speechTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+
+// Ancora o balão logo acima da cabeça do mascote (robusto entre fases).
+function positionSpeechBubble() {
+  const el = document.getElementById("speechBubble");
+  if (!el) return;
+  const FEET_Y = 780;
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const phase = levelPhase();
+  let headTopY;
+  if ((pet.level || 0) === 0) {
+    headTopY = FEET_Y - 230; // ovo: topo em FEET_Y - 110 - 120
+  } else {
+    const s = sizes[phase] || 1;
+    headTopY = FEET_Y - 95 * s - 90 * s;
+  }
+  const stageRect = document.getElementById("stage").getBoundingClientRect();
+  const cvRect = cv.getBoundingClientRect();
+  const x = cvRect.left - stageRect.left + (BASE_W / 2) * scale;
+  const y = cvRect.top - stageRect.top + headTopY * scale;
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+}
+
+// ---- WS ----
+let ws;
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function handle(msg) {
+  switch (msg.type) {
+    case "vpet_speak":
+      showSpeechBubble(msg.text || "", (msg.duration || 4) * 1000);
+      break;
+    case "vpet_state": applyState(msg); break;
+    case "vpet_egg_shake":
+      eggWobble = 1;
+      pet.hatch_points = msg.points ?? pet.hatch_points;
+      pet.hatch_need = msg.need || pet.hatch_need;
+      break;
+    case "vpet_hatch":
+      pet.hatched = true; pet.phase = "filhote"; pet.level = 1; pet.anim = "idle";
+      hatchAnim = 1;
+      break;
+    case "vpet_evolve":
+      pet.phase = msg.phase; pet.level = msg.level || pet.level; pet.xp = msg.xp || 0; pet.xp_next = msg.xp_next || 0;
+      evolveAnim = 1;
+      break;
+    case "vpet_bag":
+      pet.batalhas_disponiveis = msg.batalhas_disponiveis ?? pet.batalhas_disponiveis;
+      pet.bag_max = msg.max || pet.bag_max;
+      break;
+    case "vpet_status":
+      pet.hunger = msg.hunger ?? pet.hunger;
+      pet.energy = msg.energy ?? pet.energy;
+      if (msg.anim) pet.anim = msg.anim;
+      break;
+    case "vpet_battle_tick":
+      hitFlash = 0.5;
+      break;
+    case "vpet_battle_end":
+      if (msg.state) applyState(msg.state);
+      break;
+  }
+}
+
+function applyState(s) {
+  pet.active = !!s.active;
+  pet.phase = s.phase || "ovo-estelar";
+  pet.level = s.level || 0;
+  pet.hunger = s.hunger ?? 100;
+  pet.energy = s.energy ?? 100;
+  pet.xp = s.xp || 0;
+  pet.xp_next = s.xp_next || 0;
+  pet.hatch_points = s.hatch_points || 0;
+  pet.hatch_need = s.hatch_need || 1000;
+  pet.batalhas_disponiveis = s.batalhas_disponiveis || 0;
+  pet.bag_max = s.bag_max || 3;
+  pet.battle_wins = s.battle_wins || 0;
+  pet.anim = s.anim || "idle";
+  pet.hatched = !!s.hatched;
+}
+
+async function load() {
+  try {
+    const res = await fetch(`/api/vpet/state?room=${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data && data.success) applyState(data);
+  } catch {}
+}
+
+// ---- loop ----
+function loop(ts) {
+  if (ts - lastAnimTs > 120) { animFrame++; lastAnimTs = ts; }
+  draw();
+  positionSpeechBubble();
+  requestAnimationFrame(loop);
+}
+
+resizeCanvas();
+connectWS();
+load();
+startInfoRotation();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

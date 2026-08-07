@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay - Entrar</title>
+<link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
+<style>
+  body { background: #fdfaf3; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-wrap { width: 100%; max-width: 430px; }
+  .nb-card { background: #ffffff; border: 3px solid #000; border-radius: 14px; box-shadow: 8px 8px 0 #000; padding: 28px; }
+  .logo { font-size: 1.8rem; font-weight: 900; letter-spacing: 6px; text-align: center; margin-bottom: 4px; }
+  .logo .logo-img { max-width: 200px; width: 100%; height: auto; object-fit: contain; }
+  .subtitle { text-align: center; font-size: 0.85rem; margin-bottom: 18px; }
+  .nb-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .nb-tabs button { flex: 1; border: 3px solid #000; border-radius: 10px; background: #fff; font-weight: 800; padding: 10px; cursor: pointer; box-shadow: 3px 3px 0 #000; }
+  .nb-tabs button.active { background: #fec90f; }
+  .nb-tabs button:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #000; }
+  .form-label { font-weight: 700; }
+  .form-control { border: 3px solid #000; border-radius: 10px; box-shadow: 3px 3px 0 #000; }
+  .form-control:focus { border-color: #000; box-shadow: 3px 3px 0 #fec90f; }
+  .btn-nb { border: 3px solid #000; border-radius: 10px; font-weight: 800; padding: 10px 16px; box-shadow: 4px 4px 0 #000; width: 100%; }
+  .btn-nb:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  .btn-primary { background: #3ddc84; }
+  .btn-primary:hover { background: #7beaa9; }
+  .alert-box { border: 3px solid #000; border-radius: 10px; box-shadow: 3px 3px 0 #000; padding: 10px 14px; margin-bottom: 14px; display: none; font-weight: 600; }
+  .alert-box.err { display: block; background: #ff6b6b; }
+  .alert-box.ok { display: block; background: #3ddc84; }
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="nb-card">
+    <div class="logo"><img src="/logo.png" alt="TikPlay" class="logo-img"></div>
+    <div class="subtitle text-secondary">Painel de Controle - Jogo ao vivo</div>
+
+    <div class="alert-box" id="alertBox"></div>
+
+    <div class="nb-tabs">
+      <button type="button" id="tabLogin" class="active" onclick="switchTab('login')">Entrar</button>
+      <button type="button" id="tabRegister" onclick="switchTab('register')">Cadastrar</button>
+    </div>
+
+    <form id="formLogin" onsubmit="doLogin(event)">
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" id="loginEmail" required autocomplete="email">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Senha</label>
+        <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-nb">Entrar</button>
+    </form>
+
+    <form id="formRegister" style="display:none" onsubmit="doRegister(event)">
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" id="regName">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" id="regEmail" required autocomplete="email">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Senha (min. 8)</label>
+        <input type="password" class="form-control" id="regPassword" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-nb">Criar Conta</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function showAlert(msg, ok) {
+  const box = document.getElementById("alertBox");
+  box.className = "alert-box " + (ok ? "ok" : "err");
+  box.textContent = msg;
+}
+
+function switchTab(tab) {
+  document.getElementById("tabLogin").classList.toggle("active", tab === "login");
+  document.getElementById("tabRegister").classList.toggle("active", tab === "register");
+  document.getElementById("formLogin").style.display = tab === "login" ? "" : "none";
+  document.getElementById("formRegister").style.display = tab === "register" ? "" : "none";
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: document.getElementById("loginEmail").value,
+      password: document.getElementById("loginPassword").value,
+    }),
+  });
+  const data = await res.json();
+  if (data.success) {
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    location.href = "/painel";
+  } else {
+    showAlert(data.error || "Falha no login", false);
+  }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: document.getElementById("regName").value,
+      email: document.getElementById("regEmail").value,
+      password: document.getElementById("regPassword").value,
+    }),
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert("Conta criada! Entrando...", true);
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    setTimeout(() => { location.href = "/painel"; }, 600);
+  } else {
+    showAlert(data.error || "Falha no cadastro", false);
+  }
+}
+
+if (localStorage.getItem("token")) location.href = "/painel";
+</script>
+</body>
+</html>

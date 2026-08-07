@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo dos 3 Pontinhos</title>
+<style>
+  :root {
+    --neon-pink: #ff2d78;
+    --neon-gold: #ffd700;
+    --neon-purple: #a855f7;
+    --neon-blue: #22d3ee;
+    --bg-1: #0b0620;
+    --bg-2: #1a0b2e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #stage {
+    width: 100%;
+    max-width: 680px;
+    height: 100%;
+    max-height: 1200px;
+    padding: 12px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+  .toprow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .header {
+    text-align: left;
+  }
+  .title {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--neon-gold);
+    text-shadow: 0 0 16px rgba(255,215,0,.8);
+  }
+  .subtitle {
+    font-size: 11px;
+    color: #cbd5e1;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .round {
+    font-size: 11px;
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px rgba(34,211,238,.7);
+  }
+
+  .timer {
+    text-align: right;
+    font-size: 44px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: var(--neon-pink);
+    text-shadow: 0 0 22px rgba(255,45,120,.9);
+    letter-spacing: 2px;
+    margin: 2px 0;
+    white-space: nowrap;
+  }
+  .timer.warn { color: #fff; text-shadow: 0 0 22px rgba(255,255,255,.9); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+
+  .answer {
+    text-align: center;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 14px;
+    color: var(--neon-gold);
+    text-shadow: 0 0 18px rgba(255,215,0,.8);
+    min-height: 46px;
+    line-height: 46px;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+  }
+  .answer .letter { display: inline-block; min-width: .65em; text-align: center; }
+  .answer.locked { color: #94a3b8; text-shadow: none; }
+  .answer.revealed { color: #4ade80; text-shadow: 0 0 18px rgba(74,222,128,.8); }
+  .answer.timeout { color: #f87171; text-shadow: 0 0 18px rgba(248,113,113,.8); }
+
+  .dicas {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dica {
+    background: rgba(168,85,247,.12);
+    border: 2px solid var(--neon-purple);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 14px rgba(168,85,247,.4);
+  }
+  .dica .num {
+    color: var(--neon-gold);
+    background: rgba(255,215,0,.12);
+    border: 2px solid var(--neon-gold);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .dica .dica-play {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--neon-blue);
+    background: rgba(34,211,238,.12);
+    color: var(--neon-blue);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s;
+  }
+  .dica .dica-play svg {
+    width: 12px;
+    height: 12px;
+    margin-left: 2px;
+    display: block;
+  }
+  .dica .dica-play:hover { background: rgba(34,211,238,.3); }
+  .gift-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  .gift-tag {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,215,0,.06);
+    border: 1px solid rgba(255,215,0,.25);
+    border-radius: 10px;
+    padding: 6px 14px;
+  }
+  .gift-img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+  .gift-img.gift-active {
+    animation: giftPulse 1s ease-in-out 2;
+    filter: drop-shadow(0 0 14px var(--neon-gold));
+  }
+  @keyframes giftPulse {
+    0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px var(--neon-gold)); }
+    40% { transform: scale(1.45) rotate(-8deg); filter: drop-shadow(0 0 22px var(--neon-gold)); }
+    60% { transform: scale(1.45) rotate(8deg); filter: drop-shadow(0 0 22px var(--neon-gold)); }
+    100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px var(--neon-gold)); }
+  }
+  .gift-by {
+    color: var(--neon-blue);
+    font-size: 12px;
+    font-style: italic;
+    font-weight: 700;
+  }
+  .gift-name-text {
+    font-size: 14px;
+    color: #e2e8f0;
+  }
+  .gift-sep {
+    color: #475569;
+    font-size: 12px;
+  }
+
+  #ticketToast {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    display: none;
+    justify-content: center;
+    z-index: 25;
+    pointer-events: none;
+  }
+  #ticketToast.show { display: flex; animation: ticketIn .4s ease; }
+  @keyframes ticketIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .ticket-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,.9);
+    border: 2px solid var(--neon-gold);
+    border-radius: 16px;
+    padding: 10px 22px;
+    box-shadow: 0 0 30px rgba(255,215,0,.7);
+  }
+  .ticket-label {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--neon-gold);
+    letter-spacing: 2px;
+  }
+  .ticket-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--neon-gold);
+    object-fit: cover;
+  }
+  .ticket-name {
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+  }
+
+  #wrongGuess {
+    min-height: 34px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .wrong-item {
+    background: rgba(248,113,113,.14);
+    border: 2px solid #f87171;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 0 8px rgba(248,113,113,.5);
+  }
+  .wrong-item img {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid #f87171; object-fit: cover;
+  }
+  .wrong-item .wu { color: #fff; font-weight: 900; }
+  .wrong-item .wx { color: #f87171; margin-left: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+
+  #winnerOverlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    pointer-events: none;
+    background: rgba(0,0,0,.5);
+  }
+  #winnerOverlay.show { display: flex; }
+  .winner-card {
+    text-align: center;
+    background: rgba(0,0,0,.9);
+    border: 4px solid var(--neon-gold);
+    border-radius: 24px;
+    padding: 28px 44px;
+    box-shadow: 0 0 60px rgba(255,215,0,.9);
+    transform: translateY(-12%);
+  }
+  .winner-avatar { width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--neon-gold); object-fit: cover; }
+  .winner-title { font-size: 30px; font-weight: 900; color: var(--neon-gold); margin-top: 12px; letter-spacing: 2px; }
+  .winner-name { font-size: 34px; font-weight: 900; margin-top: 6px; }
+  .winner-pts { font-size: 26px; color: var(--neon-pink); margin-top: 6px; font-weight: 800; }
+  .winner-word { font-size: 22px; font-weight: 800; color: #fff; margin-top: 8px; letter-spacing: 3px; }
+  .winner-mult { font-size: 20px; color: var(--neon-blue); font-weight: 800; margin-top: 4px; }
+
+  .weekly {
+    margin-top: auto;
+    background: rgba(34,211,238,.08);
+    border: 2px solid var(--neon-blue);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .weekly-title { font-size: 14px; color: var(--neon-blue); font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; text-align: center; }
+  .weekly-row { display: flex; justify-content: space-between; font-size: 15px; padding: 3px 6px; color: #e2e8f0; }
+  .weekly-row .medal { color: var(--neon-gold); font-weight: 800; margin-right: 8px; }
+  .weekly-row .pts { color: var(--neon-pink); font-weight: 700; }
+  .empty { text-align: center; color: #94a3b8; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="toprow">
+    <div class="header">
+      <div class="round" id="roundLabel">JOGO DOS 3 PONTINHOS</div>
+      <div class="title">3 PONTINHOS</div>
+      <div class="subtitle" id="stageLabel">Aguarde o streamer iniciar</div>
+    </div>
+    <div class="timer" id="timer">--:--</div>
+  </div>
+  <div class="answer locked" id="answer">---</div>
+  <div class="dicas" id="dicas"></div>
+  <div id="giftInfo"></div>
+  <div id="wrongGuess"></div>
+
+  <div id="ticketToast"><div class="ticket-card">
+    <div class="ticket-label">🎟️ PASSE LIVRE</div>
+    <img class="ticket-avatar" id="ticketAvatar" onerror="this.style.visibility='hidden'">
+    <div class="ticket-name" id="ticketName"></div>
+  </div></div>
+
+  <div id="winnerOverlay"><div class="winner-card">
+    <img class="winner-avatar" id="winnerAvatar" onerror="this.style.visibility='hidden'">
+    <div class="winner-title" id="winnerTitle">ACERTOU!</div>
+    <div class="winner-name" id="winnerName"></div>
+    <div class="winner-pts" id="winnerPts"></div>
+    <div class="winner-word" id="winnerWord"></div>
+    <div class="winner-mult" id="winnerMult"></div>
+  </div></div>
+
+  <div class="weekly">
+    <div class="weekly-title">🏆 RANKING DA SEMANA</div>
+    <div id="weeklyList" class="empty">Ninguém acertou ainda.</div>
+  </div>
+</div>
+
+<script>
+const room = new URLSearchParams(location.search).get("room") || "";
+const state = {
+  active: false, phase: "idle", countdown_remaining: 0, pause_remaining: 0,
+  stage: 0, stage_remaining: 0, finished: false, timeout: false,
+  palavra: null, palavra_len: 0, first_letter: "", size_revealed: false,
+  first_letter_revealed: false, dicas: [], winner: null, dicaAudio: {},
+  size_by: "", letter_by: "",
+};
+let winTimer = null;
+let wrongItems = [];
+let giftImageMap = {};
+let currentDicaAudio = null;
+let ticketTimer = null;
+
+function showTicket(entry) {
+  if (!entry) return;
+  const el = document.getElementById("ticketToast");
+  document.getElementById("ticketName").textContent = "@" + (entry.nickname || entry.user);
+  const av = document.getElementById("ticketAvatar");
+  if (entry.avatar) { av.src = entry.avatar; av.style.visibility = ""; } else av.style.visibility = "hidden";
+  el.classList.add("show");
+  if (ticketTimer) clearTimeout(ticketTimer);
+  ticketTimer = setTimeout(() => el.classList.remove("show"), 5000);
+}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function fmt(s) { s = Math.max(0, s || 0); return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); }
+
+function applyState(s) {
+  Object.assign(state, {
+    active: !!s.active, phase: s.phase || "idle", countdown_remaining: s.countdown_remaining || 0,
+    pause_remaining: s.pause_remaining || 0,    stage: s.stage || 0, stage_remaining: s.stage_remaining || 0,
+    finished: !!s.finished, timeout: !!s.timeout, palavra: s.palavra || null,
+    palavra_len: s.palavra_len || 0, first_letter: s.first_letter || "",
+    size_revealed: !!s.size_revealed, first_letter_revealed: !!s.first_letter_revealed,
+    dicas: s.dicas || [], winner: s.winner || null,
+    gift_config: s.gift_config || { size: "", letter: "" },
+    stage_points: s.stage_points || [30, 20, 10],
+  });
+  // Nova rodada: limpa quem ativou cada reveal
+  if (!s.size_revealed && !s.first_letter_revealed) { state.size_by = ""; state.letter_by = ""; }
+  render();
+}
+
+function renderAnswer() {
+  const el = document.getElementById("answer");
+  if (!state.active && !state.finished) { el.textContent = "AGUARDANDO..."; el.className = "answer locked"; return; }
+  if (state.phase === "countdown") { el.textContent = "PREPARANDO..."; el.className = "answer locked"; return; }
+  if (state.timeout && state.finished) { el.textContent = state.palavra || ""; el.className = "answer timeout"; return; }
+  if (state.phase === "pause") { el.textContent = state.palavra || ""; el.className = "answer revealed"; return; }
+  if (state.finished && state.winner) { el.textContent = state.palavra || ""; el.className = "answer revealed"; return; }
+  if (!state.palavra_len) { el.textContent = "---"; el.className = "answer locked"; return; }
+  let chars;
+  if (state.first_letter_revealed) {
+    chars = [state.first_letter, ...Array(Math.max(0, state.palavra_len - 1)).fill("_")];
+  } else if (state.size_revealed) {
+    chars = Array(state.palavra_len).fill("_");
+  } else {
+    chars = Array(state.palavra_len).fill("█");
+  }
+  el.innerHTML = chars.map(c => `<span class="letter">${esc(c)}</span>`).join("");
+  el.className = "answer " + (state.first_letter_revealed || state.size_revealed ? "" : "locked");
+}
+
+function renderDicas() {
+  const el = document.getElementById("dicas");
+  const dicas = state.dicas || [];
+  const hasStarted = state.phase === "play" || state.finished;
+  let html = "";
+  for (let i = 0; i < 3; i++) {
+    const idx = i + 1;
+    if (!hasStarted || idx > state.stage) continue;
+    const txt = dicas[i] || "???";
+    const audio = state.dicaAudio[idx];
+    const btn = audio
+      ? `<button class="dica-play" onclick="playDica(${idx})" title="Ouvir dica"><svg viewBox="0 0 12 14"><path fill="currentColor" d="M0 0v14l12-7z"></path></svg></button>`
+      : "";
+    html += `<div class="dica"><span class="num">${idx}</span>${esc(txt)}${btn}</div>`;
+  }
+  el.innerHTML = html;
+  renderGiftInfo();
+}
+
+function playDica(stage) {
+  const url = state.dicaAudio[stage];
+  if (!url) return;
+  if (currentDicaAudio) { currentDicaAudio.pause(); currentDicaAudio = null; }
+  currentDicaAudio = new Audio(url);
+  currentDicaAudio.play().catch(() => {});
+  currentDicaAudio.onended = () => { currentDicaAudio = null; };
+}
+
+function renderGiftInfo() {
+  const el = document.getElementById("giftInfo");
+  if (!el) return;
+  const gc = state.gift_config || {};
+  const hasStarted = state.phase === "play" || state.finished;
+  if (!hasStarted || (!gc.size && !gc.letter)) { el.innerHTML = ""; return; }
+  function giftImg(name, extra) {
+    const file = giftImageMap[name];
+    if (file) return `<img class="gift-img ${extra || ""}" src="/gift-images/${esc(file)}" alt="${esc(name)}" onerror="this.style.display='none'">`;
+    return `<span class="gift-name-text">🎁 ${esc(name)}</span>`;
+  }
+  const sizeBy = state.size_by ? `<span class="gift-by">ativado por @${esc(state.size_by)}</span>` : "";
+  const letterBy = state.letter_by ? `<span class="gift-by">ativado por @${esc(state.letter_by)}</span>` : "";
+  let parts = [];
+  if (gc.size) parts.push(`<span class="gift-tag">${giftImg(gc.size)} REVELAR TAMANHO ${sizeBy}</span>`);
+  // Só exibe a 1ª letra depois que o tamanho já foi revelado
+  if (gc.letter && state.size_revealed) parts.push(`<span class="gift-tag">${giftImg(gc.letter)} REVELAR 1ª LETRA ${letterBy}</span>`);
+  el.innerHTML = `<div class="gift-info">${parts.join("")}</div>`;
+}
+
+function flashGift(kind) {
+  // Aplica a animação na imagem do presente recém-ativado
+  const gc = state.gift_config || {};
+  const name = kind === "size" ? gc.size : gc.letter;
+  const file = name && giftImageMap[name];
+  if (!file) return;
+  const img = document.querySelector(`#giftInfo .gift-img[src="/gift-images/${esc(file)}"]`);
+  if (img) {
+    img.classList.add("gift-active");
+    setTimeout(() => img.classList.remove("gift-active"), 1400);
+  }
+}
+
+function addWrongGuess(item) {
+  if (!item || !item.text) return;
+  wrongItems.unshift(item);
+  if (wrongItems.length > 4) wrongItems.pop();
+  const el = document.getElementById("wrongGuess");
+  el.innerHTML = wrongItems.map(w => `
+    <div class="wrong-item">
+      ${w.avatar ? `<img src="${esc(w.avatar)}" onerror="this.style.visibility='hidden'">` : ""}
+      <span class="wu">@${esc(w.nickname || w.user)}</span>
+      <span class="wx">${esc(w.text)}</span>
+    </div>`).join("");
+}
+
+function render() {
+  const timer = document.getElementById("timer");
+  const stageLabel = document.getElementById("stageLabel");
+  const roundLabel = document.getElementById("roundLabel");
+  if (state.phase === "countdown") {
+    timer.textContent = String(Math.max(0, state.countdown_remaining || 0));
+    timer.classList.add("warn");
+    stageLabel.textContent = "PREPARANDO...";
+  } else if (state.phase === "pause") {
+    timer.textContent = String(Math.max(0, state.pause_remaining || 0));
+    timer.classList.add("warn");
+    stageLabel.textContent = "PRÓXIMA RODADA EM...";
+  } else {
+    timer.textContent = fmt(state.stage_remaining);
+    timer.classList.toggle("warn", state.active && state.phase === "play" && state.stage_remaining <= 10);
+    if (!state.active && !state.finished) {
+      stageLabel.textContent = "Aguarde o streamer iniciar";
+    } else if (state.timeout) {
+      stageLabel.textContent = "TEMPO ESGOTADO";
+    } else if (state.finished && state.winner) {
+      stageLabel.textContent = "RODADA ENCERRADA";
+    } else {
+      stageLabel.textContent = "Dica " + state.stage + " — " + ((state.stage_points || [30,20,10])[state.stage - 1] || 0) + " pts";
+    }
+  }
+  roundLabel.textContent = state.active || state.finished ? "RODADA " + (state.round_id || "") : "JOGO DOS 3 PONTINHOS";
+  renderAnswer();
+  renderDicas();
+}
+
+function showWinner(w) {
+  if (!w) return;
+  const ov = document.getElementById("winnerOverlay");
+  document.getElementById("winnerName").textContent = w.nickname || w.user;
+  document.getElementById("winnerPts").textContent = "+" + w.pontos + " PONTOS";
+  document.getElementById("winnerMult").textContent = w.multiplicador ? "APOIADOR 2x! 💛" : "";
+  document.getElementById("winnerTitle").textContent = "ACERTOU NA DICA " + (w.stage || 1) + "!";
+  document.getElementById("winnerWord").textContent = w.palavra ? "PALAVRA: " + w.palavra.toUpperCase() : "";
+  const av = document.getElementById("winnerAvatar");
+  if (w.avatar) { av.src = w.avatar; av.style.visibility = ""; } else av.style.visibility = "hidden";
+  ov.classList.add("show");
+  if (winTimer) clearTimeout(winTimer);
+  winTimer = setTimeout(() => ov.classList.remove("show"), 8000);
+}
+
+function renderWeekly(list) {
+  const el = document.getElementById("weeklyList");
+  if (!list || !list.length) { el.innerHTML = '<div class="empty">Ninguém acertou ainda.</div>'; return; }
+  const medals = ["🥇", "🥈", "🥉"];
+  el.innerHTML = list.map((r, i) =>
+    `<div class="weekly-row"><span><span class="medal">${medals[i] || (i + 1) + "º"}</span>${esc(r.nickname || r.user)}</span><span class="pts">${r.pontos} pts</span></div>`
+  ).join("");
+}
+
+// ---- WS ----
+let ws;
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function handle(msg) {
+  switch (msg.type) {
+    case "tres_state": applyState(msg); break;
+    case "tres_dica": state.stage = msg.stage; state.stage_remaining = msg.remaining; state.phase = "play"; render(); break;
+    case "tres_tick":
+      if (msg.phase === "countdown") { state.phase = "countdown"; state.countdown_remaining = msg.remaining; }
+      else if (msg.phase === "pause") { state.phase = "pause"; state.pause_remaining = msg.remaining; }
+      else { state.phase = "play"; state.stage_remaining = msg.remaining; }
+      render();
+      break;
+    case "tres_reveal_size": state.size_revealed = true; state.palavra_len = msg.len || state.palavra_len; state.size_by = msg.nickname || msg.user || ""; render(); flashGift("size"); break;
+    case "tres_reveal_letter": state.first_letter_revealed = true; state.first_letter = msg.letter || ""; state.palavra_len = msg.palavra_len || state.palavra_len; state.letter_by = msg.nickname || msg.user || ""; render(); flashGift("letter"); break;
+    case "tres_narrate": if (msg.stage && msg.url) { state.dicaAudio[msg.stage] = msg.url; render(); } break;
+    case "tres_ticket": showTicket(msg); break;
+    case "tres_wrong_guess": addWrongGuess(msg); break;
+    case "tres_winner": state.finished = true; state.winner = msg; state.palavra = msg.palavra; render(); showWinner(msg); break;
+    case "tres_timeout": state.finished = true; state.timeout = true; state.palavra = msg.palavra; render(); break;
+    case "tres_weekly": renderWeekly(msg.weekly || []); break;
+  }
+}
+
+async function load() {
+  try {
+    const res = await fetch(`/api/tres/state?room=${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data && data.success) applyState(data);
+    const wr = await fetch(`/api/tres/weekly?room=${encodeURIComponent(room)}`);
+    const wd = await wr.json();
+    if (wd && wd.success) renderWeekly(wd.weekly);
+  } catch {}
+  try {
+    const gim = await fetch("/api/gift-image-map");
+    const gid = await gim.json();
+    if (gid && gid.map) giftImageMap = gid.map;
+  } catch {}
+}
+
+connectWS();
+load();
+</script>
+</body>
+</html>

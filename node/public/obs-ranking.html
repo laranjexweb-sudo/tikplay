@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay - Ranking de Curtidas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: transparent;
+    color: #e0e0e0;
+    overflow: hidden;
+  }
+  .title {
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #7de2ff;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.8), 0 0 20px rgba(0, 229, 255, 0.4);
+    margin: 0 0 10px 0;
+  }
+  .list { display: flex; flex-direction: column; gap: 7px; }
+  .lk-row { display: flex; align-items: center; gap: 9px; }
+  .lk-rank {
+    font-family: 'Inter', monospace;
+    font-weight: 800;
+    font-size: 0.85em;
+    color: #5cff8a;
+    text-shadow: 0 0 8px rgba(0, 255, 120, 0.7);
+    min-width: 26px;
+    text-align: right;
+  }
+  .lk-pos1 .lk-rank { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.9); }
+  .lk-pos2 .lk-rank { color: #88ff00; text-shadow: 0 0 10px rgba(136,255,0,0.8); }
+  .lk-pos3 .lk-rank { color: #ffa040; text-shadow: 0 0 10px rgba(255,160,64,0.8); }
+  .lk-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .lk-body { min-width: 0; }
+  .lk-name {
+    font-size: 0.95em;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.9), 0 0 26px rgba(0, 229, 255, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .lk-likes {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #ff4d6d;
+    text-shadow: 0 0 10px rgba(255, 77, 109, 0.9), 0 0 24px rgba(255, 77, 109, 0.5);
+    margin-top: 1px;
+  }
+  .empty {
+    color: #555;
+    font-size: 0.85em;
+  }
+</style>
+</head>
+<body>
+<div class="title">Ranking de Curtidas</div>
+<div class="list" id="likeList"><div class="empty">Aguardando curtidas...</div></div>
+
+<script>
+const room = new URLSearchParams(location.search).get("room") || "";
+let ws = null;
+
+function render(ranking) {
+  const list = document.getElementById("likeList");
+  const rows = Array.isArray(ranking) ? ranking : [];
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty">Aguardando curtidas...</div>';
+    return;
+  }
+  list.innerHTML = "";
+  rows.forEach((r, i) => {
+    const pos = i + 1;
+    const row = document.createElement("div");
+    row.className = "lk-row lk-pos" + (pos <= 3 ? pos : "n");
+
+    const rank = document.createElement("div");
+    rank.className = "lk-rank";
+    rank.textContent = "#" + pos;
+
+    const avatar = document.createElement("img");
+    avatar.className = "lk-avatar";
+    avatar.src = r.avatar || "";
+    avatar.alt = "";
+    avatar.onerror = function () { this.style.visibility = "hidden"; };
+
+    const body = document.createElement("div");
+    body.className = "lk-body";
+
+    const name = document.createElement("div");
+    name.className = "lk-name";
+    name.textContent = r.nickname || r.user || "?";
+
+    const likes = document.createElement("div");
+    likes.className = "lk-likes";
+    likes.textContent = (r.likes || 0) + " ❤";
+
+    body.appendChild(name);
+    body.appendChild(likes);
+    row.appendChild(rank);
+    row.appendChild(avatar);
+    row.appendChild(body);
+    list.appendChild(row);
+  });
+}
+
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "likes_ranking") render(msg.ranking);
+    } catch {}
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+async function loadSnapshot() {
+  try {
+    const res = await fetch(`/api/game-state?room=${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data && data.likes_ranking) render(data.likes_ranking);
+  } catch {}
+}
+
+connectWS();
+loadSnapshot();
+</script>
+</body>
+</html>

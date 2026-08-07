@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bichinho Virtual</title>
+<style>
+  :root {
+    --bg: #10141c;
+    --panel: #1a2030;
+    --border: #2c3650;
+    --text: #e8ecf4;
+    --gold: #fbbf24;
+    --green: #34d399;
+    --red: #f87171;
+    --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    background: var(--bg);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+    font-size: 13px;
+    z-index: 5;
+  }
+  .hud-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+  }
+  .bar-wrap {
+    width: 130px; height: 12px;
+    background: #0b0e14;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill { display: block; height: 100%; width: 0%; transition: width .4s ease; }
+  .bar-hunger { background: linear-gradient(90deg,#f97316,#fbbf24); }
+  .bar-energy { background: linear-gradient(90deg,#3b82f6,#60a5fa); }
+  .bar-xp { background: linear-gradient(90deg,#a855f7,#d8b4fe); }
+  .bar-hp { background: linear-gradient(90deg,#ef4444,#f87171); }
+  #battleBox {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: rgba(20,10,10,.82);
+    border: 3px solid var(--red);
+    border-radius: 14px;
+    padding: 18px 26px;
+    text-align: center;
+    display: none;
+    z-index: 8;
+    box-shadow: 0 0 40px rgba(239,68,68,.5);
+  }
+  #battleBox.show { display: block; }
+  #bossName { font-size: 20px; color: var(--red); font-weight: 800; letter-spacing: 1px; }
+  #bossHpWrap { width: 260px; height: 18px; margin: 10px auto; background:#0b0e14; border:2px solid var(--border); border-radius:6px; overflow:hidden; }
+  #bossHpFill { display: block; height:100%; width:0%; background: linear-gradient(90deg,#b91c1c,#ef4444); transition: width .3s; }
+  #battleTimer { font-size: 44px; font-weight: 900; color: var(--gold); }
+  #topContributor { font-size: 13px; color: var(--text); margin-top: 6px; min-height: 18px; }
+  #eventLog {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    height: 96px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 2px;
+    font-size: 12px;
+    color: #aab4cc;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .log-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; }
+  #phaseLabel {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 6;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  #toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 26px;
+    font-weight: 900;
+    text-align: center;
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(251,191,36,.8);
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s;
+  }
+  #toast.show { opacity: 1; }
+  #speechBubble {
+    position: absolute;
+    width: 250px;
+    max-width: 80%;
+    background: rgba(0,0,0,.88);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 14px;
+    padding: 8px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    display: none;
+    z-index: 12;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+    transform: translate(-50%, -100%);
+  }
+  #speechBubble.show { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="pet"></canvas>
+  <div id="phaseLabel">OVO</div>
+  <div id="hud">
+    <div class="hud-row">
+      <span class="pill">Fome <span class="bar-wrap"><span class="bar-fill bar-hunger" id="barHunger"></span></span><b id="valHunger">100</b></span>
+      <span class="pill">Energia <span class="bar-wrap"><span class="bar-fill bar-energy" id="barEnergy"></span></span><b id="valEnergy">100</b></span>
+    </div>
+    <div class="hud-row">
+      <span class="pill">Nível <b id="valLevel">0</b></span>
+      <span class="pill">XP <span class="bar-wrap"><span class="bar-fill bar-xp" id="barXp"></span></span><b id="valXp">0</b></span>
+      <span class="pill">Mochila 🎒 <b id="valBag">0/3</b></span>
+    </div>
+    <div class="hud-row">
+      <span class="pill">Boss vencidos <b id="valWins">0</b></span>
+      <span class="pill" id="pillHatch">Chocagem <b id="valHatch">0/1000</b></span>
+    </div>
+  </div>
+  <div id="battleBox">
+    <div id="bossName">BOSS</div>
+    <div id="bossHpWrap"><span id="bossHpFill"></span></div>
+    <div id="battleTimer">60</div>
+    <div id="topContributor">Envie presentes para atacar!</div>
+  </div>
+  <div id="eventLog"></div>
+  <div id="toast"></div>
+  <div id="speechBubble"></div>
+</div>
+
+<script>
+const room = new URLSearchParams(location.search).get("room") || "";
+const cv = document.getElementById("pet");
+const ctx = cv.getContext("2d");
+
+// ---- layout responsivo 9:16 vertical (fallback 16:9) ----
+const BASE_W = 720, BASE_H = 1280;
+let scale = 1;
+
+function resizeCanvas() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const v9 = h * (9 / 16);
+  const usable = Math.max(v9, h * (16 / 9) * 0.9);
+  scale = Math.min(w / BASE_W, h / BASE_H);
+  cv.width = BASE_W * scale;
+  cv.height = BASE_H * scale;
+  cv.style.width = (BASE_W * scale) + "px";
+  cv.style.height = (BASE_H * scale) + "px";
+  draw();
+}
+window.addEventListener("resize", resizeCanvas);
+
+// ---- estado do mascote ----
+let pet = {
+  active: false, phase: "ovo-estelar", level: 0,
+  hunger: 100, energy: 100, xp: 0, xp_next: 0,
+  hatch_points: 0, hatch_need: 1000,
+  batalhas_disponiveis: 0, bag_max: 3,
+  battle_wins: 0,
+  anim: "idle", hatched: false,
+  battle: { state: "idle", boss_name: "", boss_hp: 0, boss_max_hp: 0, timer: 0, next_in: 900, color: "" },
+};
+
+// animação procedural
+let animFrame = 0, lastAnimTs = 0;
+let eggWobble = 0, hatchAnim = 0, hitFlash = 0, evolveAnim = 0;
+let battleStartAt = 0;
+let eventLog = [];
+let hitDamage = null; // { text, t } para número flutuante de dano
+
+// Timer local de batalha (FALLBACK): só decrementa se o backend ficar mudo por >2.5s.
+// A fonte de verdade é o tick do backend; este intervalo cobre perda de WS.
+const BATTLE_FALLBACK_MS = 2500;
+let battleLastMsgAt = 0;
+let battleLocalTimerOn = false;
+function ensureBattleTimer() {
+  if (battleLocalTimerOn) return;
+  battleLocalTimerOn = true;
+  setInterval(() => {
+    const b = pet.battle || { state: "idle" };
+    if (b.state !== "countdown" && b.state !== "fight") return;
+    // Se o backend está mandando ticks, respeita o valor dele (não decrementa).
+    if (performance.now() - battleLastMsgAt < BATTLE_FALLBACK_MS) return;
+    b.timer = Math.max(0, (b.timer || 0) - 1);
+    if (b.state === "countdown" && b.timer <= 0 && pet.battle) {
+      pet.battle.state = "fight";
+      pet.battle.timer = 60;
+      updateBattleUI();
+      return;
+    }
+    updateBattleUI();
+  }, 1000);
+}
+ensureBattleTimer();
+function markBattleMsg() { battleLastMsgAt = performance.now(); }
+
+function phaseName(p) {
+  const m = {
+    "ovo-estelar": "OVO ESTELAR", "filhote": "FILHOTE", "guardiao": "GUARDIÃO",
+    "guerreiro": "GUERREIRO", "lorde": "LORDE", "divindade": "DIVINDADE",
+  };
+  return m[p] || "OVO ESTELAR";
+}
+function setPhaseLabel() {
+  const el = document.getElementById("phaseLabel");
+  el.textContent = phaseName(pet.phase);
+  el.style.color = pet.battle.state === "fight" ? "var(--red)" : "var(--gold)";
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+// ---- EventLog (anti-flood: máx N linhas) ----
+function pushLog(text) {
+  eventLog.push(text);
+  if (eventLog.length > 4) eventLog.shift();
+  const box = document.getElementById("eventLog");
+  box.innerHTML = eventLog.map(t => `<div class="log-line">${esc(t)}</div>`).join("");
+}
+
+function showToast(text, ms = 2400) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), ms);
+}
+
+let speechTimer = null;
+function showSpeechBubble(text, ms) {
+  const el = document.getElementById("speechBubble");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add("show");
+  positionSpeechBubble();
+  if (speechTimer) clearTimeout(speechTimer);
+  speechTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+
+// Ancora o balão logo acima da cabeça do mascote (robusto entre fases).
+function positionSpeechBubble() {
+  const el = document.getElementById("speechBubble");
+  if (!el) return;
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const phase = levelPhase();
+  let headTopY;
+  if ((pet.level || 0) === 0) {
+    // ovo: topo em FEET_Y - 110 - 120
+    headTopY = 1006 - 230;
+  } else {
+    const s = sizes[phase] || 1;
+    headTopY = 1006 - 95 * s - 90 * s; // feetY - 95*s (pés) - 90*s (topo do corpo)
+  }
+  const stageRect = document.getElementById("stage").getBoundingClientRect();
+  const cvRect = cv.getBoundingClientRect();
+  const x = cvRect.left - stageRect.left + (BASE_W / 2) * scale;
+  const y = cvRect.top - stageRect.top + headTopY * scale;
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+}
+
+// ---- aplicação de estado (idempotente, sem fila) ----
+function applyState(s) {
+  pet.active = !!s.active;
+  pet.phase = s.phase || "ovo-estelar";
+  pet.level = s.level || 0;
+  pet.hunger = s.hunger ?? 100;
+  pet.energy = s.energy ?? 100;
+  pet.xp = s.xp || 0;
+  pet.xp_next = s.xp_next || 0;
+  pet.hatch_points = s.hatch_points || 0;
+  pet.hatch_need = s.hatch_need || 1000;
+  pet.batalhas_disponiveis = s.batalhas_disponiveis || 0;
+  pet.bag_max = s.bag_max || 3;
+  pet.battle_wins = s.battle_wins || 0;
+  pet.anim = s.anim || "idle";
+  pet.hatched = !!s.hatched;
+  if (s.battle) pet.battle = s.battle;
+  if (s.battle && (s.battle.state === "fight" || s.battle.state === "countdown")) markBattleMsg();
+  setPhaseLabel();
+  updateHUD();
+}
+
+function updateHUD() {
+  document.getElementById("barHunger").style.width = pet.hunger + "%";
+  document.getElementById("valHunger").textContent = Math.round(pet.hunger);
+  document.getElementById("barEnergy").style.width = pet.energy + "%";
+  document.getElementById("valEnergy").textContent = Math.round(pet.energy);
+  document.getElementById("valLevel").textContent = pet.level;
+  const xpPct = pet.xp_next > 0 ? Math.min(100, (pet.xp / pet.xp_next) * 100) : 100;
+  document.getElementById("barXp").style.width = xpPct + "%";
+  document.getElementById("valXp").textContent = pet.xp + (pet.xp_next ? "/" + pet.xp_next : "");
+  document.getElementById("valWins").textContent = pet.battle_wins;
+  document.getElementById("valBag").textContent = pet.batalhas_disponiveis + "/" + pet.bag_max;
+  const hatchEl = document.getElementById("pillHatch");
+  if (hatchEl) {
+    hatchEl.style.display = pet.level === 0 ? "" : "none";
+    document.getElementById("valHatch").textContent = pet.hatch_points + "/" + pet.hatch_need;
+  }
+  updateBattleUI();
+}
+
+function updateBattleUI() {
+  const box = document.getElementById("battleBox");
+  const b = pet.battle || { state: "idle" };
+  if (b.state === "fight" || b.state === "countdown") {
+    box.classList.add("show");
+    document.getElementById("bossName").textContent = b.boss_name || "BOSS";
+    const max = b.boss_max_hp || 1;
+    document.getElementById("bossHpFill").style.width = Math.max(0, Math.min(100, (b.boss_hp / max) * 100)) + "%";
+    document.getElementById("battleTimer").textContent = Math.max(0, b.timer || 0);
+  } else {
+    box.classList.remove("show");
+  }
+}
+
+// ---- WS ----
+let ws;
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function handle(msg) {
+  switch (msg.type) {
+    case "vpet_speak":
+      showSpeechBubble(msg.text || "", (msg.duration || 4) * 1000);
+      break;
+    case "vpet_state": applyState(msg); break;
+    case "vpet_egg_shake":
+      eggWobble = 1;
+      pet.hatch_points = msg.points ?? pet.hatch_points;
+      pet.hatch_need = msg.need || pet.hatch_need;
+      pushLog(`@${msg.nickname || msg.user} energizou o ovo (${pet.hatch_points}/${pet.hatch_need})`);
+      updateHUD();
+      break;
+    case "vpet_hatch":
+      pet.hatched = true; pet.phase = "filhote"; pet.level = 1; pet.anim = "idle";
+      setPhaseLabel(); updateHUD();
+      hatchAnim = 1;
+      showToast("O OVO CHOCOU!");
+      pushLog("O ovo chocou! Nasceu um filhote!");
+      break;
+    case "vpet_evolve":
+      pet.phase = msg.phase; pet.level = msg.level || pet.level; pet.xp = msg.xp || 0; pet.xp_next = msg.xp_next || 0;
+      setPhaseLabel(); updateHUD();
+      evolveAnim = 1;
+      showToast(`NÍVEL ${pet.level}! ${phaseName(pet.phase).toUpperCase()}!`);
+      pushLog(`Subiu para o nível ${pet.level} (${phaseName(pet.phase)})`);
+      break;
+    case "vpet_bag":
+      pet.batalhas_disponiveis = msg.batalhas_disponiveis ?? pet.batalhas_disponiveis;
+      pet.bag_max = msg.max || pet.bag_max;
+      updateHUD();
+      break;
+    case "vpet_status":
+      pet.hunger = msg.hunger ?? pet.hunger;
+      pet.energy = msg.energy ?? pet.energy;
+      if (msg.anim) pet.anim = msg.anim;
+      updateHUD();
+      break;
+    case "vpet_battle_start":
+      markBattleMsg();
+      pet.battle = {
+        state: msg.state || "countdown",
+        boss_name: msg.boss_name || "BOSS",
+        boss_hp: msg.boss_hp || 0,
+        boss_max_hp: msg.boss_max_hp || 1,
+        timer: msg.timer || 60,
+        color: msg.color || "",
+      };
+      battleStartAt = Date.now();
+      updateBattleUI();
+      showToast(`${msg.boss_name || "BOSS"} INVADIU!`, 3000);
+      pushLog(`${msg.boss_name || "BOSS"} invadiu a tela! Envie presentes!`);
+      break;
+    case "vpet_battle_countdown":
+      markBattleMsg();
+      if (pet.battle) pet.battle.timer = msg.timer || 0;
+      if (pet.battle && pet.battle.state === "countdown" && (msg.timer || 0) <= 0) {
+        pet.battle.state = "fight";
+      }
+      updateBattleUI();
+      break;
+    case "vpet_battle_fight":
+      markBattleMsg();
+      if (!pet.battle) break;
+      const startedNow = pet.battle.state !== "fight";
+      pet.battle.state = "fight";
+      pet.battle.timer = msg.timer ?? pet.battle.timer;
+      if (startedNow) {
+        showToast("⚔️ A BATALHA COMEÇOU!", 2500);
+        pushLog(`⚔️ A batalha contra ${pet.battle.boss_name || "o boss"} começou!`);
+      }
+      updateBattleUI();
+      break;
+    case "vpet_battle_tick":
+      markBattleMsg();
+      if (!pet.battle || pet.battle.state === "idle") {
+        pet.battle = {
+          state: "fight",
+          boss_name: "BOSS",
+          boss_hp: msg.hp || 0,
+          boss_max_hp: msg.max || 1,
+          timer: msg.timer || 0,
+          color: "",
+        };
+        battleStartAt = Date.now();
+        updateBattleUI();
+      } else {
+        pet.battle.boss_hp = msg.hp ?? pet.battle.boss_hp;
+        pet.battle.boss_max_hp = msg.max || pet.battle.boss_max_hp;
+        pet.battle.timer = msg.timer ?? pet.battle.timer;
+      }
+      hitFlash = 0.5;
+      if (msg.top) pushLog(`💥 @${msg.top.nickname || msg.top.user} -${msg.top_dmg} no boss`);
+      if (msg.top_dmg > 0) hitDamage = { text: `-${msg.top_dmg}`, t: performance.now() };
+      updateBattleUI();
+      break;
+    case "vpet_battle_end":
+      markBattleMsg();
+      if (msg.result === "victory") {
+        showToast("BOSS DERROTADO! +XP MASSIVO!");
+        pushLog("Boss derrotado! XP de bônus!");
+        pet.battle_wins = (msg.state && msg.state.battle_wins) || pet.battle_wins;
+      } else {
+        showToast("TEMPO ESGOTADO! Mascote ferido!");
+        pushLog("Tempo esgotado... o mascote ficou ferido.");
+      }
+      pet.battle = { state: "idle", boss_name: "", boss_hp: 0, boss_max_hp: 0, timer: 0, next_in: 900 };
+      updateBattleUI();
+      if (msg.state) applyState(msg.state);
+      break;
+  }
+}
+
+// ---- carregar estado inicial ----
+async function load() {
+  try {
+    const res = await fetch(`/api/vpet/state?room=${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data && data.success) { applyState(data); markBattleMsg(); }
+  } catch {}
+}
+
+// ===================== DESENHO PROCEDURAL (pixel art) =====================
+function px(v) { return Math.round(v * scale); }
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  ctx.scale(scale, scale);
+  drawBackground();
+  drawGround();
+  if (!pet.hatched && (pet.level || 0) === 0) drawEgg();
+  else drawCreature();
+  drawShadows();
+  drawHitDamage();
+  ctx.restore();
+}
+
+function drawHitDamage() {
+  if (!hitDamage) return;
+  const age = performance.now() - hitDamage.t;
+  if (age > 900) { hitDamage = null; return; }
+  const y = 760 - (age / 900) * 90;
+  ctx.globalAlpha = 1 - (age / 900);
+  ctx.font = "bold 30px monospace";
+  ctx.textAlign = "center";
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 5;
+  ctx.strokeText(hitDamage.text, BASE_W / 2, y);
+  ctx.fillStyle = "#ffd54d";
+  ctx.fillText(hitDamage.text, BASE_W / 2, y);
+  ctx.globalAlpha = 1;
+}
+
+function drawBackground() {
+  // céu em degrade
+  const g = ctx.createLinearGradient(0, 0, 0, BASE_H);
+  g.addColorStop(0, "#1b2a4a");
+  g.addColorStop(0.55, "#22304f");
+  g.addColorStop(1, "#2a1f3d");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
+  // nuvens / estrelas pixeladas
+  ctx.fillStyle = "rgba(255,255,255,.12)";
+  for (let i = 0; i < 26; i++) {
+    const x = ((i * 137) % BASE_W), y = ((i * 71) % 600);
+    ctx.fillRect(x, y, 3, 3);
+  }
+  // montanhas pixeladas
+  ctx.fillStyle = "#172038";
+  ctx.fillRect(0, 900, BASE_W, 160);
+  ctx.fillStyle = "#1c2845";
+  for (let i = 0; i < 8; i++) {
+    const bx = i * 100;
+    ctx.beginPath();
+    ctx.moveTo(bx, 940);
+    ctx.lineTo(bx + 50, 860);
+    ctx.lineTo(bx + 100, 940);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawGround() {
+  ctx.fillStyle = "#2c2a3a";
+  ctx.fillRect(0, 1020, BASE_W, BASE_H - 1020);
+  ctx.fillStyle = "#3a3550";
+  for (let x = 0; x < BASE_W; x += 24) ctx.fillRect(x, 1020, 12, 3);
+  ctx.fillStyle = "#57c06a";
+  ctx.fillRect(0, 1016, BASE_W, 6);
+  ctx.fillStyle = "#3f9d54";
+  for (let x = 0; x < BASE_W; x += 32) {
+    if (((x / 32) % 2) === 0) ctx.fillRect(x + 8, 1010, 10, 8);
+  }
+}
+
+function drawShadows() {
+  const s = levelPhase() || 1;
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const phaseScale = sizes[s] || 1;
+  const r = 130 * (0.6 + phaseScale * 0.4);
+  ctx.fillStyle = "rgba(0,0,0,.28)";
+  ctx.beginPath();
+  ctx.ellipse(BASE_W / 2, 1006, r, 18 * (0.6 + phaseScale * 0.4), 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ---- OVO ----
+function drawEgg() {
+  const cx = BASE_W / 2, cy = 900;
+  const wob = Math.sin(eggWobble * 10) * 8 * eggWobble;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(wob * 0.05);
+  // corpo do ovo
+  ctx.fillStyle = "#f5f0e0";
+  ctx.beginPath();
+  ctx.moveTo(0, -120);
+  ctx.bezierCurveTo(70, -110, 90, -30, 80, 40);
+  ctx.bezierCurveTo(72, 90, 40, 110, 0, 110);
+  ctx.bezierCurveTo(-40, 110, -72, 90, -80, 40);
+  ctx.bezierCurveTo(-90, -30, -70, -110, 0, -120);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#cfc6a8";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  // brilho
+  ctx.fillStyle = "rgba(255,255,255,.6)";
+  ctx.beginPath();
+  ctx.ellipse(-24, -55, 14, 22, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // rachaduras (progresso de chocagem)
+  const pct = pet.hatch_points / Math.max(1, pet.hatch_need);
+  ctx.strokeStyle = "#8a7f5a";
+  ctx.lineWidth = 3;
+  const cracks = Math.floor(pct * 6);
+  for (let i = 0; i < cracks; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 60, Math.sin(a) * 55);
+    ctx.lineTo(Math.cos(a + 0.4) * 90, Math.sin(a + 0.4) * 75);
+    ctx.stroke();
+  }
+  // balança se interagindo
+  if (eggWobble > 0) eggWobble -= 0.05;
+  ctx.restore();
+}
+
+// ---- CRIATURA (filhote/guardiao/guerreiro/lorde/divindade) ----
+function levelPhase() {
+  const lv = pet.level || 0;
+  if (lv >= 100) return 5;
+  if (lv >= 51) return 4;
+  if (lv >= 31) return 3;
+  if (lv >= 11) return 2;
+  return lv >= 1 ? 1 : 0;
+}
+function drawCreature() {
+  const phase = levelPhase() || 1;
+  const cx = BASE_W / 2;
+  const feetY = 1006; // linha da sombra/chão onde os pés tocam
+  const bounce = Math.abs(Math.sin(animFrame * 0.2)) * 12;
+  const asleep = pet.anim === "sleep";
+  const eating = pet.anim === "eat";
+  ctx.save();
+
+  // tamanho por fase
+  const sizes = { 1: 1, 2: 1.35, 3: 1.75, 4: 2.1, 5: 2.5 };
+  const s = sizes[phase] || 1;
+
+  // Ancora pela BASE: os pés (local +95) ficam sempre em feetY, o corpo cresce p/ cima.
+  ctx.translate(cx, feetY - 95 * s - (asleep ? 20 : bounce));
+  ctx.scale(s, s);
+  if (asleep) ctx.rotate(0.06);
+
+  // cores por fase
+  const colors = {
+    1: { body: "#7ec8e3", belly: "#d7f0fa", accent: "#3a8fb0" },
+    2: { body: "#8ee38e", belly: "#e0f8d0", accent: "#3aa85a" },
+    3: { body: "#f0a24a", belly: "#ffe0b0", accent: "#d1602a" },
+    4: { body: "#c084fc", belly: "#f3e8ff", accent: "#7c3aed" },
+    5: { body: "#ffd54d", belly: "#fff8e1", accent: "#ff9800" },
+  };
+  const C = colors[phase] || colors[1];
+
+  // cauda
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(-60, 10, 34, 14);
+  ctx.fillRect(-76, 2, 18, 22);
+
+  // corpo
+  ctx.fillStyle = C.body;
+  ctx.beginPath();
+  ctx.moveTo(0, -90);
+  ctx.bezierCurveTo(55, -85, 75, -10, 62, 45);
+  ctx.bezierCurveTo(50, 80, 25, 95, 0, 95);
+  ctx.bezierCurveTo(-25, 95, -50, 80, -62, 45);
+  ctx.bezierCurveTo(-75, -10, -55, -85, 0, -90);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = C.accent;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // barriga
+  ctx.fillStyle = C.belly;
+  ctx.beginPath();
+  ctx.ellipse(0, 25, 40, 48, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // pés
+  ctx.fillStyle = C.accent;
+  const step = eating ? 0 : (Math.sin(animFrame * 0.3) * 6);
+  ctx.fillRect(-30, 82 + step * 0.4, 26, 18);
+  ctx.fillRect(8, 82 - step * 0.4, 26, 18);
+
+  // olhos (fechados se dormindo)
+  if (asleep) {
+    ctx.strokeStyle = "#1a2a3a";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-38, -38); ctx.lineTo(-16, -38); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(16, -38); ctx.lineTo(38, -38); ctx.stroke();
+    // zzz
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("z", 60 + Math.sin(animFrame * 0.1) * 6, -80);
+    ctx.fillText("Z", 78 + Math.sin(animFrame * 0.1 + 1) * 6, -102);
+  } else {
+    ctx.fillStyle = "#1a2a3a";
+    ctx.beginPath(); ctx.arc(-27, -38, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(27, -38, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(-24, -41, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, -41, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // boca / comida
+  ctx.fillStyle = "#8a4a3a";
+  if (eating) {
+    ctx.fillRect(-14, -6, 28, 12);
+    ctx.fillStyle = C.belly;
+    ctx.fillRect(-10, -2, 20, 4);
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, -4, 8, 0, Math.PI);
+    ctx.fill();
+  }
+
+  // orelhas/chifres por fase
+  if (phase >= 2) {
+    ctx.fillStyle = C.accent;
+    ctx.beginPath(); ctx.moveTo(-40, -80); ctx.lineTo(-60, -120); ctx.lineTo(-22, -85); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(40, -80); ctx.lineTo(60, -120); ctx.lineTo(22, -85); ctx.closePath(); ctx.fill();
+  }
+  if (phase >= 3) {
+    ctx.fillStyle = "#d1602a";
+    ctx.fillRect(-14, -130, 12, 40);
+    ctx.fillRect(2, -130, 12, 40);
+    ctx.fillRect(-10, -138, 20, 10);
+  }
+
+  // flash de dano (batalha)
+  if (hitFlash > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${hitFlash})`;
+    ctx.beginPath(); ctx.arc(0, 0, 110, 0, Math.PI * 2); ctx.fill();
+    hitFlash -= 0.02;
+  }
+  // brilho de evolução
+  if (evolveAnim > 0) {
+    ctx.globalAlpha = evolveAnim;
+    ctx.strokeStyle = "#ffe066";
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(0, -10, 130 + (1 - evolveAnim) * 60, 0, Math.PI * 2); ctx.stroke();
+    evolveAnim -= 0.02;
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+// ---- loop principal ----
+function loop(ts) {
+  if (ts - lastAnimTs > 120) {
+    animFrame++;
+    lastAnimTs = ts;
+  }
+  draw();
+  positionSpeechBubble();
+  requestAnimationFrame(loop);
+}
+
+resizeCanvas();
+setPhaseLabel();
+updateHUD();
+connectWS();
+load();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

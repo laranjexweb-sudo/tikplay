@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay - Admin</title>
+<link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
+<style>
+  body { background: #fdfaf3; min-height: 100vh; padding: 20px; }
+  .nb-card { background: #ffffff; border: 3px solid #000; border-radius: 12px; box-shadow: 5px 5px 0 #000; padding: 18px; }
+  .nb-card h2 { font-size: 0.95rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; }
+  .table { --bs-table-border-color: #000; }
+  .table th { font-weight: 800; }
+  .btn-nb { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 6px 12px; box-shadow: 3px 3px 0 #000; }
+  .btn-nb:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .btn-warn { background: #fec90f; }
+  .btn-danger { background: #ff6b6b; }
+  .btn-success { background: #3ddc84; }
+  .badge-outline { border: 2px solid #000; }
+  .text-secondary { color: #5f6368 !important; }
+</style>
+</head>
+<body>
+<div class="nb-card mb-3 d-flex justify-content-between align-items-center">
+  <div>
+    <div style="font-size:1.3rem;font-weight:900;letter-spacing:3px">ADMIN</div>
+    <div class="text-secondary" style="font-size:0.8rem">Gestao de usuarios</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-nb btn-success" onclick="location.href='/painel'">Painel</button>
+    <button class="btn btn-nb btn-danger" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="nb-card">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="m-0">Usuarios <span id="userCount" class="badge text-bg-dark"></span></h2>
+    <button class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar Conta</button>
+  </div>
+
+  <div id="userFormCard" class="mb-3 p-3 bg-light border border-dark rounded" style="display:none">
+    <div id="userFormTitle" style="font-weight:800;margin-bottom:8px">Nova conta</div>
+    <div class="row g-2">
+      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Nome</label><input type="text" class="form-control form-control-sm" id="uName"></div>
+      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Email</label><input type="email" class="form-control form-control-sm" id="uEmail"></div>
+      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Senha (min 8)</label><input type="password" class="form-control form-control-sm" id="uPassword" autocomplete="new-password"></div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Plano</label>
+        <select class="form-select form-select-sm" id="uPlan">
+          <option value="free">free</option>
+          <option value="pro_mensal">pro_mensal</option>
+          <option value="pro_anual">pro_anual</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Role</label>
+        <select class="form-select form-select-sm" id="uRole">
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">TikTok</label><input type="text" class="form-control form-control-sm" id="uTikTok"></div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">API Key Tik.Tools</label><input type="text" class="form-control form-control-sm" id="uApiKey"></div>
+    </div>
+    <div class="mt-3 p-2 bg-white border border-dark rounded">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span style="font-weight:800;font-size:0.85rem">Funcionalidades liberadas</span>
+        <span>
+          <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(true)">Todas</button>
+          <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(false)">Nenhuma</button>
+        </span>
+      </div>
+      <div class="d-flex flex-wrap gap-3" id="featuresBox"></div>
+      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
+    </div>
+    <div class="d-flex gap-2 mt-3 align-items-center">
+      <button class="btn btn-nb btn-success btn-sm" onclick="submitUser()">Salvar</button>
+      <button class="btn btn-nb btn-dark btn-sm" onclick="toggleUserForm()">Cancelar</button>
+      <span class="text-secondary" style="font-size:0.75rem" id="userFormMsg"></span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Plano</th>
+          <th>TikTok</th>
+          <th>Sala</th>
+          <th>Conta criada</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody id="userTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="nb-card mt-3">
+  <h2>Gerar Contextos (Local)</h2>
+  <div class="mb-2 d-flex flex-wrap align-items-center gap-3">
+    <label class="text-secondary" style="font-size:0.85rem">Intervalo entre alvos (min): <input type="number" id="ctxInterval" value="15" min="1" style="width:70px"></label>
+    <label class="text-secondary" style="font-size:0.85rem">Palavras por contexto: <input type="number" id="ctxWords" value="1000" min="100" step="100" style="width:90px"></label>
+    <label class="text-secondary" style="font-size:0.85rem">Limite (0 = todos): <input type="number" id="ctxLimit" value="0" min="0" style="width:70px"></label>
+  </div>
+  <div class="d-flex gap-2 mb-2">
+    <button class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()">Ativar Geração Automática</button>
+    <button class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
+  </div>
+  <div class="progress" style="height:22px">
+    <div class="progress-bar" id="ctxBar" style="width:0%">0/0</div>
+  </div>
+  <div class="text-secondary mt-2" style="font-size:0.85rem">
+    Palavra atual: <b id="ctxCurrent">-</b> &nbsp;|&nbsp; Erros: <b id="ctxErrors">0</b>
+  </div>
+  <div class="text-secondary" style="font-size:0.75rem" id="ctxMsg"></div>
+  <div class="mt-2">
+    <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">Log de geração</div>
+    <div id="ctxLog" style="background:#1e1e1e;color:#e5e7eb;font-family:Consolas,monospace;font-size:0.72rem;padding:8px;border-radius:6px;max-height:260px;overflow-y:auto;white-space:pre-wrap;line-height:1.5"></div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
+
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  const res = await fetch(path, { ...opts, headers });
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    location.href = "/login";
+    throw new Error("Sessao expirada");
+  }
+  return res.json();
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  location.href = "/login";
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+let usersData = [];
+let editingId = null;
+
+async function loadUsers() {
+  const data = await apiFetch("/api/admin/users");
+  if (!data.success) return;
+  usersData = data.users;
+  document.getElementById("userCount").textContent = usersData.length;
+  const tbody = document.getElementById("userTable");
+  tbody.innerHTML = "";
+  for (const u of usersData) {
+    const tr = document.createElement("tr");
+    const statusClass = u.status === "active" ? "text-bg-success" : "text-bg-danger";
+    const statusLabel = u.status === "active" ? "ativo" : "desativado";
+    const toggleLabel = u.status === "active" ? "Desativar" : "Ativar";
+    tr.innerHTML = `
+      <td>${u.id}</td>
+      <td>${esc(u.name)}</td>
+      <td>${esc(u.email)}</td>
+      <td><span class="badge ${u.role === "admin" ? "text-bg-dark" : "text-bg-light"} badge-outline">${esc(u.role)}</span></td>
+      <td><span class="badge ${statusClass} badge-outline">${statusLabel}</span></td>
+      <td>${esc(u.plan)}</td>
+      <td>${esc(u.tiktok_username) || "-"}</td>
+      <td><code>${esc(u.room_code)}</code></td>
+      <td>${esc(u.created_at)}</td>
+      <td class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-nb ${u.status === "active" ? "btn-danger" : "btn-success"}" onclick="toggleStatus(${u.id}, '${u.status === "active" ? "disabled" : "active"}')">${toggleLabel}</button>
+        <button class="btn btn-nb btn-warn" onclick="resetPassword(${u.id})">Resetar Senha</button>
+        <button class="btn btn-nb btn-dark" onclick="editUser(${u.id})">Editar</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function toggleUserForm() {
+  const card = document.getElementById("userFormCard");
+  const show = card.style.display === "none";
+  card.style.display = show ? "block" : "none";
+  if (show) {
+    editingId = null;
+    document.getElementById("userFormTitle").textContent = "Nova conta";
+    for (const id of ["uName", "uEmail", "uPassword", "uTikTok", "uApiKey"]) document.getElementById(id).value = "";
+    document.getElementById("uPlan").value = "free";
+    document.getElementById("uRole").value = "user";
+    document.getElementById("userFormMsg").textContent = "";
+    renderFeaturesBox({});
+  }
+}
+
+const FEATURE_LIST = [
+  { key: "connect", label: "Conectar Live" },
+  { key: "chat", label: "Leitura de Chat" },
+  { key: "alerts", label: "Alertas Sonoros" },
+  { key: "games", label: "Palavra Secreta" },
+  { key: "batalha", label: "BATALHA" },
+  { key: "caca", label: "Caça Palavras" },
+  { key: "bichinho", label: "Bichinho" },
+  { key: "tres", label: "3 Pontinhos" },
+];
+
+function renderFeaturesBox(features) {
+  const box = document.getElementById("featuresBox");
+  if (!box) return;
+  const f = (features && typeof features === "object") ? features : {};
+  const allChecked = !Object.keys(f).length; // {} = tudo liberado
+  box.innerHTML = FEATURE_LIST.map((ft) => {
+    const checked = ft.key === "connect" ? true : (allChecked ? true : f[ft.key] !== false);
+    return `<label class="form-check form-check-inline mb-0" style="font-size:0.8rem">
+      <input class="form-check-input feat-check" type="checkbox" value="${ft.key}" data-feat="${ft.key}" ${checked ? "checked" : ""} ${ft.key === "connect" ? "disabled" : ""}>
+      ${ft.label}
+    </label>`;
+  }).join("");
+}
+
+function setAllFeatures(val) {
+  document.querySelectorAll(".feat-check").forEach((c) => {
+    if (c.value !== "connect") c.checked = !!val;
+  });
+}
+
+function getFeatures() {
+  const f = {};
+  let anyUnchecked = false;
+  FEATURE_LIST.forEach((ft) => {
+    const el = document.querySelector(`.feat-check[value="${ft.key}"]`);
+    const checked = ft.key === "connect" ? true : (el ? el.checked : true);
+    if (!checked) anyUnchecked = true;
+    f[ft.key] = checked;
+  });
+  // Se tudo estiver marcado, retorna {} (tudo liberado) para compatibilidade
+  return anyUnchecked ? f : {};
+}
+
+function editUser(id) {
+  const u = usersData.find((x) => x.id === id);
+  if (!u) return;
+  editingId = id;
+  document.getElementById("userFormTitle").textContent = `Editar conta #${id}`;
+  document.getElementById("uName").value = u.name || "";
+  document.getElementById("uEmail").value = u.email || "";
+  document.getElementById("uPassword").value = "";
+  document.getElementById("uPlan").value = u.plan || "free";
+  document.getElementById("uRole").value = u.role || "user";
+  document.getElementById("uTikTok").value = u.tiktok_username || "";
+  document.getElementById("uApiKey").value = "";
+  document.getElementById("userFormMsg").textContent = "Deixe a senha em branco para manter a atual.";
+  renderFeaturesBox(u.features || {});
+  const card = document.getElementById("userFormCard");
+  card.style.display = "block";
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function submitUser() {
+  const msg = document.getElementById("userFormMsg");
+  const body = {
+    name: document.getElementById("uName").value.trim(),
+    email: document.getElementById("uEmail").value.trim(),
+    plan: document.getElementById("uPlan").value,
+    role: document.getElementById("uRole").value,
+    tiktok_username: document.getElementById("uTikTok").value.trim(),
+    tiktools_api_key: document.getElementById("uApiKey").value.trim(),
+    features: getFeatures(),
+  };
+  const pw = document.getElementById("uPassword").value;
+  if (!editingId) {
+    if (!body.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) { msg.textContent = "Email invalido"; return; }
+    if (pw.length < 8) { msg.textContent = "Senha deve ter no minimo 8 caracteres"; return; }
+    body.password = pw;
+    const data = await apiFetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!data.success) { msg.textContent = data.error || "Erro"; return; }
+    msg.textContent = `Conta criada! Sala: ${data.user.room_code}`;
+  } else {
+    if (pw) body.password = pw;
+    delete body.email;
+    const data = await apiFetch(`/api/admin/users/${editingId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!data.success) { msg.textContent = data.error || "Erro"; return; }
+    msg.textContent = "Conta atualizada!";
+  }
+  loadUsers();
+}
+
+async function toggleStatus(id, status) {
+  const data = await apiFetch(`/api/admin/users/${id}/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (data.success) loadUsers();
+  else alert(data.error);
+}
+
+async function resetPassword(id) {
+  const newPassword = prompt("Nova senha (min. 8 caracteres):");
+  if (!newPassword) return;
+  if (newPassword.length < 8) { alert("Senha deve ter no minimo 8 caracteres"); return; }
+  const data = await apiFetch(`/api/admin/users/${id}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+  if (data.success) alert("Senha alterada com sucesso");
+  else alert(data.error);
+}
+
+apiFetch("/api/auth/me").then((data) => {
+  if (!data.success || data.user.role !== "admin") {
+    location.href = "/painel";
+  }
+});
+
+let ctxPoll = null;
+
+async function startContextos() {
+  const interval_min = parseInt(document.getElementById("ctxInterval").value) || 15;
+  const words = parseInt(document.getElementById("ctxWords").value) || 1000;
+  const limit = parseInt(document.getElementById("ctxLimit").value) || 0;
+  const data = await apiFetch("/api/admin/generate-contexts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval_min, words, limit }),
+  });
+  if (data.started) {
+    document.getElementById("btnGenContextos").disabled = true;
+    document.getElementById("btnStopContextos").disabled = false;
+    pollContextos();
+  } else {
+    alert(data.reason || "Já está rodando");
+  }
+}
+
+async function stopContextos() {
+  await apiFetch("/api/admin/generate-contexts/stop", { method: "POST" });
+  pollContextos();
+}
+
+async function pollContextos() {
+  clearTimeout(ctxPoll);
+  let data;
+  try {
+    data = await apiFetch("/api/admin/generate-contexts/status");
+  } catch (e) {
+    return;
+  }
+  const bar = document.getElementById("ctxBar");
+  const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
+  bar.style.width = pct + "%";
+  bar.textContent = `${data.done}/${data.total}`;
+  document.getElementById("ctxCurrent").textContent = data.current || "-";
+  document.getElementById("ctxErrors").textContent = data.errors || 0;
+  document.getElementById("ctxMsg").textContent = data.last_error ? "Último erro: " + data.last_error : "";
+  document.getElementById("btnGenContextos").disabled = !!data.running;
+  document.getElementById("btnStopContextos").disabled = !data.running;
+
+  const logEl = document.getElementById("ctxLog");
+  if (logEl && Array.isArray(data.logs)) {
+    const frag = document.createDocumentFragment();
+    for (let i = data.logs.length - 1; i >= 0; i--) {
+      const entry = data.logs[i];
+      const div = document.createElement("div");
+      const isOk = entry.text.startsWith("OK");
+      const isErr = entry.text.startsWith("ERRO");
+      const hora = entry.t ? entry.t.slice(11, 19) : "";
+      div.style.color = isErr ? "#ff6b6b" : isOk ? "#7beaa9" : "#9aa0a6";
+      div.textContent = `${hora}  ${entry.text}`;
+      frag.appendChild(div);
+    }
+    logEl.innerHTML = "";
+    logEl.appendChild(frag);
+    logEl.scrollTop = 0;
+  }
+
+  if (data.running) {
+    ctxPoll = setTimeout(pollContextos, 2000);
+  } else if (data.finished) {
+    document.getElementById("ctxMsg").textContent += (data.errors ? " | Concluído com erros" : " | Concluído!");
+  }
+}
+
+loadUsers();
+pollContextos();
+</script>
+</body>
+</html>

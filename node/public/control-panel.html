@@ -1,0 +1,3302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay - Painel de Controle</title>
+<link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
+<style>
+  body { background: #fdfaf3; margin: 0; min-height: 100vh; overflow-y: auto; font-family: var(--bs-body-font-family); }
+  .nb-card { background: #ffffff; border: 3px solid #000; border-radius: 12px; box-shadow: 5px 5px 0 #000; padding: 16px; }
+  .nb-card h2 { font-size: 0.95rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; }
+  .form-label { font-weight: 700; font-size: 0.85rem; }
+  .form-control { border: 2px solid #000; border-radius: 8px; box-shadow: 2px 2px 0 #000; }
+  .form-control:focus { border-color: #000; box-shadow: 2px 2px 0 #fec90f; }
+  .btn-nb { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 9px 14px; box-shadow: 3px 3px 0 #000; }
+  .btn-nb:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .btn-nb:disabled { opacity: 0.5; box-shadow: none; transform: none; }
+  .btn-nb.btn-primary { background: #fec90f; }
+  .btn-nb.btn-primary:hover:not(:disabled) { background: #ffdd66; }
+  .btn-nb.btn-danger { background: #ff6b6b; }
+  .btn-nb.btn-danger:hover:not(:disabled) { background: #ff8f8f; }
+  .btn-nb.btn-success { background: #3ddc84; }
+  .btn-nb.btn-success:hover:not(:disabled) { background: #7beaa9; }
+  .btn-nb.btn-dark { background: #111; color: #fff; }
+  .btn-nb.btn-dark:hover:not(:disabled) { background: #333; }
+  .status-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #000; background: #ff4444; display: inline-block; flex-shrink: 0; }
+  .status-dot.connected { background: #44ff44; }
+  .status-dot.waiting { background: #ffcc44; }
+  .status-text { font-size: 0.85rem; font-weight: 600; }
+  .log-area { background: #faf7f1; border: 2px solid #000; border-radius: 8px; padding: 10px; flex: 1 1 auto; height: 450px; min-height: 300px; overflow-y: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.75em; line-height: 1.4; }
+  .log-area::-webkit-scrollbar { width: 10px; }
+  .log-area::-webkit-scrollbar-track { background: #e8e2d5; border-radius: 4px; }
+  .log-area::-webkit-scrollbar-thumb { background: #000; border-radius: 4px; border: 2px solid #e8e2d5; }
+  .log-line { white-space: pre-wrap; word-break: break-all; padding: 1px 0; }
+  .log-info { color: #1f5f8b; }
+  .log-ok { color: #0b7a3a; }
+  .log-warn { color: #9a6a00; }
+  .log-err { color: #b30000; }
+  .log-guess { color: #006699; }
+  .log-hint { color: #7a2fbf; }
+  .kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dashed #ccc; font-size: 0.85rem; }
+  .kv strong { font-weight: 800; }
+  .kv span { font-weight: 600; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 2px solid #000; border-radius: 8px; padding: 4px 8px 4px 6px; font-size: 0.85em; font-weight: 600; box-shadow: 2px 2px 0 #000; }
+  .chip img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+  .chip .meta { color: #555; font-size: 0.78em; font-weight: 600; }
+  .chip .remove { cursor: pointer; color: #b30000; font-weight: 900; margin-left: 2px; border: none; background: none; font-size: 1.1em; line-height: 1; padding: 0 2px; }
+  .chip .remove:hover { color: #ff0000; }
+  #giftCounter { font-size: 0.8rem; font-weight: 700; color: #444; }
+  #giftAutocomplete .ac-item, #riddleAutocomplete .ac-item, #sizeGiftAutocomplete .ac-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #000; font-size: 0.85rem; }
+  #giftAutocomplete .ac-item img, #riddleAutocomplete .ac-item img, #sizeGiftAutocomplete .ac-item img { width: 24px; height: 24px; object-fit: contain; }
+  #giftAutocomplete .ac-item .ac-name, #riddleAutocomplete .ac-item .ac-name, #sizeGiftAutocomplete .ac-item .ac-name { flex: 1; font-weight: 700; }
+  #giftAutocomplete .ac-item .ac-diam, #riddleAutocomplete .ac-item .ac-diam, #sizeGiftAutocomplete .ac-item .ac-diam { color: #666; font-size: 0.8em; }
+  #giftAutocomplete .ac-item.active, #giftAutocomplete .ac-item:hover,
+  #riddleAutocomplete .ac-item.active, #riddleAutocomplete .ac-item:hover,
+  #sizeGiftAutocomplete .ac-item.active, #sizeGiftAutocomplete .ac-item:hover { background: #fec90f; }
+  #giftHint { font-size: 0.75rem; margin-top: 6px; }
+  #btnSaveSettings.dirty, #btnSaveAll.dirty { outline: 3px solid #fec90f; }
+  .tab-nav { background: #111; border-bottom: 3px solid #000; }
+  .tab-btn { background: transparent; border: none; color: #fff; font-weight: 800; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1px; padding: 13px 18px; cursor: pointer; border-right: 2px solid rgba(255,255,255,0.08); }
+  .tab-btn:hover { background: #222; }
+  .tab-btn.active { background: #fec90f; color: #000; }
+  .tab-page { display: block; }
+  .text-secondary { color: #5f6368 !important; }
+  .btn-tiny { padding: 6px 12px; font-size: 0.72rem; border-radius: 6px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .topbar .logo { font-size: 1.4rem; font-weight: 900; letter-spacing: 4px; }
+  .topbar .logo-img { height: 40px; width: auto; object-fit: contain; }
+  @media (max-width: 992px) { body { overflow-y: auto; height: auto; min-height: 100vh; } .log-area { height: 300px; min-height: 300px; } }
+  #historyTableBody td {
+    border-right: 2px solid #000;
+    border-bottom: 2px solid #000;
+    font-weight: 700;
+    font-size: 0.9em;
+    padding: 8px 12px;
+  }
+  #historyTableBody td:last-child {
+    border-right: none;
+  }
+  #historyTableBody tr:last-child td {
+    border-bottom: none;
+  }
+</style>
+</head>
+<body>
+<div class="container-fluid p-3 d-flex flex-column" style="min-height:100vh">
+  <div class="nb-card mb-3">
+    <div class="topbar">
+      <div>
+        <img src="/logo.png" alt="TikPlay" class="logo-img">
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="badge text-bg-light border border-dark border-2" id="userBadge"></span>
+        <span class="badge text-bg-warning border border-dark border-2" id="roleBadge"></span>
+        <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
+        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura">Plano: -</button>
+        <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
+        <button class="btn btn-nb btn-dark btn-sm" onclick="location.href='/docs'">Ajuda</button>
+        <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nb-card mb-3 p-0" style="overflow:hidden">
+    <div class="tab-nav d-flex flex-wrap">
+      <button type="button" class="tab-btn active" data-tab="connect" onclick="switchTab('connect')">Conectar Live</button>
+      <button type="button" class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Leitura de Chat</button>
+      <button type="button" class="tab-btn" data-tab="alerts" onclick="switchTab('alerts')">Alertas Sonoros</button>
+      <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')">Palavra Secreta</button>
+      <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha')">BATALHA</button>
+      <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca')">Caça Palavras</button>
+      <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho')">Bichinho</button>
+      <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')">3 Pontinhos</button>
+    </div>
+  </div>
+
+  <div class="nb-card mb-3" id="billingCard" style="display:none">
+    <h2>Assinatura</h2>
+    <div class="text-secondary" style="font-size:0.85rem" id="billingInfo"></div>
+    <div class="d-flex flex-wrap gap-2 mt-3" id="billingPlans"></div>
+    <div class="text-secondary mt-2" style="font-size:0.75rem" id="billingMsg"></div>
+  </div>
+
+  <div class="row flex-grow-1" style="min-height:0">
+    <div class="col-lg-8 d-flex flex-column" style="min-height:0">
+
+      <!-- ===================== Conectar Live ===================== -->
+      <div class="tab-page" id="tab-connect">
+        <div class="nb-card mb-3">
+          <h2>Conexão TikTok</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="username">Usuário TikTok</label>
+              <input type="text" class="form-control" id="username" placeholder="Digite o usuário do TikTok...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="apiKey">API Key Tik.Tools</label>
+              <div class="d-flex gap-2">
+                <input type="password" class="form-control" id="apiKey" placeholder="Chave da api.tik.tools" autocomplete="off">
+                <button type="button" class="btn btn-nb btn-danger btn-sm flex-shrink-0" id="btnClearKey" onclick="clearApiKey()" title="Remover chave salva" style="display:none">Limpar</button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label mb-0" for="tiktokEngine">Motor de conexão</label>
+              <select class="form-select form-select-sm mt-1" id="tiktokEngine" onchange="onEngineChange()">
+                <option value="tiktoklive">TikTokLive (direto, sem chave)</option>
+                <option value="tiktools">Tik.Tools (API key)</option>
+              </select>
+              <div class="text-secondary" style="font-size:0.75rem;margin-top:4px" id="engineHint">Conexão direta via TikTokLive — não precisa de API key.</div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-nb btn-primary flex-fill" id="btnConnect" onclick="startGame()">Conectar Live</button>
+            <button class="btn btn-nb btn-danger flex-fill" id="btnStop" onclick="stopGame()" disabled>Desconectar Live</button>
+          </div>
+          <div class="nb-card mt-3 p-2" style="box-shadow:none">
+            <div class="kv"><strong>Estado:</strong> <span id="liveState">Aguardando...</span></div>
+            <div class="kv"><strong>Room ID:</strong> <span id="roomId">-</span></div>
+            <div class="kv"><strong>API:</strong> <span id="apiRate">-</span></div>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <div class="status-dot" id="statusDot"></div>
+              <span class="status-text" id="statusText">Aguardando conexão...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Filtros de Chat (quem pode pontuar — vale para todos os jogos)</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="chkFollowers" onchange="onSettingsChanged()">
+              <label class="form-check-label" for="chkFollowers">Contabilizar apenas <strong>Seguidores</strong></label>
+            </div>
+            <div class="form-check mt-1">
+              <input class="form-check-input" type="checkbox" id="chkHeartMe" onchange="onSettingsChanged()">
+              <label class="form-check-label" for="chkHeartMe">Contabilizar apenas <strong>Heart-me Ativo</strong> (membros do fã clube)</label>
+            </div>
+            <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">
+              Com os dois marcados, exige <strong>Seguidor E Heart-me</strong>. Vale para Palavra Secreta, Caça Palavras e BATALHA (taps e moedas). Quem não passar é ignorado (aparece no log).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Leitura de Chat ===================== -->
+      <div class="tab-page" id="tab-chat" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>Narração de Chat e Áudio da Charada</h2>
+
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="chkNarr" onchange="onSettingsChanged()">
+              <label class="form-check-label" for="chkNarr"><strong>Narração de Chat</strong> (ler o bate-papo em voz alta, com a voz da charada)</label>
+            </div>
+            <div class="row g-2 mt-2 align-items-end">
+              <div class="col-7">
+                <label class="form-label mb-0" for="narrMode">O que narrar</label>
+                <select class="form-select form-select-sm" id="narrMode" onchange="onSettingsChanged()">
+                  <option value="all">Tudo</option>
+                  <option value="exclude">Não falar frases que começam com o caractere</option>
+                  <option value="only">Só falar frases que começam com o caractere</option>
+                </select>
+              </div>
+              <div class="col-5">
+                <label class="form-label mb-0" for="narrChar">Caractere do filtro</label>
+                <input type="text" class="form-control form-control-sm" id="narrChar" maxlength="1" value="#" oninput="onSettingsChanged()">
+              </div>
+            </div>
+            <div class="text-secondary" style="font-size:0.72rem;margin-top:4px">
+              Independente do caractere do jogo. Ao narrar, o caractere é removido da frase.
+            </div>
+          </div>
+
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <strong class="d-block mb-1">Voz do narrador</strong>
+            <div class="row g-2 align-items-end">
+              <div class="col-5">
+                <label class="form-label mb-0" for="ttsRate">Velocidade <span class="text-secondary" id="ttsRateLabel">1x</span></label>
+                <input type="range" class="form-range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0" for="ttsVoiceSelect">Voz</label>
+                <select class="form-select form-select-sm" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"></select>
+              </div>
+              <div class="col-3">
+                <button class="btn btn-nb btn-dark btn-tiny" onclick="testPanelVoice()">🎙️ Testar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-nb btn-success" id="btnSaveSettings" onclick="saveSettings()" disabled>Salvar Preferências</button>
+      </div>
+
+      <!-- ===================== Alertas Sonoros ===================== -->
+      <div class="tab-page" id="tab-alerts" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>Alertas Sonoros</h2>
+          <div class="text-secondary" style="font-size:0.85rem">Selecione um gift e anexe um áudio. O som será reproduzido quando o gift chegar na live.</div>
+          <div class="mt-3" id="soundAlertsList"></div>
+        </div>
+      </div>
+
+      <!-- ===================== Jogos ===================== -->
+      <div class="tab-page" id="tab-games" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>Partida em andamento</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="kv"><strong>Palavra atual:</strong> <span id="currentWord">-</span></div>
+          </div>
+          <button class="btn btn-nb btn-success w-100" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-nb btn-primary flex-fill" id="btnManualHint" onclick="manualHintFromPanel()" disabled>DICA</button>
+            <button class="btn btn-nb btn-info flex-fill" id="btnManualRiddle" onclick="manualRiddleFromPanel()" disabled>CHARADA</button>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Configuração de Dicas e Presente Revelador</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong>Presente Revelador</strong>
+              <span id="riddleCounter" class="badge text-bg-warning">0/1</span>
+            </div>
+            <div class="position-relative">
+              <input type="text" class="form-control form-control-sm" id="riddleTagInput" placeholder="Escolha 1 presente revelador..." autocomplete="off">
+              <div id="riddleAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+            </div>
+            <div id="riddleTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+            <div class="text-secondary" id="riddleHint" style="font-size:0.75rem;margin-top:4px">Máximo de 1. É o presente que revela a palavra no Final Boss.</div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span id="giftCounter">Gifts de dica (0/5)</span>
+          </div>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="giftTagInput" placeholder="Busque o gift no catálogo..." autocomplete="off">
+            <div id="giftAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+          </div>
+          <div id="giftTags" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+          <div class="text-secondary" id="giftHint">Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.</div>
+
+          <div class="d-flex justify-content-between align-items-center mb-1 mt-3">
+            <strong>Presente de Tamanho</strong>
+          </div>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="sizeGiftInput" placeholder="Escolha 1 presente para revelar o tamanho..." autocomplete="off">
+            <div id="sizeGiftAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+          </div>
+          <div id="sizeGiftTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+          <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">Se preenchido, o tamanho da palavra fica oculto até alguém enviar este presente.</div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Como identificar os palpites</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <label class="form-label mb-0" for="cmdPrefix">Prefixo do chute no chat</label>
+            <select class="form-select form-select-sm mt-1" id="cmdPrefix" onchange="onSettingsChanged()">
+              <option value="#"># (hashtag) — chute com "#palavra"</option>
+              <option value="!">! (exclamação) — chute com "!palavra"</option>
+              <option value="">Sem prefixo — todo comentário vira palpite</option>
+            </select>
+            <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">
+              Define como o chat envia os palpites da Palavra Secreta.
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Rodada Automática</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="autoRound" onchange="onSettingsChanged()">
+              <label class="form-check-label" for="autoRound"><strong>Auto-iniciar próxima partida</strong></label>
+            </div>
+            <div class="mt-2">
+              <label class="form-label mb-0" for="autoRoundPause">Pausa entre partidas (segundos)</label>
+              <input type="number" class="form-control form-control-sm" id="autoRoundPause" min="5" max="300" value="20" onchange="onSettingsChanged()">
+            </div>
+            <div class="mt-2">
+              <label class="form-label mb-0" for="tapMeta">Meta de Tap (likes) para liberar dica</label>
+              <input type="number" class="form-control form-control-sm" id="tapMeta" min="50" max="100000" value="1000" onchange="onSettingsChanged()">
+            </div>
+            <div class="text-secondary" style="font-size:0.75rem;margin-top:6px">
+              Quando a partida termina (vitória ou encerramento), a próxima inicia automaticamente após a pausa. Ao atingir a meta de tap, o jogo libera uma dica/charada (seguindo a porcentagem), respeitando o Final Boss.
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Probabilidade de Drops (Roleta)</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="row g-2 mt-1">
+              <div class="col-6">
+                <label class="form-label" for="pctDica">% Dicas</label>
+                <input type="number" class="form-control" id="pctDica" min="0" max="100" oninput="onPctChanged(this)" onchange="onSettingsChanged()">
+              </div>
+              <div class="col-6">
+                <label class="form-label" for="pctCharada">% Charadas</label>
+                <input type="number" class="form-control" id="pctCharada" min="0" max="100" oninput="onPctChanged(this)" onchange="onSettingsChanged()">
+              </div>
+            </div>
+            <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">A soma dos dois deve ser 100% (o outro campo é atualizado automaticamente).</div>
+          </div>
+        </div>
+
+        <button class="btn btn-nb btn-success" id="btnSaveAll" onclick="saveAll()" disabled>Salvar Tudo</button>
+
+        <div class="nb-card mt-3 mb-3">
+          <h2>Histórico de Partidas (Todas)</h2>
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label mb-0" for="whSearch">Vencedor / Palavra</label>
+              <input type="text" class="form-control form-control-sm" id="whSearch" placeholder="Buscar..." onchange="loadWordHistory(1)">
+            </div>
+            <div class="col-3">
+              <label class="form-label mb-0" for="whFrom">De</label>
+              <input type="date" class="form-control form-control-sm" id="whFrom" onchange="loadWordHistory(1)">
+            </div>
+            <div class="col-3">
+              <label class="form-label mb-0" for="whTo">Até</label>
+              <input type="date" class="form-control form-control-sm" id="whTo" onchange="loadWordHistory(1)">
+            </div>
+            <div class="col-2 d-flex align-items-end">
+              <button class="btn btn-nb btn-dark btn-tiny w-100" onclick="loadWordHistory(1)">Filtrar</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped border border-dark border-2" style="background:#fff; border-collapse: separate; border-spacing: 0;">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col" style="border-right: 2px solid #000; border-bottom: 3px solid #000; font-weight: 800; text-transform: uppercase;">ID</th>
+                  <th scope="col" style="border-right: 2px solid #000; border-bottom: 3px solid #000; font-weight: 800; text-transform: uppercase;">Palavra Secreta</th>
+                  <th scope="col" style="border-right: 2px solid #000; border-bottom: 3px solid #000; font-weight: 800; text-transform: uppercase;">Vencedor</th>
+                  <th scope="col" style="border-right: 2px solid #000; border-bottom: 3px solid #000; font-weight: 800; text-transform: uppercase;">Palpites</th>
+                  <th scope="col" style="border-bottom: 3px solid #000; font-weight: 800; text-transform: uppercase;">Data e Hora</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr>
+                  <td colspan="5" class="text-center text-secondary py-3">Carregando histórico...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <button class="btn btn-nb btn-dark btn-tiny" id="whPrev" onclick="loadWordHistory(whPage - 1)" disabled>← Anterior</button>
+            <span class="text-secondary" style="font-size:0.8rem" id="whInfo"></span>
+            <button class="btn btn-nb btn-dark btn-tiny" id="whNext" onclick="loadWordHistory(whPage + 1)" disabled>Próxima →</button>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Onde assistir</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            Acompanhe ao vivo na página: <a href="#" id="linkGame" target="_blank">Abrir página PALAVRA SECRETA</a>.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== BATALHA ===================== -->
+      <div class="tab-page" id="tab-batalha" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>BATALHA — rodada de Tap × Moeda</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="kv"><strong>Timer:</strong> <span id="battleTimer" style="font-size:1.4rem;font-weight:900">--:--</span></div>
+            <div class="kv"><strong>Última ação:</strong> <span id="battleAction">-</span></div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label mb-0" for="battleDuration">Duração (s)</label>
+              <input type="number" class="form-control form-control-sm" id="battleDuration" value="180" min="10" max="600">
+            </div>
+            <div class="col-8 d-flex align-items-end gap-2">
+              <button class="btn btn-nb btn-primary flex-fill" id="btnBattleStart" onclick="startBattle()">Iniciar Rodada</button>
+              <button class="btn btn-nb btn-danger flex-fill" id="btnBattleStop" onclick="stopBattle()" disabled>Finalizar</button>
+              <button class="btn btn-nb btn-dark" onclick="resetBattle()">Reset Ranking</button>
+            </div>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col-6">
+              <div class="text-secondary" style="font-weight:800;font-size:0.8rem">🥇 TOP MOEDA (líder atual)</div>
+              <div id="battleCoinLeader" class="p-2" style="font-size:0.9rem">-</div>
+            </div>
+            <div class="col-6">
+              <div class="text-secondary" style="font-weight:800;font-size:0.8rem">👑 TOP TAP (líder atual)</div>
+              <div id="battleTapLeader" class="p-2" style="font-size:0.9rem">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Ranking Geral da Live</h2>
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="text-secondary" style="font-weight:800;margin-bottom:4px">TOP MOEDA DA LIVE (🪙)</div>
+              <div id="battleCoinRanking"></div>
+            </div>
+            <div class="col-6">
+              <div class="text-secondary" style="font-weight:800;margin-bottom:4px">TOP TAP DA LIVE (❤)</div>
+              <div id="battleTapRanking"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Histórico de Batalhas</h2>
+          <div class="row g-2 mb-2">
+            <div class="col-3">
+              <label class="form-label mb-0" for="bhSearch">Vencedor</label>
+              <input type="text" class="form-control form-control-sm" id="bhSearch" placeholder="Buscar por usuário..." onchange="loadBattleHistory(1)">
+            </div>
+            <div class="col-3">
+              <label class="form-label mb-0" for="bhRoom">Room ID (live)</label>
+              <input type="text" class="form-control form-control-sm" id="bhRoom" placeholder="Room id..." onchange="loadBattleHistory(1)">
+            </div>
+            <div class="col-2">
+              <label class="form-label mb-0" for="bhFrom">De</label>
+              <input type="date" class="form-control form-control-sm" id="bhFrom" onchange="loadBattleHistory(1)">
+            </div>
+            <div class="col-2">
+              <label class="form-label mb-0" for="bhTo">Até</label>
+              <input type="date" class="form-control form-control-sm" id="bhTo" onchange="loadBattleHistory(1)">
+            </div>
+            <div class="col-2 d-flex align-items-end gap-1">
+              <button class="btn btn-nb btn-dark btn-tiny w-100" onclick="loadBattleHistory(1)">Filtrar</button>
+              <button class="btn btn-nb btn-primary btn-tiny" onclick="loadBattleReport()" title="Resumo da live filtrada">📊</button>
+            </div>
+          </div>
+          <div id="bhReport" class="text-secondary" style="font-size:0.8rem;margin-bottom:8px"></div>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped border border-dark border-2" style="background:#fff">
+              <thead class="table-dark">
+                <tr>
+                  <th>Data</th>
+                  <th>Room</th>
+                  <th>Duração</th>
+                  <th>Vencedor TAP</th>
+                  <th>Vencedor MOEDA</th>
+                </tr>
+              </thead>
+              <tbody id="battleHistoryBody">
+                <tr><td colspan="5" class="text-center text-secondary py-3">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <button class="btn btn-nb btn-dark btn-tiny" id="bhPrev" onclick="loadBattleHistory(bhPage - 1)" disabled>← Anterior</button>
+            <span class="text-secondary" style="font-size:0.8rem" id="bhInfo"></span>
+            <button class="btn btn-nb btn-dark btn-tiny" id="bhNext" onclick="loadBattleHistory(bhPage + 1)" disabled>Próxima →</button>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Como funciona</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            A cada rodada (3 min), curtidas valem <strong>Tap ❤</strong> e presentes valem <strong>Moeda 🪙</strong>.
+            No fim, o <strong>Top 1 de Tap</strong> e o <strong>Top 1 de Moeda</strong> da rodada ganham a coroa e +1 vitória.
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Onde assistir</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            Acompanhe ao vivo na página: <a href="#" id="linkBatalha" target="_blank">Abrir página BATALHA</a>.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Caça Palavras ===================== -->
+      <div class="tab-page" id="tab-caca" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>CAÇA PALAVRAS</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="kv"><strong>Encontradas:</strong> <span id="cacaFound">0</span>/<span id="cacaTotal">0</span></div>
+            <div class="kv"><strong>Status:</strong> <span id="cacaStatus">Parado</span></div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label mb-0" for="cacaCount">Palavras na grade</label>
+              <input type="number" class="form-control form-control-sm" id="cacaCount" value="10" min="4" max="16">
+            </div>
+            <div class="col-8 d-flex align-items-end gap-2">
+              <button class="btn btn-nb btn-primary flex-fill" id="btnCacaStart" onclick="startCaca()">Iniciar</button>
+              <button class="btn btn-nb btn-danger flex-fill" id="btnCacaStop" onclick="stopCaca()" disabled>Encerrar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Como o público acerta</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <label class="form-label mb-0" for="cacaCmdMode">Formato do comando no chat</label>
+            <select class="form-select form-select-sm mt-1" id="cacaCmdMode" onchange="onCacaCmdMode()">
+              <option value="plain">Só coordenadas — ex: A1A4 ou A1:A4</option>
+              <option value="prefix">Com prefixo — ex: cp A1A4 ou cp A1:A4</option>
+              <option value="emoji">Com emoji ao redor — ex: [EMOJI]A1:A3[EMOJI]</option>
+            </select>
+            <div class="d-flex align-items-center gap-2 mt-2" id="cacaPrefixRow" style="display:none">
+              <label class="form-label mb-0" for="cacaPrefix">Prefixo</label>
+              <input type="text" class="form-control form-control-sm" id="cacaPrefix" value="cp" style="max-width:120px">
+              <button class="btn btn-nb btn-dark btn-tiny" onclick="saveCacaConfig()">Salvar</button>
+            </div>
+            <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">
+              Formato A1:A4 = linha (letra) : coluna (número). A página pública exibe o tabuleiro para o público.
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Onde assistir</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            Acompanhe ao vivo na página: <a href="#" id="linkCaca" target="_blank">Abrir página CAÇA PALAVRAS</a>.
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Respostas (visão do painel)</h2>
+          <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">Palavras do tabuleiro atual. Clique em uma palavra para revelar manualmente.</div>
+          <div id="cacaWordsList" class="text-secondary" style="font-size:0.85rem">Nenhuma grade ativa.</div>
+        </div>
+      </div>
+
+      <div class="tab-page" id="tab-bichinho" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>BICHINHO VIRTUAL</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="kv"><strong>Fase:</strong> <span id="vpetPhase">-</span></div>
+            <div class="kv"><strong>Fome:</strong> <span id="vpetHunger">-</span></div>
+            <div class="kv"><strong>Energia:</strong> <span id="vpetEnergy">-</span></div>
+            <div class="kv"><strong>XP:</strong> <span id="vpetXp">-</span></div>
+            <div class="kv"><strong>Mochila de Batalhas:</strong> <span id="vpetBag">0/3</span></div>
+            <div class="kv"><strong>Chocagem (ovo):</strong> <span id="vpetHatch">0/1000</span></div>
+            <div class="kv"><strong>Boss vencidos:</strong> <span id="vpetWins">-</span></div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <button class="btn btn-nb btn-primary flex-fill" id="btnVpetToggle" onclick="vpetToggle()">▶ Iniciar Mascote</button>
+            </div>
+            <div class="col-6 d-flex align-items-end">
+              <button class="btn btn-nb btn-dark flex-fill" id="btnVpetBattle" onclick="vpetBattle()" title="Precisa ativar o Bichinho e o ovo chocar">Invocar Boss agora</button>
+            </div>
+          </div>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="chkAssistant" onchange="vpetAssistantMode(this.checked)" disabled>
+            <label class="form-check-label" for="chkAssistant">Modo Assistente <span class="text-secondary">(reage à live: saudações, agradecimentos, incentivos)</span></label>
+          </div>
+          <div class="text-secondary" style="font-size:0.78rem">
+            O público interage por presentes e comandos de chat: <b>#chocar</b>, <b>#alimentar</b>, <b>#carinho</b>.
+            Presentes alimentam e atacam o boss durante a batalha (1 diamante = 50 de dano).
+          </div>
+        </div>
+        <div class="nb-card mb-3">
+          <h2>Onde assistir</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            Acompanhe ao vivo na página: <a href="#" id="linkBichinho" target="_blank">Abrir página BICHINHO</a>.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== 3 PONTINHOS ===================== -->
+      <div class="tab-page" id="tab-tres" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>JOGO DOS 3 PONTINHOS</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="kv"><strong>Rodada:</strong> <span id="tresRound">-</span></div>
+            <div class="kv"><strong>Dica:</strong> <span id="tresStage">-</span></div>
+            <div class="kv"><strong>Timer:</strong> <span id="tresTimer">--:--</span></div>
+            <div class="kv"><strong>Palavra:</strong> <span id="tresPalavra">-</span></div>
+            <div class="kv"><strong>Status:</strong> <span id="tresStatus">Parado</span></div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-8 d-flex align-items-end gap-2">
+              <button class="btn btn-nb btn-primary flex-fill" id="btnTresStart" onclick="tresStart()">Iniciar Jogo</button>
+              <button class="btn btn-nb btn-warning flex-fill" id="btnTresPause" onclick="tresPause()" disabled>Pausar</button>
+              <button class="btn btn-nb btn-danger flex-fill" id="btnTresStop" onclick="tresStop()" disabled>Parar</button>
+            </div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-nb btn-dark flex-fill" onclick="tresReset()">Resetar</button>
+            </div>
+          </div>
+          <div class="text-secondary" style="font-size:0.78rem">
+            Dica 1 (2min, 30pts) → Dica 2 (1min, 20pts) → Dica 3 (30s, 10pts). O chat adivinha a palavra em texto livre.
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Configuração de Presentes</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="row g-2 align-items-end">
+              <div class="col-4">
+                <label class="form-label mb-0" for="tresGiftSize">Presente A — Revelar Tamanho</label>
+                <input type="text" class="form-control form-control-sm" id="tresGiftSize" list="soundGiftList" placeholder="Nome do gift...">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0" for="tresGiftLetter">Presente B — Primeira Letra</label>
+                <input type="text" class="form-control form-control-sm" id="tresGiftLetter" list="soundGiftList" placeholder="Nome do gift...">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0" for="tresGiftTicket">Ingresso — Liberar Chat</label>
+                <input type="text" class="form-control form-control-sm" id="tresGiftTicket" list="soundGiftList" placeholder="Nome do gift...">
+              </div>
+            </div>
+            <div class="text-secondary mt-2" style="font-size:0.72rem">
+              Presente A revela o tamanho. Presente B revela a 1ª letra (só após o A). Ingresso libera o chat para palpitar (Passe Livre); deixe vazio para todos participarem.
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Tempos do Jogo</h2>
+          <div class="mb-3 p-2 bg-light border border-dark rounded">
+            <div class="row g-2 align-items-end">
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 1 — Tempo (s)</label>
+                <input type="number" class="form-control form-control-sm" id="tresTime1" min="10" max="300" value="120">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 2 — Tempo (s)</label>
+                <input type="number" class="form-control form-control-sm" id="tresTime2" min="10" max="300" value="60">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 3 — Tempo (s)</label>
+                <input type="number" class="form-control form-control-sm" id="tresTime3" min="10" max="300" value="30">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 1 — Pontos</label>
+                <input type="number" class="form-control form-control-sm" id="tresPts1" min="1" max="100" value="30">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 2 — Pontos</label>
+                <input type="number" class="form-control form-control-sm" id="tresPts2" min="1" max="100" value="20">
+              </div>
+              <div class="col-4">
+                <label class="form-label mb-0">Dica 3 — Pontos</label>
+                <input type="number" class="form-control form-control-sm" id="tresPts3" min="1" max="100" value="10">
+              </div>
+            </div>
+            <div class="d-flex align-items-end mt-2">
+              <button class="btn btn-nb btn-success btn-tiny" onclick="saveTresConfig()">Salvar</button>
+            </div>
+            <div class="text-secondary mt-2" style="font-size:0.72rem">
+              Configure o tempo (em segundos) e pontos de cada dica. A Dica 1 vale mais por ser mais difícil.
+            </div>
+          </div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Ranking Semanal</h2>
+          <div id="tresWeeklyList" class="text-secondary" style="font-size:0.85rem">Ninguém acertou ainda esta semana.</div>
+        </div>
+
+        <div class="nb-card mb-3">
+          <h2>Onde assistir</h2>
+          <div class="text-secondary" style="font-size:0.85rem">
+            Acompanhe ao vivo na página: <a href="#" id="linkTres" target="_blank">Abrir página 3 PONTINHOS</a>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4 d-flex" style="min-height:0">
+      <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="m-0">Logs</h2>
+          <div class="d-flex gap-2">
+            <button class="btn btn-nb btn-dark btn-sm" onclick="copyAllLogs()">Copiar Logs</button>
+            <button class="btn btn-nb btn-danger btn-sm" onclick="clearLogs()" title="Limpar tela de logs">Limpar</button>
+          </div>
+        </div>
+        <div class="log-area" id="logArea">
+          <div class="log-line log-info">[Painel] Pronto. Configure e clique em Conectar.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
+
+function switchTab(tab) {
+  // Bloqueia navegação para aba não liberada (gating de funcionalidades)
+  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  if (btn && btn.style.display === "none") return;
+  document.querySelectorAll(".tab-page").forEach((el) => (el.style.display = "none"));
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  const page = document.getElementById("tab-" + tab);
+  if (page) page.style.display = "block";
+  if (tab === "alerts") loadSoundAlerts();
+  if (tab === "batalha") { loadBattleState(); loadBattleHistory(1); }
+  if (tab === "caca") { loadCacaState(); }
+  if (tab === "bichinho") { vpetLoadState(); }
+  if (tab === "tres") { tresLoadState(); }
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+let ws = null;
+let wsRetry = 0;
+let roomCode = "";
+let gameActive = false;
+
+function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers }).then(async (res) => {
+    if (res.status === 401) {
+      logout();
+      throw new Error("Sessão expirada");
+    }
+    return res.json();
+  });
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  location.href = "/login";
+}
+
+function connectLogs() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/logs?token=${encodeURIComponent(token)}`);
+
+  ws.onopen = () => {
+    wsRetry = 0;
+    setStatus(true, "Conectado ao servidor");
+  };
+
+  ws.onclose = () => {
+    setStatus(false, "Desconectado do servidor - reconectando...");
+    const delay = Math.min(1000 * Math.pow(2, wsRetry), 10000);
+    wsRetry++;
+    setTimeout(connectLogs, delay);
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "log") {
+      addLog(msg.text);
+    } else if (msg.type === "status") {
+      updateStatus(msg);
+    } else if (msg.type === "word") {
+      const el = document.getElementById("currentWord");
+      if (el) el.textContent = msg.word || "-";
+    } else if (msg.type === "game_start") {
+      gameActive = true;
+      syncPanelNewGameButton(window.lastStateStr || "connected");
+      fetchHistoryAll();
+    } else if (msg.type === "game_over") {
+      gameActive = false;
+      syncPanelNewGameButton(window.lastStateStr || "connected");
+      fetchHistoryAll();
+    } else if (msg.type === "tts_test_ready" && msg.url) {
+      const a = new Audio(msg.url);
+      a.play().catch(() => {});
+    } else if (msg.type === "chat_narrate") {
+      if (msg.url) {
+        enqueueNarrate({ url: msg.url });
+      } else if (msg.text) {
+        enqueueNarrate({ text: msg.text });
+      }
+    } else if (msg.type === "gift_event") {
+      playGiftSound(msg.gift, msg.repeat_count);
+    } else if (msg.type === "sound_alerts_updated") {
+      loadSoundAlerts();
+    } else if (["battle_tick", "battle_state", "battle_action", "battle_round_end", "battle_ranking"].includes(msg.type)) {
+      handleBattleMsg(msg);
+    } else if (["caca_state", "caca_word_found", "caca_finished"].includes(msg.type)) {
+      handleCacaMsg(msg);
+    } else if (["vpet_state", "vpet_evolve", "vpet_battle_end", "vpet_bag"].includes(msg.type)) {
+      handleVpetMsg(msg);
+    } else if (["tres_state", "tres_dica", "tres_tick", "tres_winner", "tres_timeout", "tres_weekly"].includes(msg.type)) {
+      handleTresMsg(msg);
+    } else if (msg.type === "battle_reset") {
+      loadBattleState();
+    }
+  };
+}
+
+connectLogs();
+
+// ---------------- Alertas Sonoros ----------------
+let soundAlerts = {};
+let soundAudio = null;
+const SOUND_EFFECT_GAP_MS = 250;
+const MAX_ALERT_SECONDS = 10;
+let soundDurations = {};
+let soundEffectQueue = [];
+let soundEffectPlaying = false;
+let soundEffectGapTimer = null;
+
+const CONNECT_SOUND_KEY = "__connect__";
+let connectSoundSeenOnce = false;
+let lastConnectState = null;
+
+function playConnectSound() {
+  const entry = soundAlerts[CONNECT_SOUND_KEY];
+  if (entry && entry.normal) {
+    enqueueSoundEffects([entry.normal]);
+    return;
+  }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    const now = ctx.currentTime;
+    [880, 1175].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t = now + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+    setTimeout(() => { try { ctx.close(); } catch {} }, 800);
+  } catch {}
+}
+
+function enqueueSoundEffects(urls) {
+  for (const u of urls) if (u) soundEffectQueue.push(u);
+  processSoundEffectQueue();
+}
+
+function processSoundEffectQueue() {
+  if (soundEffectPlaying) return;
+  const url = soundEffectQueue.shift();
+  if (!url) return;
+  soundEffectPlaying = true;
+  const a = new Audio(url);
+  a.preload = "auto";
+  a.onended = nextSoundEffect;
+  a.onerror = nextSoundEffect;
+  a.play().catch(nextSoundEffect);
+  soundAudio = a;
+}
+
+function nextSoundEffect() {
+  soundEffectPlaying = false;
+  if (soundEffectGapTimer) clearTimeout(soundEffectGapTimer);
+  soundEffectGapTimer = setTimeout(processSoundEffectQueue, SOUND_EFFECT_GAP_MS);
+}
+
+function cacheSoundDuration(url) {
+  if (!url || soundDurations[url] !== undefined) return;
+  try {
+    const a = new Audio(url);
+    a.preload = "metadata";
+    a.onloadedmetadata = () => {
+      soundDurations[url] = isFinite(a.duration) ? a.duration : 0;
+    };
+  } catch {}
+}
+
+function cacheAllSoundDurations() {
+  for (const entry of Object.values(soundAlerts)) {
+    cacheSoundDuration(entry.normal);
+    cacheSoundDuration(entry.combo);
+  }
+}
+
+function resolveSoundEntry(gift) {
+  const key = String(gift || "").trim();
+  if (!key) return null;
+  if (soundAlerts[key]) return soundAlerts[key];
+  if (soundAlerts[key.toLowerCase()]) return soundAlerts[key.toLowerCase()];
+  const g = giftByName(key);
+  if (g) {
+    if (soundAlerts[g.name]) return soundAlerts[g.name];
+    const pt = getGiftPtName(g.name);
+    if (pt && soundAlerts[pt]) return soundAlerts[pt];
+  }
+  const ptRaw = getGiftPtName(key);
+  if (ptRaw && ptRaw.toLowerCase() !== key.toLowerCase() && soundAlerts[ptRaw]) return soundAlerts[ptRaw];
+  return null;
+}
+
+function computeNormalPlays(repeatCount, duration) {
+  const secs = duration > 0 ? duration : 0;
+  let maxPlays;
+  if (secs > 0) {
+    maxPlays = Math.max(1, Math.floor(MAX_ALERT_SECONDS / secs));
+  } else {
+    maxPlays = 5; // duração ainda desconhecida
+  }
+  return Math.min(repeatCount, maxPlays);
+}
+
+function playGiftSound(gift, repeat_count) {
+  const entry = resolveSoundEntry(gift);
+  if (!entry) return;
+  const repeatCount = Math.max(1, repeat_count || 1);
+  if (repeatCount > 1 && entry.combo) {
+    enqueueSoundEffects([entry.combo]);
+    return;
+  }
+  if (!entry.normal) return;
+  if (repeatCount > 1) {
+    const duration = soundDurations[entry.normal] || 0;
+    const plays = computeNormalPlays(repeatCount, duration);
+    const urls = [];
+    for (let i = 0; i < plays; i++) urls.push(entry.normal);
+    enqueueSoundEffects(urls);
+  } else {
+    enqueueSoundEffects([entry.normal]);
+  }
+}
+
+async function loadSoundAlerts() {
+  try {
+    const data = await apiFetch("/api/sound-alerts");
+    if (data.success) {
+      soundAlerts = data.alerts || {};
+      cacheAllSoundDurations();
+      renderSoundAlerts();
+    }
+  } catch (e) {}
+}
+
+function renderSoundAlerts() {
+  const container = document.getElementById("soundAlertsList");
+  if (!container) return;
+  const connectEntry = soundAlerts[CONNECT_SOUND_KEY] || { normal: "", combo: "" };
+  const gifts = Object.keys(soundAlerts).filter((g) => g !== CONNECT_SOUND_KEY);
+  let html = `
+    <div class="mb-3 p-2 bg-light border border-dark rounded">
+      <strong>Som de Conexão</strong>
+      <div class="text-secondary" style="font-size:0.72rem">Toca quando a live conecta. Sem arquivo, usa o beep padrão.</div>
+      <div class="row g-2 mt-1 align-items-end">
+        <div class="col-7">
+          <input type="file" class="form-control form-control-sm" id="connectSoundFile" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
+        </div>
+        <div class="col-5 d-flex gap-2">
+          <button class="btn btn-nb btn-success btn-tiny flex-shrink-0" onclick="uploadConnectSound()">Anexar</button>
+          <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeConnectSound()" title="Remover som de conexão">Remover</button>
+        </div>
+      </div>
+      ${connectEntry.normal ? `<div class="mt-2"><audio controls preload="none" style="height:34px;width:100%" src="${esc(connectEntry.normal)}"></audio></div>` : ""}
+      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px" id="connectSoundMsg"></div>
+    </div>
+    <div class="mb-3 p-2 bg-light border border-dark rounded">
+      <strong>Adicionar alerta (áudio normal)</strong>
+      <div class="row g-2 mt-1 align-items-end">
+        <div class="col-5">
+          <label class="form-label mb-0" for="soundGiftInput">Gift</label>
+          <input type="text" class="form-control form-control-sm" id="soundGiftInput" list="soundGiftList" placeholder="Nome do gift..." autocomplete="off">
+          <datalist id="soundGiftList">${giftTagList.map(g => `<option value="${esc(g.name)}">`).join("")}</datalist>
+        </div>
+        <div class="col-4">
+          <label class="form-label mb-0" for="soundFileInput">Áudio normal</label>
+          <input type="file" class="form-control form-control-sm" id="soundFileInput" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
+        </div>
+        <div class="col-3">
+          <button class="btn btn-nb btn-success btn-tiny" onclick="uploadSoundAlert()">Anexar</button>
+        </div>
+      </div>
+      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px" id="soundAlertMsg"></div>
+    </div>`;
+  if (gifts.length === 0) {
+    html += `<div class="text-secondary" style="font-size:0.8rem">Nenhum alerta configurado ainda.</div>`;
+  } else {
+    gifts.forEach((g, idx) => {
+      const entry = soundAlerts[g] || { normal: "", combo: "" };
+      html += `
+        <div class="mb-2 p-2 bg-light border border-dark rounded">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong style="font-size:0.85rem">${esc(g)}</strong>
+            <button class="btn btn-nb btn-danger btn-tiny" onclick="removeGiftSound(${idx})">Remover gift</button>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="text-secondary" style="font-size:0.72rem;font-weight:700">Áudio normal</div>
+              <audio controls preload="none" style="height:34px;width:100%" src="${esc(entry.normal || "")}"></audio>
+              <div class="d-flex gap-2 mt-1">
+                <input type="file" class="form-control form-control-sm" id="sndN_${idx}" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
+                <button class="btn btn-nb btn-dark btn-tiny flex-shrink-0" onclick="uploadSoundSlot(${idx},'normal')">Anexar</button>
+                <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeSoundSlot(${idx},'normal')" title="Remover áudio normal">×</button>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="text-secondary" style="font-size:0.72rem;font-weight:700">Áudio combo</div>
+              <audio controls preload="none" style="height:34px;width:100%" src="${esc(entry.combo || "")}"></audio>
+              <div class="d-flex gap-2 mt-1">
+                <input type="file" class="form-control form-control-sm" id="sndC_${idx}" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
+                <button class="btn btn-nb btn-dark btn-tiny flex-shrink-0" onclick="uploadSoundSlot(${idx},'combo')">Anexar</button>
+                <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeSoundSlot(${idx},'combo')" title="Remover áudio combo">×</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+async function uploadSoundAlert() {
+  const giftInput = document.getElementById("soundGiftInput");
+  const fileInput = document.getElementById("soundFileInput");
+  const msg = document.getElementById("soundAlertMsg");
+  const gift = (giftInput.value || "").trim();
+  if (!gift) { if (msg) msg.textContent = "Digite o nome do gift."; return; }
+  if (!fileInput.files || !fileInput.files[0]) { if (msg) msg.textContent = "Selecione um arquivo de áudio."; return; }
+  const fd = new FormData();
+  fd.append("gift", gift);
+  fd.append("type", "normal");
+  fd.append("file", fileInput.files[0]);
+  try {
+    const data = await apiFetch("/api/sound-alerts", { method: "POST", body: fd });
+    if (data.success) {
+      const cur = soundAlerts[gift] || { normal: "", combo: "" };
+      cur.normal = data.url;
+      soundAlerts[gift] = cur;
+      renderSoundAlerts();
+      if (msg) msg.textContent = "Alerta salvo!";
+      addLog(`[Alerta] Som anexado ao gift: ${gift}`);
+    } else {
+      if (msg) msg.textContent = data.error || "Erro ao salvar.";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Erro de rede: " + e.message;
+  }
+}
+
+async function uploadConnectSound() {
+  const fileInput = document.getElementById("connectSoundFile");
+  const msg = document.getElementById("connectSoundMsg");
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    if (msg) msg.textContent = "Selecione um arquivo de áudio.";
+    return;
+  }
+  const fd = new FormData();
+  fd.append("gift", CONNECT_SOUND_KEY);
+  fd.append("type", "normal");
+  fd.append("file", fileInput.files[0]);
+  try {
+    const data = await apiFetch("/api/sound-alerts", { method: "POST", body: fd });
+    if (data.success) {
+      const cur = soundAlerts[CONNECT_SOUND_KEY] || { normal: "", combo: "" };
+      cur.normal = data.url;
+      soundAlerts[CONNECT_SOUND_KEY] = cur;
+      cacheSoundDuration(data.url);
+      renderSoundAlerts();
+      if (msg) msg.textContent = "Som de conexão salvo!";
+      addLog("[Alerta] Som de conexão configurado");
+    } else {
+      if (msg) msg.textContent = data.error || "Erro ao salvar.";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Erro de rede: " + e.message;
+  }
+}
+
+async function removeConnectSound() {
+  const msg = document.getElementById("connectSoundMsg");
+  try {
+    const data = await apiFetch(`/api/sound-alerts?gift=${encodeURIComponent(CONNECT_SOUND_KEY)}`, { method: "DELETE" });
+    if (data.success) {
+      delete soundAlerts[CONNECT_SOUND_KEY];
+      renderSoundAlerts();
+      if (msg) msg.textContent = "Som de conexão removido (volta o beep padrão).";
+      addLog("[Alerta] Som de conexão removido");
+    } else {
+      if (msg) msg.textContent = data.error || "Erro ao remover.";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Erro de rede: " + e.message;
+  }
+}
+
+async function uploadSoundSlot(idx, slot) {
+  const gifts = Object.keys(soundAlerts);
+  const gift = gifts[idx];
+  if (!gift) return;  const fileInput = document.getElementById(slot === "combo" ? `sndC_${idx}` : `sndN_${idx}`);
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+  const fd = new FormData();
+  fd.append("gift", gift);
+  fd.append("type", slot);
+  fd.append("file", fileInput.files[0]);
+  try {
+    const data = await apiFetch("/api/sound-alerts", { method: "POST", body: fd });
+    if (data.success) {
+      const cur = soundAlerts[gift] || { normal: "", combo: "" };
+      cur[slot] = data.url;
+      soundAlerts[gift] = cur;
+      renderSoundAlerts();
+      addLog(`[Alerta] Som ${slot} anexado ao gift: ${gift}`);
+    }
+  } catch (e) {}
+}
+
+async function removeSoundSlot(idx, slot) {
+  const gifts = Object.keys(soundAlerts);
+  const gift = gifts[idx];
+  if (!gift) return;
+  try {
+    const data = await apiFetch(`/api/sound-alerts?gift=${encodeURIComponent(gift)}&slot=${slot}`, { method: "DELETE" });
+    if (data.success) {
+      if (soundAlerts[gift]) soundAlerts[gift][slot] = "";
+      if (soundAlerts[gift] && !soundAlerts[gift].normal && !soundAlerts[gift].combo) delete soundAlerts[gift];
+      renderSoundAlerts();
+      addLog(`[Alerta] Som ${slot} removido do gift: ${gift}`);
+    }
+  } catch (e) {}
+}
+
+async function removeGiftSound(idx) {
+  const gifts = Object.keys(soundAlerts);
+  const gift = gifts[idx];
+  if (!gift) return;
+  try {
+    const data = await apiFetch(`/api/sound-alerts?gift=${encodeURIComponent(gift)}`, { method: "DELETE" });
+    if (data.success) {
+      delete soundAlerts[gift];
+      renderSoundAlerts();
+      addLog(`[Alerta] Todos os sons removidos do gift: ${gift}`);
+    }
+  } catch (e) {}
+}
+
+// ---------------- Assinatura / Planos ----------------
+let billingData = null;
+
+function toggleBilling() {
+  const card = document.getElementById("billingCard");
+  card.style.display = card.style.display === "none" ? "block" : "none";
+  if (card.style.display === "block" && billingData) renderBilling();
+}
+
+async function loadBilling() {
+  try {
+    const data = await apiFetch("/api/billing");
+    if (!data.success) return;
+    billingData = data;
+    const btn = document.getElementById("btnPlan");
+    if (btn) {
+      const name = (data.plans.find((p) => p.code === data.plan) || {}).name || data.plan;
+      btn.textContent = "Plano: " + name;
+    }
+  } catch (e) {}
+}
+
+function renderBilling() {
+  const info = document.getElementById("billingInfo");
+  const plansEl = document.getElementById("billingPlans");
+  const msg = document.getElementById("billingMsg");
+  if (!billingData) return;
+  const cur = billingData.plans.find((p) => p.code === billingData.plan) || {};
+  const exp = billingData.plan_expires_at ? ` | Expira: ${billingData.plan_expires_at.replace("T", " ").slice(0, 16)}` : "";
+  info.innerHTML = `Plano atual: <b>${esc(cur.name || billingData.plan)}</b>${billingData.plan !== "free" ? exp : " (trial gratuito)"}`;
+  plansEl.innerHTML = "";
+  for (const p of billingData.plans) {
+    if (p.code === "free") continue;
+    const active = p.code === billingData.plan;
+    plansEl.innerHTML += `
+      <button class="btn btn-nb ${active ? "btn-success" : "btn-primary"}" onclick="upgradePlan('${p.code}')" ${active ? "disabled" : ""}>
+        ${esc(p.name)} - R$ ${p.price}${p.period === "yearly" ? "/ano" : "/mês"}
+      </button>`;
+  }
+  msg.textContent = "";
+}
+
+async function upgradePlan(code) {
+  const msg = document.getElementById("billingMsg");
+  msg.textContent = "Gerando pagamento...";
+  try {
+    const data = await apiFetch("/api/billing/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: code }),
+    });
+    if (data.success && data.checkout_url) {
+      window.location.href = data.checkout_url;
+    } else {
+      msg.textContent = data.error || "Erro ao gerar pagamento";
+    }
+  } catch (e) {
+    msg.textContent = "Erro de rede: " + e.message;
+  }
+}
+
+// ---------------- BATALHA ----------------
+let battleState = { active: false, duration: 180, remaining: 0, leaders: null, last_action: null };
+let battleRanking = { taps: [], coins: [] };
+
+function fmtTimeBattle(sec) {
+  const s = Math.max(0, sec || 0);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+}
+
+function battleAvatarHtml(url) {
+  if (!url) return "";
+  return `<img src="${esc(url)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`;
+}
+
+function handleBattleMsg(msg) {
+  if (msg.type === "battle_tick" || msg.type === "battle_state") {
+    if (msg.active !== undefined) battleState.active = !!msg.active;
+    if (msg.remaining !== undefined) battleState.remaining = msg.remaining;
+    if (msg.duration !== undefined) battleState.duration = msg.duration;
+    if (msg.leaders !== undefined) battleState.leaders = msg.leaders;
+    if (msg.last_action) battleState.last_action = msg.last_action;
+    renderBattle();
+  } else if (msg.type === "battle_action") {
+    battleState.last_action = msg;
+    renderBattle();
+  } else if (msg.type === "battle_round_end") {
+    battleState.active = false;
+    battleState.remaining = 0;
+    battleState.last_winners = msg;
+    renderBattle();
+  } else if (msg.type === "battle_ranking") {
+    battleRanking = msg || { taps: [], coins: [] };
+    renderBattleRanking();
+  }
+}
+
+async function loadBattleState() {
+  try {
+    const data = await apiFetch("/api/battle/state");
+    if (data.success) {
+      if (data.battle) Object.assign(battleState, data.battle);
+      battleRanking = data.ranking || { taps: [], coins: [] };
+      renderBattle();
+    }
+  } catch (e) {}
+}
+
+function renderBattle() {
+  const timer = document.getElementById("battleTimer");
+  if (timer) timer.textContent = fmtTimeBattle(battleState.remaining);
+  const action = document.getElementById("battleAction");
+  if (action && battleState.last_action) {
+    const la = battleState.last_action;
+    action.textContent = `${la.nickname || la.user} enviou ${la.count} ${la.type === "coin" ? "Moedas 🪙" : "Taps ❤"}`;
+  }
+  const bs = document.getElementById("btnBattleStart");
+  const bp = document.getElementById("btnBattleStop");
+  if (bs) bs.disabled = !!battleState.active || window.lastStateStr !== "connected";
+  if (bp) bp.disabled = !battleState.active;
+  renderBattleLeader();
+  renderBattleRanking();
+}
+
+function renderBattleLeader() {
+  const elCoin = document.getElementById("battleCoinLeader");
+  const elTap = document.getElementById("battleTapLeader");
+  const c = battleState.leaders && battleState.leaders.coin;
+  const t = battleState.leaders && battleState.leaders.tap;
+  if (elCoin) elCoin.innerHTML = c ? `${battleAvatarHtml(c.avatar)}<b>${esc(c.nickname)}</b> — ${c.coins} 🪙` : "<span class='text-secondary'>Ninguém ainda</span>";
+  if (elTap) elTap.innerHTML = t ? `${battleAvatarHtml(t.avatar)}<b>${esc(t.nickname)}</b> — ${t.taps} ❤` : "<span class='text-secondary'>Ninguém ainda</span>";
+}
+
+function renderBattleRanking() {
+  const listCoin = document.getElementById("battleCoinRanking");
+  const listTap = document.getElementById("battleTapRanking");
+  const medal = (i) => ["🥇", "🥈", "🥉"][i] || `${i + 1}º`;
+  if (listCoin) listCoin.innerHTML = battleRanking.coins.map((r, i) => `<div class="p-1" style="font-size:0.85rem">${medal(i)} ${battleAvatarHtml(r.avatar)}${esc(r.nickname || r.user)} — <b>${r.coins}</b> 🪙</div>`).join("") || "<span class='text-secondary' style='font-size:0.8rem'>Ninguém ainda</span>";
+  if (listTap) listTap.innerHTML = battleRanking.taps.map((r, i) => `<div class="p-1" style="font-size:0.85rem">${medal(i)} ${battleAvatarHtml(r.avatar)}${esc(r.nickname || r.user)} — <b>${r.taps}</b> ❤</div>`).join("") || "<span class='text-secondary' style='font-size:0.8rem'>Ninguém ainda</span>";
+}
+
+async function startBattle() {
+  const dur = parseInt(document.getElementById("battleDuration").value, 10) || 180;
+  const data = await apiFetch("/api/battle/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ duration: dur }),
+  });
+  if (data.success) addLog("[Batalha] Rodada iniciada!");
+  else addLog(`[Batalha] [!] ${data.error || "Erro"}`);
+}
+
+async function stopBattle() {
+  const data = await apiFetch("/api/battle/stop", { method: "POST" });
+  if (data.success) addLog("[Batalha] Rodada finalizada.");
+}
+
+async function resetBattle() {
+  if (!confirm("Resetar o ranking geral da BATALHA?")) return;
+  const data = await apiFetch("/api/battle/reset", { method: "POST" });
+  if (data.success) { battleRanking = { taps: [], coins: [] }; renderBattleRanking(); addLog("[Batalha] Ranking resetado."); }
+}
+
+let bhPage = 1;
+async function loadBattleHistory(page) {
+  bhPage = Math.max(1, page || 1);
+  const params = new URLSearchParams({ page: bhPage, pageSize: 10 });
+  const s = (document.getElementById("bhSearch").value || "").trim();
+  const room = (document.getElementById("bhRoom").value || "").trim();
+  const from = document.getElementById("bhFrom").value;
+  const to = document.getElementById("bhTo").value;
+  if (s) params.set("search", s);
+  if (room) params.set("room", room);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  try {
+    const data = await apiFetch("/api/battle/history?" + params.toString());
+    if (data.success) renderBattleHistory(data);
+  } catch (e) {}
+}
+
+function battleAvatarSmall(url) {
+  if (!url) return "";
+  return `<img src="${esc(url)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`;
+}
+
+function renderBattleHistory(data) {
+  const tbody = document.getElementById("battleHistoryBody");
+  const items = data.items || [];
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-3">Nenhuma batalha encontrada.</td></tr>';
+  } else {
+    tbody.innerHTML = items.map(r => {
+      const dt = String(r.started_at || "").replace("T", " ").slice(0, 16);
+      const dur = Math.round((r.duration_s || 0) / 60) + "min";
+      const tap = r.winner_tap_user ? `${battleAvatarSmall(r.winner_tap_avatar)}<b>${esc(r.winner_tap_nickname || r.winner_tap_user)}</b>` : "-";
+      const coin = r.winner_coin_user ? `${battleAvatarSmall(r.winner_coin_avatar)}<b>${esc(r.winner_coin_nickname || r.winner_coin_user)}</b>` : "-";
+      const room = r.room_id ? `<code style="font-size:0.7rem">${esc(String(r.room_id).slice(-6))}</code>` : "-";
+      return `<tr><td>${esc(dt)}</td><td>${room}</td><td>${esc(dur)}</td><td>${tap}</td><td>${coin}</td></tr>`;
+    }).join("");
+  }
+  const total = data.total || 0;
+  document.getElementById("bhInfo").textContent = `Página ${data.page} de ${Math.max(1, Math.ceil(total / data.pageSize))} · ${total} batalhas`;
+  document.getElementById("bhPrev").disabled = data.page <= 1;
+  document.getElementById("bhNext").disabled = data.page * data.pageSize >= total;
+}
+
+async function loadBattleReport() {
+  const room = (document.getElementById("bhRoom").value || "").trim();
+  const el = document.getElementById("bhReport");
+  if (!room) { el.textContent = "Digite um Room ID para ver o resumo da live."; return; }
+  el.textContent = "Buscando resumo...";
+  try {
+    const data = await apiFetch(`/api/battle/report?room_id=${encodeURIComponent(room)}`);
+    if (data.success && data.report) {
+      const r = data.report;
+      const top = (arr, icon) => arr.map(w => `${esc(w.nickname || w.user)} (${w.wins}🏆)`).join(", ") || "-";
+      el.textContent = `Live ${r.room_id}: ${r.battles} batalhas · ${r.users} participantes · ${r.total_taps} taps · ${r.total_coins} moedas. Top TAP: ${top(r.top_tap_winners, "❤")} | Top MOEDA: ${top(r.top_coin_winners, "🟡")}`;
+    } else {
+      el.textContent = data.error || "Erro ao gerar relatório.";
+    }
+  } catch (e) {
+    el.textContent = "Erro de rede: " + e.message;
+  }
+}
+
+function setStatus(ok, text) {
+  document.getElementById("statusDot").className = "status-dot" + (ok ? " connected" : "");
+  document.getElementById("statusText").textContent = text;
+}
+
+// ---------------- Caça Palavras ----------------
+let cacaState = { active: false, board: [], words: [], found_count: 0, total: 0, finished: false };
+
+function onCacaCmdMode() {
+  const mode = document.getElementById("cacaCmdMode").value;
+  document.getElementById("cacaPrefixRow").style.display = mode === "prefix" ? "flex" : "none";
+}
+
+async function saveCacaConfig() {
+  const mode = document.getElementById("cacaCmdMode").value;
+  const prefix = mode === "prefix" ? (document.getElementById("cacaPrefix").value.trim() || "cp") : "";
+  try {
+    const data = await apiFetch("/api/caca/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix }),
+    });
+    const label = mode === "emoji" ? "com emoji ao redor (ex: ❤️A1:A3✨)" : (prefix ? `com prefixo '${prefix}'` : "só coordenadas");
+    if (data.success) addLog(`[CaçaPalavras] Comando configurado — ${label}`);
+    else addLog(`[CaçaPalavras] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function startCaca() {
+  const count = parseInt(document.getElementById("cacaCount").value, 10) || 10;
+  await saveCacaConfig();
+  try {
+    const data = await apiFetch("/api/caca/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ count }),
+    });
+    if (data.success) addLog("[CaçaPalavras] Nova grade gerada!");
+    else addLog(`[CaçaPalavras] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function stopCaca() {
+  try {
+    const data = await apiFetch("/api/caca/stop", { method: "POST" });
+    if (data.success) addLog("[CaçaPalavras] Jogo encerrado.");
+    else addLog(`[CaçaPalavras] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function revealCaca(start, end) {
+  try {
+    await apiFetch("/api/caca/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ start, end }),
+    });
+  } catch (e) {}
+}
+
+function renderCacaWords() {
+  const list = document.getElementById("cacaWordsList");
+  if (!list) return;
+  if (!cacaState.active || !cacaState.words || !cacaState.words.length) {
+    list.textContent = "Nenhuma grade ativa.";
+    return;
+  }
+  const chips = cacaState.words.map(w => {
+    const done = w.found ? "✅" : "";
+    const who = w.found && (w.finder_nickname || w.finder) ? ` — ${esc(w.finder_nickname || w.finder)}` : "";
+    return `<button class="btn btn-nb btn-tiny mb-1 me-1 ${w.found ? "btn-success" : "btn-dark"}" onclick="revealCaca('${esc(w.start)}','${esc(w.end)}')" title="Revelar manualmente">${esc(w.text)} ${esc(w.start)}:${esc(w.end)} ${done}${who}</button>`;
+  }).join("");
+  list.innerHTML = chips || "Nenhuma palavra.";
+}
+
+function renderCaca() {
+  document.getElementById("cacaFound").textContent = cacaState.found_count || 0;
+  document.getElementById("cacaTotal").textContent = cacaState.total || 0;
+  document.getElementById("cacaStatus").textContent = cacaState.active ? (cacaState.finished ? "Finalizado" : "Ativo") : "Parado";
+  const bs = document.getElementById("btnCacaStart");
+  const bp = document.getElementById("btnCacaStop");
+  if (bs) bs.disabled = (!!cacaState.active && !cacaState.finished) || window.lastStateStr !== "connected";
+  if (bp) bp.disabled = !cacaState.active;
+  renderCacaWords();
+}
+
+function handleCacaMsg(msg) {
+  if (msg.type === "caca_state") { cacaState = msg; renderCaca(); }
+  else if (msg.type === "caca_word_found") { renderCacaWords(); }
+  else if (msg.type === "caca_finished") { cacaState.finished = true; renderCaca(); }
+}
+
+async function loadCacaState() {
+  try {
+    const data = await apiFetch("/api/caca/state");
+    if (data.success) { cacaState = data; renderCaca(); }
+  } catch (e) {}
+}
+
+// ---------------- Bichinho Virtual ----------------
+let vpetPanelState = { active: false, phase: "ovo-estelar", level: 0, hunger: 100, energy: 100, xp: 0, xp_next: 0, hatch_points: 0, hatch_need: 1000, batalhas_disponiveis: 0, bag_max: 3, battle_wins: 0 };
+
+function vpetPhaseName(p) {
+  const m = {
+    "ovo-estelar": "OVO ESTELAR", "filhote": "FILHOTE", "guardiao": "GUARDIÃO",
+    "guerreiro": "GUERREIRO", "lorde": "LORDE", "divindade": "DIVINDADE",
+  };
+  return m[p] || "OVO ESTELAR";
+}
+
+function renderVpet() {
+  document.getElementById("vpetPhase").textContent = `${vpetPhaseName(vpetPanelState.phase)} (Nível ${vpetPanelState.level ?? 0})`;
+  document.getElementById("vpetHunger").textContent = Math.round(vpetPanelState.hunger ?? 100);
+  document.getElementById("vpetEnergy").textContent = Math.round(vpetPanelState.energy ?? 100);
+  document.getElementById("vpetXp").textContent = `${vpetPanelState.xp || 0}${vpetPanelState.xp_next ? "/" + vpetPanelState.xp_next : ""}`;
+  document.getElementById("vpetWins").textContent = vpetPanelState.battle_wins || 0;
+  const bagEl = document.getElementById("vpetBag");
+  if (bagEl) bagEl.textContent = `${vpetPanelState.batalhas_disponiveis || 0}/${vpetPanelState.bag_max || 3}`;
+  const hatchEl = document.getElementById("vpetHatch");
+  if (hatchEl) hatchEl.textContent = `${vpetPanelState.hatch_points || 0}/${vpetPanelState.hatch_need || 1000}`;
+  const bt = document.getElementById("btnVpetToggle");
+  if (bt) {
+    const active = !!vpetPanelState.active;
+    bt.disabled = window.lastStateStr !== "connected";
+    bt.textContent = active ? "⏸ Pausar Mascote" : "▶ Iniciar Mascote";
+    bt.className = "btn btn-nb flex-fill " + (active ? "btn-danger" : "btn-primary");
+  }
+  const chk = document.getElementById("chkAssistant");
+  if (chk) {
+    chk.disabled = !vpetPanelState.active;
+    chk.checked = !!vpetPanelState.assistant_mode;
+  }
+  const bb = document.getElementById("btnVpetBattle");
+  if (bb) {
+    const isEgg = (vpetPanelState.level ?? 0) < 1;
+    const hasBag = (vpetPanelState.batalhas_disponiveis || 0) >= 1;
+    const canBattle = !!vpetPanelState.active && !isEgg && hasBag;
+    bb.disabled = !canBattle;
+    bb.title = canBattle
+      ? "Invocar o boss (consome 1 batalha da mochila)"
+      : (isEgg ? "O ovo ainda não chocou — use #chocar ou presentes" : (hasBag ? "Ative o Bichinho primeiro" : "Nenhuma batalha na mochila — aguarde 15 min ou use !abrirportal"));
+  }
+}
+
+function handleVpetMsg(msg) {
+  if (msg.type === "vpet_state") {
+    vpetPanelState = msg;
+    renderVpet();
+  } else if (msg.type === "vpet_bag") {
+    vpetPanelState.batalhas_disponiveis = msg.batalhas_disponiveis ?? 0;
+    vpetPanelState.bag_max = msg.max || 3;
+    renderVpet();
+  } else if (msg.type === "vpet_evolve") {
+    vpetPanelState.phase = msg.phase;
+    vpetPanelState.level = msg.level;
+    vpetPanelState.xp = msg.xp || 0;
+    vpetPanelState.xp_next = msg.xp_next || 0;
+    renderVpet();
+  } else if (msg.type === "vpet_battle_end") {
+    if (msg.state) { vpetPanelState = msg.state; renderVpet(); }
+  }
+}
+
+async function vpetLoadState() {
+  try {
+    const data = await apiFetch("/api/vpet/state");
+    if (data.success) { vpetPanelState = data; renderVpet(); }
+  } catch (e) {}
+}
+
+async function vpetToggle() {
+  const active = !!vpetPanelState.active;
+  if (active) {
+    const b = (vpetPanelState.battle && vpetPanelState.battle.state) || "idle";
+    if (b === "fight" || b === "countdown") {
+      if (!confirm("⚠️ VOCÊ ESTÁ EM UMA LUTA CONTRA O BOSS!\n\nPausar agora CANCELARÁ a batalha em andamento. Deseja continuar?")) return;
+    } else {
+      if (!confirm("Pausar o mascote? Fome/Energia param de decair, mas o progresso é mantido.")) return;
+    }
+    await vpetStop();
+  } else {
+    await vpetStart();
+  }
+}
+
+async function vpetAssistantMode(on) {
+  try {
+    const data = await apiFetch("/api/vpet/assistant_mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: !!on }),
+    });
+    if (data.success) addLog("[Bichinho] Modo Assistente " + (on ? "ATIVADO" : "desativado"));
+    else addLog(`[Bichinho] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[Bichinho] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function vpetStart() {
+  try {
+    const data = await apiFetch("/api/vpet/start", { method: "POST" });
+    if (data.success) addLog("[Bichinho] Mascote ativado!");
+    else addLog(`[Bichinho] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[Bichinho] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function vpetStop() {
+  try {
+    const data = await apiFetch("/api/vpet/stop", { method: "POST" });
+    if (data.success) addLog("[Bichinho] Mascote desativado.");
+    else addLog(`[Bichinho] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[Bichinho] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+async function vpetBattle() {
+  try {
+    const data = await apiFetch("/api/vpet/battle/start", { method: "POST" });
+    if (data.success) addLog("[Bichinho] Boss invocado!");
+    else addLog(`[Bichinho] [!] ${data.error}`);
+  } catch (err) {
+    addLog(`[Bichinho] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+// ---------------- Jogo dos 3 Pontinhos ----------------
+let tresPanelState = {
+  active: false, round_id: 0, stage: 0, stage_remaining: 0, stage_time: 0, stage_points: 0,
+  paused: false, finished: false, timeout: false, palavra: null, palavra_len: 0, first_letter: "",
+  size_revealed: false, first_letter_revealed: false, dicas: [], winner: null, vip: null,
+};
+
+function fmtTresTimer(s) {
+  s = Math.max(0, s || 0);
+  const m = Math.floor(s / 60), sec = s % 60;
+  return String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+}
+
+function renderTres() {
+  document.getElementById("tresRound").textContent = tresPanelState.round_id || "-";
+  document.getElementById("tresStage").textContent = tresPanelState.active ? ("Dica " + (tresPanelState.stage || 0)) : "-";
+  document.getElementById("tresTimer").textContent = tresPanelState.active ? fmtTresTimer(tresPanelState.stage_remaining) : "--:--";
+  document.getElementById("tresPalavra").textContent = (tresPanelState.palavra || (tresPanelState.palavra_len ? "_".repeat(tresPanelState.palavra_len) : "-")).toUpperCase();
+  const st = document.getElementById("tresStatus");
+  if (tresPanelState.paused) st.textContent = "Pausado";
+  else if (tresPanelState.finished) st.textContent = tresPanelState.timeout ? "Tempo esgotado" : (tresPanelState.winner ? "Vencedor: " + (tresPanelState.winner.nickname || tresPanelState.winner.user) : "Finalizado");
+  else if (tresPanelState.active) st.textContent = "Rodando";
+  else st.textContent = "Parado";
+  const bs = document.getElementById("btnTresStart");
+  const bp = document.getElementById("btnTresPause");
+  const bq = document.getElementById("btnTresStop");
+  if (bs) bs.disabled = !!tresPanelState.active || window.lastStateStr !== "connected";
+  if (bp) bp.disabled = !tresPanelState.active || tresPanelState.paused;
+  if (bq) bq.disabled = !tresPanelState.active;
+}
+
+function handleTresMsg(msg) {
+  if (msg.type === "tres_state") { tresPanelState = msg; renderTres(); }
+  else if (msg.type === "tres_dica") {
+    tresPanelState.stage = msg.stage;
+    tresPanelState.stage_remaining = msg.remaining;
+    renderTres();
+    addLog(`[3 Pontinhos] Dica ${msg.stage}: ${msg.dica} (${msg.points} pts)`);
+  } else if (msg.type === "tres_tick") {
+    tresPanelState.stage_remaining = msg.remaining;
+    renderTres();
+  } else if (msg.type === "tres_winner") {
+    tresPanelState.finished = true;
+    tresPanelState.winner = msg;
+    renderTres();
+    loadTresWeekly();
+  } else if (msg.type === "tres_timeout") {
+    tresPanelState.finished = true;
+    tresPanelState.timeout = true;
+    tresPanelState.palavra = msg.palavra;
+    renderTres();
+  } else if (msg.type === "tres_weekly") {
+    renderTresWeekly(msg.weekly || []);
+  }
+}
+
+function renderTresWeekly(list) {
+  const el = document.getElementById("tresWeeklyList");
+  if (!el) return;
+  if (!list || !list.length) { el.textContent = "Ninguém acertou ainda esta semana."; return; }
+  el.innerHTML = list.map((r, i) =>
+    `<div class="kv"><strong>${i + 1}º ${esc(r.nickname || r.user)}</strong><span>${r.pontos} pts (${r.acertos} acerto${r.acertos > 1 ? "s" : ""})</span></div>`
+  ).join("");
+}
+
+async function loadTresWeekly() {
+  try {
+    const data = await apiFetch("/api/tres/weekly");
+    if (data.success) renderTresWeekly(data.weekly);
+  } catch (e) {}
+}
+
+async function tresLoadState() {
+  try {
+    const data = await apiFetch("/api/tres/state");
+    if (data.success) { tresPanelState = data; renderTres(); }
+    loadTresWeekly();
+  } catch (e) {}
+}
+
+async function tresStart() {
+  try {
+    const data = await apiFetch("/api/tres/start", { method: "POST" });
+    if (data.success) addLog("[3 Pontinhos] Jogo iniciado!");
+    else addLog(`[3 Pontinhos] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+}
+
+async function tresPause() {
+  try {
+    const data = await apiFetch("/api/tres/pause", { method: "POST" });
+    if (data.success) addLog("[3 Pontinhos] Pausado.");
+    else addLog(`[3 Pontinhos] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+}
+
+async function tresStop() {
+  try {
+    const data = await apiFetch("/api/tres/stop", { method: "POST" });
+    if (data.success) addLog("[3 Pontinhos] Jogo parado.");
+    else addLog(`[3 Pontinhos] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+}
+
+async function tresReset() {
+  try {
+    const data = await apiFetch("/api/tres/reset", { method: "POST" });
+    if (data.success) addLog("[3 Pontinhos] Resetado.");
+    else addLog(`[3 Pontinhos] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+}
+
+async function saveTresConfig() {
+  const config = {
+    size: (document.getElementById("tresGiftSize").value || "").trim(),
+    letter: (document.getElementById("tresGiftLetter").value || "").trim(),
+    ticket: (document.getElementById("tresGiftTicket").value || "").trim(),
+    stage_times: [
+      parseInt(document.getElementById("tresTime1").value) || 120,
+      parseInt(document.getElementById("tresTime2").value) || 60,
+      parseInt(document.getElementById("tresTime3").value) || 30,
+    ],
+    stage_points: [
+      parseInt(document.getElementById("tresPts1").value) || 30,
+      parseInt(document.getElementById("tresPts2").value) || 20,
+      parseInt(document.getElementById("tresPts3").value) || 10,
+    ],
+  };
+  try {
+    const data = await apiFetch("/api/tres/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config }),
+    });
+    if (data.success) addLog("[3 Pontinhos] Configuração salva!");
+    else addLog(`[3 Pontinhos] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+}
+
+function syncPanelNewGameButton(stateStr) {
+  const btn = document.getElementById("btnNewGame");
+  if (!btn) return;
+
+  const isLiveActive = ["connected"].includes(stateStr);
+  if (!isLiveActive) {
+    btn.disabled = true;
+    btn.textContent = "Iniciar Partida";
+    btn.className = "btn btn-nb btn-success w-100";
+    btn.onclick = startNewGameFromPanel;
+    setManualButtonsEnabled(false);
+    return;
+  }
+
+  btn.disabled = false;
+  if (gameActive) {
+    btn.textContent = "Finalizar Partida";
+    btn.className = "btn btn-nb btn-danger w-100";
+    btn.onclick = endGameFromPanel;
+    setManualButtonsEnabled(true);
+  } else {
+    btn.textContent = "Iniciar Partida";
+    btn.className = "btn btn-nb btn-success w-100";
+    btn.onclick = startNewGameFromPanel;
+    setManualButtonsEnabled(false);
+  }
+}
+
+function setManualButtonsEnabled(enabled) {
+  const hint = document.getElementById("btnManualHint");
+  const riddle = document.getElementById("btnManualRiddle");
+  if (hint) hint.disabled = !enabled;
+  if (riddle) riddle.disabled = !enabled;
+}
+
+function setRunningUI(running) {
+  document.getElementById("btnConnect").disabled = running;
+  document.getElementById("btnStop").disabled = !running;
+  syncPanelNewGameButton(running ? "connected" : "offline");
+  document.getElementById("btnConnect").textContent = running ? "Conectar Live" : "Conectar Live";
+}
+
+function formatTime() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+function updateStatus(s) {
+  const stateEl = document.getElementById("liveState");
+  const roomEl = document.getElementById("roomId");
+  const rateEl = document.getElementById("apiRate");
+
+  window.lastStateStr = s.state;
+
+  if (s.state === "connected") {
+    stateEl.textContent = "Conectado";
+    stateEl.style.color = "#0b7a3a";
+  } else if (s.state === "offline") {
+    stateEl.textContent = "Offline";
+    stateEl.style.color = "#b30000";
+  } else if (s.state === "waiting") {
+    stateEl.textContent = "Aguardando live...";
+    stateEl.style.color = "#9a6a00";
+  } else {
+    stateEl.textContent = "Aguardando...";
+    stateEl.style.color = "#666";
+  }
+
+  roomEl.textContent = s.room_id || "-";
+
+  if (s.rate && s.rate.api) {
+    const api = s.rate.api;
+    const wsInfo = s.rate.websocket ? ` · WS ${s.rate.websocket.current}` : "";
+    rateEl.textContent = `${api.remaining}/${api.limit} req${wsInfo} · ${s.rate.tier || ""}`;
+  } else if (s.rate && s.rate.error) {
+    rateEl.textContent = `erro: ${s.rate.error}`;
+  }
+
+  if (s.state === "connected" && lastConnectState !== "connected" && connectSoundSeenOnce) {
+    playConnectSound();
+  }
+  lastConnectState = s.state;
+  connectSoundSeenOnce = true;
+}
+
+function addLog(text) {
+  const area = document.getElementById("logArea");
+  const line = document.createElement("div");
+  line.className = "log-line";
+
+  if (text.includes("ERRO") || text.includes("Error")) {
+    line.classList.add("log-err");
+  } else if (text.includes("[Guess]")) {
+    line.classList.add("log-guess");
+  } else if (text.includes("[Hint]") || text.includes("dica")) {
+    line.classList.add("log-hint");
+  } else if (text.includes("OK") || text.includes("Conectado") || text.includes("ao vivo")) {
+    line.classList.add("log-ok");
+  } else if (text.includes("ATENCAO") || text.includes("Warning")) {
+    line.classList.add("log-warn");
+  } else {
+    line.classList.add("log-info");
+  }
+
+  line.textContent = `[${formatTime()}] ${text}`;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+}
+
+function copyAllLogs() {
+  const area = document.getElementById("logArea");
+  const lines = Array.from(area.querySelectorAll(".log-line"));
+  const text = lines.map((l) => l.textContent).join("\n");
+  if (!text) {
+    addLog("[Painel] Nenhum log para copiar");
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    addLog("[Painel] Todos os logs foram copiados para a área de transferência!");
+  }).catch((err) => {
+    addLog("[Painel] [!] Erro ao copiar logs: " + err.message);
+  });
+}
+
+function clearLogs() {
+  const area = document.getElementById("logArea");
+  area.innerHTML = '<div class="log-line log-info">[Painel] Tela de logs limpada.</div>';
+}
+
+async function saveCredentials() {
+  const username = document.getElementById("username").value.trim();
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const engine = document.getElementById("tiktokEngine") ? document.getElementById("tiktokEngine").value : "";
+  const body = {};
+  if (username) body.username = username;
+  if (apiKey) body.api_key = apiKey;
+  if (engine) body.tiktok_engine = engine;
+  if (!body.username && !body.api_key && !body.tiktok_engine) return;
+  try {
+    await apiFetch("/api/panel-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {}
+}
+
+function onEngineChange() {
+  const engine = document.getElementById("tiktokEngine").value;
+  const hint = document.getElementById("engineHint");
+  if (hint) hint.textContent = engine === "tiktools"
+    ? "Conexão via Tik.Tools — exige API key."
+    : "Conexão direta via TikTokLive — não precisa de API key.";
+  saveCredentials();
+}
+
+async function clearApiKey() {
+  try {
+    await apiFetch("/api/panel-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clear_api_key: true }),
+    });
+    document.getElementById("apiKey").value = "";
+    document.getElementById("apiKey").placeholder = "Chave da api.tik.tools";
+    document.getElementById("btnClearKey").style.display = "none";
+    addLog("[Painel] Chave API removida");
+  } catch (err) {
+    addLog(`[Painel] [!] Erro ao limpar chave: ${err.message}`);
+  }
+}
+
+async function startGame() {
+  const username = document.getElementById("username").value.trim();
+
+  if (!username) {
+    addLog("[Painel] [!] Informe o usuário do TikTok");
+    return;
+  }
+
+  await saveCredentials();
+
+  const btn = document.getElementById("btnConnect");
+  btn.disabled = true;
+  btn.textContent = "Conectando...";
+
+  addLog(`[Painel] Solicitando conexão com @${username}...`);
+
+  try {
+    const data = await apiFetch("/start-game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (data.success) {
+      addLog("[Painel] Jogo iniciado com sucesso!");
+      setRunningUI(true);
+    } else {
+      addLog(`[Painel] [!] ${data.error}`);
+      btn.disabled = false;
+      btn.textContent = "Conectar";
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = "Conectar";
+  }
+}
+
+async function stopGame() {
+  const btn = document.getElementById("btnStop");
+  btn.disabled = true;
+  btn.textContent = "Desconectando...";
+
+  try {
+    const data = await apiFetch("/stop-game", { method: "POST" });
+    if (data.success) {
+      addLog("[Painel] Jogo encerrado");
+    } else {
+      addLog(`[Painel] [!] ${data.error}`);
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  }
+
+  setRunningUI(false);
+}
+
+async function startNewGameFromPanel() {
+  const btn = document.getElementById("btnNewGame");
+  btn.disabled = true;
+  btn.textContent = "Iniciando...";
+  try {
+    const res = await apiFetch(`/api/new-game`, { method: "POST" });
+    if (res.success) {
+      addLog("[Painel] Nova partida iniciada com sucesso!");
+    } else {
+      addLog(`[Painel] [!] Erro ao iniciar partida: ${res.error}`);
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  }
+  btn.disabled = false;
+  btn.textContent = "Iniciar Partida";
+}
+
+async function endGameFromPanel() {
+  const btn = document.getElementById("btnNewGame");
+  btn.disabled = true;
+  btn.textContent = "Finalizando...";
+  try {
+    const res = await apiFetch(`/api/end-game`, { method: "POST" });
+    if (res.success) {
+      addLog("[Painel] Partida finalizada manualmente!");
+    } else {
+      addLog(`[Painel] [!] Erro ao finalizar partida: ${res.error}`);
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  }
+  btn.disabled = false;
+  btn.textContent = "Finalizar Partida";
+}
+
+async function manualActionFromPanel(action) {
+  const label = action === "hint" ? "Dica" : "Charada";
+  try {
+    const res = await apiFetch(`/api/game/manual-action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.success) {
+      addLog(`[Painel] ${label} manual enviada ao jogo!`);
+    } else {
+      addLog(`[Painel] [!] Erro ao enviar ${label}: ${res.error}`);
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  }
+}
+
+function manualHintFromPanel() { manualActionFromPanel("hint"); }
+function manualRiddleFromPanel() { manualActionFromPanel("riddle"); }
+
+// Gift config
+const MAX_HINT_GIFTS = 5;
+let giftTags = [];
+let savedGiftTags = [];
+let giftTagList = [];
+let giftImageMap = {};
+let acMatches = [];
+let acIndex = -1;
+
+const giftInput = document.getElementById("giftTagInput");
+const giftAutocomplete = document.getElementById("giftAutocomplete");
+const giftTagsContainer = document.getElementById("giftTags");
+const giftCounter = document.getElementById("giftCounter");
+const giftHint = document.getElementById("giftHint");
+const btnSaveGift = document.getElementById("btnSaveGiftConfig");
+const btnSaveAll = document.getElementById("btnSaveAll");
+
+const MAX_RIDDLE_GIFTS = 1;
+let riddleTags = [];
+let savedRiddleTags = [];
+const riddleInput = document.getElementById("riddleTagInput");
+const riddleAutocomplete = document.getElementById("riddleAutocomplete");
+const riddleTagsContainer = document.getElementById("riddleTags");
+const riddleCounter = document.getElementById("riddleCounter");
+
+const MAX_SIZE_GIFTS = 1;
+let sizeGiftTag = "";
+let savedSizeGiftTag = "";
+const sizeGiftInput = document.getElementById("sizeGiftInput");
+const sizeGiftAutocomplete = document.getElementById("sizeGiftAutocomplete");
+const sizeGiftTagsContainer = document.getElementById("sizeGiftTags");
+const riddleHint = document.getElementById("riddleHint");
+
+// Preferências de Jogo
+let settingsDirty = false;
+let savedSettings = { apenas_seguidores: false, apenas_heart_me: false, command_prefix: "#", pct_dica: 70, pct_charada: 30, tts_rate: 1.0, tts_voice: "", chat_narr_enabled: false, chat_narr_mode: "all", chat_narr_char: "#" };
+const chkFollowers = document.getElementById("chkFollowers");
+const chkHeartMe = document.getElementById("chkHeartMe");
+const cmdPrefixInput = document.getElementById("cmdPrefix");
+const pctDicaInput = document.getElementById("pctDica");
+const pctCharadaInput = document.getElementById("pctCharada");
+const ttsRateInput = document.getElementById("ttsRate");
+const ttsRateLabel = document.getElementById("ttsRateLabel");
+const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
+const btnSaveSettings = document.getElementById("btnSaveSettings");
+const btnSaveSettingsGames = document.getElementById("btnSaveSettingsGames");
+const chkNarr = document.getElementById("chkNarr");
+const narrMode = document.getElementById("narrMode");
+const narrChar = document.getElementById("narrChar");
+let currentTtsVoice = "";
+
+// Gift translation dictionary (EN -> PT-BR)
+const GIFT_PT_MAP = {
+  "rose": "Rosa",
+  "finger heart": "Coração com os Dedos",
+  "hand heart": "Coração com as Mãos",
+  "tiktok": "TikTok",
+  "ice cream": "Casquinha de Sorvete",
+  "doughnut": "Rosquinha",
+  "donut": "Rosquinha",
+  "coffee": "Café",
+  "weights": "Halteres",
+  "paper crane": "Ave de Papel (Tsuru)",
+  "cap": "Boné",
+  "panda": "Panda",
+  "perfume": "Perfume",
+  "microphone": "Microfone",
+  "crown": "Coroa",
+  "gg": "GG",
+  "love bear": "Ursinho do Amor",
+  "sunglasses": "Óculos de Sol",
+  "gold mine": "Mina de Ouro",
+  "lion": "Leão",
+  "galaxy": "Galáxia",
+  "universe": "Universo",
+  "rosa": "Rosa",
+  "mushroom": "Cogumelo",
+  "lollipop": "Pirulito",
+  "fireworks": "Fogos de Artifício",
+  "swan": "Cisne",
+  "watermelon": "Melancia",
+  "chili": "Pimenta",
+  "balloon": "Balão",
+  "guitar": "Violão",
+  "boxing gloves": "Luvas de Boxe",
+  "cake slice": "Fatia de Bolo",
+  "blow a kiss": "Mandar Beijo",
+  "clap clap": "Palmas",
+  "club cheers": "Brinde",
+  "congratulations": "Parabéns",
+  "football": "Futebol",
+  "dragon": "Dragão",
+  "phoenix": "Fênix",
+  "castle": "Castelo",
+  "car": "Carro Esportivo",
+  "yacht": "Iate",
+  "rocket": "Foguete",
+  "interstellar": "Interestelar",
+  "planet": "Planeta",
+  "treasure chest": "Baú do Tesouro",
+  "whale": "Baleia",
+  "shining star": "Estrela Brilhante",
+  "magic hat": "Chapéu Mágico",
+  "gamepad": "Controle de Game",
+  "headphones": "Fones de Ouvido",
+  "pizza": "Fatia de Pizza",
+  "burger": "Hambúrguer",
+  "boba tea": "Chá Boba",
+  "diamond": "Diamante",
+  "ruby": "Rubi",
+  "gold": "Ouro"
+};
+
+function getGiftPtName(name) {
+  if (!name) return "";
+  const key = String(name).toLowerCase().trim();
+  return GIFT_PT_MAP[key] || name;
+}
+
+function getGiftLabel(name) {
+  const pt = getGiftPtName(name);
+  if (pt && pt.toLowerCase() !== String(name).toLowerCase()) {
+    return `${pt} (${name})`;
+  }
+  return name;
+}
+
+function giftByName(name) {
+  const key = String(name || "").toLowerCase().trim();
+  return giftTagList.find((t) => {
+    const en = t.name.toLowerCase();
+    const pt = getGiftPtName(t.name).toLowerCase();
+    return en === key || pt === key;
+  }) || null;
+}
+
+function giftDiamonds(name) {
+  const g = giftByName(name);
+  return g ? Number(g.diamond_count) || 0 : 0;
+}
+
+function giftLevel(name, minD, maxD) {
+  const d = giftDiamonds(name);
+  if (giftTags.length <= 1 || maxD === minD) return "Média";
+  const ratio = (d - minD) / (maxD - minD || 1);
+  if (ratio <= 0.25) return "Longe";
+  if (ratio <= 0.5) return "Média";
+  if (ratio <= 0.75) return "Próxima";
+  return "Muito Próxima";
+}
+
+function isGiftDirty() {
+  if (giftTags.length !== savedGiftTags.length) return true;
+  return giftTags.some((g, i) => g !== savedGiftTags[i]);
+}
+
+function updateGiftSaveState() {
+  const dirty = isGiftDirty();
+  if (btnSaveGift) {
+    btnSaveGift.disabled = !dirty;
+    btnSaveGift.classList.toggle("dirty", dirty);
+  }
+  updateSaveAllState();
+  giftCounter.textContent = `Gifts de dica (${giftTags.length}/${MAX_HINT_GIFTS})`;
+  const full = giftTags.length >= MAX_HINT_GIFTS;
+  giftInput.disabled = full;
+  if (full) {
+    giftHint.textContent = "Limite de 5 atingido. Remova um gift para adicionar outro.";
+    giftInput.placeholder = "Limite atingido (5/5)";
+    hideAutocomplete();
+  } else {
+    giftHint.textContent = "Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.";
+    giftInput.placeholder = "Busque o gift no catálogo (ex: Rosa, Coração, Sorvete)...";
+  }
+}
+
+function updateSaveAllState() {
+  if (!btnSaveAll) return;
+  const dirty = isGiftDirty() || settingsDirty;
+  btnSaveAll.disabled = !dirty;
+  btnSaveAll.classList.toggle("dirty", dirty);
+}
+
+async function saveAll() {
+  await saveGiftConfig();
+  await saveSettings();
+  updateSaveAllState();
+}
+
+function hideAutocomplete() {
+  giftAutocomplete.style.display = "none";
+  giftAutocomplete.innerHTML = "";
+  acMatches = [];
+  acIndex = -1;
+}
+
+function renderAutocomplete() {
+  giftAutocomplete.innerHTML = "";
+  if (!acMatches.length) {
+    giftAutocomplete.style.display = "none";
+    return;
+  }
+  giftAutocomplete.style.display = "block";
+  acMatches.forEach((g, i) => {
+    const item = document.createElement("div");
+    item.className = "ac-item" + (i === acIndex ? " active" : "");
+    const img = document.createElement("img");
+    const file = giftImageMap[g.name];
+    if (file) {
+      img.src = "/gift-images/" + file;
+      img.alt = "";
+    } else {
+      img.style.display = "none";
+    }
+    const nameEl = document.createElement("span");
+    nameEl.className = "ac-name";
+    nameEl.textContent = getGiftLabel(g.name);
+    const diam = document.createElement("span");
+    diam.className = "ac-diam";
+    diam.textContent = g.diamond_count + " 💎";
+    item.appendChild(img);
+    item.appendChild(nameEl);
+    item.appendChild(diam);
+    item.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectGift(g.name);
+    });
+    giftAutocomplete.appendChild(item);
+  });
+}
+
+function filterCatalog(q) {
+  const val = String(q || "").trim().toLowerCase();
+  const selected = new Set(giftTags.map((n) => n.toLowerCase()));
+  const available = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
+  if (!val) return available.slice(0, 30);
+  return available.filter((g) => {
+    const enName = g.name.toLowerCase();
+    const ptName = getGiftPtName(g.name).toLowerCase();
+    return enName.includes(val) || ptName.includes(val);
+  }).slice(0, 20);
+}
+
+function openGiftList() {
+  if (giftTags.length >= MAX_HINT_GIFTS || giftInput.disabled) {
+    hideAutocomplete();
+    return;
+  }
+  acMatches = filterCatalog(giftInput.value);
+  acIndex = acMatches.length ? 0 : -1;
+  renderAutocomplete();
+}
+
+giftInput.addEventListener("focus", openGiftList);
+giftInput.addEventListener("click", openGiftList);
+
+giftInput.addEventListener("input", function () {
+  openGiftList();
+});
+
+giftInput.addEventListener("keydown", function (e) {
+  if (e.key === "ArrowDown" && acMatches.length) {
+    e.preventDefault();
+    acIndex = (acIndex + 1) % acMatches.length;
+    renderAutocomplete();
+    return;
+  }
+  if (e.key === "ArrowUp" && acMatches.length) {
+    e.preventDefault();
+    acIndex = (acIndex - 1 + acMatches.length) % acMatches.length;
+    renderAutocomplete();
+    return;
+  }
+  if (e.key === "Escape") {
+    hideAutocomplete();
+    return;
+  }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (acMatches.length && acIndex >= 0) {
+      selectGift(acMatches[acIndex].name);
+      return;
+    }
+    const q = this.value.trim();
+    if (!q) return;
+    const found = giftByName(q) || giftTagList.find((g) => {
+      return g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase());
+    });
+    if (found) selectGift(found.name);
+    else addLog("[GiftConfig] [!] Gift não encontrado no catálogo: " + q);
+    return;
+  }
+  if (e.key === "Backspace" && this.value === "" && giftTags.length > 0) {
+    removeGiftTag(giftTags[giftTags.length - 1]);
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#giftTagInput") && !e.target.closest("#giftAutocomplete")) {
+    hideAutocomplete();
+  }
+  if (!e.target.closest("#riddleTagInput") && !e.target.closest("#riddleAutocomplete")) {
+    hideRiddleAutocomplete();
+  }
+  if (!e.target.closest("#sizeGiftInput") && !e.target.closest("#sizeGiftAutocomplete")) {
+    hideSizeAutocomplete();
+  }
+});
+
+let riddleAcMatches = [];
+let riddleAcIndex = -1;
+
+function hideRiddleAutocomplete() {
+  if (riddleAutocomplete) {
+    riddleAutocomplete.style.display = "none";
+    riddleAutocomplete.innerHTML = "";
+    riddleAcMatches = [];
+    riddleAcIndex = -1;
+  }
+}
+
+function filterRiddleCatalog(q) {
+  const val = String(q || "").trim().toLowerCase();
+  const selected = new Set(riddleTags.map((n) => n.toLowerCase()));
+  const available = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
+  if (!val) return available.slice(0, 30);
+  return available.filter((g) => {
+    const enName = g.name.toLowerCase();
+    const ptName = getGiftPtName(g.name).toLowerCase();
+    return enName.includes(val) || ptName.includes(val);
+  }).slice(0, 20);
+}
+
+function renderRiddleAutocomplete() {
+  if (!riddleAutocomplete) return;
+  riddleAutocomplete.innerHTML = "";
+  if (!riddleAcMatches.length) {
+    riddleAutocomplete.style.display = "none";
+    return;
+  }
+  riddleAutocomplete.style.display = "block";
+  riddleAcMatches.forEach((g, i) => {
+    const item = document.createElement("div");
+    item.className = "ac-item" + (i === riddleAcIndex ? " active" : "");
+    const img = document.createElement("img");
+    const file = giftImageMap[g.name];
+    if (file) {
+      img.src = "/gift-images/" + file;
+      img.alt = "";
+    } else {
+      img.style.display = "none";
+    }
+    const nameEl = document.createElement("span");
+    nameEl.className = "ac-name";
+    nameEl.textContent = getGiftLabel(g.name);
+    const diam = document.createElement("span");
+    diam.className = "ac-diam";
+    diam.textContent = g.diamond_count + " 💎";
+    item.appendChild(img);
+    item.appendChild(nameEl);
+    item.appendChild(diam);
+    item.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      addRiddleTag(g.name);
+      if (riddleInput) riddleInput.value = "";
+      hideRiddleAutocomplete();
+    });
+    riddleAutocomplete.appendChild(item);
+  });
+}
+
+function openRiddleList() {
+  if (riddleTags.length >= MAX_RIDDLE_GIFTS || (riddleInput && riddleInput.disabled)) {
+    hideRiddleAutocomplete();
+    return;
+  }
+  riddleAcMatches = filterRiddleCatalog(riddleInput ? riddleInput.value : "");
+  riddleAcIndex = riddleAcMatches.length ? 0 : -1;
+  renderRiddleAutocomplete();
+}
+
+if (riddleInput) {
+  riddleInput.addEventListener("focus", openRiddleList);
+  riddleInput.addEventListener("click", openRiddleList);
+  riddleInput.addEventListener("input", openRiddleList);
+
+  riddleInput.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown" && riddleAcMatches.length) {
+      e.preventDefault();
+      riddleAcIndex = (riddleAcIndex + 1) % riddleAcMatches.length;
+      renderRiddleAutocomplete();
+      return;
+    }
+    if (e.key === "ArrowUp" && riddleAcMatches.length) {
+      e.preventDefault();
+      riddleAcIndex = (riddleAcIndex - 1 + riddleAcMatches.length) % riddleAcMatches.length;
+      renderRiddleAutocomplete();
+      return;
+    }
+    if (e.key === "Escape") {
+      hideRiddleAutocomplete();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (riddleAcMatches.length && riddleAcIndex >= 0) {
+        addRiddleTag(riddleAcMatches[riddleAcIndex].name);
+        this.value = "";
+        hideRiddleAutocomplete();
+        return;
+      }
+      const q = this.value.trim();
+      if (!q) return;
+      const found = giftByName(q) || giftTagList.find((g) => {
+        return g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase());
+      });
+      if (found) {
+        addRiddleTag(found.name);
+        this.value = "";
+        hideRiddleAutocomplete();
+      }
+    }
+  });
+}
+
+function renderSizeAutocomplete() {
+  if (!sizeGiftAutocomplete) return;
+  sizeGiftAutocomplete.innerHTML = "";
+  const q = sizeGiftInput ? sizeGiftInput.value.trim().toLowerCase() : "";
+  const matches = giftTagList.filter((g) => {
+    if (sizeGiftTag && g.name.toLowerCase() === sizeGiftTag.toLowerCase()) return false;
+    if (!q) return true;
+    return g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q);
+  }).slice(0, 20);
+  if (!matches.length) { sizeGiftAutocomplete.style.display = "none"; return; }
+  sizeGiftAutocomplete.style.display = "block";
+  matches.forEach((g) => {
+    const item = document.createElement("div");
+    item.className = "ac-item";
+    const img = document.createElement("img");
+    const file = giftImageMap[g.name];
+    if (file) { img.src = "/gift-images/" + file; img.alt = ""; } else img.style.display = "none";
+    const nameEl = document.createElement("span");
+    nameEl.className = "ac-name";
+    nameEl.textContent = getGiftLabel(g.name);
+    item.appendChild(img);
+    item.appendChild(nameEl);
+    item.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      addSizeGiftTag(g.name);
+      if (sizeGiftInput) sizeGiftInput.value = "";
+      hideSizeAutocomplete();
+    });
+    sizeGiftAutocomplete.appendChild(item);
+  });
+}
+
+function openSizeList() {
+  if (sizeGiftTag || (sizeGiftInput && sizeGiftInput.disabled)) { hideSizeAutocomplete(); return; }
+  renderSizeAutocomplete();
+}
+
+function hideSizeAutocomplete() {
+  if (sizeGiftAutocomplete) { sizeGiftAutocomplete.style.display = "none"; sizeGiftAutocomplete.innerHTML = ""; }
+}
+
+if (sizeGiftInput) {
+  sizeGiftInput.addEventListener("focus", openSizeList);
+  sizeGiftInput.addEventListener("click", openSizeList);
+  sizeGiftInput.addEventListener("input", renderSizeAutocomplete);
+  sizeGiftInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const q = this.value.trim();
+      if (!q) return;
+      const found = giftByName(q) || giftTagList.find((g) => g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase()));
+      if (found) {
+        addSizeGiftTag(found.name);
+        this.value = "";
+        hideSizeAutocomplete();
+      }
+    } else if (e.key === "Escape") {
+      hideSizeAutocomplete();
+    }
+  });
+}
+
+function updateSizeInputState() {
+  if (sizeGiftInput) {
+    sizeGiftInput.disabled = !!sizeGiftTag;
+    sizeGiftInput.placeholder = sizeGiftTag ? "Limite atingido (1/1)" : "Escolha 1 presente para revelar o tamanho...";
+  }
+  if (sizeGiftTag) hideSizeAutocomplete();
+}
+
+function addSizeGiftTag(name) {
+  const g = giftByName(name);
+  if (!g) return;
+  if (sizeGiftTag) return;
+  sizeGiftTag = g.name;
+  renderSizeGiftTags();
+}
+
+function selectGift(name) {
+  const g = giftByName(name);
+  if (!g) {
+    addLog("[GiftConfig] [!] Gift inválido: " + name);
+    return;
+  }
+  addGiftTag(g.name);
+  giftInput.value = "";
+  hideAutocomplete();
+  giftInput.focus();
+}
+
+function addGiftTag(name) {
+  const g = giftByName(name);
+  if (!g) return;
+  if (giftTags.some((n) => n.toLowerCase() === g.name.toLowerCase())) return;
+  if (giftTags.length >= MAX_HINT_GIFTS) {
+    addLog("[GiftConfig] [!] Máximo de 5 gifts permitido");
+    return;
+  }
+  giftTags.push(g.name);
+  giftTags.sort((a, b) => giftDiamonds(a) - giftDiamonds(b) || a.localeCompare(b));
+  renderGiftTags();
+}
+
+function removeGiftTag(name) {
+  giftTags = giftTags.filter((g) => g !== name);
+  renderGiftTags();
+}
+
+function renderGiftTags() {
+  giftTagsContainer.innerHTML = "";
+  const diamonds = giftTags.map(giftDiamonds);
+  const minD = diamonds.length ? Math.min(...diamonds) : 0;
+  const maxD = diamonds.length ? Math.max(...diamonds) : 0;
+
+  for (const g of giftTags) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+
+    const file = giftImageMap[g];
+    if (file) {
+      const img = document.createElement("img");
+      img.src = "/gift-images/" + file;
+      img.alt = "";
+      img.onerror = function () { this.style.display = "none"; };
+      chip.appendChild(img);
+    }
+
+    const nameEl = document.createElement("span");
+    nameEl.textContent = getGiftLabel(g);
+    chip.appendChild(nameEl);
+
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = giftDiamonds(g) + "💎 " + giftLevel(g, minD, maxD);
+    chip.appendChild(meta);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "remove";
+    btn.setAttribute("aria-label", "Remover " + g);
+    btn.textContent = "×";
+    btn.addEventListener("click", () => removeGiftTag(g));
+    chip.appendChild(btn);
+
+    giftTagsContainer.appendChild(chip);
+  }
+  updateGiftSaveState();
+}
+
+function updateRiddleInputState() {
+  const full = riddleTags.length >= MAX_RIDDLE_GIFTS;
+  if (riddleInput) {
+    riddleInput.disabled = full;
+    riddleInput.placeholder = full ? "Limite atingido (1/1)" : "Escolha 1 presente revelador...";
+  }
+  if (riddleHint) {
+    riddleHint.textContent = full
+      ? "Limite de 1 atingido. Remova o presente para adicionar outro."
+      : "Máximo de 1. É o presente que revela a palavra no Final Boss.";
+  }
+  if (full) hideRiddleAutocomplete();
+}
+
+function addRiddleTag(name) {
+  const g = giftByName(name);
+  if (!g) return;
+  if (riddleTags.some((n) => n.toLowerCase() === g.name.toLowerCase())) return;
+  if (riddleTags.length >= MAX_RIDDLE_GIFTS) {
+    addLog("[GiftConfig] [!] Máximo de 1 presente revelador");
+    return;
+  }
+  riddleTags.push(g.name);
+  renderRiddleTags();
+}
+
+function removeRiddleTag(name) {
+  riddleTags = riddleTags.filter((g) => g !== name);
+  renderRiddleTags();
+}
+
+function renderRiddleTags() {
+  if (!riddleTagsContainer) return;
+  riddleTagsContainer.innerHTML = "";
+  riddleTags.forEach((g, idx) => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    const file = giftImageMap[g];
+    if (file) {
+      const img = document.createElement("img");
+      img.src = "/gift-images/" + file;
+      img.alt = "";
+      chip.appendChild(img);
+    }
+    const nameEl = document.createElement("span");
+    nameEl.textContent = getGiftLabel(g);
+    chip.appendChild(nameEl);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "remove";
+    btn.textContent = "×";
+    btn.addEventListener("click", () => removeRiddleTag(g));
+    chip.appendChild(btn);
+
+    riddleTagsContainer.appendChild(chip);
+  });
+  if (riddleCounter) riddleCounter.textContent = `${riddleTags.length}/${MAX_RIDDLE_GIFTS}`;
+  updateGiftSaveState();
+  updateRiddleInputState();
+}
+
+function renderSizeGiftTags() {
+  if (!sizeGiftTagsContainer) return;
+  sizeGiftTagsContainer.innerHTML = "";
+  if (sizeGiftTag) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    const file = giftImageMap[sizeGiftTag];
+    if (file) {
+      const img = document.createElement("img");
+      img.src = "/gift-images/" + file;
+      img.alt = "";
+      chip.appendChild(img);
+    }
+    const nameEl = document.createElement("span");
+    nameEl.textContent = getGiftLabel(sizeGiftTag);
+    chip.appendChild(nameEl);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "remove";
+    btn.textContent = "×";
+    btn.addEventListener("click", () => { sizeGiftTag = ""; savedSizeGiftTag = ""; renderSizeGiftTags(); updateGiftSaveState(); });
+    chip.appendChild(btn);
+    sizeGiftTagsContainer.appendChild(chip);
+  }
+  updateSizeInputState();
+}
+
+function isGiftDirty() {
+  if (giftTags.length !== savedGiftTags.length) return true;
+  if (riddleTags.length !== savedRiddleTags.length) return true;
+  if (sizeGiftTag !== savedSizeGiftTag) return true;
+  if (giftTags.some((g, i) => g !== savedGiftTags[i])) return true;
+  return riddleTags.some((g, i) => g !== savedRiddleTags[i]);
+}
+
+async function saveGiftConfig() {
+  if (btnSaveGift) btnSaveGift.disabled = true;
+  if (btnSaveAll) btnSaveAll.disabled = true;
+  try {
+    const data = await apiFetch("/api/gift-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hint_gifts: giftTags, riddle_gifts: riddleTags, size_gift: sizeGiftTag }),
+    });
+    if (data.success) {
+      giftTags = data.hint_gifts || giftTags;
+      riddleTags = data.riddle_gifts || riddleTags;
+      sizeGiftTag = data.size_gift || sizeGiftTag;
+      savedGiftTags = [...giftTags];
+      savedRiddleTags = [...riddleTags];
+      savedSizeGiftTag = sizeGiftTag;
+      renderGiftTags();
+      renderRiddleTags();
+      renderSizeGiftTags();
+      addLog(`[GiftConfig] Configuração salva: ${giftTags.length} dicas, ${riddleTags.length} presente revelador` + (sizeGiftTag ? `, tamanho: ${sizeGiftTag}` : ""));
+    } else {
+      addLog(`[GiftConfig] [!] ${data.error}`);
+      updateGiftSaveState();
+    }
+  } catch (err) {
+    addLog(`[GiftConfig] [!] Erro: ${err.message}`);
+    updateGiftSaveState();
+  }
+}
+
+async function loadGiftCatalog() {
+  try {
+    const [tagsRes, mapRes] = await Promise.all([
+      fetch("/api/gift-tags"),
+      fetch("/api/gift-image-map"),
+    ]);
+    const tagsData = await tagsRes.json();
+    const mapData = await mapRes.json();
+    giftTagList = tagsData.gifts || [];
+    giftImageMap = mapData.map || {};
+  } catch (e) {
+    addLog("[GiftConfig] [!] Falha ao carregar catálogo de gifts");
+  }
+}
+
+function applySettingsUI(settings) {
+  const s = settings || {};
+  chkFollowers.checked = !!s.apenas_seguidores;
+  chkHeartMe.checked = !!s.apenas_heart_me;
+  if (cmdPrefixInput) cmdPrefixInput.value = (s.command_prefix === undefined || s.command_prefix === null) ? "#" : s.command_prefix;
+  const dica = Math.max(0, Math.min(100, Number(s.pct_dica) || 70));
+  pctDicaInput.value = dica;
+  pctCharadaInput.value = 100 - dica;
+  const rate = Math.max(0.1, Math.min(10, Number(s.tts_rate) || 1));
+  ttsRateInput.value = rate;
+  if (ttsRateLabel) ttsRateLabel.textContent = `${rate.toFixed(1).replace(/\.0$/, "")}x`;
+  currentTtsVoice = s.tts_voice || "";
+  chkNarr.checked = !!s.chat_narr_enabled;
+  narrMode.value = s.chat_narr_mode === "no_guesses" ? "exclude" : (["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all");
+  if (narrChar) narrChar.value = (s.chat_narr_char === undefined || s.chat_narr_char === null || s.chat_narr_char === "") ? "#" : s.chat_narr_char;
+  const autoRoundEl = document.getElementById("autoRound");
+  if (autoRoundEl) autoRoundEl.checked = !!s.auto_round;
+  const autoRoundPauseEl = document.getElementById("autoRoundPause");
+  if (autoRoundPauseEl) autoRoundPauseEl.value = s.auto_round_pause || 20;
+  const tapMetaEl = document.getElementById("tapMeta");
+  if (tapMetaEl) tapMetaEl.value = s.tap_meta || 1000;
+  settingsDirty = false;
+  refreshPanelVoices();
+  updateSettingsSaveState();
+}
+
+let ttsRatePushTimer = null;
+
+function onTtsRateChanged(el) {
+  if (ttsRateLabel) ttsRateLabel.textContent = `${el.value}x`;
+  onSettingsChanged();
+  clearTimeout(ttsRatePushTimer);
+  ttsRatePushTimer = setTimeout(pushLiveTtsRate, 600);
+}
+
+async function pushLiveTtsRate() {
+  try {
+    const settings = {
+      ...savedSettings,
+      command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
+      tts_rate: parseFloat(ttsRateInput.value) || 1,
+      pct_dica: parseInt(pctDicaInput.value, 10) || 70,
+      tts_voice: currentTtsVoice,
+      chat_narr_enabled: chkNarr.checked,
+      chat_narr_mode: narrMode.value === "no_guesses" ? "exclude" : narrMode.value,
+      chat_narr_char: narrChar ? (narrChar.value || "#") : "#",
+    };
+    const data = await apiFetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings }),
+    });
+    if (data.success) {
+      savedSettings = { ...data.settings };
+    }
+  } catch (e) {}
+}
+
+let panelVoicesCache = [];
+function loadPanelVoices() {
+  if (!('speechSynthesis' in window)) return;
+  panelVoicesCache = window.speechSynthesis.getVoices() || [];
+  refreshPanelVoices();
+  window.speechSynthesis.onvoiceschanged = function () {
+    panelVoicesCache = window.speechSynthesis.getVoices() || [];
+    refreshPanelVoices();
+  };
+}
+
+function refreshPanelVoices() {
+  if (!ttsVoiceSelect) return;
+  const current = (currentTtsVoice || "").trim();
+  let options = '<option value="gtts"' + (current === "gtts" ? " selected" : "") + '>🗣️ Google (gTTS) — servidor</option>';
+  options += '<option value="piper_faber"' + (current === "piper_faber" ? " selected" : "") + '>🧑‍🏫 Piper — Faber (servidor)</option>';
+  options += '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>💙 Edge — Antonio (servidor)</option>';
+  options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>💜 Edge — Francisca (servidor)</option>';
+  options += '<option value="kokoro_pf_dora"' + (current === "kokoro_pf_dora" ? " selected" : "") + '>👩‍🦰 Kokoro — Dora (Feminina) — servidor</option>';
+  options += '<option value="kokoro_pm_alex"' + (current === "kokoro_pm_alex" ? " selected" : "") + '>👨 Kokoro — Alex (Masculina) — servidor</option>';
+  options += '<option value=""' + (current === "" ? " selected" : "") + '>🎙️ Auto (melhor pt-BR)</option>';
+  if (panelVoicesCache.length) {
+    options += panelVoicesCache.map(v => {
+      const val = `${v.name}|${v.lang}`;
+      return `<option value="${val}" ${v.name === current ? "selected" : ""}>${v.name} (${v.lang})</option>`;
+    }).join("");
+  }
+  ttsVoiceSelect.innerHTML = options;
+}
+
+const SERVER_VOICES = ["gtts", "piper_faber", "edge_antonio", "edge_francisca", "kokoro_pf_dora", "kokoro_pm_alex"];
+
+function onPanelVoicePick(value) {
+  if (SERVER_VOICES.includes(value)) {
+    currentTtsVoice = value;
+  } else if (!value) {
+    currentTtsVoice = "";
+  } else {
+    currentTtsVoice = value.split("|")[0];
+  }
+  onSettingsChanged();
+}
+
+function testPanelVoice() {
+  if (SERVER_VOICES.includes(currentTtsVoice)) {
+    const rate = parseFloat(ttsRateInput.value) || 1;
+    apiFetch("/api/tts/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rate, voice: currentTtsVoice }),
+    }).catch(() => {});
+    return;
+  }
+  if (!('speechSynthesis' in window)) return;
+  const voiceName = (currentTtsVoice || "").trim();
+  const rate = parseFloat(ttsRateInput.value) || 1;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance("Olá! Esta é a voz da narração das charadas do TikPlay.");
+  u.lang = "pt-BR";
+  u.rate = rate;
+  u.pitch = 1.0;
+  let voice = null;
+  if (voiceName) {
+    voice = panelVoicesCache.find(v => (v.name || "").toLowerCase().includes(voiceName.toLowerCase())) ||
+            panelVoicesCache.find(v => (v.lang || "").toLowerCase().includes(voiceName.toLowerCase()));
+  }
+  if (!voice) voice = panelVoicesCache.find(v => (v.lang || "").toLowerCase().startsWith("pt"));
+  if (voice) u.voice = voice;
+  window.speechSynthesis.speak(u);
+}
+
+let narrateQueue = [];
+let narrating = false;
+
+function enqueueNarrate(item) {
+  narrateQueue.push(item);
+  processNarrateQueue();
+}
+
+const NARRATE_GAP_MS = 350;
+
+function processNarrateQueue() {
+  if (narrating || !narrateQueue.length) return;
+  const item = narrateQueue.shift();
+  narrating = true;
+  playNarrateItem(item).finally(() => {
+    setTimeout(() => {
+      narrating = false;
+      processNarrateQueue();
+    }, NARRATE_GAP_MS);
+  });
+}
+
+function playNarrateItem(item) {
+  return new Promise((resolve) => {
+    if (item && item.url) {
+      const a = new Audio(item.url);
+      a.preload = "auto";
+      a.currentTime = 0;
+      a.onended = () => resolve();
+      a.onerror = () => resolve();
+      const p = a.play();
+      if (p && p.catch) p.catch(() => resolve());
+    } else if (item && item.text && 'speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(item.text);
+      u.lang = "pt-BR";
+      u.rate = parseFloat(ttsRateInput.value) || 1;
+      u.pitch = 1.0;
+      const voiceName = (currentTtsVoice || "").trim();
+      let voice = null;
+      if (voiceName) {
+        voice = panelVoicesCache.find(v => (v.name || "").toLowerCase().includes(voiceName.toLowerCase())) ||
+                panelVoicesCache.find(v => (v.lang || "").toLowerCase().includes(voiceName.toLowerCase()));
+      }
+      if (!voice) voice = panelVoicesCache.find(v => (v.lang || "").toLowerCase().startsWith("pt"));
+      if (voice) u.voice = voice;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.speak(u);
+    } else {
+      resolve();
+    }
+  });
+}
+
+async function loadSettings() {
+  try {
+    const data = await apiFetch("/api/settings");
+    if (data && data.success) {
+      applySettingsUI(data.settings);
+    }
+  } catch {}
+}
+
+function onPctChanged(el) {
+  let v = parseInt(el.value, 10);
+  if (Number.isNaN(v)) return;
+  v = Math.max(0, Math.min(100, v));
+  if (el === pctDicaInput) {
+    pctCharadaInput.value = 100 - v;
+  } else {
+    pctDicaInput.value = 100 - v;
+  }
+  onSettingsChanged();
+}
+
+function isSettingsDirty() {
+  const dica = parseInt(pctDicaInput.value, 10) || 0;
+  const rate = parseFloat(ttsRateInput.value) || 1;
+  return (
+    chkFollowers.checked !== !!savedSettings.apenas_seguidores ||
+    chkHeartMe.checked !== !!savedSettings.apenas_heart_me ||
+    (cmdPrefixInput ? cmdPrefixInput.value : "#") !== (savedSettings.command_prefix === undefined || savedSettings.command_prefix === null ? "#" : savedSettings.command_prefix) ||
+    dica !== (savedSettings.pct_dica || 70) ||
+    Math.abs(rate - (savedSettings.tts_rate || 1)) > 0.001 ||
+    (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
+    chkNarr.checked !== !!savedSettings.chat_narr_enabled ||
+    narrMode.value !== (savedSettings.chat_narr_mode || "all") ||
+    (narrChar ? (narrChar.value || "#") : "#") !== (savedSettings.chat_narr_char || "#") ||
+    (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
+    Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
+    Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000)
+  );
+}
+
+function onSettingsChanged() {
+  settingsDirty = isSettingsDirty();
+  updateSettingsSaveState();
+}
+
+function updateSettingsSaveState() {
+  if (btnSaveSettings) {
+    btnSaveSettings.disabled = !settingsDirty;
+    btnSaveSettings.classList.toggle("dirty", settingsDirty);
+  }
+  updateSaveAllState();
+}
+
+async function saveSettings() {
+  if (btnSaveSettings) btnSaveSettings.disabled = true;
+  if (btnSaveSettingsGames) btnSaveSettingsGames.disabled = true;
+  if (btnSaveAll) btnSaveAll.disabled = true;
+  const settings = {
+    apenas_seguidores: chkFollowers.checked,
+    apenas_heart_me: chkHeartMe.checked,
+    command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
+    pct_dica: Math.max(0, Math.min(100, parseInt(pctDicaInput.value, 10) || 0)),
+    tts_rate: parseFloat(ttsRateInput.value) || 1,
+    tts_voice: currentTtsVoice,
+    chat_narr_enabled: chkNarr.checked,
+    chat_narr_mode: narrMode.value === "no_guesses" ? "exclude" : narrMode.value,
+    chat_narr_char: narrChar ? (narrChar.value || "#") : "#",
+    auto_round: document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false,
+    auto_round_pause: Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) || 20,
+    tap_meta: Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) || 1000,
+  };
+  try {
+    const data = await apiFetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings }),
+    });
+    if (data.success) {
+      savedSettings = { ...data.settings };
+      applySettingsUI(data.settings);
+      const seg = data.settings.apenas_seguidores ? "Seguidores" : "";
+      const heart = data.settings.apenas_heart_me ? "Heart-me" : "";
+      const filtro = [seg, heart].filter(Boolean).join(" + ") || "Todos";
+      const voz = data.settings.tts_voice || "auto (pt-BR)";
+      addLog(`[Preferências] Salvas — Filtro: ${filtro} | Dicas ${data.settings.pct_dica}% / Charadas ${data.settings.pct_charada}% | Voz: ${voz} (${data.settings.tts_rate}x)`);
+    } else {
+      addLog(`[Preferências] [!] ${data.error || "Erro ao salvar"}`);
+      onSettingsChanged();
+    }
+  } catch (err) {
+    addLog(`[Preferências] [!] Erro: ${err.message}`);
+    onSettingsChanged();
+  }
+}
+
+async function loadGiftConfig() {
+  try {
+    const data = await apiFetch("/api/gift-config");
+    const list = Array.isArray(data.hint_gifts) ? data.hint_gifts : [];
+    giftTags = list.map((n) => giftByName(n)?.name || n).filter(Boolean);
+    giftTags = [...new Set(giftTags)];
+    giftTags.sort((a, b) => giftDiamonds(a) - giftDiamonds(b) || a.localeCompare(b));
+    savedGiftTags = [...giftTags];
+
+    const rList = Array.isArray(data.riddle_gifts) ? data.riddle_gifts : [];
+    riddleTags = rList.map((n) => giftByName(n)?.name || n).filter(Boolean).slice(0, 1);
+    savedRiddleTags = [...riddleTags];
+
+    sizeGiftTag = data.size_gift ? (giftByName(data.size_gift)?.name || data.size_gift) : "";
+    savedSizeGiftTag = sizeGiftTag;
+
+    renderGiftTags();
+    renderRiddleTags();
+    renderSizeGiftTags();
+  } catch (e) {}
+}
+
+async function syncGameState() {
+  try {
+    const data = await apiFetch("/api/game-state");
+    gameActive = data.active && !data.finished;
+    if (data.python_connected) {
+      setRunningUI(true);
+    }
+    if (data.last_status) {
+      updateStatus(data.last_status);
+    }
+    const btn = document.getElementById("btnNewGame");
+    if (btn) {
+      if (gameActive) {
+        btn.disabled = true;
+        btn.textContent = "Partida em Andamento";
+      } else {
+        const isLiveConnected = data.last_status && ["connected"].includes(data.last_status.state);
+        btn.disabled = !isLiveConnected;
+        btn.textContent = "Iniciar Partida";
+      }
+    }
+  } catch {}
+}
+
+async function loadMe() {
+  try {
+    const data = await apiFetch("/api/auth/me");
+    if (!data.success) return;
+    const user = data.user;
+    document.getElementById("userBadge").textContent = user.name || user.email;
+    document.getElementById("roleBadge").textContent = user.role === "admin" ? "ADMIN" : "";
+    document.getElementById("roleBadge").style.display = user.role === "admin" ? "" : "none";
+    if (user.role === "admin") document.getElementById("btnAdmin").style.display = "";
+    roomCode = user.room_code || "";
+    document.getElementById("roomBadge").textContent = "Sala: " + roomCode;
+    if (user.tiktok_username) document.getElementById("username").value = user.tiktok_username;
+    if (user.has_api_key) {
+      document.getElementById("apiKey").placeholder = "•••••••• (salva)";
+      document.getElementById("btnClearKey").style.display = "";
+    }
+    applyFeatureGating(user);
+    updateLinks();
+  } catch {}
+}
+
+const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres"];
+
+function applyFeatureGating(user) {
+  if (!user || user.role === "admin") {
+    // Admin: mostra tudo
+    document.querySelectorAll(".tab-btn").forEach((b) => (b.style.display = ""));
+    document.querySelectorAll(".tab-page").forEach((p) => (p.style.display = ""));
+    return;
+  }
+  const f = (user.features && typeof user.features === "object") ? user.features : {};
+  const allAllowed = !Object.keys(f).length; // {} = tudo liberado
+  let visibleTabs = [];
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    const tab = b.dataset.tab;
+    const allowed = tab === "connect" ? true : (allAllowed ? true : f[tab] !== false);
+    b.style.display = allowed ? "" : "none";
+    if (allowed) visibleTabs.push(tab);
+  });
+  document.querySelectorAll(".tab-page").forEach((p) => {
+    const tab = p.id.replace("tab-", "");
+    if (FEATURE_TABS.includes(tab) && !visibleTabs.includes(tab)) {
+      p.style.display = "none";
+    }
+  });
+  // Se a aba ativa não está liberada, vai para a primeira visível (preferindo connect)
+  const activeBtn = document.querySelector(".tab-btn.active");
+  const activeTab = activeBtn ? activeBtn.dataset.tab : "";
+  if (!visibleTabs.includes(activeTab)) {
+    const first = visibleTabs.length ? visibleTabs[0] : "connect";
+    switchTab(first);
+  }
+}
+
+function updateLinks() {
+  const base = location.origin;
+  const gl = `${base}/jogo?room=${roomCode}`;
+  const glink = document.getElementById("linkGame");
+  if (glink) glink.href = gl;
+  const bl = `${base}/batalha?room=${roomCode}`;
+  const b1 = document.getElementById("linkBatalha");
+  if (b1) b1.href = bl;
+  const cl = `${base}/caca-palavra?room=${roomCode}`;
+  const clink = document.getElementById("linkCaca");
+  if (clink) clink.href = cl;
+  const bl2 = `${base}/bichinho?room=${roomCode}`;
+  const blink = document.getElementById("linkBichinho");
+  if (blink) blink.href = bl2;
+  const tl = `${base}/tres-pontinhos?room=${roomCode}`;
+  const tlink = document.getElementById("linkTres");
+  if (tlink) tlink.href = tl;
+}
+
+function copyRoomUrl() {
+  const url = `${location.origin}/overlay?room=${roomCode}`;
+  navigator.clipboard.writeText(url).then(() => {
+    addLog("[Painel] Link da sala copiado");
+  }).catch(() => {});
+}
+
+(async function initGiftPanel() {
+  await loadGiftCatalog();
+  await loadGiftConfig();
+  await loadSettings();
+  await loadTresConfig();
+  loadPanelVoices();
+})();
+
+async function loadTresConfig() {
+  try {
+    const data = await apiFetch("/api/tres/config");
+    if (data && data.config) {
+      if (document.getElementById("tresGiftSize")) document.getElementById("tresGiftSize").value = data.config.size || "";
+      if (document.getElementById("tresGiftLetter")) document.getElementById("tresGiftLetter").value = data.config.letter || "";
+      if (document.getElementById("tresGiftTicket")) document.getElementById("tresGiftTicket").value = data.config.ticket || "";
+      const st = data.config.stage_times || [120, 60, 30];
+      const sp = data.config.stage_points || [30, 20, 10];
+      if (document.getElementById("tresTime1")) document.getElementById("tresTime1").value = st[0] || 120;
+      if (document.getElementById("tresTime2")) document.getElementById("tresTime2").value = st[1] || 60;
+      if (document.getElementById("tresTime3")) document.getElementById("tresTime3").value = st[2] || 30;
+      if (document.getElementById("tresPts1")) document.getElementById("tresPts1").value = sp[0] || 30;
+      if (document.getElementById("tresPts2")) document.getElementById("tresPts2").value = sp[1] || 20;
+      if (document.getElementById("tresPts3")) document.getElementById("tresPts3").value = sp[2] || 10;
+    }
+  } catch (e) {}
+}
+async function loadPanelConfig() {
+  try {
+    const data = await apiFetch("/api/panel-config");
+    if (data && data.current_word) {
+      document.getElementById("currentWord").textContent = data.current_word;
+    }
+    if (data && data.tiktok_engine && document.getElementById("tiktokEngine")) {
+      document.getElementById("tiktokEngine").value = data.tiktok_engine;
+      onEngineChange();
+    }
+  } catch {}
+}
+let whPage = 1;
+async function loadWordHistory(page) {
+  whPage = Math.max(1, page || 1);
+  const params = new URLSearchParams({ page: whPage, pageSize: 10 });
+  const s = (document.getElementById("whSearch").value || "").trim();
+  const from = document.getElementById("whFrom").value;
+  const to = document.getElementById("whTo").value;
+  if (s) params.set("search", s);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  try {
+    const res = await apiFetch(`/api/history?room=${encodeURIComponent(roomCode)}&` + params.toString());
+    const container = document.getElementById("historyTableBody");
+    if (!container) return;
+
+    const games = (res.games && res.games.items) || [];
+    if (games.length === 0) {
+      container.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-3">Nenhuma partida registrada no histórico ainda.</td></tr>';
+    } else {
+      container.innerHTML = "";
+      games.forEach(g => {
+        const row = document.createElement("tr");
+
+        // ID
+        const tdId = document.createElement("td");
+        tdId.textContent = `#${g.id}`;
+        tdId.style.fontWeight = "800";
+        row.appendChild(tdId);
+
+        // Word (com o número da partida na frente)
+        const tdWord = document.createElement("td");
+        tdWord.textContent = g.word ? `#${g.id} ${g.word.toUpperCase()}` : "-";
+        tdWord.style.color = "#8B5CF6";
+        tdWord.style.fontWeight = "800";
+        row.appendChild(tdWord);
+
+        // Winner
+        const tdWinner = document.createElement("td");
+        if (g.winner === "Ninguém") {
+          tdWinner.innerHTML = `<span class="badge bg-danger text-white border border-dark">Ninguém</span>`;
+        } else {
+          const avatarImg = g.avatar ? `<img src="${g.avatar}" style="width:24px;height:24px;border-radius:50%;border:1px solid #000;margin-right:8px;" onerror="this.style.display='none'">` : "";
+          tdWinner.innerHTML = `<div class="d-flex align-items-center">${avatarImg}<span>${g.nickname || g.winner}</span></div>`;
+        }
+        row.appendChild(tdWinner);
+
+        // Guesses
+        const tdGuesses = document.createElement("td");
+        tdGuesses.textContent = g.guesses || 0;
+        row.appendChild(tdGuesses);
+
+        // Time
+        const tdTime = document.createElement("td");
+        if (g.time) {
+          try {
+            const date = new Date(g.time);
+            const p = (n) => String(n).padStart(2, "0");
+            tdTime.textContent = `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(date.getHours())}:${p(date.getMinutes())}`;
+          } catch {
+            tdTime.textContent = g.time;
+          }
+        } else {
+          tdTime.textContent = "-";
+        }
+        row.appendChild(tdTime);
+
+        container.appendChild(row);
+      });
+    }
+    const total = res.games && res.games.total ? res.games.total : 0;
+    document.getElementById("whInfo").textContent = `Página ${res.games.page} de ${Math.max(1, Math.ceil(total / res.games.pageSize))} · ${total} partidas`;
+    document.getElementById("whPrev").disabled = res.games.page <= 1;
+    document.getElementById("whNext").disabled = res.games.page * res.games.pageSize >= total;
+  } catch (err) {
+    console.error("Erro ao carregar histórico completo:", err);
+  }
+}
+function fetchHistoryAll() { loadWordHistory(1); }
+
+loadMe().then(() => fetchHistoryAll());
+syncGameState();
+loadPanelConfig();
+loadBilling();
+loadSoundAlerts();
+loadCacaState();
+document.getElementById("username").addEventListener("blur", saveCredentials);
+document.getElementById("apiKey").addEventListener("blur", saveCredentials);
+</script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caça Palavras — Live</title>
+<style>
+  :root {
+    --neon-pink: #ff2ec4;
+    --neon-gold: #ffd700;
+    --neon-purple: #b026ff;
+    --neon-blue: #00e5ff;
+    --bg-1: #050014;
+    --bg-2: #12022b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(255, 46, 196, 0.18), transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(0, 229, 255, 0.18), transparent 45%),
+      radial-gradient(ellipse at 70% 10%, rgba(176, 38, 255, 0.22), transparent 50%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    overflow-x: hidden;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .wrap { width: 100%; max-width: 680px; text-align: center; }
+
+  .head-title {
+    font-size: 1.9rem; font-weight: 900; letter-spacing: 5px;
+    color: var(--neon-gold); text-shadow: 0 0 18px rgba(255,215,0,0.8);
+    margin-bottom: 6px;
+  }
+  .head-sub { font-size: 0.95rem; color: #cfd0ff; margin-bottom: 14px; }
+  .head-sub b { color: #fff; }
+
+  .board {
+    display: inline-grid;
+    gap: 3px;
+    background: rgba(0,0,0,0.35);
+    border: 2px solid var(--neon-blue);
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 0 24px 4px rgba(0,229,255,0.35);
+  }
+  .cell-label {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 900; color: var(--neon-blue);
+    text-shadow: 0 0 8px rgba(0,229,255,0.7);
+    user-select: none;
+  }
+  .cell {
+    position: relative;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; font-weight: 900; color: #e6e6ff;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    user-select: none;
+  }
+  .cell.found { background: rgba(255,215,0,0.18); color: #ffe066; box-shadow: inset 0 0 0 2px rgba(255,215,0,0.55); }
+
+  /* Foto + nome sobre a palavra revelada */
+  .cell .finder {
+    position: absolute; left: 50%; bottom: -4px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 2px;
+    background: rgba(0,0,0,0.85);
+    border: 2px solid var(--pcolor, var(--neon-gold));
+    border-radius: 999px;
+    padding: 0 4px 0 1px;
+    max-width: 68px;
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: 5;
+    font-size: 0.5rem; color: var(--pcolor, #ffd);
+    box-shadow: 0 0 8px var(--pcolor, rgba(255,215,0,0.6));
+  }
+  .cell.found.p-found { background: color-mix(in srgb, var(--pcolor, #ffd700) 20%, transparent); color: var(--pcolor, #ffe066); box-shadow: inset 0 0 0 2px var(--pcolor, rgba(255,215,0,0.55)); }
+  .cell .finder img { width: 13px; height: 13px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--pcolor, #ffd); }
+  .cell .finder span { overflow: hidden; text-overflow: ellipsis; }
+
+  .words-bar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 30px; }
+  .wchip {
+    padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.25);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .wchip.found { border-color: var(--pcolor, var(--neon-gold)); background: color-mix(in srgb, var(--pcolor, #ffd700) 14%, transparent); color: var(--pcolor, #ffe066); }
+  .wchip span.coord { font-size: 0.65rem; color: var(--neon-blue); font-weight: 600; }
+  .wchip.found span.coord { color: var(--pcolor, #ffd); }
+
+  .footer { margin-top: 16px; font-size: 0.8rem; color: #9a9ac0; }
+  .empty { color: #6b6fa8; font-size: 1rem; padding: 20px; }
+  .finished-banner {
+    margin-top: 14px; padding: 12px; border-radius: 12px; font-weight: 900; letter-spacing: 2px;
+    background: linear-gradient(90deg, rgba(255,215,0,0.25), rgba(255,46,196,0.25));
+    border: 2px solid var(--neon-gold); color: #ffe066;
+    text-shadow: 0 0 12px rgba(255,215,0,0.9);
+  }
+  .caca-ranking {
+    margin-top: 14px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--neon-gold);
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 0 20px 3px rgba(255,215,0,0.35);
+  }
+  .caca-ranking h3 { font-size: 1rem; letter-spacing: 3px; color: var(--neon-gold); text-shadow: 0 0 10px var(--neon-gold); margin-bottom: 8px; }
+  .caca-help {
+    margin-top: 14px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--neon-blue);
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: 0 0 20px 3px rgba(0,229,255,0.3);
+    text-align: left;
+  }
+  .caca-help h3 { font-size: 1rem; letter-spacing: 3px; color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); margin-bottom: 10px; }
+  .caca-help h4 { font-size: 0.85rem; color: var(--neon-pink); margin: 12px 0 6px; letter-spacing: 1px; }
+  .caca-help p { font-size: 0.9rem; line-height: 1.5; color: #e6e6ff; margin: 4px 0; }
+  .caca-help code {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px; padding: 1px 6px; font-size: 0.85rem; color: var(--neon-gold);
+  }
+  .caca-help ul { margin: 4px 0 4px 20px; }
+  .caca-help li { font-size: 0.88rem; color: #d8d8ff; margin: 3px 0; line-height: 1.45; }
+  .cr-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; border-radius: 8px;
+  }
+  .cr-row:nth-child(odd) { background: rgba(255,255,255,0.05); }
+  .cr-medal { width: 30px; text-align: center; font-size: 1.1rem; flex-shrink: 0; }
+  .cr-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.4); flex-shrink: 0; }
+  .cr-name { flex: 1; text-align: left; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cr-count { font-weight: 900; color: var(--neon-gold); flex-shrink: 0; }
+
+  /* ===== Menu inferior esquerdo (modos de visualização) ===== */
+  #cacaMenuWrap { position: fixed; bottom: 18px; left: 18px; z-index: 15; }
+  #cacaMenuBtn {
+    background: rgba(10,0,20,0.85); border: 2px solid var(--neon-blue); color: var(--neon-blue);
+    border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px;
+    cursor: pointer; box-shadow: 0 0 14px 2px rgba(0,229,255,0.5);
+  }
+  #cacaMenuBtn:hover { background: rgba(0,229,255,0.15); }
+  #cacaMenu { display: none; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  #cacaMenu.show { display: flex; }
+  .cm-opt {
+    background: rgba(10,0,20,0.9); border: 2px solid var(--neon-blue); color: #fff;
+    border-radius: 10px; padding: 8px 12px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px;
+    cursor: pointer; text-align: left;
+  }
+  .cm-opt:hover { background: rgba(0,229,255,0.18); }
+  .cm-opt.active { border-color: var(--neon-pink); color: var(--neon-pink); }
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head-title">CAÇA PALAVRAS</div>
+  <div class="head-sub">Envie no chat as coordenadas, ex: <b>B2 F6</b> ou <b>B2:F6</b> · Encontradas: <b id="foundCount">0</b>/<span id="totalCount">0</span></div>
+
+  <div id="boardWrap"><div class="empty">Aguardando partida...</div></div>
+  <div class="words-bar" id="wordsBar"></div>
+  <div class="finished-banner" id="finishedBanner" style="display:none">TODAS AS PALAVRAS ENCONTRADAS!</div>
+  <div class="caca-ranking" id="cacaRanking" style="display:none"></div>
+  <div class="caca-ranking" id="cacaWeekly" style="display:none"></div>
+  <div class="caca-help" id="cacaHelp" style="display:none"></div>
+  <div class="footer">Jogue pelo chat · coordenadas linha(Letra)+coluna(Número)</div>
+</div>
+
+<div id="cacaMenuWrap">
+  <div id="cacaMenu">
+    <button class="cm-opt" data-view="game" onclick="cacaSetView('game')">⚔️ JOGO</button>
+    <button class="cm-opt" data-view="weekly" onclick="cacaSetView('weekly')">🏆 SEMANAL</button>
+    <button class="cm-opt" data-view="help" onclick="cacaSetView('help')">ℹ️ ORIENTAÇÕES</button>
+  </div>
+  <button id="cacaMenuBtn" onclick="toggleCacaMenu()">☰ OPÇÕES</button>
+</div>
+
+<script>
+const room = new URLSearchParams(location.search).get("room") || "";
+let state = null;
+let ws = null;
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+const PLAYER_COLORS = [
+  "#ffd700", "#00e5ff", "#ff2ec4", "#b026ff", "#4aff4a",
+  "#ff6b6b", "#ffa500", "#7cffcb", "#ff9a3d", "#6ee7ff",
+  "#f472b6", "#a3e635", "#fb7185", "#38bdf8", "#e879f9",
+  "#fbbf24", "#34d399", "#f87171", "#60a5fa", "#c084fc"
+];
+function playerColor(user) {
+  let h = 0;
+  const s = String(user || "?");
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PLAYER_COLORS[h % PLAYER_COLORS.length];
+}
+
+function render() {
+  if (!state || !state.board || !state.board.length) {
+    document.getElementById("boardWrap").innerHTML = '<div class="empty">Aguardando partida...</div>';
+    document.getElementById("wordsBar").innerHTML = "";
+    document.getElementById("foundCount").textContent = "0";
+    document.getElementById("totalCount").textContent = "0";
+    document.getElementById("finishedBanner").style.display = "none";
+    renderRanking();
+    return;
+  }
+
+  const size = state.size || 10;
+  const foundByWord = {};
+  const coordOf = {};
+  for (const w of state.words || []) {
+    coordOf[w.start] = w;
+    coordOf[w.end] = w;
+    if (w.found) foundByWord[w.start] = w;
+  }
+
+  const boardEl = document.createElement("div");
+  boardEl.className = "board";
+  boardEl.style.gridTemplateColumns = `22px repeat(${size}, 40px)`;
+
+  // Mapa de células que pertencem a palavras encontradas
+  const cellMeta = {};
+  for (const w of state.words || []) {
+    if (!w.found) continue;
+    const p1 = parse(w.start), p2 = parse(w.end);
+    const cells = segment(p1, p2);
+    for (const {r, c, idx} of cells) {
+      const key = r + "_" + c;
+      cellMeta[key] = { word: w, idx };
+    }
+  }
+
+  // Cabeçalho de colunas (1..size) + célula do canto
+  const corner = document.createElement("div");
+  corner.className = "cell-label";
+  boardEl.appendChild(corner);
+  for (let c = 1; c <= size; c++) {
+    const lbl = document.createElement("div");
+    lbl.className = "cell-label";
+    lbl.textContent = c;
+    boardEl.appendChild(lbl);
+  }
+
+  for (let r = 0; r < size; r++) {
+    // Identificação da linha (A..J)
+    const rowLabel = document.createElement("div");
+    rowLabel.className = "cell-label";
+    rowLabel.textContent = String.fromCharCode(65 + r);
+    boardEl.appendChild(rowLabel);
+
+    for (let c = 0; c < size; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      const meta = cellMeta[r + "_" + c];
+      if (meta) {
+        const color = playerColor(meta.word.finder || meta.word.finder_nickname);
+        cell.classList.add("found", "p-found");
+        cell.style.setProperty("--pcolor", color);
+        cell.textContent = state.board[r][c];
+        if (meta.idx === 0) {
+          const w = meta.word;
+          const f = document.createElement("div");
+          f.className = "finder";
+          f.style.setProperty("--pcolor", color);
+          if (w.finder_avatar) f.innerHTML = `<img src="${esc(w.finder_avatar)}" onerror="this.style.display='none'">`;
+          const nm = document.createElement("span");
+          nm.textContent = esc(w.finder_nickname || w.finder || "?");
+          f.appendChild(nm);
+          cell.appendChild(f);
+        }
+      } else {
+        cell.textContent = state.board[r][c];
+      }
+      boardEl.appendChild(cell);
+    }
+  }
+  document.getElementById("boardWrap").innerHTML = "";
+  document.getElementById("boardWrap").appendChild(boardEl);
+
+  const bar = document.getElementById("wordsBar");
+  bar.innerHTML = (state.words || []).map(w => {
+    if (!w.found) return `<span class="wchip">•••</span>`;
+    const color = playerColor(w.finder || w.finder_nickname);
+    return `<span class="wchip found" style="--pcolor:${color}">${esc(w.text)} <span class="coord">${esc(w.start)}:${esc(w.end)}</span></span>`;
+  }).join("");
+
+  document.getElementById("foundCount").textContent = state.found_count;
+  document.getElementById("totalCount").textContent = state.total;
+  document.getElementById("finishedBanner").style.display = state.finished ? "block" : "none";
+  renderRanking();
+  applyCacaView();
+}
+
+function renderRanking() {
+  const el = document.getElementById("cacaRanking");
+  if (!el) return;
+  if (!state || !state.finished) { el.style.display = "none"; el.innerHTML = ""; return; }
+
+  const agg = {};
+  for (const w of state.words || []) {
+    if (!w.found || !w.finder) continue;
+    const k = w.finder;
+    agg[k] = agg[k] || { finder: k, nickname: w.finder_nickname || k, avatar: w.finder_avatar || "", count: 0 };
+    agg[k].count++;
+  }
+  const list = Object.values(agg).sort((a, b) => b.count - a.count);
+  if (!list.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  el.style.display = "block";
+  el.innerHTML =
+    "<h3>🏆 MAIS PALAVRAS ACERTADAS</h3>" +
+    list.map((r, i) =>
+      `<div class="cr-row">
+         <span class="cr-medal">${medals[i] || (i + 1) + "º"}</span>
+         ${r.avatar ? `<img class="cr-avatar" src="${esc(r.avatar)}" onerror="this.style.visibility='hidden'">` : `<span class="cr-avatar" style="background:rgba(255,255,255,0.1)"></span>`}
+         <span class="cr-name">${esc(r.nickname)}</span>
+         <span class="cr-count">${r.count} palavra${r.count > 1 ? "s" : ""}</span>
+       </div>`
+    ).join("");
+}
+
+// ---------------- Menu / modos de visualização ----------------
+let cacaView = "game";
+
+function toggleCacaMenu() {
+  document.getElementById("cacaMenu").classList.toggle("show");
+}
+
+function cacaSetView(view) {
+  cacaView = view;
+  document.querySelectorAll(".cm-opt").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("cacaMenu").classList.remove("show");
+  if (view === "weekly") loadCacaWeekly();
+  applyCacaView();
+}
+
+function applyCacaView() {
+  const showGame = cacaView === "game";
+  const showHelp = cacaView === "help";
+  const board = document.getElementById("boardWrap");
+  const words = document.getElementById("wordsBar");
+  const banner = document.getElementById("finishedBanner");
+  const ranking = document.getElementById("cacaRanking");
+  const weekly = document.getElementById("cacaWeekly");
+  const help = document.getElementById("cacaHelp");
+  if (board) board.style.display = showGame ? "" : "none";
+  if (words) words.style.display = showGame ? "" : "none";
+  if (banner) banner.style.display = showGame ? (state && state.finished ? "block" : "none") : "none";
+  if (ranking) ranking.style.display = showGame ? (state && state.finished ? "block" : "none") : "none";
+  if (weekly) weekly.style.display = showGame ? "none" : "block";
+  if (help) help.style.display = showHelp ? "block" : "none";
+}
+
+function renderHelp() {
+  const el = document.getElementById("cacaHelp");
+  if (!el) return;
+  el.innerHTML = `
+    <h3>ℹ️ COMO JOGAR</h3>
+    <h4>OBJETIVO</h4>
+    <p>Encontre as palavras escondidas na grade e envie no <b>chat</b> as coordenadas de <b>início</b> e <b>fim</b> da palavra.</p>
+
+    <h4>COMO LER AS COORDENADAS</h4>
+    <p><b>Letra = linha (A a J)</b> · <b>Número = coluna (1 a 10)</b></p>
+    <p>Exemplo: <code>B2 F6</code> vai da linha B, coluna 2 até a linha F, coluna 6.</p>
+
+    <h4>FORMATOS ACEITOS</h4>
+    <ul>
+      <li><code>A1A4</code></li>
+      <li><code>A1:A4</code></li>
+      <li><code>B2 F6</code> (com espaço)</li>
+      <li><code>B2-F6</code>, <code>B2,F6</code>, <code>B2.F6</code></li>
+      <li>Com emoji ao redor: <code>❤️A1:A3✨</code></li>
+      <li>Com prefixo (se configurado): <code>cp A1A4</code></li>
+    </ul>
+
+    <h4>ORDEM NÃO IMPORTA</h4>
+    <p>Tanto <code>A1:A3</code> quanto <code>A3:A1</code> funcionam (o reverso também é aceito).</p>
+
+    <h4>DICA — SE O TIKTOK BLOQUEAR</h4>
+    <p>Comentários como <code>B2F6</code> (só letra+número) podem parecer código e ser barrados. Use <b>espaço ou pontuação</b>, ex: <code>B2 F6</code> ou <code>B2:F6</code>, que passa com mais facilidade.</p>
+
+    <h4>PONTUAÇÃO</h4>
+    <p>Quem acertar a palavra, ela é <b>revelada com a foto e o nome</b> do jogador. Ao encontrar todas, o jogo encerra e mostra o ranking de quem mais acertou.</p>
+  `;
+}
+
+async function loadCacaWeekly() {
+  const el = document.getElementById("cacaWeekly");
+  if (!el) return;
+  try {
+    const res = await fetch(`/api/caca/weekly?room=${encodeURIComponent(room)}`);
+    const d = await res.json();
+    if (!d || !d.success) return;
+    const list = d.weekly || [];
+    const medals = ["🥇", "🥈", "🥉"];
+    el.innerHTML =
+      "<h3>🏆 SEMANAL — MAIS PALAVRAS</h3>" +
+      (list.length ? list.map((r, i) =>
+        `<div class="cr-row">
+           <span class="cr-medal">${medals[i] || (i + 1) + "º"}</span>
+           ${r.avatar ? `<img class="cr-avatar" src="${esc(r.avatar)}" onerror="this.style.visibility='hidden'">` : `<span class="cr-avatar" style="background:rgba(255,255,255,0.1)"></span>`}
+           <span class="cr-name">${esc(r.nickname || r.user)}</span>
+           <span class="cr-count">${r.words} palavra${r.words > 1 ? "s" : ""}</span>
+         </div>`
+      ).join("") : '<div class="empty">Ninguém ainda esta semana.</div>');
+  } catch (e) {}
+}
+
+function parse(coord) {
+  coord = String(coord || "").toUpperCase();
+  const letter = coord[0];
+  const num = parseInt(coord.slice(1), 10);
+  return { r: letter.charCodeAt(0) - 65, c: num - 1 };
+}
+
+function segment(p1, p2) {
+  const dr = Math.sign(p2.r - p1.r);
+  const dc = Math.sign(p2.c - p1.c);
+  const len = Math.max(Math.abs(p2.r - p1.r), Math.abs(p2.c - p1.c)) + 1;
+  const out = [];
+  for (let i = 0; i < len; i++) out.push({ r: p1.r + dr * i, c: p1.c + dc * i, idx: i });
+  return out;
+}
+
+function handle(msg) {
+  if (msg.type === "caca_state") {
+    state = msg;
+    render();
+  } else if (msg.type === "caca_word_found") {
+    // estado completo chega junto via caca_state
+  } else if (msg.type === "caca_finished") {
+    if (state) state.finished = true;
+    render();
+  }
+}
+
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+async function loadState() {
+  try {
+    const res = await fetch(`/api/caca/state?room=${encodeURIComponent(room)}`);
+    const d = await res.json();
+    if (d && d.success) { state = d; render(); }
+  } catch (e) {}
+}
+
+connectWS();
+loadState();
+renderHelp();
+applyCacaView();
+</script>
+</body>
+</html>

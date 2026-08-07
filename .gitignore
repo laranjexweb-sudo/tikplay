@@ -1,0 +1,36 @@
+# segredos
+.env
+*.env.local
+python/tiktools_key.txt
+node/seed-admin.js
+
+# node
+node_modules/
+
+# bancos SQLite
+*.db
+*.db-wal
+*.db-shm
+
+# dados gerados / mídia
+node/public/alert-audio/
+node/public/tts-audio/
+node/data/_legacy_backup/
+node/data/
+node/gift-config.json
+node/panel-config.json
+node/public/history.json
+node/public/_legacy_history_backup.json
+python/_legacy_contextos_backup/
+python/words_backup_original.json
+
+# modelo TTS (Piper) - baixado/instalado localmente
+python/tts_models/
+
+# python
+__pycache__/
+*.pyc
+python/game.db
+
+# logs
+*.log

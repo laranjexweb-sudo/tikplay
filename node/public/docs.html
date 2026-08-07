@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay - Ajuda</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171b26;
+    --border: #2a3242;
+    --text: #e8ecf4;
+    --muted: #9aa4bd;
+    --gold: #fbbf24;
+    --green: #34d399;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+  header {
+    padding: 34px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #1a2030, #251d3a);
+    border-bottom: 2px solid var(--border);
+  }
+  header h1 { font-size: 1.9rem; color: var(--gold); letter-spacing: 1px; }
+  header p { color: var(--muted); margin-top: 6px; }
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 22px 0;
+  }
+  .toc b { color: var(--gold); }
+  .toc a { color: var(--blue); text-decoration: none; display: inline-block; margin-right: 14px; }
+  .toc a:hover { text-decoration: underline; }
+  h2 {
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin: 36px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; color: var(--blue); margin: 20px 0 8px; }
+  h4 { color: var(--purple); margin: 16px 0 6px; }
+  p { margin: 8px 0; color: var(--text); }
+  ul, ol { margin: 8px 0 8px 24px; }
+  li { margin: 4px 0; }
+  code {
+    background: #0b0e14;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.9em;
+    color: var(--green);
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 14px 0;
+  }
+  .tag {
+    display: inline-block;
+    background: #0b0e14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .tag.game1 { color: var(--green); }
+  .tag.game2 { color: var(--red); }
+  .tag.game3 { color: var(--blue); }
+  .tag.game4 { color: var(--purple); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+  th { background: #0b0e14; color: var(--gold); }
+  .url { color: var(--blue); word-break: break-all; }
+  .note {
+    background: rgba(251,191,36,.08);
+    border-left: 3px solid var(--gold);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+  }
+  .ok { color: var(--green); font-weight: 700; }
+  .warn { color: var(--red); font-weight: 700; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 TikPlay — Guia Completo</h1>
+  <p>Como funciona e como jogar cada jogo da plataforma</p>
+</header>
+<div class="wrap">
+  <nav class="toc">
+    <b>Sumário:</b>
+    <a href="#visao">Visão geral</a>
+    <a href="#conectar">Conectar a live</a>
+    <a href="#palavra">Palavra Secreta</a>
+    <a href="#batalha">BATALHA</a>
+    <a href="#caca">Caça Palavras</a>
+    <a href="#bichinho">Bichinho Virtual</a>
+    <a href="#tres">3 Pontinhos</a>
+    <a href="#publico">Guia do público</a>
+    <a href="#streamer">Guia do streamer</a>
+  </nav>
+
+  <h2 id="visao">Visão geral</h2>
+  <p>
+    Esta plataforma transforma a sua transmissão ao vivo em um jogo interativo. O público participa
+    usando o <b>chat</b> (comandos de texto) e os <b>presentes</b> (gifts) do TikTok — e tudo isso
+    aparece na tela em tempo real, pronta para ser capturada pelo OBS.
+  </p>
+  <div class="card">
+    <p><b>Fluxo básico:</b></p>
+    <ol>
+      <li>Conecte sua live no painel de controle.</li>
+      <li>Ative um dos jogos (ou mais de um — eles funcionam juntos).</li>
+      <li>Abra a página pública no OBS (overlay, ranking, etc.).</li>
+      <li>O público joga pelo chat e por presentes.</li>
+    </ol>
+  </div>
+
+  <h2 id="conectar">Conectar a live</h2>
+  <p>
+    No painel (<span class="url">/painel</span>), aba <b>Conectar Live</b>, informe:
+  </p>
+  <ul>
+    <li><b>Usuário TikTok</b> — o @ da sua conta (sem o @).</li>
+    <li><b>Motor de conexão</b>:
+      <ul>
+        <li><b>TikTokLive</b> (recomendado) — conexão direta, não precisa de chave.</li>
+        <li><b>Tik.Tools</b> — precisa da API key do api.tik.tools.</li>
+      </ul>
+    </li>
+  </ul>
+  <p>Clique em <b>Conectar Live</b>. Quando o estado mudar para <b>Conectado</b> (com um som), a live está pronta.</p>
+  <div class="note">
+    <b>Filtros de chat</b> (aba Conectar Live): podem ser ativados para valer em <b>todos</b> os jogos —
+    "apenas seguidores" e/ou "apenas heart-me" (assinantes). Quem não cumprir o filtro não pontua.
+  </div>
+
+  <h2 id="palavra">1. Palavra Secreta <span class="tag game1">JOGO 1</span></h2>
+  <h3>Como funciona</h3>
+  <p>
+    O streamer inicia uma partida e o sistema sorteia uma <b>palavra secreta</b>. O público tenta
+    adivinhá-la escrevendo palavras no chat. Cada chute recebe um <b>ranking</b> por similaridade
+    (quanto menor o número, mais perto da resposta). O jogo termina quando alguém acerta.
+  </p>
+  <h3>Como jogar (público)</h3>
+  <ul>
+    <li>Escreva uma palavra no chat — opcionalmente com o prefixo configurado (padrão <code>#</code>): <code>#cachorro</code>.</li>
+    <li>Cada palavra só vale uma vez; duplicatas são ignoradas.</li>
+    <li>O overlay mostra o rank do seu chute e dicas liberadas.</li>
+  </ul>
+  <h3>Dicas e presentes</h3>
+  <ul>
+    <li><b>Gifts de dica</b>: enviar um presente configurado libera palavras próximas da resposta (dicas quentes/mornas).</li>
+    <li><b>DICA / CHARADA</b> (botões no painel ou por presentes): o streamer pode liberar uma dica manualmente ou uma charada gerada por IA.</li>
+    <li><b>Presente Revelador / Final Boss</b>: no fim da partida, um presente específico revela a palavra — quem enviar vence.</li>
+    <li><b>Presente de Tamanho</b>: se configurado, o tamanho da palavra fica oculto na tela até alguém enviar o presente — então as caixas aparecem.</li>
+  </ul>
+  <h3>Meta de Tap (barra de coração)</h3>
+  <ul>
+    <li>Uma barra vertical ao lado da roleta mostra o progresso de curtidas (taps) da live.</li>
+    <li>Ao atingir a <b>meta</b> (configurável no painel), o jogo libera automaticamente uma <b>dica ou charada</b> (seguindo a porcentagem da roleta).</li>
+    <li>No <b>Final Boss</b> (top 3 do ranking), a dica fica pendente e é liberada quando o jogo sair do top 3.</li>
+  </ul>
+  <h3>Rodada automática</h3>
+  <ul>
+    <li>Opção no painel: ao terminar uma partida, a próxima inicia automaticamente após a pausa configurada.</li>
+    <li>O botão <b>Finalizar Partida</b> sempre encerra — a auto-rodada só vale para vitória natural ou Final Boss.</li>
+  </ul>
+  <h3>Rankings</h3>
+  <ul>
+    <li><b>Ranking Semanal</b> e <b>Ranking da Live</b> podem ser alternados clicando no título do painel lateral.</li>
+    <li>O primeiro lugar é destacado com medalha 🥇 e estilo dourado.</li>
+  </ul>
+
+  <h2 id="batalha">2. BATALHA <span class="tag game2">JOGO 2</span></h2>
+  <h3>Como funciona</h3>
+  <p>
+    Uma rodada com duração padrão de <b>3 minutos</b>. O público pontua de duas formas, e há
+    <b>dois campeões</b> por rodada:
+  </p>
+  <ul>
+    <li><b>👑 TOP TAP</b> — quem mais enviar <b>curtidas</b> (taps) na live durante a rodada.</li>
+    <li><b>🪙 TOP MOEDA</b> — quem mais enviar <b>presentes</b> (valor em diamantes) durante a rodada.</li>
+  </ul>
+  <h3>Como jogar (público)</h3>
+  <ul>
+    <li>Toque na tela para dar <b>curtidas</b> (aumenta seus taps).</li>
+    <li>Envie <b>presentes</b> (cada diamante vale moedas na batalha).</li>
+  </ul>
+  <p>No fim da rodada, os dois vencedores são anunciados na tela de batalha. Há também o <b>ranking geral da live</b> (acumulado) e o <b>ranking semanal</b>.</p>
+
+  <h2 id="caca">3. Caça Palavras <span class="tag game3">JOGO 3</span></h2>
+  <h3>Como funciona</h3>
+  <p>
+    Uma grade <b>10×10</b> é gerada com palavras escondidas. O público informa as <b>coordenadas</b>
+    do início e do fim de uma palavra para marcá-la.
+  </p>
+  <h3>Como jogar (público)</h3>
+  <p>Use a letra (linha) + número (coluna) do início ao fim da palavra:</p>
+  <ul>
+    <li><code>A1A4</code> — formato compacto.</li>
+    <li><code>A1:A4</code>, <code>B2 F6</code>, <code>B2-F6</code>, <code>B2,F6</code> — com separadores.</li>
+    <li>Com emoji ao redor: <code>❤️A1:A3✨</code>.</li>
+    <li>Com prefixo (se configurado): <code>cp A1A4</code>.</li>
+  </ul>
+  <div class="note">
+    <b>Ordem não importa:</b> tanto <code>A1:A3</code> quanto <code>A3:A1</code> funcionam.
+    Se o TikTok bloquear <code>B2F6</code> (parece código), use espaço/pontuação: <code>B2 F6</code>.
+  </div>
+  <p>Quem acerta vê a palavra <b>revelada com foto e nome</b>. Ao encontrar todas, o jogo encerra e mostra o ranking de quem mais acertou (rodada e semanal).</p>
+
+  <h2 id="bichinho">4. Bichinho Virtual <span class="tag game4">JOGO 4</span></h2>
+  <h3>Como funciona</h3>
+  <p>
+    Um mascote comunitário (estilo Digimon) que nasce, evolui e luta contra boss. O estado é
+    <b>salvo</b> — ele continua evoluído entre as lives.
+  </p>
+  <h3>Fases</h3>
+  <ol>
+    <li><b>OVO</b> — o público chacoalha até ele chocar.</li>
+    <li><b>BEBÊ → NOVATO → CAMPEÃO</b> — evolui com XP acumulado por cuidados.</li>
+  </ol>
+  <h3>Como jogar (público)</h3>
+  <ul>
+    <li><code>#chocar</code> — chacoalha o ovo.</li>
+    <li><code>#alimentar</code> — restaura a fome.</li>
+    <li><code>#carinho</code> — restaura a energia.</li>
+    <li><b>Presentes</b> — alimentam o mascote (e também chocam o ovo).</li>
+    <li><b>Curtidas</b> — dão um pouco de energia.</li>
+  </ul>
+  <h3>Batalha de boss</h3>
+  <ul>
+    <li>A cada <b>15 minutos</b> (ou pelo botão no painel) um boss invade a tela.</li>
+    <li>A batalha dura <b>60 segundos</b>. Durante esse tempo, <b>presentes viram dano</b>: 1 diamante = 50 de dano.</li>
+    <li><span class="ok">Vitória</span>: o mascote ganha XP massivo e pode evoluir.</li>
+    <li><span class="warn">Derrota</span> (tempo esgotado): o mascote fica ferido e perde fome/energia.</li>
+  </ul>
+  <p>O público acompanha a batalha na página do Bichinho (barra de HP do boss, cronômetro gigante e quem deu o último golpe).</p>
+  <h3>Modo Assistente</h3>
+  <ul>
+    <li>Ative no painel para o mascote falar: cumprimenta quem entra, agradece a cada 500 curtidas e comenta a batalha.</li>
+    <li>O streamer pode mandar o mascote falar com <code>!falar texto</code>.</li>
+    <li>Quando a live desconecta, o mascote pausa automaticamente (não perde fome/energia offline).</li>
+  </ul>
+
+  <h2 id="tres">5. Jogo dos 3 Pontinhos <span class="tag game2">JOGO 5</span></h2>
+  <h3>Como funciona</h3>
+  <p>
+    Uma palavra é sorteada e revelada em <b>3 dicas progressivas</b>. O público tenta adivinhar
+    escrevendo a palavra no chat. Quanto antes acertar, mais pontos ganha.
+  </p>
+  <ul>
+    <li><b>Dica 1</b> (difícil, mais pontos) → <b>Dica 2</b> → <b>Dica 3</b> (fácil).</li>
+    <li>Cada dica tem um tempo e pontuação configuráveis no painel.</li>
+    <li>O ranking semanal registra quem acertou mais vezes.</li>
+  </ul>
+  <h3>Presentes</h3>
+  <ul>
+    <li><b>Presente A</b> — revela o tamanho da palavra.</li>
+    <li><b>Presente B</b> — revela a primeira letra (só após o tamanho ter sido revelado).</li>
+    <li><b>Ingresso / Passe Livre</b> — se configurado, só quem enviou esse presente pode palpitar no chat.</li>
+  </ul>
+  <h3>Botão de áudio</h3>
+  <p>Cada dica tem um botão ▶ para ouvir a dica em voz alta (usa a voz configurada na narração de chat).</p>
+
+  <h2 id="publico">Guia rápido do público</h2>
+  <table>
+    <tr><th>Jogo</th><th>Como interagir</th><th>O que ganha</th></tr>
+    <tr>
+      <td>Palavra Secreta</td>
+      <td><code>#palavra</code> no chat; presentes de dica</td>
+      <td>Dica, ranking, vitória</td>
+    </tr>
+    <tr>
+      <td>BATALHA</td>
+      <td>Curtidas (taps) e presentes (moedas)</td>
+      <td>Top Tap / Top Moeda</td>
+    </tr>
+    <tr>
+      <td>Caça Palavras</td>
+      <td>Coordenadas: <code>A1:A4</code>, <code>B2 F6</code></td>
+      <td>Revelar palavras, ranking</td>
+    </tr>
+    <tr>
+      <td>Bichinho</td>
+      <td><code>#chocar</code>, <code>#alimentar</code>, <code>#carinho</code>, presentes, curtidas</td>
+      <td>Evolução, derrotar o boss</td>
+    </tr>
+    <tr>
+      <td>3 Pontinhos</td>
+      <td>Escrever a palavra no chat (com Ingresso, se configurado); presentes A/B</td>
+      <td>Pontos no ranking semanal</td>
+    </tr>
+  </table>
+
+  <h2 id="streamer">Guia rápido do streamer</h2>
+  <p>Páginas públicas (troque <code>SEUCODIGO</code> pelo código da sua sala):</p>
+  <table>
+    <tr><th>Página</th><th>Para que serve</th></tr>
+    <tr><td class="url">/jogo?room=SEUCODIGO</td><td>Palavra Secreta (tela do jogo)</td></tr>
+    <tr><td class="url">/overlay?room=SEUCODIGO</td><td>Overlay geral para o OBS</td></tr>
+    <tr><td class="url">/ranking?room=SEUCODIGO</td><td>Ranking geral</td></tr>
+    <tr><td class="url">/batalha?room=SEUCODIGO</td><td>Tela da BATALHA</td></tr>
+    <tr><td class="url">/caca-palavra?room=SEUCODIGO</td><td>Tela do Caça Palavras</td></tr>
+    <tr><td class="url">/bichinho?room=SEUCODIGO</td><td>Tela do Bichinho Virtual</td></tr>
+    <tr><td class="url">/tres-pontinhos?room=SEUCODIGO</td><td>Tela do Jogo dos 3 Pontinhos</td></tr>
+    <tr><td class="url">/docs</td><td>Esta página de ajuda</td></tr>
+  </table>
+  <div class="card">
+    <p><b>Painel de controle</b> (<span class="url">/painel</span>):</p>
+    <ul>
+      <li><b>Conectar Live</b> — usuário, motor, filtros de chat.</li>
+      <li><b>Leitura de Chat</b> — narração do chat em voz alta e voz das charadas.</li>
+      <li><b>Alertas Sonoros</b> — som por presente e som de conexão.</li>
+      <li><b>Palavra Secreta</b> — iniciar partida, gifts de dica, presente revelador, DICA/CHARADA manuais.</li>
+      <li><b>BATALHA</b> — iniciar/finalizar rodada, ranking e histórico.</li>
+      <li><b>Caça Palavras</b> — iniciar grade, formato do comando, revelar palavra.</li>
+      <li><b>Bichinho</b> — ativar/desativar mascote, modo assistente e invocar o boss.</li>
+      <li><b>3 Pontinhos</b> — tempos/pontos das dicas, presentes A/B/Ingresso, ranking semanal.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <b>Dica de OBS:</b> adicione uma fonte de <b>Navegador</b> apontando para a URL da página desejada
+    (com o parâmetro <code>?room=SEUCODIGO</code>). A tela acompanha a live automaticamente.
+  </div>
+
+  <footer>Guia da plataforma TikPlay — jogos interativos para lives — <span class="url">/docs</span></footer>
+</div>
+</body>
+</html>
