@@ -718,12 +718,19 @@ class GameSession:
             pass
 
     def _pick_tres_word(self) -> str:
-        """Sorteia uma palavra para o 3 Pontinhos sem repetir (reusa played_words)."""
+        """Sorteia uma palavra para o 3 Pontinhos sem repetir (reusa played_words) e sem banidas."""
         if not self.game.word_pool:
             return ""
-        disponiveis = [w for w in self.game.word_pool if strip_accents(w) not in self.game.played_words]
+        try:
+            banned = db.load_banned_words()
+        except Exception:
+            banned = getattr(self.game, "banned_words", set()) or set()
+        disponiveis = [w for w in self.game.word_pool
+                       if strip_accents(w) not in self.game.played_words and strip_accents(w) not in banned]
         if not disponiveis:
             self.game.played_words.clear()
+            disponiveis = [w for w in self.game.word_pool if strip_accents(w) not in banned]
+        if not disponiveis:
             disponiveis = self.game.word_pool[:]
         import random as _r
         return _r.choice(disponiveis)

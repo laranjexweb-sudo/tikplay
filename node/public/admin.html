@@ -32,6 +32,20 @@
   </div>
 </div>
 
+<div class="nb-card mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="m-0">Palavras Banidas <span id="bannedCount" class="badge text-bg-dark"></span></h2>
+  </div>
+  <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
+    Palavras que nunca devem ser sorteadas no Palavra Secreta e no 3 Pontinhos (global, vale para todos os clientes). Uma palavra por linha.
+  </div>
+  <textarea id="bannedWordsInput" rows="8" class="form-control" placeholder="exemplo&#10;palavra2&#10;termo3" style="font-family:monospace;font-size:0.85rem"></textarea>
+  <div class="d-flex gap-2 mt-2 align-items-center">
+    <button class="btn btn-nb btn-success btn-sm" onclick="saveBannedWords()">Salvar Palavras Banidas</button>
+    <span class="text-secondary" style="font-size:0.75rem" id="bannedMsg"></span>
+  </div>
+</div>
+
 <div class="nb-card">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Usuarios <span id="userCount" class="badge text-bg-dark"></span></h2>
@@ -150,6 +164,39 @@ function esc(s) {
 
 let usersData = [];
 let editingId = null;
+
+async function loadBannedWords() {
+  try {
+    const data = await apiFetch("/api/admin/banned-words");
+    if (!data.success) return;
+    const input = document.getElementById("bannedWordsInput");
+    const counter = document.getElementById("bannedCount");
+    if (input) input.value = (data.words || []).join("\n");
+    if (counter) counter.textContent = (data.words || []).length;
+  } catch (e) {}
+}
+
+async function saveBannedWords() {
+  const input = document.getElementById("bannedWordsInput");
+  const msg = document.getElementById("bannedMsg");
+  const words = (input ? input.value : "").split("\n").map(s => s.trim()).filter(Boolean);
+  try {
+    const data = await apiFetch("/api/admin/banned-words", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ words }),
+    });
+    if (data.success) {
+      const counter = document.getElementById("bannedCount");
+      if (counter) counter.textContent = data.count || 0;
+      if (msg) msg.textContent = `${data.count} palavra(s) banida(s) salvas.`;
+    } else if (msg) {
+      msg.textContent = data.error || "Erro ao salvar";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Erro de rede: " + e.message;
+  }
+}
 
 async function loadUsers() {
   const data = await apiFetch("/api/admin/users");
@@ -387,6 +434,7 @@ async function pollContextos() {
   }
 }
 
+loadBannedWords();
 loadUsers();
 pollContextos();
 </script>

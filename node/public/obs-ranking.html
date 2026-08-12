@@ -74,8 +74,15 @@
 <div class="list" id="likeList"><div class="empty">Aguardando curtidas...</div></div>
 
 <script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 let ws = null;
+
+function authFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers });
+}
 
 function render(ranking) {
   const list = document.getElementById("likeList");
@@ -122,7 +129,7 @@ function render(ranking) {
 
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
   ws.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
@@ -134,7 +141,7 @@ function connectWS() {
 
 async function loadSnapshot() {
   try {
-    const res = await fetch(`/api/game-state?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/game-state`);
     const data = await res.json();
     if (data && data.likes_ranking) render(data.likes_ranking);
   } catch {}

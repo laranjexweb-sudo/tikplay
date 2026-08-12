@@ -141,13 +141,21 @@
   </div>
 
 <script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
+const room = new URLSearchParams(location.search).get("room") || "";
 let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false };
 let ws = null;
-const room = new URLSearchParams(location.search).get("room") || "";
+
+function authFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers });
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
 
   ws.onopen = () => {
     document.getElementById("statusBadge").textContent = "🟢 Conectado";
@@ -660,7 +668,7 @@ function closeRiddleCard() {
 
 async function triggerPlayRiddle() {
   try {
-    await fetch(`/api/play-riddle?room=${encodeURIComponent(room)}`, { method: "POST" });
+    await authFetch(`/api/play-riddle`, { method: "POST" });
   } catch (err) {
     console.error("Erro ao iniciar charada:", err);
   }
@@ -826,12 +834,13 @@ function processGuessHighlightQueue() {
     const msg = current.msg;
     state.finished = true;
     state.secretWord = msg.secret_word;
+    state.secretLength = (msg.secret_word || "").length;
     state.postGameSummary = msg.post_game_summary || null;
     document.getElementById("gameOverBanner").style.display = "block";
     if (msg.winner === "Ninguém") {
-      document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
+      document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span><div class="word-reveal">A palavra era: <span>${esc(msg.secret_word || "")}</span></div>`;
     } else {
-      document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner} venceu!</span>`;
+      document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(msg.secret_word || "")}</span></div>`;
     }
     renderBoxes();
     refreshRanking();
@@ -1026,7 +1035,7 @@ let rankingMode = "weekly";
 
 async function fetchWinners() {
   try {
-    const res = await fetch(`/api/winners?room=${encodeURIComponent(room)}&` + Date.now());
+    const res = await authFetch(`/api/winners?` + Date.now());
     const data = await res.json();
     renderWinners(data.ranking || []);
   } catch (e) {}
@@ -1034,7 +1043,7 @@ async function fetchWinners() {
 
 async function fetchLiveRanking() {
   try {
-    const res = await fetch(`/api/ranking-live?room=${encodeURIComponent(room)}&` + Date.now());
+    const res = await authFetch(`/api/ranking-live?` + Date.now());
     const data = await res.json();
     renderWinners(data.ranking || []);
   } catch (e) {
@@ -1245,7 +1254,7 @@ async function loadGameState() {
     if (!giftImageMap || !Object.keys(giftImageMap).length) {
       await loadGiftImageMap();
     }
-    const res = await fetch(`/api/game-state?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/game-state`);
     const gs = await res.json();
     state.ttsSettings = gs.settings || {};
     state.activeGift = gs.active_gift || null;
@@ -1275,11 +1284,11 @@ async function loadGameState() {
         state.postGameSummary = gs.post_game_summary || null;
         document.getElementById("gameOverBanner").style.display = "block";
         if (gs.winner === "Ninguém") {
-          document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
+          document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span><div class="word-reveal">A palavra era: <span>${esc(gs.secret_word || "")}</span></div>`;
         } else {
           const winAvatar = gs.guesses && gs.guesses.find(g => g.word === gs.secret_word);
           const avUrl = winAvatar ? (winAvatar.avatar || '') : '';
-          document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner} venceu!</span>`;
+          document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(gs.secret_word || "")}</span></div>`;
         }
         showStartBar("Jogo finalizado! Aguardando a próxima partida...");
       } else {

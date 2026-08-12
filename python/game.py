@@ -224,6 +224,10 @@ class JogoContexto:
         with open(path, encoding="utf-8") as f:
             self.word_pool = json.load(f)
         self.norm_to_word = {strip_accents(w): w for w in self.word_pool}
+        try:
+            self.banned_words = db.load_banned_words()
+        except Exception:
+            self.banned_words = set()
 
     def _load_history(self):
         if self.tenant_id is not None:
@@ -348,9 +352,17 @@ class JogoContexto:
         return pos + 2
 
     def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None) -> str:
-        available = [w for w in self.word_pool if w not in self.played_words]
+        # Relê as palavras banidas a cada rodada (mudanças do admin valem na próxima)
+        try:
+            self.banned_words = db.load_banned_words()
+        except Exception:
+            self.banned_words = self.banned_words or set()
+        available = [w for w in self.word_pool
+                     if w not in self.played_words and strip_accents(w) not in self.banned_words]
         if not available:
             self.played_words.clear()
+            available = [w for w in self.word_pool if strip_accents(w) not in self.banned_words]
+        if not available:
             available = self.word_pool[:]
 
         self.secret_word = random.choice(available)

@@ -345,6 +345,8 @@
 </div>
 
 <script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 const state = {
   active: false, phase: "idle", countdown_remaining: 0, pause_remaining: 0,
@@ -356,6 +358,11 @@ const state = {
 let winTimer = null;
 let wrongItems = [];
 let giftImageMap = {};
+
+function authFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers });
+}
 let currentDicaAudio = null;
 let ticketTimer = null;
 
@@ -541,7 +548,7 @@ function renderWeekly(list) {
 let ws;
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
   ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
   ws.onclose = () => setTimeout(connectWS, 3000);
 }
@@ -569,10 +576,10 @@ function handle(msg) {
 
 async function load() {
   try {
-    const res = await fetch(`/api/tres/state?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/tres/state`);
     const data = await res.json();
     if (data && data.success) applyState(data);
-    const wr = await fetch(`/api/tres/weekly?room=${encodeURIComponent(room)}`);
+    const wr = await authFetch(`/api/tres/weekly`);
     const wd = await wr.json();
     if (wd && wd.success) renderWeekly(wd.weekly);
   } catch {}

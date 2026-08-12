@@ -304,8 +304,15 @@
 </div>
 
 <script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 let ws = null;
+
+function authFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers });
+}
 let ranking = { taps: [], coins: [] };
 let weekly = { taps: [], coins: [] };
 let liveRanking = { taps: [], coins: [] };
@@ -379,7 +386,7 @@ function renderWeekly() {
 
 async function loadWeekly() {
   try {
-    const res = await fetch(`/api/battle/weekly?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/battle/weekly`);
     const d = await res.json();
     if (d && d.success) { weekly = d.weekly || { taps: [], coins: [] }; renderWeekly(); }
   } catch (e) {}
@@ -398,7 +405,7 @@ function renderLiveRanking() {
 
 async function loadLiveRanking() {
   try {
-    const res = await fetch(`/api/battle/live-ranking?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/battle/live-ranking`);
     const d = await res.json();
     if (d && d.success) { liveRanking = d.ranking || { taps: [], coins: [] }; renderLiveRanking(); }
   } catch (e) {}
@@ -479,14 +486,14 @@ function animateBalance(type) {
 
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
   ws.onmessage = (e) => { try { handle(JSON.parse(e.data)); } catch {} };
   ws.onclose = () => setTimeout(connectWS, 3000);
 }
 
 async function load() {
   try {
-    const res = await fetch(`/api/battle/state?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/battle/state`);
     const data = await res.json();
     if (data && data.success) {
       if (data.battle) {

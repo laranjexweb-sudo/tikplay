@@ -262,6 +262,7 @@ function updateGameState(tenant, msg) {
     case "game_over":
       gs.finished = true;
       gs.secret_word = msg.secret_word;
+      if (msg.secret_word) gs.secret_length = msg.secret_word.length;
       gs.winner = msg.winner;
       gs.post_game_summary = msg.post_game_summary || null;
       break;
@@ -866,6 +867,18 @@ app.post("/api/admin/generate-contexts/stop", auth.requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ---------------- Palavras banidas (global, admin super) ----------------
+
+app.get("/api/admin/banned-words", auth.requireAdmin, (req, res) => {
+  res.json({ success: true, words: db.getBannedWords() });
+});
+
+app.post("/api/admin/banned-words", auth.requireAdmin, (req, res) => {
+  const words = (req.body && req.body.words) || [];
+  const clean = db.saveBannedWords(words);
+  res.json({ success: true, words: clean, count: clean.length });
+});
+
 // ---------------- Panel config ----------------
 
 app.get("/api/panel-config", auth.requireAuth, (req, res) => {
@@ -1032,16 +1045,8 @@ app.post("/api/sound-alerts", auth.requireAuth, soundUpload.single("file"), (req
   }
 });
 
-app.get("/api/sound-alerts", (req, res) => {
-  const room = req.query.room;
-  if (room) {
-    const user = db.getUserByRoomCode(room);
-    if (!user) return res.json({ success: false, error: "Sala nao encontrada" });
-    return res.json({ success: true, alerts: db.getSoundAlerts(user.id) });
-  }
-  auth.requireAuth(req, res, () => {
-    res.json({ success: true, alerts: db.getSoundAlerts(req.user.id) });
-  });
+app.get("/api/sound-alerts", auth.requireAuth, (req, res) => {
+  res.json({ success: true, alerts: db.getSoundAlerts(req.user.id) });
 });
 
 app.delete("/api/sound-alerts", auth.requireAuth, (req, res) => {
@@ -1270,24 +1275,13 @@ function loadTenantGameState(tenantId) {
   };
 }
 
-app.get("/api/game-state", (req, res) => {
-  if (req.query.room) {
-    const user = db.getUserByRoomCode(req.query.room);
-    if (!user) return res.json({ success: false, error: "Sala nao encontrada" });
-    return res.json({ success: true, ...loadTenantGameState(user.id) });
-  }
-  auth.requireAuth(req, res, () => {
-    res.json({ success: true, ...loadTenantGameState(req.user.id) });
-  });
+app.get("/api/game-state", auth.requireAuth, (req, res) => {
+  res.json({ success: true, ...loadTenantGameState(req.user.id) });
 });
 
 // ---------------- Batalha (jogo BATALHA) ----------------
 
 function battleTenantId(req) {
-  if (req.query.room) {
-    const user = db.getUserByRoomCode(req.query.room);
-    return user ? user.id : null;
-  }
   const token = auth.extractToken(req);
   if (token) {
     try { return auth.verifyToken(token).id; } catch {}
@@ -1295,18 +1289,16 @@ function battleTenantId(req) {
   return null;
 }
 
-app.get("/api/battle/state", (req, res) => {
-  const tid = battleTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/battle/state", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   const tenant = tenants.get(tid);
   const battle = (tenant && tenant.gameState && tenant.gameState.battle) || { active: false, duration: 180, remaining: 0, leaders: null };
   const ranking = db.getBattlePlayers(tid, 8);
   res.json({ success: true, battle, ranking });
 });
 
-app.get("/api/battle/ranking", (req, res) => {
-  const tid = battleTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/battle/ranking", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   res.json({ success: true, ranking: db.getBattlePlayers(tid, 8) });
 });
 
@@ -1333,10 +1325,8 @@ app.post("/api/battle/reset", auth.requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/battle/weekly", (req, res) => {
-  const tid = battleTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
-  res.json({ success: true, weekly: db.getBattleWeeklyWinners(tid, 5) });
+app.get("/api/battle/weekly", auth.requireAuth, (req, res) => {
+  res.json({ success: true, weekly: db.getBattleWeeklyWinners(req.user.id, 5) });
 });
 
 app.get("/api/battle/history", auth.requireAuth, (req, res) => {
@@ -1359,22 +1349,18 @@ app.get("/api/battle/report", auth.requireAuth, (req, res) => {
   res.json({ success: true, report: db.getBattleReport(req.user.id, roomId) });
 });
 
-app.get("/api/battle/live-ranking", (req, res) => {
-  const tid = battleTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/battle/live-ranking", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   const tenant = tenants.get(tid);
   const liveRoom = (tenant && tenant.currentStatus && tenant.currentStatus.room_id) || "";
   if (!liveRoom) return res.json({ success: true, live_room_id: "", ranking: { taps: [], coins: [] } });
   res.json({ success: true, live_room_id: liveRoom, ranking: db.getBattleLiveRanking(tid, liveRoom, 10) });
 });
 
-app.get("/api/history", (req, res) => {
-  const room = req.query.room;
-  if (!room) return res.json({ success: false, error: "room obrigatorio" });
-  const user = db.getUserByRoomCode(room);
-  if (!user) return res.json({ success: false, error: "Sala nao encontrada" });
-  const th = db.getTenantHistory(user.id);
-  const games = db.getGamesPaged(user.id, {
+app.get("/api/history", auth.requireAuth, (req, res) => {
+  const user = req.user.id;
+  const th = db.getTenantHistory(user);
+  const games = db.getGamesPaged(user, {
     page: req.query.page,
     pageSize: req.query.pageSize,
     search: req.query.search,
@@ -1384,24 +1370,16 @@ app.get("/api/history", (req, res) => {
   res.json({ games, played: th.played_words, last_id: th.last_id });
 });
 
-app.get("/api/winners", (req, res) => {
-  const room = req.query.room;
-  if (!room) return res.json({ success: false, error: "room obrigatorio" });
-  const user = db.getUserByRoomCode(room);
-  if (!user) return res.json({ success: false, error: "Sala nao encontrada" });
-  const ranking = db.getWeeklyWins(user.id, 10);
+app.get("/api/winners", auth.requireAuth, (req, res) => {
+  const ranking = db.getWeeklyWins(req.user.id, 10);
   res.json({ success: true, ranking });
 });
 
-app.get("/api/ranking-live", (req, res) => {
-  const room = req.query.room;
-  if (!room) return res.json({ success: false, error: "room obrigatorio" });
-  const user = db.getUserByRoomCode(room);
-  if (!user) return res.json({ success: false, error: "Sala nao encontrada" });
-  const tenant = tenants.get(user.id);
+app.get("/api/ranking-live", auth.requireAuth, (req, res) => {
+  const tenant = tenants.get(req.user.id);
   const liveRoom = (tenant && tenant.currentStatus && tenant.currentStatus.room_id) || "";
   if (!liveRoom) return res.json({ success: true, live_room_id: "", ranking: [] });
-  const ranking = db.getLiveWins(user.id, liveRoom, 10);
+  const ranking = db.getLiveWins(req.user.id, liveRoom, 10);
   res.json({ success: true, live_room_id: liveRoom, ranking });
 });
 
@@ -1468,10 +1446,6 @@ app.post("/api/game/manual-action", auth.requireAuth, (req, res) => {
 // ---------------- Caça Palavras ----------------
 
 function cacaTenantId(req) {
-  if (req.query.room) {
-    const user = db.getUserByRoomCode(req.query.room);
-    return user ? user.id : null;
-  }
   const token = auth.extractToken(req);
   if (token) {
     try { return auth.verifyToken(token).id; } catch {}
@@ -1511,28 +1485,21 @@ app.post("/api/caca/reveal", auth.requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/caca/state", (req, res) => {
-  const tid = cacaTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/caca/state", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   const tenant = tenants.get(tid);
   const st = (tenant && tenant.cacaState) || { active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false };
   res.json({ success: true, ...st });
 });
 
-app.get("/api/caca/weekly", (req, res) => {
-  const tid = cacaTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
-  const weekly = db.getCacaWeekly(tid, 10);
+app.get("/api/caca/weekly", auth.requireAuth, (req, res) => {
+  const weekly = db.getCacaWeekly(req.user.id, 10);
   res.json({ success: true, weekly });
 });
 
 // ---------------- Jogo dos 3 Pontinhos ----------------
 
 function tresTenantId(req) {
-  if (req.query.room) {
-    const user = db.getUserByRoomCode(req.query.room);
-    return user ? user.id : null;
-  }
   const token = auth.extractToken(req);
   if (token) {
     try { return auth.verifyToken(token).id; } catch {}
@@ -1596,9 +1563,8 @@ app.get("/api/tres/config", auth.requireAuth, (req, res) => {
   res.json({ success: true, config: db.getTresGiftConfig(req.user.id) });
 });
 
-app.get("/api/tres/state", (req, res) => {
-  const tid = tresTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/tres/state", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   const tenant = tenants.get(tid);
   const st = (tenant && tenant.tresState) || {
     active: false, round_id: 0, stage: 0, stage_remaining: 0, stage_time: 0, stage_points: 0,
@@ -1609,19 +1575,13 @@ app.get("/api/tres/state", (req, res) => {
   res.json({ success: true, ...st });
 });
 
-app.get("/api/tres/weekly", (req, res) => {
-  const tid = tresTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
-  res.json({ success: true, weekly: db.getTresWeekly(tid, 10) });
+app.get("/api/tres/weekly", auth.requireAuth, (req, res) => {
+  res.json({ success: true, weekly: db.getTresWeekly(req.user.id, 10) });
 });
 
 // ---------------- Bichinho Virtual (V-Pet) ----------------
 
 function vpetTenantId(req) {
-  if (req.query.room) {
-    const user = db.getUserByRoomCode(req.query.room);
-    return user ? user.id : null;
-  }
   const token = auth.extractToken(req);
   if (token) {
     try { return auth.verifyToken(token).id; } catch {}
@@ -1675,9 +1635,8 @@ app.post("/api/vpet/battle/start", auth.requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/vpet/state", (req, res) => {
-  const tid = vpetTenantId(req);
-  if (!tid) return res.json({ success: false, error: "Sala nao encontrada" });
+app.get("/api/vpet/state", auth.requireAuth, (req, res) => {
+  const tid = req.user.id;
   const tenant = tenants.get(tid);
   let st = (tenant && tenant.vpetState) || null;
   if (!st) {
@@ -1771,10 +1730,17 @@ wss.on("connection", (ws, req) => {
   }
 
   if (pathname === "/browser") {
-    const room = parsed.searchParams.get("room");
-    const user = room ? db.getUserByRoomCode(room) : null;
-    if (!user) {
-      ws.close(4404, "sala nao encontrada");
+    const token = parsed.searchParams.get("token");
+    let payload;
+    try {
+      payload = auth.verifyToken(token);
+    } catch {
+      ws.close(1008, "nao autenticado");
+      return;
+    }
+    const user = db.getUserById(payload.id);
+    if (!user || user.status !== "active") {
+      ws.close(1008, "conta invalida");
       return;
     }
     const tenant = getTenant(user.id);

@@ -134,8 +134,16 @@
   </div>
 
 <script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/login";
 let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {} };
 let ws = null;
+
+function authFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  return fetch(path, { ...opts, headers });
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 
 function updateIdleState() {
   const el = document.getElementById("idleWaiting");
@@ -153,7 +161,7 @@ const room = new URLSearchParams(location.search).get("room") || "";
 
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/browser?room=${encodeURIComponent(room)}`);
+  ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     handleMessage(msg);
@@ -381,7 +389,7 @@ function playGiftSound(gift, repeat_count) {
 
 async function loadSoundAlerts() {
   try {
-    const res = await fetch(`/api/sound-alerts?room=${encodeURIComponent(room)}&` + Date.now());
+    const res = await authFetch(`/api/sound-alerts?` + Date.now());
     const data = await res.json();
     if (data.success) {
       obsSoundAlerts = data.alerts || {};
@@ -653,10 +661,11 @@ function processGuessHighlightQueue() {
     const msg = current.msg;
     state.finished = true;
     state.secretWord = msg.secret_word;
+    state.secretLength = (msg.secret_word || "").length;
     state.postGameSummary = msg.post_game_summary || null;
     updateIdleState();
     document.getElementById("gameOverBanner").style.display = "block";
-    document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>ðŸ† ${msg.nickname || msg.winner} venceu!</span>`;
+    document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(msg.secret_word || "")}</span></div>`;
     renderBoxes();
     refreshRanking();
     if (state.postGameSummary) {
@@ -907,7 +916,7 @@ let rankingMode = "weekly";
 
 async function fetchWinners() {
   try {
-    const res = await fetch(`/api/winners?room=${encodeURIComponent(room)}&` + Date.now());
+    const res = await authFetch(`/api/winners?` + Date.now());
     const data = await res.json();
     renderWinners(data.ranking || []);
   } catch (e) {
@@ -917,7 +926,7 @@ async function fetchWinners() {
 
 async function fetchLiveRanking() {
   try {
-    const res = await fetch(`/api/ranking-live?room=${encodeURIComponent(room)}&` + Date.now());
+    const res = await authFetch(`/api/ranking-live?` + Date.now());
     const data = await res.json();
     renderWinners(data.ranking || []);
   } catch (e) {
@@ -1035,7 +1044,7 @@ async function loadGameState() {
     if (!giftImageMap || !Object.keys(giftImageMap).length) {
       await loadGiftImageMap();
     }
-    const res = await fetch(`/api/game-state?room=${encodeURIComponent(room)}`);
+    const res = await authFetch(`/api/game-state`);
     const gs = await res.json();
     state.ttsSettings = gs.settings || {};
     updateSubtitle();
@@ -1059,7 +1068,7 @@ async function loadGameState() {
         document.getElementById("gameOverBanner").style.display = "block";
         const winAvatar = gs.guesses && gs.guesses.find(g => g.word === gs.secret_word);
         const avUrl = winAvatar ? (winAvatar.avatar || '') : '';
-        document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>ðŸ† ${gs.winner} venceu!</span>`;
+        document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>ðŸ† ${gs.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(gs.secret_word || "")}</span></div>`;
         if (state.postGameSummary) {
           renderPostGame();
         }

@@ -2,8 +2,16 @@ import sqlite3
 import os
 import json
 import time
+import unicodedata
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "data.db")
+
+
+def _norm(s: str) -> str:
+    if not s:
+        return ""
+    s = s.lower().strip()
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
 def _conn():
@@ -394,6 +402,18 @@ def record_tres_hit(tenant_id, username, nickname, avatar, pontos, usou_multipli
         conn.commit()
     finally:
         conn.close()
+
+
+def load_banned_words() -> set:
+    """Palavras banidas (global) normalizadas sem acento, para exclusão do sorteio."""
+    conn = _conn()
+    try:
+        rows = conn.execute("SELECT word FROM banned_words").fetchall()
+    except Exception:
+        rows = []
+    finally:
+        conn.close()
+    return {_norm(r[0]) for r in rows if r and r[0]}
 
 
 def get_tres_weekly(tenant_id, limit=10):

@@ -190,6 +190,10 @@ CREATE TABLE IF NOT EXISTS tres_acertos (
   usou_multiplicador INTEGER DEFAULT 0,
   criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS banned_words (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word TEXT UNIQUE NOT NULL
+);
 `);
 try { db.exec("ALTER TABLE batalha_rounds ADD COLUMN room_id TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE batalha_interactions ADD COLUMN room_id TEXT DEFAULT ''"); } catch {}
@@ -753,6 +757,25 @@ function readJsonFile(file, fallback) {
   }
 }
 
+// Palavras banidas (global, gerenciadas pelo admin super)
+function getBannedWords() {
+  const rows = db.prepare("SELECT word FROM banned_words ORDER BY word").all();
+  return rows.map(r => r.word);
+}
+
+function saveBannedWords(words) {
+  const clean = (Array.isArray(words) ? words : [])
+    .map(w => String(w || "").trim())
+    .filter(Boolean);
+  const run = db.transaction((list) => {
+    db.prepare("DELETE FROM banned_words").run();
+    const ins = db.prepare("INSERT OR IGNORE INTO banned_words (word) VALUES (?)");
+    for (const w of list) ins.run(w);
+  });
+  run(clean);
+  return clean;
+}
+
 module.exports = {
   db,
   DEFAULT_SETTINGS,
@@ -795,6 +818,8 @@ module.exports = {
   getTresWeekly,
   getVpetState,
   saveVpetState,
+  getBannedWords,
+  saveBannedWords,
   tenantDataPath,
   readJsonFile,
 };
