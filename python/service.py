@@ -48,6 +48,7 @@ DEFAULT_SETTINGS = {
     "command_prefix": "#",
     "auto_round": False,
     "auto_round_pause": 20,
+    "riddle_auto_narrate": True,
     "tap_meta": 1000,
 }
 
@@ -104,6 +105,8 @@ def normalize_settings(raw) -> dict:
             settings["tap_meta"] = max(50, min(100000, val))
         except (TypeError, ValueError):
             pass
+    if "riddle_auto_narrate" in raw:
+        settings["riddle_auto_narrate"] = bool(raw["riddle_auto_narrate"])
     return settings
 
 
@@ -242,7 +245,7 @@ async def generate_tres_dicas(secret_word: str) -> list:
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {api_key}",
                     "HTTP-Referer": PUBLIC_BASE_URL,
-                    "X-Title": "Jogo 3 Pontinhos TikTok"
+                    "X-Title": "Jogo 3 Dicas TikTok"
                 },
                 method="POST"
             )
@@ -759,8 +762,8 @@ class GameSession:
             dicas = [f"Palavra com {len(palavra)} letras", "É uma palavra comum", "Última dica!"]
         return palavra, dicas
 
-    async def start_game(self, hint_gifts=None, riddle_gifts=None, size_gift=None):
-        self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift)
+    async def start_game(self, hint_gifts=None, riddle_gifts=None, size_gift=None, letter_gift=None):
+        self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift)
         # Meta de tap: zera a cada partida e aplica o valor configurado
         self.tap_meta_current = 0
         self.tap_meta_total = int(self.settings.get("tap_meta", 1000) or 1000)
@@ -787,6 +790,9 @@ class GameSession:
             "riddle_gifts": self.game.riddle_gifts,
             "size_gift": self.game.size_gift,
             "size_revealed": self.game.size_revealed,
+            "letter_gift": self.game.letter_gift,
+            "first_letter_revealed": self.game.first_letter_revealed,
+            "first_letter": self.game.secret_word[0] if (self.game.first_letter_revealed and self.game.secret_word) else "",
             "active_gift": active_gift,
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
@@ -1042,7 +1048,7 @@ class GameSession:
                     "nickname": nickname or user,
                     "avatar": avatar or "",
                 })
-                emit(self.tenant_id, "log", f"[3 Pontinhos] @{user} liberou o chat! (Passe Livre)")
+                emit(self.tenant_id, "log", f"[3 Dicas] @{user} liberou o chat! (Passe Livre)")
 
         # BICHINHO VIRTUAL: presente alimenta/choca/ataca o boss (não afeta o fluxo dos jogos)
         if self.vpet.active:
@@ -1068,6 +1074,17 @@ class GameSession:
                 "secret_length": size_res.get("secret_length", 0),
             })
             emit(self.tenant_id, "log", f"[Jogo] @{user} revelou o TAMANHO da palavra ({size_res.get('secret_length', 0)} letras)")
+            return
+        if size_res and size_res.get("first_letter_revealed"):
+            emit(self.tenant_id, "game", {
+                "type": "letter_revealed",
+                "user": user,
+                "nickname": nickname or user,
+                "avatar": avatar or "",
+                "first_letter": size_res.get("first_letter", ""),
+                "secret_length": size_res.get("secret_length", 0),
+            })
+            emit(self.tenant_id, "log", f"[Jogo] @{user} revelou a PRIMEIRA LETRA ('{size_res.get('first_letter', '')}')")
             return
 
         active_gift = self.game.get_active_gift()
@@ -1283,6 +1300,7 @@ class GameSession:
                 hint_gifts=self.game.hint_gifts,
                 riddle_gifts=self.game.riddle_gifts,
                 size_gift=self.game.size_gift,
+                letter_gift=self.game.letter_gift,
             )
         except asyncio.CancelledError:
             raise
@@ -1416,6 +1434,7 @@ class GameSession:
                     hint_gifts=cmd.get("hint_gifts"),
                     riddle_gifts=cmd.get("riddle_gifts"),
                     size_gift=cmd.get("size_gift") or "",
+                    letter_gift=cmd.get("letter_gift") or "",
                 )
             elif c == "end_game":
                 await self.end_game()
@@ -1453,7 +1472,7 @@ class GameSession:
                     self.tres.start(palavra, dicas)
                     emit(self.tenant_id, "game", {"type": "tres_weekly", "weekly": db.get_tres_weekly(self.tenant_id, 10)})
                 else:
-                    emit(self.tenant_id, "log", "[3 Pontinhos] Sem palavra disponível")
+                    emit(self.tenant_id, "log", "[3 Dicas] Sem palavra disponível")
             elif c == "tres_stop":
                 self.tres.stop()
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
@@ -1468,7 +1487,7 @@ class GameSession:
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
             elif c == "tres_config":
                 self.tres.set_gift_config(cmd.get("config") or {})
-                emit(self.tenant_id, "log", "[3 Pontinhos] Configuração de presentes atualizada")
+                emit(self.tenant_id, "log", "[3 Dicas] Configuração de presentes atualizada")
             elif c == "vpet_start":
                 self.vpet.start()
                 emit(self.tenant_id, "game", {"type": "vpet_state", **self.vpet.public_state()})
@@ -1649,7 +1668,9 @@ async def process_commands(queue):
                 s.game.riddle_gifts = cmd.get("riddle_gifts") or []
                 if "size_gift" in cmd:
                     s.game.size_gift = str(cmd.get("size_gift") or "")
-                emit(tid, "log", f"[Service] Gifts atualizados — Dicas: {', '.join(s.game.hint_gifts)} | Presente revelador: {', '.join(s.game.riddle_gifts)}" + (f" | Tamanho: {s.game.size_gift}" if s.game.size_gift else ""))
+                if "letter_gift" in cmd:
+                    s.game.letter_gift = str(cmd.get("letter_gift") or "")
+                emit(tid, "log", f"[Service] Gifts atualizados — Dicas: {', '.join(s.game.hint_gifts)} | Presente revelador: {', '.join(s.game.riddle_gifts)}" + (f" | Tamanho: {s.game.size_gift}" if s.game.size_gift else "") + (f" | 1ª letra: {s.game.letter_gift}" if s.game.letter_gift else ""))
             else:
                 emit(tid, "log", "[Service] update_gift_config ignorado: sessao nao ativa")
 
@@ -1657,10 +1678,21 @@ async def process_commands(queue):
             s = sessions.get(tid)
             if s:
                 s.settings = normalize_settings(cmd.get("settings"))
+                # Meta de tap: aplica em runtime preservando o progresso atual
+                s.tap_meta_total = int(s.settings.get("tap_meta", 1000) or 1000)
+                if s.game.secret_word and not s.game.finished:
+                    emit(tid, "game", {
+                        "type": "likes_ranking",
+                        "ranking": s.build_likes_ranking(5),
+                        "tap_meta_current": s.tap_meta_current,
+                        "tap_meta_total": s.tap_meta_total,
+                        "tap_meta_ready": s.tap_meta_ready,
+                    })
+                    await s._check_tap_meta()
                 emit(tid, "log",
                      f"[Service] Preferências atualizadas — Seguidores: {'sim' if s.settings['apenas_seguidores'] else 'nao'} | "
                      f"Heart-me: {'sim' if s.settings['apenas_heart_me'] else 'nao'} | "
-                     f"Dicas: {s.settings['pct_dica']}% / Charadas: {s.settings['pct_charada']}%")
+                     f"Dicas: {s.settings['pct_dica']}% / Charadas: {s.settings['pct_charada']}% | Meta de tap: {s.tap_meta_total}")
             else:
                 emit(tid, "log", "[Service] update_settings ignorado: sessao nao ativa")
 

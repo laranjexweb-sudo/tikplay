@@ -54,6 +54,11 @@
   #giftAutocomplete .ac-item.active, #giftAutocomplete .ac-item:hover,
   #riddleAutocomplete .ac-item.active, #riddleAutocomplete .ac-item:hover,
   #sizeGiftAutocomplete .ac-item.active, #sizeGiftAutocomplete .ac-item:hover { background: #fec90f; }
+  .gift-ac .ac-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #000; font-size: 0.85rem; }
+  .gift-ac .ac-item img { width: 24px; height: 24px; object-fit: contain; }
+  .gift-ac .ac-item .ac-name { flex: 1; font-weight: 700; }
+  .gift-ac .ac-item .ac-diam { color: #666; font-size: 0.8em; }
+  .gift-ac .ac-item.active, .gift-ac .ac-item:hover { background: #fec90f; }
   #giftHint { font-size: 0.75rem; margin-top: 6px; }
   #btnSaveSettings.dirty, #btnSaveAll.dirty { outline: 3px solid #fec90f; }
   .tab-nav { background: #111; border-bottom: 3px solid #000; }
@@ -110,7 +115,7 @@
       <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha')">BATALHA</button>
       <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca')">Caça Palavras</button>
       <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho')">Bichinho</button>
-      <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')">3 Pontinhos</button>
+      <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')">3 Dicas</button>
     </div>
   </div>
 
@@ -248,11 +253,16 @@
           <div class="mb-3 p-2 bg-light border border-dark rounded">
             <div class="kv"><strong>Palavra atual:</strong> <span id="currentWord">-</span></div>
           </div>
-          <button class="btn btn-nb btn-success w-100" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
-          <div class="d-flex gap-2 mt-2">
-            <button class="btn btn-nb btn-primary flex-fill" id="btnManualHint" onclick="manualHintFromPanel()" disabled>DICA</button>
-            <button class="btn btn-nb btn-info flex-fill" id="btnManualRiddle" onclick="manualRiddleFromPanel()" disabled>CHARADA</button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-nb btn-success flex-fill" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
+            <button class="btn btn-nb btn-info flex-fill" id="btnChangeRanking" onclick="displayActionFromPanel('change_ranking')">Mudar Ranking</button>
           </div>
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-nb btn-primary flex-fill" id="btnManualHint" onclick="manualHintFromPanel()" disabled>Dica</button>
+            <button class="btn btn-nb btn-warning flex-fill" id="btnManualRiddle" onclick="manualRiddleFromPanel()" disabled>Soltar Charada</button>
+            <button class="btn btn-nb btn-danger flex-fill" id="btnCloseRiddle" onclick="displayActionFromPanel('close_riddle')" disabled>Fechar Charada</button>
+          </div>
+          <div class="text-secondary mt-2" style="font-size:0.8rem" id="obsControlStatus">Ranking atual: Ranking da Live</div>
         </div>
 
         <div class="nb-card mb-3">
@@ -264,7 +274,7 @@
             </div>
             <div class="position-relative">
               <input type="text" class="form-control form-control-sm" id="riddleTagInput" placeholder="Escolha 1 presente revelador..." autocomplete="off">
-              <div id="riddleAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+              <div id="riddleAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
             </div>
             <div id="riddleTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
             <div class="text-secondary" id="riddleHint" style="font-size:0.75rem;margin-top:4px">Máximo de 1. É o presente que revela a palavra no Final Boss.</div>
@@ -275,7 +285,7 @@
           </div>
           <div class="position-relative">
             <input type="text" class="form-control" id="giftTagInput" placeholder="Busque o gift no catálogo..." autocomplete="off">
-            <div id="giftAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+            <div id="giftAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
           </div>
           <div id="giftTags" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
           <div class="text-secondary" id="giftHint">Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.</div>
@@ -285,10 +295,20 @@
           </div>
           <div class="position-relative">
             <input type="text" class="form-control" id="sizeGiftInput" placeholder="Escolha 1 presente para revelar o tamanho..." autocomplete="off">
-            <div id="sizeGiftAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+            <div id="sizeGiftAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
           </div>
           <div id="sizeGiftTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
           <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">Se preenchido, o tamanho da palavra fica oculto até alguém enviar este presente.</div>
+
+          <div class="d-flex justify-content-between align-items-center mb-1 mt-3">
+            <strong>Presente — Revelar Primeira Letra</strong>
+          </div>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="letterGiftInput" placeholder="Escolha 1 presente para revelar a 1ª letra..." autocomplete="off">
+            <div id="letterGiftAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+          </div>
+          <div id="letterGiftTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+          <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">Se preenchido, revela a primeira letra após o presente de tamanho ser enviado.</div>
         </div>
 
         <div class="nb-card mb-3">
@@ -320,6 +340,15 @@
             <div class="mt-2">
               <label class="form-label mb-0" for="tapMeta">Meta de Tap (likes) para liberar dica</label>
               <input type="number" class="form-control form-control-sm" id="tapMeta" min="50" max="100000" value="1000" onchange="onSettingsChanged()">
+            </div>
+            <div class="mt-2">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="riddleAutoNarrate" onchange="onSettingsChanged()">
+                <label class="form-check-label" for="riddleAutoNarrate"><strong>Narrar charada automaticamente</strong></label>
+              </div>
+              <div class="text-secondary" style="font-size:0.75rem">
+                Ao liberar uma charada, o áudio toca sozinho (ideal para OBS), sem depender de clique em "Ouvir".
+              </div>
             </div>
             <div class="text-secondary" style="font-size:0.75rem;margin-top:6px">
               Quando a partida termina (vitória ou encerramento), a próxima inicia automaticamente após a pausa. Ao atingir a meta de tap, o jogo libera uma dica/charada (seguindo a porcentagem), respeitando o Final Boss.
@@ -601,7 +630,7 @@
       <!-- ===================== 3 PONTINHOS ===================== -->
       <div class="tab-page" id="tab-tres" style="display:none">
         <div class="nb-card mb-3">
-          <h2>JOGO DOS 3 PONTINHOS</h2>
+          <h2>JOGO DAS 3 DICAS</h2>
           <div class="mb-3 p-2 bg-light border border-dark rounded">
             <div class="kv"><strong>Rodada:</strong> <span id="tresRound">-</span></div>
             <div class="kv"><strong>Dica:</strong> <span id="tresStage">-</span></div>
@@ -630,15 +659,27 @@
             <div class="row g-2 align-items-end">
               <div class="col-4">
                 <label class="form-label mb-0" for="tresGiftSize">Presente A — Revelar Tamanho</label>
-                <input type="text" class="form-control form-control-sm" id="tresGiftSize" list="soundGiftList" placeholder="Nome do gift...">
+                <div class="position-relative">
+                  <input type="text" class="form-control form-control-sm" id="tresGiftSize" placeholder="Nome do gift..." autocomplete="off">
+                  <div id="tresGiftSizeAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+                </div>
+                <div id="tresGiftSizeTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
               </div>
               <div class="col-4">
                 <label class="form-label mb-0" for="tresGiftLetter">Presente B — Primeira Letra</label>
-                <input type="text" class="form-control form-control-sm" id="tresGiftLetter" list="soundGiftList" placeholder="Nome do gift...">
+                <div class="position-relative">
+                  <input type="text" class="form-control form-control-sm" id="tresGiftLetter" placeholder="Nome do gift..." autocomplete="off">
+                  <div id="tresGiftLetterAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+                </div>
+                <div id="tresGiftLetterTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
               </div>
               <div class="col-4">
                 <label class="form-label mb-0" for="tresGiftTicket">Ingresso — Liberar Chat</label>
-                <input type="text" class="form-control form-control-sm" id="tresGiftTicket" list="soundGiftList" placeholder="Nome do gift...">
+                <div class="position-relative">
+                  <input type="text" class="form-control form-control-sm" id="tresGiftTicket" placeholder="Nome do gift..." autocomplete="off">
+                  <div id="tresGiftTicketAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+                </div>
+                <div id="tresGiftTicketTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
               </div>
             </div>
             <div class="text-secondary mt-2" style="font-size:0.72rem">
@@ -693,7 +734,7 @@
         <div class="nb-card mb-3">
           <h2>Onde assistir</h2>
           <div class="text-secondary" style="font-size:0.85rem">
-            Acompanhe ao vivo na página: <a href="#" id="linkTres" target="_blank">Abrir página 3 PONTINHOS</a>.
+            Acompanhe ao vivo na página: <a href="#" id="linkTres" target="_blank">Abrir página 3 DICAS</a>.
           </div>
         </div>
       </div>
@@ -1431,7 +1472,12 @@ async function startCaca() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ count }),
     });
-    if (data.success) addLog("[CaçaPalavras] Nova grade gerada!");
+    if (data.success) {
+      addLog("[CaçaPalavras] Nova grade gerada!");
+      cacaState = { ...cacaState, active: true, finished: false, found_count: 0 };
+      renderCaca();
+      loadCacaState();
+    }
     else addLog(`[CaçaPalavras] [!] ${data.error}`);
   } catch (err) {
     addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
@@ -1441,7 +1487,12 @@ async function startCaca() {
 async function stopCaca() {
   try {
     const data = await apiFetch("/api/caca/stop", { method: "POST" });
-    if (data.success) addLog("[CaçaPalavras] Jogo encerrado.");
+    if (data.success) {
+      addLog("[CaçaPalavras] Jogo encerrado.");
+      cacaState = { ...cacaState, active: false, finished: false };
+      renderCaca();
+      loadCacaState();
+    }
     else addLog(`[CaçaPalavras] [!] ${data.error}`);
   } catch (err) {
     addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
@@ -1664,7 +1715,7 @@ function handleTresMsg(msg) {
     tresPanelState.stage = msg.stage;
     tresPanelState.stage_remaining = msg.remaining;
     renderTres();
-    addLog(`[3 Pontinhos] Dica ${msg.stage}: ${msg.dica} (${msg.points} pts)`);
+    addLog(`[3 Dicas] Dica ${msg.stage}: ${msg.dica} (${msg.points} pts)`);
   } else if (msg.type === "tres_tick") {
     tresPanelState.stage_remaining = msg.remaining;
     renderTres();
@@ -1710,40 +1761,40 @@ async function tresLoadState() {
 async function tresStart() {
   try {
     const data = await apiFetch("/api/tres/start", { method: "POST" });
-    if (data.success) addLog("[3 Pontinhos] Jogo iniciado!");
-    else addLog(`[3 Pontinhos] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+    if (data.success) addLog("[3 Dicas] Jogo iniciado!");
+    else addLog(`[3 Dicas] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
 async function tresPause() {
   try {
     const data = await apiFetch("/api/tres/pause", { method: "POST" });
-    if (data.success) addLog("[3 Pontinhos] Pausado.");
-    else addLog(`[3 Pontinhos] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+    if (data.success) addLog("[3 Dicas] Pausado.");
+    else addLog(`[3 Dicas] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
 async function tresStop() {
   try {
     const data = await apiFetch("/api/tres/stop", { method: "POST" });
-    if (data.success) addLog("[3 Pontinhos] Jogo parado.");
-    else addLog(`[3 Pontinhos] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+    if (data.success) addLog("[3 Dicas] Jogo parado.");
+    else addLog(`[3 Dicas] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
 async function tresReset() {
   try {
     const data = await apiFetch("/api/tres/reset", { method: "POST" });
-    if (data.success) addLog("[3 Pontinhos] Resetado.");
-    else addLog(`[3 Pontinhos] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+    if (data.success) addLog("[3 Dicas] Resetado.");
+    else addLog(`[3 Dicas] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
 async function saveTresConfig() {
   const config = {
-    size: (document.getElementById("tresGiftSize").value || "").trim(),
-    letter: (document.getElementById("tresGiftLetter").value || "").trim(),
-    ticket: (document.getElementById("tresGiftTicket").value || "").trim(),
+    size: tresGiftSizeVal,
+    letter: tresGiftLetterVal,
+    ticket: tresGiftTicketVal,
     stage_times: [
       parseInt(document.getElementById("tresTime1").value) || 120,
       parseInt(document.getElementById("tresTime2").value) || 60,
@@ -1761,9 +1812,9 @@ async function saveTresConfig() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ config }),
     });
-    if (data.success) addLog("[3 Pontinhos] Configuração salva!");
-    else addLog(`[3 Pontinhos] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Pontinhos] [!] Erro de rede: ${err.message}`); }
+    if (data.success) addLog("[3 Dicas] Configuração salva!");
+    else addLog(`[3 Dicas] [!] ${data.error}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
 function syncPanelNewGameButton(stateStr) {
@@ -1774,23 +1825,26 @@ function syncPanelNewGameButton(stateStr) {
   if (!isLiveActive) {
     btn.disabled = true;
     btn.textContent = "Iniciar Partida";
-    btn.className = "btn btn-nb btn-success w-100";
+    btn.className = "btn btn-nb btn-success flex-fill";
     btn.onclick = startNewGameFromPanel;
     setManualButtonsEnabled(false);
+    setDisplayControlsEnabled(false);
     return;
   }
 
   btn.disabled = false;
   if (gameActive) {
     btn.textContent = "Finalizar Partida";
-    btn.className = "btn btn-nb btn-danger w-100";
+    btn.className = "btn btn-nb btn-danger flex-fill";
     btn.onclick = endGameFromPanel;
     setManualButtonsEnabled(true);
+    setDisplayControlsEnabled(true);
   } else {
     btn.textContent = "Iniciar Partida";
-    btn.className = "btn btn-nb btn-success w-100";
+    btn.className = "btn btn-nb btn-success flex-fill";
     btn.onclick = startNewGameFromPanel;
     setManualButtonsEnabled(false);
+    setDisplayControlsEnabled(false);
   }
 }
 
@@ -1799,6 +1853,13 @@ function setManualButtonsEnabled(enabled) {
   const riddle = document.getElementById("btnManualRiddle");
   if (hint) hint.disabled = !enabled;
   if (riddle) riddle.disabled = !enabled;
+}
+
+function setDisplayControlsEnabled(enabled) {
+  const close = document.getElementById("btnCloseRiddle");
+  const rank = document.getElementById("btnChangeRanking");
+  if (close) close.disabled = !enabled;
+  if (rank) rank.disabled = false;
 }
 
 function setRunningUI(running) {
@@ -2054,36 +2115,27 @@ function manualRiddleFromPanel() { manualActionFromPanel("riddle"); }
 
 // Gift config
 const MAX_HINT_GIFTS = 5;
+const MAX_RIDDLE_GIFTS = 1;
+const MAX_SIZE_GIFTS = 1;
+const MAX_LETTER_GIFTS = 1;
 let giftTags = [];
 let savedGiftTags = [];
+let riddleTags = [];
+let savedRiddleTags = [];
+let sizeGiftTag = "";
+let savedSizeGiftTag = "";
+let letterGiftTag = "";
+let savedLetterGiftTag = "";
+let tresGiftSizeVal = "";
+let tresGiftLetterVal = "";
+let tresGiftTicketVal = "";
 let giftTagList = [];
 let giftImageMap = {};
-let acMatches = [];
-let acIndex = -1;
-
 const giftInput = document.getElementById("giftTagInput");
-const giftAutocomplete = document.getElementById("giftAutocomplete");
-const giftTagsContainer = document.getElementById("giftTags");
 const giftCounter = document.getElementById("giftCounter");
 const giftHint = document.getElementById("giftHint");
 const btnSaveGift = document.getElementById("btnSaveGiftConfig");
 const btnSaveAll = document.getElementById("btnSaveAll");
-
-const MAX_RIDDLE_GIFTS = 1;
-let riddleTags = [];
-let savedRiddleTags = [];
-const riddleInput = document.getElementById("riddleTagInput");
-const riddleAutocomplete = document.getElementById("riddleAutocomplete");
-const riddleTagsContainer = document.getElementById("riddleTags");
-const riddleCounter = document.getElementById("riddleCounter");
-
-const MAX_SIZE_GIFTS = 1;
-let sizeGiftTag = "";
-let savedSizeGiftTag = "";
-const sizeGiftInput = document.getElementById("sizeGiftInput");
-const sizeGiftAutocomplete = document.getElementById("sizeGiftAutocomplete");
-const sizeGiftTagsContainer = document.getElementById("sizeGiftTags");
-const riddleHint = document.getElementById("riddleHint");
 
 // Preferências de Jogo
 let settingsDirty = false;
@@ -2203,9 +2255,256 @@ function giftLevel(name, minD, maxD) {
   return "Muito Próxima";
 }
 
+// ---------------- Gift picker (componente comum) ----------------
+function createGiftPicker(opts) {
+  const input = document.getElementById(opts.inputId);
+  const autocomplete = document.getElementById(opts.autocompleteId);
+  const tagsContainer = opts.tagsId ? document.getElementById(opts.tagsId) : null;
+  const counter = opts.counterId ? document.getElementById(opts.counterId) : null;
+  const max = opts.max || 1;
+  const isMulti = !!opts.multi;
+  const showMeta = !!opts.showMeta;
+  const getValue = opts.getValue;
+  const onChange = opts.onChange;
+  let matches = [];
+  let idx = -1;
+
+  function values() {
+    const v = getValue();
+    return Array.isArray(v) ? v.slice() : (v ? [v] : []);
+  }
+
+  function available(q) {
+    const val = String(q || "").trim().toLowerCase();
+    const selected = new Set(values().map((n) => n.toLowerCase()));
+    let list = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
+    if (val) list = list.filter((g) => g.name.toLowerCase().includes(val) || getGiftPtName(g.name).toLowerCase().includes(val));
+    return list.slice(0, 20);
+  }
+
+  function hide() {
+    if (!autocomplete) return;
+    autocomplete.style.display = "none";
+    autocomplete.innerHTML = "";
+    matches = [];
+    idx = -1;
+  }
+
+  function renderAc() {
+    if (!autocomplete) return;
+    autocomplete.innerHTML = "";
+    if (!matches.length) { autocomplete.style.display = "none"; return; }
+    autocomplete.style.display = "block";
+    matches.forEach((g, i) => {
+      const item = document.createElement("div");
+      item.className = "ac-item" + (i === idx ? " active" : "");
+      const file = giftImageMap[g.name];
+      if (file) {
+        const img = document.createElement("img");
+        img.src = "/gift-images/" + file;
+        img.alt = "";
+        item.appendChild(img);
+      }
+      const nameEl = document.createElement("span");
+      nameEl.className = "ac-name";
+      nameEl.textContent = getGiftLabel(g.name);
+      item.appendChild(nameEl);
+      const diam = document.createElement("span");
+      diam.className = "ac-diam";
+      diam.textContent = g.diamond_count + " 💎";
+      item.appendChild(diam);
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        add(g.name);
+        if (input) input.value = "";
+        hide();
+      });
+      autocomplete.appendChild(item);
+    });
+  }
+
+  function open() {
+    if (!input || input.disabled || values().length >= max) { hide(); return; }
+    matches = available(input.value);
+    idx = matches.length ? 0 : -1;
+    renderAc();
+  }
+
+  function add(name) {
+    const g = giftByName(name);
+    if (!g) return;
+    const cur = values();
+    if (cur.some((n) => n.toLowerCase() === g.name.toLowerCase())) return;
+    if (cur.length >= max) return;
+    cur.push(g.name);
+    if (isMulti) cur.sort((a, b) => giftDiamonds(a) - giftDiamonds(b) || a.localeCompare(b));
+    onChange(isMulti ? cur : [g.name]);
+    renderTags();
+  }
+
+  function remove(name) {
+    const cur = values().filter((n) => n !== name);
+    onChange(isMulti ? cur : []);
+    renderTags();
+  }
+
+  function renderTags() {
+    const cur = values();
+    if (tagsContainer) {
+      tagsContainer.innerHTML = "";
+      const diamonds = cur.map(giftDiamonds);
+      const minD = diamonds.length ? Math.min(...diamonds) : 0;
+      const maxD = diamonds.length ? Math.max(...diamonds) : 0;
+      for (const g of cur) {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        const file = giftImageMap[g];
+        if (file) {
+          const img = document.createElement("img");
+          img.src = "/gift-images/" + file;
+          img.alt = "";
+          img.onerror = function () { this.style.display = "none"; };
+          chip.appendChild(img);
+        }
+        const nameEl = document.createElement("span");
+        nameEl.textContent = getGiftLabel(g);
+        chip.appendChild(nameEl);
+        if (showMeta) {
+          const meta = document.createElement("span");
+          meta.className = "meta";
+          meta.textContent = giftDiamonds(g) + "💎 " + giftLevel(g, minD, maxD);
+          chip.appendChild(meta);
+        }
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "remove";
+        btn.setAttribute("aria-label", "Remover " + g);
+        btn.textContent = "×";
+        btn.addEventListener("click", () => remove(g));
+        chip.appendChild(btn);
+        tagsContainer.appendChild(chip);
+      }
+    }
+    updateInputState();
+    if (counter) counter.textContent = `${cur.length}/${max}`;
+    if (opts.onRender) opts.onRender();
+  }
+
+  function updateInputState() {
+    if (!input) return;
+    const full = values().length >= max;
+    input.disabled = full;
+    input.placeholder = full ? `Limite atingido (${max}/${max})` : (opts.placeholder || "Busque o gift no catálogo...");
+    if (full) hide();
+  }
+
+  if (input) {
+    input.addEventListener("focus", open);
+    input.addEventListener("click", open);
+    input.addEventListener("input", open);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" && matches.length) { e.preventDefault(); idx = (idx + 1) % matches.length; renderAc(); return; }
+      if (e.key === "ArrowUp" && matches.length) { e.preventDefault(); idx = (idx - 1 + matches.length) % matches.length; renderAc(); return; }
+      if (e.key === "Escape") { hide(); return; }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (matches.length && idx >= 0) { add(matches[idx].name); this.value = ""; hide(); return; }
+        const q = this.value.trim();
+        if (!q) return;
+        const found = giftByName(q) || giftTagList.find((g) => g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase()));
+        if (found) { add(found.name); this.value = ""; hide(); }
+      }
+      if (e.key === "Backspace" && this.value === "" && isMulti && values().length > 0) {
+        remove(values()[values().length - 1]);
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#" + opts.inputId) && !(opts.autocompleteId && e.target.closest("#" + opts.autocompleteId))) hide();
+    });
+  }
+
+  renderTags();
+  return {
+    render: renderTags,
+    values,
+    hide,
+    setValues(arr) {
+      const next = Array.isArray(arr) ? (isMulti ? arr.slice() : arr.slice(0, 1)) : [];
+      onChange(next);
+      renderTags();
+    },
+  };
+}
+
+// --- Palavra Secreta ---
+const giftPicker = createGiftPicker({
+  inputId: "giftTagInput", autocompleteId: "giftAutocomplete", tagsId: "giftTags",
+  counterId: "giftCounter", max: MAX_HINT_GIFTS, multi: true, showMeta: true,
+  placeholder: "Busque o gift no catálogo...",
+  getValue: () => giftTags,
+  onChange: (arr) => { giftTags = arr.slice(); updateGiftSaveState(); },
+});
+
+const riddlePicker = createGiftPicker({
+  inputId: "riddleTagInput", autocompleteId: "riddleAutocomplete", tagsId: "riddleTags",
+  counterId: "riddleCounter", max: MAX_RIDDLE_GIFTS, multi: false,
+  placeholder: "Escolha 1 presente revelador...",
+  getValue: () => riddleTags,
+  onChange: (arr) => { riddleTags = arr.slice(0, 1); updateGiftSaveState(); },
+});
+
+const sizeGiftPicker = createGiftPicker({
+  inputId: "sizeGiftInput", autocompleteId: "sizeGiftAutocomplete", tagsId: "sizeGiftTags",
+  max: MAX_SIZE_GIFTS,
+  placeholder: "Escolha 1 presente para revelar o tamanho...",
+  getValue: () => sizeGiftTag,
+  onChange: (arr) => { sizeGiftTag = arr[0] || ""; updateGiftSaveState(); },
+});
+
+const letterGiftPicker = createGiftPicker({
+  inputId: "letterGiftInput", autocompleteId: "letterGiftAutocomplete", tagsId: "letterGiftTags",
+  max: MAX_LETTER_GIFTS,
+  placeholder: "Escolha 1 presente para revelar a 1ª letra...",
+  getValue: () => letterGiftTag,
+  onChange: (arr) => { letterGiftTag = arr[0] || ""; updateGiftSaveState(); },
+});
+
+// --- 3 Dicas (3 Pontinhos) ---
+const tresSizePicker = createGiftPicker({
+  inputId: "tresGiftSize", autocompleteId: "tresGiftSizeAutocomplete", tagsId: "tresGiftSizeTags",
+  max: 1,
+  placeholder: "Presente A — Revelar Tamanho",
+  getValue: () => tresGiftSizeVal,
+  onChange: (arr) => { tresGiftSizeVal = arr[0] || ""; },
+});
+const tresLetterPicker = createGiftPicker({
+  inputId: "tresGiftLetter", autocompleteId: "tresGiftLetterAutocomplete", tagsId: "tresGiftLetterTags",
+  max: 1,
+  placeholder: "Presente B — Primeira Letra",
+  getValue: () => tresGiftLetterVal,
+  onChange: (arr) => { tresGiftLetterVal = arr[0] || ""; },
+});
+const tresTicketPicker = createGiftPicker({
+  inputId: "tresGiftTicket", autocompleteId: "tresGiftTicketAutocomplete", tagsId: "tresGiftTicketTags",
+  max: 1,
+  placeholder: "Ingresso — Liberar Chat",
+  getValue: () => tresGiftTicketVal,
+  onChange: (arr) => { tresGiftTicketVal = arr[0] || ""; },
+});
+
+// Wrappers mantidos para compatibilidade com loadGiftConfig
+function renderGiftTags() { giftPicker.render(); }
+function renderRiddleTags() { riddlePicker.render(); }
+function renderSizeGiftTags() { sizeGiftPicker.render(); }
+function renderLetterGiftTags() { letterGiftPicker.render(); }
+
 function isGiftDirty() {
-  if (giftTags.length !== savedGiftTags.length) return true;
-  return giftTags.some((g, i) => g !== savedGiftTags[i]);
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  if (!same(giftTags, savedGiftTags)) return true;
+  if (!same(riddleTags, savedRiddleTags)) return true;
+  if (sizeGiftTag !== savedSizeGiftTag) return true;
+  if (letterGiftTag !== savedLetterGiftTag) return true;
+  return false;
 }
 
 function updateGiftSaveState() {
@@ -2215,16 +2514,13 @@ function updateGiftSaveState() {
     btnSaveGift.classList.toggle("dirty", dirty);
   }
   updateSaveAllState();
-  giftCounter.textContent = `Gifts de dica (${giftTags.length}/${MAX_HINT_GIFTS})`;
+  if (giftCounter) giftCounter.textContent = `Gifts de dica (${giftTags.length}/${MAX_HINT_GIFTS})`;
   const full = giftTags.length >= MAX_HINT_GIFTS;
-  giftInput.disabled = full;
-  if (full) {
-    giftHint.textContent = "Limite de 5 atingido. Remova um gift para adicionar outro.";
-    giftInput.placeholder = "Limite atingido (5/5)";
-    hideAutocomplete();
-  } else {
-    giftHint.textContent = "Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.";
-    giftInput.placeholder = "Busque o gift no catálogo (ex: Rosa, Coração, Sorvete)...";
+  if (giftInput) giftInput.disabled = full;
+  if (giftHint) {
+    giftHint.textContent = full
+      ? "Limite de 5 atingido. Remova um gift para adicionar outro."
+      : "Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.";
   }
 }
 
@@ -2241,486 +2537,30 @@ async function saveAll() {
   updateSaveAllState();
 }
 
-function hideAutocomplete() {
-  giftAutocomplete.style.display = "none";
-  giftAutocomplete.innerHTML = "";
-  acMatches = [];
-  acIndex = -1;
-}
-
-function renderAutocomplete() {
-  giftAutocomplete.innerHTML = "";
-  if (!acMatches.length) {
-    giftAutocomplete.style.display = "none";
-    return;
-  }
-  giftAutocomplete.style.display = "block";
-  acMatches.forEach((g, i) => {
-    const item = document.createElement("div");
-    item.className = "ac-item" + (i === acIndex ? " active" : "");
-    const img = document.createElement("img");
-    const file = giftImageMap[g.name];
-    if (file) {
-      img.src = "/gift-images/" + file;
-      img.alt = "";
+async function displayActionFromPanel(action, extra) {
+  try {
+    const body = { action, ...(extra || {}) };
+    const data = await apiFetch("/api/game/display-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (data.success) {
+      if (data.message) addLog(`[OBS] ${data.message}`);
+      updateObsControlStatus(data);
     } else {
-      img.style.display = "none";
+      addLog(`[OBS] [!] ${data.error || "Erro"}`);
     }
-    const nameEl = document.createElement("span");
-    nameEl.className = "ac-name";
-    nameEl.textContent = getGiftLabel(g.name);
-    const diam = document.createElement("span");
-    diam.className = "ac-diam";
-    diam.textContent = g.diamond_count + " 💎";
-    item.appendChild(img);
-    item.appendChild(nameEl);
-    item.appendChild(diam);
-    item.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      selectGift(g.name);
-    });
-    giftAutocomplete.appendChild(item);
-  });
-}
-
-function filterCatalog(q) {
-  const val = String(q || "").trim().toLowerCase();
-  const selected = new Set(giftTags.map((n) => n.toLowerCase()));
-  const available = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
-  if (!val) return available.slice(0, 30);
-  return available.filter((g) => {
-    const enName = g.name.toLowerCase();
-    const ptName = getGiftPtName(g.name).toLowerCase();
-    return enName.includes(val) || ptName.includes(val);
-  }).slice(0, 20);
-}
-
-function openGiftList() {
-  if (giftTags.length >= MAX_HINT_GIFTS || giftInput.disabled) {
-    hideAutocomplete();
-    return;
-  }
-  acMatches = filterCatalog(giftInput.value);
-  acIndex = acMatches.length ? 0 : -1;
-  renderAutocomplete();
-}
-
-giftInput.addEventListener("focus", openGiftList);
-giftInput.addEventListener("click", openGiftList);
-
-giftInput.addEventListener("input", function () {
-  openGiftList();
-});
-
-giftInput.addEventListener("keydown", function (e) {
-  if (e.key === "ArrowDown" && acMatches.length) {
-    e.preventDefault();
-    acIndex = (acIndex + 1) % acMatches.length;
-    renderAutocomplete();
-    return;
-  }
-  if (e.key === "ArrowUp" && acMatches.length) {
-    e.preventDefault();
-    acIndex = (acIndex - 1 + acMatches.length) % acMatches.length;
-    renderAutocomplete();
-    return;
-  }
-  if (e.key === "Escape") {
-    hideAutocomplete();
-    return;
-  }
-  if (e.key === "Enter") {
-    e.preventDefault();
-    if (acMatches.length && acIndex >= 0) {
-      selectGift(acMatches[acIndex].name);
-      return;
-    }
-    const q = this.value.trim();
-    if (!q) return;
-    const found = giftByName(q) || giftTagList.find((g) => {
-      return g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase());
-    });
-    if (found) selectGift(found.name);
-    else addLog("[GiftConfig] [!] Gift não encontrado no catálogo: " + q);
-    return;
-  }
-  if (e.key === "Backspace" && this.value === "" && giftTags.length > 0) {
-    removeGiftTag(giftTags[giftTags.length - 1]);
-  }
-});
-
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#giftTagInput") && !e.target.closest("#giftAutocomplete")) {
-    hideAutocomplete();
-  }
-  if (!e.target.closest("#riddleTagInput") && !e.target.closest("#riddleAutocomplete")) {
-    hideRiddleAutocomplete();
-  }
-  if (!e.target.closest("#sizeGiftInput") && !e.target.closest("#sizeGiftAutocomplete")) {
-    hideSizeAutocomplete();
-  }
-});
-
-let riddleAcMatches = [];
-let riddleAcIndex = -1;
-
-function hideRiddleAutocomplete() {
-  if (riddleAutocomplete) {
-    riddleAutocomplete.style.display = "none";
-    riddleAutocomplete.innerHTML = "";
-    riddleAcMatches = [];
-    riddleAcIndex = -1;
+  } catch (err) {
+    addLog(`[OBS] [!] Erro de rede: ${err.message}`);
   }
 }
 
-function filterRiddleCatalog(q) {
-  const val = String(q || "").trim().toLowerCase();
-  const selected = new Set(riddleTags.map((n) => n.toLowerCase()));
-  const available = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
-  if (!val) return available.slice(0, 30);
-  return available.filter((g) => {
-    const enName = g.name.toLowerCase();
-    const ptName = getGiftPtName(g.name).toLowerCase();
-    return enName.includes(val) || ptName.includes(val);
-  }).slice(0, 20);
-}
-
-function renderRiddleAutocomplete() {
-  if (!riddleAutocomplete) return;
-  riddleAutocomplete.innerHTML = "";
-  if (!riddleAcMatches.length) {
-    riddleAutocomplete.style.display = "none";
-    return;
-  }
-  riddleAutocomplete.style.display = "block";
-  riddleAcMatches.forEach((g, i) => {
-    const item = document.createElement("div");
-    item.className = "ac-item" + (i === riddleAcIndex ? " active" : "");
-    const img = document.createElement("img");
-    const file = giftImageMap[g.name];
-    if (file) {
-      img.src = "/gift-images/" + file;
-      img.alt = "";
-    } else {
-      img.style.display = "none";
-    }
-    const nameEl = document.createElement("span");
-    nameEl.className = "ac-name";
-    nameEl.textContent = getGiftLabel(g.name);
-    const diam = document.createElement("span");
-    diam.className = "ac-diam";
-    diam.textContent = g.diamond_count + " 💎";
-    item.appendChild(img);
-    item.appendChild(nameEl);
-    item.appendChild(diam);
-    item.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      addRiddleTag(g.name);
-      if (riddleInput) riddleInput.value = "";
-      hideRiddleAutocomplete();
-    });
-    riddleAutocomplete.appendChild(item);
-  });
-}
-
-function openRiddleList() {
-  if (riddleTags.length >= MAX_RIDDLE_GIFTS || (riddleInput && riddleInput.disabled)) {
-    hideRiddleAutocomplete();
-    return;
-  }
-  riddleAcMatches = filterRiddleCatalog(riddleInput ? riddleInput.value : "");
-  riddleAcIndex = riddleAcMatches.length ? 0 : -1;
-  renderRiddleAutocomplete();
-}
-
-if (riddleInput) {
-  riddleInput.addEventListener("focus", openRiddleList);
-  riddleInput.addEventListener("click", openRiddleList);
-  riddleInput.addEventListener("input", openRiddleList);
-
-  riddleInput.addEventListener("keydown", function (e) {
-    if (e.key === "ArrowDown" && riddleAcMatches.length) {
-      e.preventDefault();
-      riddleAcIndex = (riddleAcIndex + 1) % riddleAcMatches.length;
-      renderRiddleAutocomplete();
-      return;
-    }
-    if (e.key === "ArrowUp" && riddleAcMatches.length) {
-      e.preventDefault();
-      riddleAcIndex = (riddleAcIndex - 1 + riddleAcMatches.length) % riddleAcMatches.length;
-      renderRiddleAutocomplete();
-      return;
-    }
-    if (e.key === "Escape") {
-      hideRiddleAutocomplete();
-      return;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (riddleAcMatches.length && riddleAcIndex >= 0) {
-        addRiddleTag(riddleAcMatches[riddleAcIndex].name);
-        this.value = "";
-        hideRiddleAutocomplete();
-        return;
-      }
-      const q = this.value.trim();
-      if (!q) return;
-      const found = giftByName(q) || giftTagList.find((g) => {
-        return g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase());
-      });
-      if (found) {
-        addRiddleTag(found.name);
-        this.value = "";
-        hideRiddleAutocomplete();
-      }
-    }
-  });
-}
-
-function renderSizeAutocomplete() {
-  if (!sizeGiftAutocomplete) return;
-  sizeGiftAutocomplete.innerHTML = "";
-  const q = sizeGiftInput ? sizeGiftInput.value.trim().toLowerCase() : "";
-  const matches = giftTagList.filter((g) => {
-    if (sizeGiftTag && g.name.toLowerCase() === sizeGiftTag.toLowerCase()) return false;
-    if (!q) return true;
-    return g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q);
-  }).slice(0, 20);
-  if (!matches.length) { sizeGiftAutocomplete.style.display = "none"; return; }
-  sizeGiftAutocomplete.style.display = "block";
-  matches.forEach((g) => {
-    const item = document.createElement("div");
-    item.className = "ac-item";
-    const img = document.createElement("img");
-    const file = giftImageMap[g.name];
-    if (file) { img.src = "/gift-images/" + file; img.alt = ""; } else img.style.display = "none";
-    const nameEl = document.createElement("span");
-    nameEl.className = "ac-name";
-    nameEl.textContent = getGiftLabel(g.name);
-    item.appendChild(img);
-    item.appendChild(nameEl);
-    item.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      addSizeGiftTag(g.name);
-      if (sizeGiftInput) sizeGiftInput.value = "";
-      hideSizeAutocomplete();
-    });
-    sizeGiftAutocomplete.appendChild(item);
-  });
-}
-
-function openSizeList() {
-  if (sizeGiftTag || (sizeGiftInput && sizeGiftInput.disabled)) { hideSizeAutocomplete(); return; }
-  renderSizeAutocomplete();
-}
-
-function hideSizeAutocomplete() {
-  if (sizeGiftAutocomplete) { sizeGiftAutocomplete.style.display = "none"; sizeGiftAutocomplete.innerHTML = ""; }
-}
-
-if (sizeGiftInput) {
-  sizeGiftInput.addEventListener("focus", openSizeList);
-  sizeGiftInput.addEventListener("click", openSizeList);
-  sizeGiftInput.addEventListener("input", renderSizeAutocomplete);
-  sizeGiftInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const q = this.value.trim();
-      if (!q) return;
-      const found = giftByName(q) || giftTagList.find((g) => g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase()));
-      if (found) {
-        addSizeGiftTag(found.name);
-        this.value = "";
-        hideSizeAutocomplete();
-      }
-    } else if (e.key === "Escape") {
-      hideSizeAutocomplete();
-    }
-  });
-}
-
-function updateSizeInputState() {
-  if (sizeGiftInput) {
-    sizeGiftInput.disabled = !!sizeGiftTag;
-    sizeGiftInput.placeholder = sizeGiftTag ? "Limite atingido (1/1)" : "Escolha 1 presente para revelar o tamanho...";
-  }
-  if (sizeGiftTag) hideSizeAutocomplete();
-}
-
-function addSizeGiftTag(name) {
-  const g = giftByName(name);
-  if (!g) return;
-  if (sizeGiftTag) return;
-  sizeGiftTag = g.name;
-  renderSizeGiftTags();
-}
-
-function selectGift(name) {
-  const g = giftByName(name);
-  if (!g) {
-    addLog("[GiftConfig] [!] Gift inválido: " + name);
-    return;
-  }
-  addGiftTag(g.name);
-  giftInput.value = "";
-  hideAutocomplete();
-  giftInput.focus();
-}
-
-function addGiftTag(name) {
-  const g = giftByName(name);
-  if (!g) return;
-  if (giftTags.some((n) => n.toLowerCase() === g.name.toLowerCase())) return;
-  if (giftTags.length >= MAX_HINT_GIFTS) {
-    addLog("[GiftConfig] [!] Máximo de 5 gifts permitido");
-    return;
-  }
-  giftTags.push(g.name);
-  giftTags.sort((a, b) => giftDiamonds(a) - giftDiamonds(b) || a.localeCompare(b));
-  renderGiftTags();
-}
-
-function removeGiftTag(name) {
-  giftTags = giftTags.filter((g) => g !== name);
-  renderGiftTags();
-}
-
-function renderGiftTags() {
-  giftTagsContainer.innerHTML = "";
-  const diamonds = giftTags.map(giftDiamonds);
-  const minD = diamonds.length ? Math.min(...diamonds) : 0;
-  const maxD = diamonds.length ? Math.max(...diamonds) : 0;
-
-  for (const g of giftTags) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-
-    const file = giftImageMap[g];
-    if (file) {
-      const img = document.createElement("img");
-      img.src = "/gift-images/" + file;
-      img.alt = "";
-      img.onerror = function () { this.style.display = "none"; };
-      chip.appendChild(img);
-    }
-
-    const nameEl = document.createElement("span");
-    nameEl.textContent = getGiftLabel(g);
-    chip.appendChild(nameEl);
-
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    meta.textContent = giftDiamonds(g) + "💎 " + giftLevel(g, minD, maxD);
-    chip.appendChild(meta);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "remove";
-    btn.setAttribute("aria-label", "Remover " + g);
-    btn.textContent = "×";
-    btn.addEventListener("click", () => removeGiftTag(g));
-    chip.appendChild(btn);
-
-    giftTagsContainer.appendChild(chip);
-  }
-  updateGiftSaveState();
-}
-
-function updateRiddleInputState() {
-  const full = riddleTags.length >= MAX_RIDDLE_GIFTS;
-  if (riddleInput) {
-    riddleInput.disabled = full;
-    riddleInput.placeholder = full ? "Limite atingido (1/1)" : "Escolha 1 presente revelador...";
-  }
-  if (riddleHint) {
-    riddleHint.textContent = full
-      ? "Limite de 1 atingido. Remova o presente para adicionar outro."
-      : "Máximo de 1. É o presente que revela a palavra no Final Boss.";
-  }
-  if (full) hideRiddleAutocomplete();
-}
-
-function addRiddleTag(name) {
-  const g = giftByName(name);
-  if (!g) return;
-  if (riddleTags.some((n) => n.toLowerCase() === g.name.toLowerCase())) return;
-  if (riddleTags.length >= MAX_RIDDLE_GIFTS) {
-    addLog("[GiftConfig] [!] Máximo de 1 presente revelador");
-    return;
-  }
-  riddleTags.push(g.name);
-  renderRiddleTags();
-}
-
-function removeRiddleTag(name) {
-  riddleTags = riddleTags.filter((g) => g !== name);
-  renderRiddleTags();
-}
-
-function renderRiddleTags() {
-  if (!riddleTagsContainer) return;
-  riddleTagsContainer.innerHTML = "";
-  riddleTags.forEach((g, idx) => {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    const file = giftImageMap[g];
-    if (file) {
-      const img = document.createElement("img");
-      img.src = "/gift-images/" + file;
-      img.alt = "";
-      chip.appendChild(img);
-    }
-    const nameEl = document.createElement("span");
-    nameEl.textContent = getGiftLabel(g);
-    chip.appendChild(nameEl);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "remove";
-    btn.textContent = "×";
-    btn.addEventListener("click", () => removeRiddleTag(g));
-    chip.appendChild(btn);
-
-    riddleTagsContainer.appendChild(chip);
-  });
-  if (riddleCounter) riddleCounter.textContent = `${riddleTags.length}/${MAX_RIDDLE_GIFTS}`;
-  updateGiftSaveState();
-  updateRiddleInputState();
-}
-
-function renderSizeGiftTags() {
-  if (!sizeGiftTagsContainer) return;
-  sizeGiftTagsContainer.innerHTML = "";
-  if (sizeGiftTag) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    const file = giftImageMap[sizeGiftTag];
-    if (file) {
-      const img = document.createElement("img");
-      img.src = "/gift-images/" + file;
-      img.alt = "";
-      chip.appendChild(img);
-    }
-    const nameEl = document.createElement("span");
-    nameEl.textContent = getGiftLabel(sizeGiftTag);
-    chip.appendChild(nameEl);
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "remove";
-    btn.textContent = "×";
-    btn.addEventListener("click", () => { sizeGiftTag = ""; savedSizeGiftTag = ""; renderSizeGiftTags(); updateGiftSaveState(); });
-    chip.appendChild(btn);
-    sizeGiftTagsContainer.appendChild(chip);
-  }
-  updateSizeInputState();
-}
-
-function isGiftDirty() {
-  if (giftTags.length !== savedGiftTags.length) return true;
-  if (riddleTags.length !== savedRiddleTags.length) return true;
-  if (sizeGiftTag !== savedSizeGiftTag) return true;
-  if (giftTags.some((g, i) => g !== savedGiftTags[i])) return true;
-  return riddleTags.some((g, i) => g !== savedRiddleTags[i]);
+function updateObsControlStatus(data) {
+  if (!data || !data.ranking_view) return;
+  const map = { round: "Ranking da Rodada", live: "Ranking da Live", weekly: "Ranking Semanal", hidden: "Oculto" };
+  const el = document.getElementById("obsControlStatus");
+  if (el) el.textContent = "Ranking atual: " + (map[data.ranking_view] || data.ranking_view);
 }
 
 async function saveGiftConfig() {
@@ -2730,19 +2570,22 @@ async function saveGiftConfig() {
     const data = await apiFetch("/api/gift-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hint_gifts: giftTags, riddle_gifts: riddleTags, size_gift: sizeGiftTag }),
+      body: JSON.stringify({ hint_gifts: giftTags, riddle_gifts: riddleTags, size_gift: sizeGiftTag, letter_gift: letterGiftTag }),
     });
     if (data.success) {
       giftTags = data.hint_gifts || giftTags;
       riddleTags = data.riddle_gifts || riddleTags;
       sizeGiftTag = data.size_gift || sizeGiftTag;
+      letterGiftTag = (data.letter_gift !== undefined) ? (data.letter_gift || "") : letterGiftTag;
       savedGiftTags = [...giftTags];
       savedRiddleTags = [...riddleTags];
       savedSizeGiftTag = sizeGiftTag;
+      savedLetterGiftTag = letterGiftTag;
       renderGiftTags();
       renderRiddleTags();
       renderSizeGiftTags();
-      addLog(`[GiftConfig] Configuração salva: ${giftTags.length} dicas, ${riddleTags.length} presente revelador` + (sizeGiftTag ? `, tamanho: ${sizeGiftTag}` : ""));
+      renderLetterGiftTags();
+      addLog(`[GiftConfig] Configuração salva: ${giftTags.length} dicas, ${riddleTags.length} revelador` + (sizeGiftTag ? `, tamanho: ${sizeGiftTag}` : "") + (letterGiftTag ? `, 1ª letra: ${letterGiftTag}` : ""));
     } else {
       addLog(`[GiftConfig] [!] ${data.error}`);
       updateGiftSaveState();
@@ -2789,6 +2632,8 @@ function applySettingsUI(settings) {
   if (autoRoundPauseEl) autoRoundPauseEl.value = s.auto_round_pause || 20;
   const tapMetaEl = document.getElementById("tapMeta");
   if (tapMetaEl) tapMetaEl.value = s.tap_meta || 1000;
+  const riddleAutoNarrateEl = document.getElementById("riddleAutoNarrate");
+  if (riddleAutoNarrateEl) riddleAutoNarrateEl.checked = s.riddle_auto_narrate !== false;
   settingsDirty = false;
   refreshPanelVoices();
   updateSettingsSaveState();
@@ -2987,7 +2832,8 @@ function isSettingsDirty() {
     (narrChar ? (narrChar.value || "#") : "#") !== (savedSettings.chat_narr_char || "#") ||
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
     Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
-    Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000)
+    Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000) ||
+    (document.getElementById("riddleAutoNarrate") ? !!document.getElementById("riddleAutoNarrate").checked : false) !== (savedSettings.riddle_auto_narrate !== false)
   );
 }
 
@@ -3021,6 +2867,7 @@ async function saveSettings() {
     auto_round: document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false,
     auto_round_pause: Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) || 20,
     tap_meta: Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) || 1000,
+    riddle_auto_narrate: document.getElementById("riddleAutoNarrate") ? !!document.getElementById("riddleAutoNarrate").checked : true,
   };
   try {
     const data = await apiFetch("/api/settings", {
@@ -3062,9 +2909,13 @@ async function loadGiftConfig() {
     sizeGiftTag = data.size_gift ? (giftByName(data.size_gift)?.name || data.size_gift) : "";
     savedSizeGiftTag = sizeGiftTag;
 
+    letterGiftTag = data.letter_gift ? (giftByName(data.letter_gift)?.name || data.letter_gift) : "";
+    savedLetterGiftTag = letterGiftTag;
+
     renderGiftTags();
     renderRiddleTags();
     renderSizeGiftTags();
+    renderLetterGiftTags();
   } catch (e) {}
 }
 
@@ -3072,6 +2923,8 @@ async function syncGameState() {
   try {
     const data = await apiFetch("/api/game-state");
     gameActive = data.active && !data.finished;
+    setDisplayControlsEnabled(gameActive);
+    if (data.display) updateObsControlStatus({ ranking_view: data.display.ranking_view });
     if (data.python_connected) {
       setRunningUI(true);
     }
@@ -3166,7 +3019,7 @@ function updateLinks() {
 }
 
 function copyRoomUrl() {
-  const url = `${location.origin}/overlay?room=${roomCode}`;
+  const url = `${location.origin}/jogo?room=${roomCode}`;
   navigator.clipboard.writeText(url).then(() => {
     addLog("[Painel] Link da sala copiado");
   }).catch(() => {});
@@ -3184,9 +3037,9 @@ async function loadTresConfig() {
   try {
     const data = await apiFetch("/api/tres/config");
     if (data && data.config) {
-      if (document.getElementById("tresGiftSize")) document.getElementById("tresGiftSize").value = data.config.size || "";
-      if (document.getElementById("tresGiftLetter")) document.getElementById("tresGiftLetter").value = data.config.letter || "";
-      if (document.getElementById("tresGiftTicket")) document.getElementById("tresGiftTicket").value = data.config.ticket || "";
+      if (tresSizePicker) tresSizePicker.setValues(data.config.size ? [data.config.size] : []);
+      if (tresLetterPicker) tresLetterPicker.setValues(data.config.letter ? [data.config.letter] : []);
+      if (tresTicketPicker) tresTicketPicker.setValues(data.config.ticket ? [data.config.ticket] : []);
       const st = data.config.stage_times || [120, 60, 30];
       const sp = data.config.stage_points || [30, 20, 10];
       if (document.getElementById("tresTime1")) document.getElementById("tresTime1").value = st[0] || 120;

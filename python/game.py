@@ -199,6 +199,8 @@ class JogoContexto:
         self.riddle_gifts = []
         self.size_gift = ""
         self.size_revealed = False
+        self.letter_gift = ""
+        self.first_letter_revealed = False
         self.finished = False
         self.winner = None
         self.winner_nickname = None
@@ -351,7 +353,7 @@ class JogoContexto:
         pos = bisect.bisect_left(self._all_scored_neg_sims, -best_sim)
         return pos + 2
 
-    def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None) -> str:
+    def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None, letter_gift: str = None) -> str:
         # Relê as palavras banidas a cada rodada (mudanças do admin valem na próxima)
         try:
             self.banned_words = db.load_banned_words()
@@ -377,6 +379,8 @@ class JogoContexto:
         self.riddle_gifts = riddle_gifts or []
         self.size_gift = size_gift or ""
         self.size_revealed = False
+        self.letter_gift = letter_gift or ""
+        self.first_letter_revealed = False
         self.current_riddle_stage = 0
         self.finished = False
         self.winner = None
@@ -516,6 +520,21 @@ class JogoContexto:
                     "avatar": avatar or "",
                     "gift": gift_name,
                     "size_revealed": True,
+                    "secret_length": len(self.secret_word),
+                }
+
+        # Presente de primeira letra: revela a 1ª letra (exige tamanho visível, 1x)
+        if self.letter_gift and not self.first_letter_revealed and (self.size_revealed or not self.size_gift):
+            norm_in = strip_accents(gift_name.strip().lower())
+            if norm_in in self._gift_aliases(self.letter_gift):
+                self.first_letter_revealed = True
+                return {
+                    "user": user,
+                    "nickname": nickname or user,
+                    "avatar": avatar or "",
+                    "gift": gift_name,
+                    "first_letter_revealed": True,
+                    "first_letter": self.secret_word[0] if self.secret_word else "",
                     "secret_length": len(self.secret_word),
                 }
 
@@ -754,6 +773,9 @@ class JogoContexto:
             "secret_length": len(self.secret_word) if len_visible else 0,
             "size_gift": self.size_gift,
             "size_revealed": self.size_revealed,
+            "letter_gift": self.letter_gift,
+            "first_letter": self.secret_word[0] if (self.secret_word and self.first_letter_revealed) else "",
+            "first_letter_revealed": self.first_letter_revealed,
             "guesses": self.guesses[:50],
             "hints": self.hints_given,
             "finished": self.finished,
@@ -1928,7 +1950,7 @@ class TresPontinhos:
         self.first_letter_revealed = False
         self.supporter_users = set()
         self._emit("tres_state", self.state(public=False))
-        self._emit_log(f"[3 Pontinhos] Rodada {self.round_id} em {TRES_COUNTDOWN}s... preparem-se!")
+        self._emit_log(f"[3 Dicas] Rodada {self.round_id} em {TRES_COUNTDOWN}s... preparem-se!")
         if not self.task:
             try:
                 loop = asyncio.get_running_loop()
@@ -1945,17 +1967,17 @@ class TresPontinhos:
             self.task.cancel()
             self.task = None
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Pontinhos] Jogo parado")
+        self._emit_log("[3 Dicas] Jogo parado")
 
     def pause(self):
         self.paused = True
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Pontinhos] Pausado")
+        self._emit_log("[3 Dicas] Pausado")
 
     def resume(self):
         self.paused = False
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Pontinhos] Retomado")
+        self._emit_log("[3 Dicas] Retomado")
 
     def reset(self):
         self.stop()
@@ -2009,7 +2031,7 @@ class TresPontinhos:
         }
         self._emit("tres_winner", self.winner)
         self._emit("tres_state", self.state(public=False))
-        self._emit_log(f"[3 Pontinhos] 🎉 @{user} acertou '{self.palavra}' na Dica {self.stage} ({pontos} pts{' 2x' if mult == 2 else ''})")
+        self._emit_log(f"[3 Dicas] 🎉 @{user} acertou '{self.palavra}' na Dica {self.stage} ({pontos} pts{' 2x' if mult == 2 else ''})")
         return self.winner
 
     # -------------------------------------------------------------
@@ -2046,13 +2068,13 @@ class TresPontinhos:
         if self._gift_matches(n, cfg.get("size")) and not self.size_revealed:
             self.size_revealed = True
             self._emit("tres_reveal_size", {"user": user, "nickname": nickname or user, "len": len(self.palavra)})
-            self._emit_log(f"[3 Pontinhos] @{user} revelou o TAMANHO ({len(self.palavra)} letras)")
+            self._emit_log(f"[3 Dicas] @{user} revelou o TAMANHO ({len(self.palavra)} letras)")
         elif self._gift_matches(n, cfg.get("letter")) and self.size_revealed and not self.first_letter_revealed:
             self.first_letter_revealed = True
             self._emit("tres_reveal_letter", {"user": user, "nickname": nickname or user, "letter": self.palavra[0] if self.palavra else "", "palavra_len": len(self.palavra)})
-            self._emit_log(f"[3 Pontinhos] @{user} revelou a PRIMEIRA LETRA")
+            self._emit_log(f"[3 Dicas] @{user} revelou a PRIMEIRA LETRA")
         elif self._gift_matches(n, cfg.get("letter")) and not self.size_revealed:
-            self._emit_log(f"[3 Pontinhos] @{user} enviou o presente da 1ª letra, mas o TAMANHO ainda não foi revelado")
+            self._emit_log(f"[3 Dicas] @{user} enviou o presente da 1ª letra, mas o TAMANHO ainda não foi revelado")
 
     # -------------------------------------------------------------
     # Loop asyncio (1s)
@@ -2091,9 +2113,9 @@ class TresPontinhos:
             palavra, dicas = res
             if palavra:
                 self.start(palavra, dicas)
-                self._emit_log("[3 Pontinhos] Nova rodada iniciada automaticamente")
+                self._emit_log("[3 Dicas] Nova rodada iniciada automaticamente")
         except Exception as e:
-            self._emit_log(f"[3 Pontinhos] Erro ao auto-iniciar rodada: {e}")
+            self._emit_log(f"[3 Dicas] Erro ao auto-iniciar rodada: {e}")
 
     def _tick_timer(self):
         # Fase countdown: espera antes de revelar a Dica 1
@@ -2106,7 +2128,7 @@ class TresPontinhos:
                 self.stage_remaining = self.stage_times[1]
                 self._emit("tres_state", self.state(public=False))
                 self._emit("tres_dica", {"stage": 1, "dica": self.dicas[0], "remaining": self.stage_remaining, "points": self.stage_points[1]})
-                self._emit_log(f"[3 Pontinhos] Dica 1: {self.dicas[0]} ({self.stage_times[1]}s, {self.stage_points[1]} pts)")
+                self._emit_log(f"[3 Dicas] Dica 1: {self.dicas[0]} ({self.stage_times[1]}s, {self.stage_points[1]} pts)")
             return
         self.stage_remaining -= 1
         # Tick visual a cada segundo (cronômetro fluido)
@@ -2116,7 +2138,7 @@ class TresPontinhos:
                 self.stage += 1
                 self.stage_remaining = self.stage_times[self.stage]
                 self._emit("tres_dica", {"stage": self.stage, "dica": self.dicas[self.stage - 1], "remaining": self.stage_remaining, "points": self.stage_points[self.stage]})
-                self._emit_log(f"[3 Pontinhos] Dica {self.stage}: {self.dicas[self.stage - 1]} ({self.stage_times[self.stage]}s, {self.stage_points[self.stage]} pts)")
+                self._emit_log(f"[3 Dicas] Dica {self.stage}: {self.dicas[self.stage - 1]} ({self.stage_times[self.stage]}s, {self.stage_points[self.stage]} pts)")
             else:
                 # Tempo esgotado coletivamente
                 self.timeout = True
@@ -2125,7 +2147,7 @@ class TresPontinhos:
                 self.pause_remaining = TRES_PAUSE_AFTER_END
                 self._emit("tres_timeout", {"palavra": self.palavra})
                 self._emit("tres_state", self.state(public=False))
-                self._emit_log(f"[3 Pontinhos] ⏰ TEMPO ESGOTADO — a palavra era '{self.palavra}'")
+                self._emit_log(f"[3 Dicas] ⏰ TEMPO ESGOTADO — a palavra era '{self.palavra}'")
 
     # -------------------------------------------------------------
     # Estado público

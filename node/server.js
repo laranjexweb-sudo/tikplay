@@ -26,7 +26,6 @@ const FRIENDLY_PAGES = {
   "/admin": "admin.html",
   "/login": "login.html",
   "/jogo": "web-game.html",
-  "/overlay": "obs-overlay.html",
   "/ranking": "obs-ranking.html",
   "/batalha": "batalha.html",
   "/caca-palavra": "caca-palavra.html",
@@ -40,7 +39,6 @@ const LEGACY_PAGES = {
   "/admin.html": "/admin",
   "/login.html": "/login",
   "/web-game.html": "/jogo",
-  "/obs-overlay.html": "/overlay",
   "/obs-ranking.html": "/ranking",
 };
 
@@ -91,6 +89,13 @@ function emptyGameState() {
     hint_gifts: [],
     riddle_gifts: [],
     current_riddle_stage: 0,
+    current_riddle: null,
+    size_gift: "",
+    size_revealed: false,
+    letter_gift: "",
+    first_letter: "",
+    first_letter_revealed: false,
+    display: { riddle_visible: false, ranking_view: "live" },
     post_game_summary: null,
     likes_ranking: [],
     tap_meta_current: 0,
@@ -168,6 +173,11 @@ function updateGameState(tenant, msg) {
         likes_ranking: (gs && gs.likes_ranking) || [],
         size_gift: msg.size_gift || "",
         size_revealed: !!msg.size_revealed,
+        letter_gift: msg.letter_gift || "",
+        first_letter: msg.first_letter || "",
+        first_letter_revealed: !!msg.first_letter_revealed,
+        current_riddle: null,
+        display: { riddle_visible: false, ranking_view: (gs && gs.display && gs.display.ranking_view) || "live" },
         tap_meta_current: (gs && gs.tap_meta_current) || 0,
         tap_meta_total: (gs && gs.tap_meta_total) || 1000,
         tap_meta_ready: !!(gs && gs.tap_meta_ready),
@@ -176,6 +186,11 @@ function updateGameState(tenant, msg) {
       break;
     case "size_revealed":
       gs.size_revealed = true;
+      if (msg.secret_length) gs.secret_length = msg.secret_length;
+      break;
+    case "letter_revealed":
+      if (msg.first_letter !== undefined) gs.first_letter = msg.first_letter;
+      gs.first_letter_revealed = true;
       if (msg.secret_length) gs.secret_length = msg.secret_length;
       break;
     case "guess":
@@ -215,6 +230,14 @@ function updateGameState(tenant, msg) {
       break;
     case "riddle_ready":
       gs.current_riddle_stage = msg.stage || gs.current_riddle_stage;
+      gs.current_riddle = {
+        stage: msg.stage || gs.current_riddle_stage,
+        text: msg.text || "",
+        audio_url: msg.audio_url || "",
+        user: msg.user || "",
+        nickname: msg.nickname || msg.user || "",
+      };
+      if (gs.display) gs.display.riddle_visible = true;
       broadcastToClients(tenant.browserClients, msg);
       break;
     case "roulette_drop":
@@ -247,6 +270,14 @@ function updateGameState(tenant, msg) {
         }
       } else if (msg.reward_type === "riddle_ready") {
         gs.current_riddle_stage = msg.stage || gs.current_riddle_stage;
+        gs.current_riddle = {
+          stage: msg.stage || gs.current_riddle_stage,
+          text: msg.text || "",
+          audio_url: msg.audio_url || "",
+          user: msg.user || "",
+          nickname: msg.nickname || msg.user || "",
+        };
+        if (gs.display) gs.display.riddle_visible = true;
       }
       break;
     case "likes_ranking":
@@ -606,6 +637,7 @@ function normalizeSettings(raw) {
     if (typeof raw.auto_round === "boolean") out.auto_round = raw.auto_round;
     let pause = parseInt(raw.auto_round_pause, 10);
     if (Number.isFinite(pause)) out.auto_round_pause = Math.max(5, Math.min(300, pause));
+    if (typeof raw.riddle_auto_narrate === "boolean") out.riddle_auto_narrate = raw.riddle_auto_narrate;
     let tapMeta = parseInt(raw.tap_meta, 10);
     if (Number.isFinite(tapMeta)) out.tap_meta = Math.max(50, Math.min(100000, tapMeta));
   }
@@ -652,6 +684,7 @@ app.post("/api/auth/register", (req, res) => {
     name: String(name).trim(),
     password_hash: auth.hashPassword(password),
     role,
+    features: { bichinho: false },
   });
   const user = db.getUserById(id);
   const token = auth.signToken(user);
@@ -964,9 +997,9 @@ app.get("/api/gift-config", auth.requireAuth, (req, res) => {
 });
 
 app.post("/api/gift-config", auth.requireAuth, (req, res) => {
-  const { hint_gifts, riddle_gifts, size_gift } = req.body;
-  if (hint_gifts === undefined && riddle_gifts === undefined && size_gift === undefined) {
-    return res.json({ success: false, error: "hint_gifts, riddle_gifts ou size_gift obrigatorio" });
+  const { hint_gifts, riddle_gifts, size_gift, letter_gift } = req.body;
+  if (hint_gifts === undefined && riddle_gifts === undefined && size_gift === undefined && letter_gift === undefined) {
+    return res.json({ success: false, error: "hint_gifts, riddle_gifts, size_gift ou letter_gift obrigatorio" });
   }
 
   const config = readTenantGiftConfig(req.user.id);
@@ -987,17 +1020,22 @@ app.post("/api/gift-config", auth.requireAuth, (req, res) => {
     config.size_gift = String(size_gift || "").trim();
   }
 
+  if (letter_gift !== undefined) {
+    config.letter_gift = String(letter_gift || "").trim();
+  }
+
   try {
-    db.saveTenantGiftConfig(req.user.id, config.hint_gifts || [], config.riddle_gifts || [], config.size_gift);
+    db.saveTenantGiftConfig(req.user.id, config.hint_gifts || [], config.riddle_gifts || [], config.size_gift, config.letter_gift);
     const newGifts = config.hint_gifts || [];
     const newRiddleGifts = config.riddle_gifts || [];
     const newSizeGift = config.size_gift || "";
+    const newLetterGift = config.letter_gift || "";
     const tenant = getTenant(req.user.id);
     tenant.gameState.hint_gifts = newGifts;
     tenant.gameState.riddle_gifts = newRiddleGifts;
-    daemonSend({ cmd: "update_gift_config", tenant_id: req.user.id, hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift });
-    broadcastToClients(tenant.browserClients, { type: "gift_config_updated", hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift });
-    res.json({ success: true, hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift });
+    daemonSend({ cmd: "update_gift_config", tenant_id: req.user.id, hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift, letter_gift: newLetterGift });
+    broadcastToClients(tenant.browserClients, { type: "gift_config_updated", hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift, letter_gift: newLetterGift });
+    res.json({ success: true, hint_gifts: newGifts, riddle_gifts: newRiddleGifts, size_gift: newSizeGift, letter_gift: newLetterGift });
   } catch (e) {
     res.json({ success: false, error: e.message });
   }
@@ -1402,6 +1440,7 @@ app.post("/api/new-game", auth.requireAuth, (req, res) => {
     hint_gifts: config.hint_gifts || [],
     riddle_gifts: config.riddle_gifts || [],
     size_gift: config.size_gift || "",
+    letter_gift: config.letter_gift || "",
   });
   if (!ok) {
     return res.json({ success: false, error: "Servico Python indisponivel" });
@@ -1657,6 +1696,61 @@ app.post("/api/play-riddle", auth.requireAuth, (req, res) => {
   broadcastToClients(tenant.browserClients, { type: "riddle_play" });
   res.json({ success: true });
 });
+
+app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  if (!tenant) {
+    return res.json({ success: false, error: "Tenant nao encontrado" });
+  }
+  const gs = tenant.gameState;
+  if (!gs.display) gs.display = { riddle_visible: false, ranking_view: "live" };
+  const action = String((req.body && req.body.action) || "").trim();
+  const payload = { type: "display_action", action };
+
+  switch (action) {
+    case "show_riddle":
+      gs.display.riddle_visible = true;
+      break;
+    case "close_riddle":
+      gs.display.riddle_visible = false;
+      broadcastToClients(tenant.browserClients, payload);
+      broadcastToClients(tenant.logClients, payload);
+      return res.json({ success: true, message: "Charada fechada no OBS.", riddle_visible: false });
+    case "change_ranking": {
+      const order = ["round", "live", "weekly", "hidden"];
+      const cur = gs.display.ranking_view || "live";
+      const next = order[(order.indexOf(cur) + 1) % order.length] || "live";
+      gs.display.ranking_view = next;
+      payload.ranking_view = next;
+      broadcastToClients(tenant.browserClients, payload);
+      broadcastToClients(tenant.logClients, payload);
+      return res.json({ success: true, ranking_view: next, message: "Ranking alterado para " + rankingLabel(next) + "." });
+    }
+    case "show_ranking":
+      gs.display.ranking_view = String((req.body && req.body.ranking_view) || "live").trim() || "live";
+      payload.ranking_view = gs.display.ranking_view;
+      break;
+    case "hide_ranking":
+      gs.display.ranking_view = "hidden";
+      payload.ranking_view = "hidden";
+      break;
+    case "close_winner":
+    case "clear_screen":
+      // Reservado para futuras acoes visuais
+      break;
+    default:
+      return res.json({ success: false, error: "Action desconhecida: " + action });
+  }
+  broadcastToClients(tenant.browserClients, payload);
+  broadcastToClients(tenant.logClients, payload);
+  res.json({ success: true, ...gs.display });
+});
+
+function rankingLabel(view) {
+  const map = { round: "Ranking da Rodada", live: "Ranking da Live", weekly: "Ranking Semanal", hidden: "Oculto" };
+  return map[view] || view;
+}
 
 app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
   const user = db.getUserById(req.user.id);

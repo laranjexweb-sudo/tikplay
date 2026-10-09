@@ -115,6 +115,33 @@ body {
   text-transform: uppercase;
 }
 
+/* Numeração das posições das letras (após revelar o tamanho) */
+.secret-display .letter-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.secret-display .letter-number {
+  font-size: 0.72rem;
+  opacity: 0.65;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Transição suave entre palavra e card de presente */
+.secret-display .letter-slot {
+  animation: softSwap 0.45s ease-out;
+}
+.secret-display .size-lock {
+  animation: softSwap 0.45s ease-out;
+}
+@keyframes softSwap {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 .gifts-bar {
   display: flex;
   justify-content: center;
@@ -226,23 +253,40 @@ body {
   border: 1px solid #10B981;
   border-radius: 12px;
   margin-bottom: 14px;
+  animation: winnerPop 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes winnerPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .game-over-banner .winner {
   font-size: 1.5em;
   color: #34D399;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.game-over-banner .word-reveal {
-  font-size: 1.2em;
-  color: #fff;
-  margin-top: 8px;
+.game-over-banner .winner-av {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #34D399;
+  flex-shrink: 0;
 }
 
-.game-over-banner .word-reveal span {
-  color: #FBBF24;
-  font-weight: bold;
+.game-over-banner .winner-msg {
+  font-size: 1.05em;
+  color: #A7F3D0;
+  margin-top: 6px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .stats {
@@ -557,7 +601,7 @@ body {
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-/* ============ Interface compacta (web-game + obs-overlay) ============ */
+/* ============ Interface compacta (web-game) ============ */
 
 .container.compact { max-width: 680px; padding: 8px; }
 
@@ -651,6 +695,9 @@ body {
   background: #064E3B;
   border-color: #10B981;
   color: #34D399;
+}
+.compact .secret-display .letter-number {
+  font-size: 0.6rem;
 }
 .compact .secret-display .size-lock {
   gap: 8px;
@@ -1334,6 +1381,10 @@ body {
   object-fit: cover;
   border: 2px solid #34D399;
   flex-shrink: 0;
+}
+.compact .game-over-banner .winner-msg {
+  font-size: 0.95em;
+  margin-top: 4px;
 }
 
 /* Ranking densificado */

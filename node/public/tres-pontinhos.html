@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jogo dos 3 Pontinhos</title>
+<title>Jogo das 3 Dicas</title>
 <style>
   :root {
     --neon-pink: #ff2d78;
@@ -312,8 +312,8 @@
 <div id="stage">
   <div class="toprow">
     <div class="header">
-      <div class="round" id="roundLabel">JOGO DOS 3 PONTINHOS</div>
-      <div class="title">3 PONTINHOS</div>
+      <div class="round" id="roundLabel">JOGO DAS 3 DICAS</div>
+      <div class="title">3 DICAS</div>
       <div class="subtitle" id="stageLabel">Aguarde o streamer iniciar</div>
     </div>
     <div class="timer" id="timer">--:--</div>
@@ -515,7 +515,7 @@ function render() {
       stageLabel.textContent = "Dica " + state.stage + " — " + ((state.stage_points || [30,20,10])[state.stage - 1] || 0) + " pts";
     }
   }
-  roundLabel.textContent = state.active || state.finished ? "RODADA " + (state.round_id || "") : "JOGO DOS 3 PONTINHOS";
+  roundLabel.textContent = state.active || state.finished ? "RODADA " + (state.round_id || "") : "JOGO DAS 3 DICAS";
   renderAnswer();
   renderDicas();
 }

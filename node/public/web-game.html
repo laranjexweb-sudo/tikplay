@@ -144,7 +144,7 @@
 const token = localStorage.getItem("token");
 if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
-let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false };
+let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", letterGift: "", firstLetterRevealed: false, firstLetter: "", letterHintDismissed: false, tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false, display: { riddleVisible: false, rankingView: "live" } };
 let ws = null;
 
 function authFetch(path, opts = {}) {
@@ -180,6 +180,7 @@ connectWS();
 let currentRiddleText = "";
 let currentRiddleAudioUrl = "";
 let riddleAudio = null;
+let lastNarratedRiddleKey = "";
 let shakeInterval = null;
 
 function handleMessage(msg) {
@@ -254,8 +255,20 @@ function handleMessage(msg) {
       state.sizeRevealed = true;
       if (msg.secret_length) state.secretLength = msg.secret_length;
       renderBoxes();
+      startLetterGiftPromptCycle();
       if (msg.nickname || msg.user) {
         showNotification(`? @${msg.nickname || msg.user} revelou o tamanho! (${msg.secret_length} letras)`, "#a78bfa");
+      }
+      break;
+
+    case "letter_revealed":
+      state.firstLetterRevealed = true;
+      if (msg.first_letter) state.firstLetter = msg.first_letter;
+      if (msg.secret_length) state.secretLength = msg.secret_length;
+      renderBoxes();
+      stopLetterGiftPromptCycle();
+      if (msg.nickname || msg.user) {
+        showNotification(`🔤 @${msg.nickname || msg.user} revelou a 1ª letra!`, "#a78bfa");
       }
       break;
 
@@ -269,6 +282,10 @@ function handleMessage(msg) {
 
     case "riddle_play":
       playRiddleSfxAndTimer();
+      break;
+
+    case "display_action":
+      handleDisplayAction(msg);
       break;
 
     case "game_over":
@@ -286,6 +303,9 @@ function applyGameStart(msg) {
   rouletteShowing = false;
   dicaQueue = [];
   dicaShowing = false;
+  currentRiddleText = "";
+  currentRiddleAudioUrl = "";
+  lastNarratedRiddleKey = "";
 
   state.secretLength = msg.secret_length;
   state.currentGameId = msg.game_id;
@@ -298,6 +318,11 @@ function applyGameStart(msg) {
   state.hintGifts = msg.hint_gifts || [];
   state.sizeGift = msg.size_gift || "";
   state.sizeRevealed = !!msg.size_revealed;
+  state.letterGift = msg.letter_gift || "";
+  state.firstLetterRevealed = !!msg.first_letter_revealed;
+  state.firstLetter = msg.first_letter || "";
+  state.letterHintDismissed = false;
+  state.display.riddleVisible = false;
   state.currentRiddleStage = 0;
 
   document.getElementById("gameOverBanner").style.display = "none";
@@ -317,6 +342,9 @@ function applyGameStart(msg) {
   renderBoxes();
   renderGuesses();
   refreshRanking();
+  stopLetterGiftPromptCycle();
+  wordAreaMode = "word";
+  startLetterGiftPromptCycle();
 }
 
 const GIFT_PT_MAP = {
@@ -546,6 +574,35 @@ function processRouletteQueue() {
 
   const current = rouletteQueue.shift();
   const card = document.getElementById("rouletteCard");
+
+  if (document.hidden) {
+    let cur = current;
+    while (true) {
+      if (cur.reward_type === "hint") {
+        state.hintCount++;
+        document.getElementById("hintCount").textContent = state.hintCount;
+        addGuessToList({
+          word: cur.hint_word,
+          rank: cur.hint_rank,
+          user: cur.user,
+          nickname: cur.nickname,
+          avatar: cur.avatar,
+          color: cur.color,
+          is_hint: true,
+          gift: cur.gift,
+        });
+        if (cur.active_gift) renderActiveGift(cur.active_gift);
+      } else if (cur.reward_type === "riddle_started") {
+        handleRiddleStarted(cur);
+      } else if (cur.reward_type === "riddle_ready") {
+        handleRiddleReady(cur);
+      }
+      if (rouletteQueue.length === 0) break;
+      cur = rouletteQueue.shift();
+    }
+    rouletteShowing = false;
+    return;
+  }
   
   // Rule of queue acceleration: If more than 4 items are pending, use a fast spin (500ms)
   const isFast = rouletteQueue.length > 4;
@@ -627,10 +684,12 @@ function handleRiddleStarted(msg) {
   document.getElementById("riddleFooter").style.display = "none";
 }
 
-function handleRiddleReady(msg) {
+function handleRiddleReady(msg, opts) {
   state.currentRiddleStage = msg.stage;
   currentRiddleText = msg.text;
   currentRiddleAudioUrl = msg.audio_url || "";
+  state.display.riddleVisible = true;
+  stopLetterGiftPromptCycle();
 
   document.getElementById("riddleLoading").style.display = "none";
   document.getElementById("riddleBody").style.display = "block";
@@ -643,6 +702,14 @@ function handleRiddleReady(msg) {
   // Show play button, hide repeat button initially
   document.getElementById("btnPlayRiddle").style.display = "inline-block";
   document.getElementById("btnRepeatRiddle").style.display = "none";
+
+  // Narração automática (sem clique — ideal para OBS), com dedup por gameId:stage
+  const rkey = `${state.currentGameId || ""}:${msg.stage || 0}`;
+  const auto = (state.ttsSettings ? state.ttsSettings.riddle_auto_narrate !== false : true);
+  if (auto && (!opts || opts.narrate !== false) && rkey !== lastNarratedRiddleKey) {
+    lastNarratedRiddleKey = rkey;
+    speakCurrentRiddle();
+  }
 }
 
 function playRiddleSfxAndTimer() {
@@ -661,9 +728,24 @@ function closeRiddleCard() {
     riddleAudio = null;
   }
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
+  state.display.riddleVisible = false;
   document.getElementById("riddlePanel").style.display = "none";
-  document.getElementById("winnersPanel").style.display = "block";
+  applyRankingVisibility();
   renderActiveGift(state.activeGift);
+  startLetterGiftPromptCycle();
+}
+
+function handleDisplayAction(msg) {
+  if (!msg || !msg.action) return;
+  if (msg.action === "close_riddle") {
+    closeRiddleCard();
+  } else if (msg.action === "change_ranking") {
+    if (msg.ranking_view) setRankingMode(msg.ranking_view);
+  }
 }
 
 async function triggerPlayRiddle() {
@@ -741,42 +823,105 @@ function speakCurrentRiddle() {
 
 function renderBoxes() {
   const container = document.getElementById("secretBoxes");
+  if (!container) return;
+  if (wordAreaMode === "letter_gift_prompt" && letterPromptEligible()) {
+    renderGiftPromptCard(state.letterGift, "REVELE A PRIMEIRA LETRA");
+    return;
+  }
   container.innerHTML = "";
   // Tamanho oculto: presente de tamanho configurado mas ainda não revelado.
   // Mostra o presente cadastrado com o texto, sem revelar o tamanho real.
   const locked = state.sizeGift && !state.sizeRevealed && !state.finished;
   if (locked) {
-    const wrap = document.createElement("div");
-    wrap.className = "size-lock";
-    const file = giftImageMap[state.sizeGift];
-    if (file) {
-      const img = document.createElement("img");
-      img.className = "size-lock-img";
-      img.src = "/gift-images/" + file;
-      img.alt = "";
-      wrap.appendChild(img);
-    } else {
-      const emoji = document.createElement("span");
-      emoji.className = "size-lock-emoji";
-      emoji.textContent = "🎁";
-      wrap.appendChild(emoji);
-    }
-    const txt = document.createElement("span");
-    txt.className = "size-lock-text";
-    txt.textContent = "REVELAR TAMANHO DA PALAVRA";
-    wrap.appendChild(txt);
-    container.appendChild(wrap);
+    renderGiftPromptCard(state.sizeGift, "REVELAR TAMANHO DA PALAVRA");
     return;
   }
   const n = state.secretLength;
   for (let i = 0; i < n; i++) {
+    const slot = document.createElement("div");
+    slot.className = "letter-slot";
     const box = document.createElement("div");
     box.className = "box";
     if (state.finished) {
       box.textContent = state.secretWord[i] || "?";
       box.classList.add("revealed");
+    } else if (state.firstLetterRevealed && i === 0 && state.firstLetter) {
+      box.textContent = state.firstLetter;
+      box.classList.add("revealed");
     }
-    container.appendChild(box);
+    const num = document.createElement("div");
+    num.className = "letter-number";
+    num.textContent = i + 1;
+    slot.appendChild(box);
+    slot.appendChild(num);
+    container.appendChild(slot);
+  }
+}
+
+function renderGiftPromptCard(gift, text) {
+  const container = document.getElementById("secretBoxes");
+  if (!container) return;
+  container.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "size-lock";
+  const file = giftImageMap[gift];
+  if (file) {
+    const img = document.createElement("img");
+    img.className = "size-lock-img";
+    img.src = "/gift-images/" + file;
+    img.alt = "";
+    wrap.appendChild(img);
+  } else {
+    const emoji = document.createElement("span");
+    emoji.className = "size-lock-emoji";
+    emoji.textContent = "🎁";
+    wrap.appendChild(emoji);
+  }
+  const txt = document.createElement("span");
+  txt.className = "size-lock-text";
+  txt.textContent = text;
+  wrap.appendChild(txt);
+  container.appendChild(wrap);
+}
+
+let wordAreaMode = "word";
+let letterPromptTimer = null;
+let letterPromptHideTimer = null;
+
+function letterPromptEligible() {
+  return !!state.currentGameId && (!!state.sizeRevealed || !state.sizeGift) && !!state.letterGift && !state.firstLetterRevealed && !state.finished;
+}
+
+function startLetterGiftPromptCycle() {
+  stopLetterGiftPromptCycle();
+  if (!letterPromptEligible()) { wordAreaMode = "word"; renderBoxes(); return; }
+  wordAreaMode = "word";
+  letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
+}
+
+function stopLetterGiftPromptCycle() {
+  if (letterPromptTimer) { clearTimeout(letterPromptTimer); letterPromptTimer = null; }
+  if (letterPromptHideTimer) { clearTimeout(letterPromptHideTimer); letterPromptHideTimer = null; }
+  if (wordAreaMode !== "word") { wordAreaMode = "word"; renderBoxes(); }
+}
+
+function showLetterGiftPrompt() {
+  letterPromptTimer = null;
+  if (!letterPromptEligible() || state.display.riddleVisible) {
+    letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
+    return;
+  }
+  wordAreaMode = "letter_gift_prompt";
+  renderBoxes();
+  letterPromptHideTimer = setTimeout(hideLetterGiftPrompt, 5000);
+}
+
+function hideLetterGiftPrompt() {
+  letterPromptHideTimer = null;
+  wordAreaMode = "word";
+  renderBoxes();
+  if (letterPromptEligible() && !state.display.riddleVisible) {
+    letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
   }
 }
 
@@ -838,20 +983,29 @@ function processGuessHighlightQueue() {
     state.postGameSummary = msg.post_game_summary || null;
     document.getElementById("gameOverBanner").style.display = "block";
     if (msg.winner === "Ninguém") {
-      document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span><div class="word-reveal">A palavra era: <span>${esc(msg.secret_word || "")}</span></div>`;
+      document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
     } else {
-      document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(msg.secret_word || "")}</span></div>`;
+      document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`;
     }
     renderBoxes();
     refreshRanking();
     showStartBar("Jogo finalizado! Aguardando a próxima partida...");
     enablePostGame();
+    state.display.riddleVisible = false;
+    stopLetterGiftPromptCycle();
 
     guessHighlightShowing = false;
     processGuessHighlightQueue();
     return;
   }
   
+  if (document.hidden) {
+    addGuessToList(current);
+    guessHighlightShowing = false;
+    processGuessHighlightQueue();
+    return;
+  }
+
   // Render new guess at top (Position 1) in highlighted state
   const tempRow = renderNewGuessAtTop(current);
   if (!tempRow) {
@@ -1031,7 +1185,28 @@ function renderGuesses() {
   }
 }
 
-let rankingMode = "weekly";
+const RANK_MODES = ["round", "live", "weekly", "hidden"];
+let rankingMode = "live";
+
+function rankingModeLabel(mode) {
+  if (mode === "weekly") return "RANKING SEMANAL ▸";
+  if (mode === "live") return "RANKING DA LIVE ▸";
+  if (mode === "hidden") return "RANKING ▸";
+  return "MAIS PALPITES ▸";
+}
+
+function setRankingMode(view) {
+  const v = view === "round" ? "round" : (view === "hidden" ? "hidden" : (view === "weekly" ? "weekly" : "live"));
+  state.display.rankingView = v;
+  rankingMode = v === "round" ? "guesses" : v;
+  refreshRanking();
+}
+
+function applyRankingVisibility() {
+  const panel = document.getElementById("winnersPanel");
+  if (!panel) return;
+  panel.style.display = (rankingMode === "hidden") ? "none" : "block";
+}
 
 async function fetchWinners() {
   try {
@@ -1052,22 +1227,19 @@ async function fetchLiveRanking() {
 }
 
 function cycleRankingMode() {
-  if (rankingMode === "weekly") rankingMode = "live";
-  else if (rankingMode === "live") rankingMode = "guesses";
-  else rankingMode = "weekly";
-  refreshRanking();
+  const order = ["round", "live", "weekly", "hidden"];
+  const cur = state.display.rankingView === "round" ? "round" : rankingMode;
+  const idx = order.indexOf(cur);
+  setRankingMode(order[(idx + 1) % order.length]);
 }
 
 function refreshRanking() {
   const titleEl = document.getElementById("rankTitle");
-  if (titleEl) {
-    if (rankingMode === "weekly") titleEl.textContent = "RANKING SEMANAL ▸";
-    else if (rankingMode === "live") titleEl.textContent = "RANKING DA LIVE ▸";
-    else titleEl.textContent = "MAIS PALPITES ▸";
-  }
+  if (titleEl) titleEl.textContent = rankingModeLabel(rankingMode);
+  applyRankingVisibility();
   if (rankingMode === "weekly") fetchWinners();
   else if (rankingMode === "live") fetchLiveRanking();
-  else renderGuessesRanking();
+  else if (rankingMode === "guesses") renderGuessesRanking();
 }
 
 function renderWinners(ranking) {
@@ -1265,6 +1437,18 @@ async function loadGameState() {
     if (gs.active && gs.game_id) {
       document.getElementById("gameIdLabel").textContent = `#${gs.game_id}`;
       state.currentGameId = gs.game_id;
+      const disp = gs.display || {};
+      state.display.riddleVisible = !!disp.riddle_visible;
+      if (disp.ranking_view) state.display.rankingView = disp.ranking_view;
+      setRankingMode(state.display.rankingView);
+      if (gs.current_riddle && gs.current_riddle.text && state.display.riddleVisible) {
+        handleRiddleReady(gs.current_riddle, { narrate: false });
+      } else {
+        currentRiddleText = "";
+        currentRiddleAudioUrl = "";
+        const rp = document.getElementById("riddlePanel");
+        if (rp) rp.style.display = "none";
+      }
       state.secretLength = gs.secret_length;
       state.guesses = gs.guesses || [];
       state.hintCount = (gs.hints || []).length;
@@ -1272,6 +1456,9 @@ async function loadGameState() {
       state.secretWord = gs.secret_word || "";
       state.sizeGift = gs.size_gift || "";
       state.sizeRevealed = !!gs.size_revealed;
+      state.letterGift = gs.letter_gift || "";
+      state.firstLetterRevealed = !!gs.first_letter_revealed;
+      state.firstLetter = gs.first_letter || "";
       state.tapMetaCurrent = gs.tap_meta_current || 0;
       state.tapMetaTotal = gs.tap_meta_total || 0;
       state.tapMetaReady = !!gs.tap_meta_ready;
@@ -1284,11 +1471,11 @@ async function loadGameState() {
         state.postGameSummary = gs.post_game_summary || null;
         document.getElementById("gameOverBanner").style.display = "block";
         if (gs.winner === "Ninguém") {
-          document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span><div class="word-reveal">A palavra era: <span>${esc(gs.secret_word || "")}</span></div>`;
+          document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
         } else {
           const winAvatar = gs.guesses && gs.guesses.find(g => g.word === gs.secret_word);
           const avUrl = winAvatar ? (winAvatar.avatar || '') : '';
-          document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner} venceu!</span><div class="word-reveal">A palavra era: <span>${esc(gs.secret_word || "")}</span></div>`;
+          document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`;
         }
         showStartBar("Jogo finalizado! Aguardando a próxima partida...");
       } else {
@@ -1299,6 +1486,8 @@ async function loadGameState() {
       renderBoxes();
       renderGuesses();
       refreshRanking();
+      stopLetterGiftPromptCycle();
+      startLetterGiftPromptCycle();
     } else if (gs.python_connected) {
       showStartBar("Live conectada! Aguardando o streamer iniciar a partida.");
     }
@@ -1308,6 +1497,18 @@ async function loadGameState() {
 refreshRanking();
 loadGameState();
 renderBoxes();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    guessHighlightQueue = [];
+    guessHighlightShowing = false;
+    rouletteQueue = [];
+    rouletteShowing = false;
+    dicaQueue = [];
+    dicaShowing = false;
+    loadGameState();
+  }
+});
 </script>
 
 <div id="dicaOverlay" class="dica-overlay" style="display:none">
@@ -1402,6 +1603,12 @@ function processDicaQueue() {
   try {
     if (dicaShowing || dicaQueue.length === 0) return;
     dicaShowing = true;
+
+    if (document.hidden) {
+      dicaQueue = [];
+      dicaShowing = false;
+      return;
+    }
 
     const current = dicaQueue.shift();
     const overlay = document.getElementById("dicaOverlay");

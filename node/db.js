@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   command_prefix: "#",
   auto_round: false,
   auto_round_pause: 20,
+  riddle_auto_narrate: true,
   tap_meta: 1000,
 };
 
@@ -29,6 +30,9 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_gift_config ADD COLUMN size_gift TEXT DEFAULT ''");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_gift_config ADD COLUMN letter_gift TEXT DEFAULT ''");
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_gift_config ADD COLUMN tres_gifts TEXT DEFAULT '{}'");
@@ -60,6 +64,9 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN tap_meta INTEGER DEFAULT 1000");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN riddle_auto_narrate INTEGER DEFAULT 1");
 } catch {}
 
 db.exec(`
@@ -109,6 +116,7 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   command_prefix TEXT DEFAULT '#',
   auto_round INTEGER DEFAULT 0,
   auto_round_pause INTEGER DEFAULT 20,
+  riddle_auto_narrate INTEGER DEFAULT 1,
   tap_meta INTEGER DEFAULT 1000
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
@@ -116,7 +124,8 @@ CREATE TABLE IF NOT EXISTS tenant_gift_config (
   hint_gifts TEXT DEFAULT '[]',
   riddle_gifts TEXT DEFAULT '[]',
   sound_alerts TEXT DEFAULT '{}',
-  size_gift TEXT DEFAULT ''
+  size_gift TEXT DEFAULT '',
+  letter_gift TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS tenant_history (
   tenant_id INTEGER PRIMARY KEY,
@@ -293,14 +302,15 @@ function getTenantSettings(tenantId) {
     command_prefix: (row.command_prefix === null || row.command_prefix === undefined) ? "#" : row.command_prefix,
     auto_round: !!row.auto_round,
     auto_round_pause: (row.auto_round_pause === null || row.auto_round_pause === undefined) ? 20 : row.auto_round_pause,
+    riddle_auto_narrate: row.riddle_auto_narrate === 0 ? false : true,
     tap_meta: (row.tap_meta === null || row.tap_meta === undefined) ? 1000 : row.tap_meta,
   };
 }
 
 function saveTenantSettings(tenantId, s) {
   db.prepare(`
-    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, tap_meta)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET
       apenas_seguidores=excluded.apenas_seguidores,
       apenas_heart_me=excluded.apenas_heart_me,
@@ -314,6 +324,7 @@ function saveTenantSettings(tenantId, s) {
       command_prefix=excluded.command_prefix,
       auto_round=excluded.auto_round,
       auto_round_pause=excluded.auto_round_pause,
+      riddle_auto_narrate=excluded.riddle_auto_narrate,
       tap_meta=excluded.tap_meta
   `).run(
     tenantId,
@@ -329,25 +340,26 @@ function saveTenantSettings(tenantId, s) {
     (s.command_prefix === null || s.command_prefix === undefined) ? "#" : s.command_prefix,
     s.auto_round ? 1 : 0,
     (s.auto_round_pause === null || s.auto_round_pause === undefined) ? 20 : s.auto_round_pause,
+    s.riddle_auto_narrate === false ? 0 : 1,
     (s.tap_meta === null || s.tap_meta === undefined) ? 1000 : s.tap_meta
   );
 }
 
 function getTenantGiftConfig(tenantId) {
-  const row = db.prepare("SELECT hint_gifts, riddle_gifts, size_gift FROM tenant_gift_config WHERE tenant_id = ?").get(tenantId);
-  if (!row) return { hint_gifts: [], riddle_gifts: [], size_gift: "" };
+  const row = db.prepare("SELECT hint_gifts, riddle_gifts, size_gift, letter_gift FROM tenant_gift_config WHERE tenant_id = ?").get(tenantId);
+  if (!row) return { hint_gifts: [], riddle_gifts: [], size_gift: "", letter_gift: "" };
   let hg = [], rg = [];
   try { hg = JSON.parse(row.hint_gifts || "[]"); } catch {}
   try { rg = JSON.parse(row.riddle_gifts || "[]"); } catch {}
-  return { hint_gifts: hg, riddle_gifts: rg, size_gift: row.size_gift || "" };
+  return { hint_gifts: hg, riddle_gifts: rg, size_gift: row.size_gift || "", letter_gift: row.letter_gift || "" };
 }
 
-function saveTenantGiftConfig(tenantId, hint_gifts, riddle_gifts, size_gift) {
+function saveTenantGiftConfig(tenantId, hint_gifts, riddle_gifts, size_gift, letter_gift) {
   db.prepare(`
-    INSERT INTO tenant_gift_config (tenant_id, hint_gifts, riddle_gifts, size_gift)
-    VALUES (?,?,?,?)
-    ON CONFLICT(tenant_id) DO UPDATE SET hint_gifts=excluded.hint_gifts, riddle_gifts=excluded.riddle_gifts, size_gift=excluded.size_gift
-  `).run(tenantId, JSON.stringify(hint_gifts || []), JSON.stringify(riddle_gifts || []), String(size_gift || ""));
+    INSERT INTO tenant_gift_config (tenant_id, hint_gifts, riddle_gifts, size_gift, letter_gift)
+    VALUES (?,?,?,?,?)
+    ON CONFLICT(tenant_id) DO UPDATE SET hint_gifts=excluded.hint_gifts, riddle_gifts=excluded.riddle_gifts, size_gift=excluded.size_gift, letter_gift=excluded.letter_gift
+  `).run(tenantId, JSON.stringify(hint_gifts || []), JSON.stringify(riddle_gifts || []), String(size_gift || ""), String(letter_gift || ""));
 }
 
 function getTresGiftConfig(tenantId) {
