@@ -801,6 +801,14 @@ function switchTab(tab) {
   if (tab === "caca") { loadCacaState(); }
   if (tab === "bichinho") { vpetLoadState(); }
   if (tab === "tres") { tresLoadState(); }
+  try { localStorage.setItem("panel_tab", tab); } catch (e) {}
+  try { if (location.hash !== "#" + tab) history.replaceState(null, "", location.pathname + location.search + "#" + tab); } catch (e) {}
+}
+
+function restoreActiveTab() {
+  let wanted = "";
+  try { wanted = (location.hash || "").replace(/^#/, "") || localStorage.getItem("panel_tab") || ""; } catch (e) {}
+  if (wanted) switchTab(wanted);
 }
 
 function esc(s) {
@@ -3210,7 +3218,7 @@ async function loadWordHistory(page) {
 }
 function fetchHistoryAll() { loadWordHistory(1); }
 
-loadMe().then(() => fetchHistoryAll());
+loadMe().then(() => { fetchHistoryAll(); restoreActiveTab(); });
 syncGameState();
 loadPanelConfig();
 loadBilling();
