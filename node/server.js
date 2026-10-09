@@ -25,6 +25,8 @@ const FRIENDLY_PAGES = {
   "/painel": "control-panel.html",
   "/admin": "admin.html",
   "/login": "login.html",
+  "/register": "login.html",
+  "/cadastro": "login.html",
   "/jogo": "web-game.html",
   "/ranking": "obs-ranking.html",
   "/batalha": "batalha.html",
