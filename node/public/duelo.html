@@ -154,7 +154,7 @@
 const params = new URLSearchParams(location.search);
 const DEBUG = params.get("debug") === "1";
 const token = params.get("tk") || localStorage.getItem("token");
-if (!token) location.href = "/login";
+if (!token && !DEBUG) location.href = "/login";
 
 const FIGHTERS = {
   flavio: {
@@ -350,7 +350,11 @@ function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
   ws.onopen = () => { $("statusText").textContent = "conectado"; };
-  ws.onclose = () => { $("statusText").textContent = "desconectado — reconectando…"; setTimeout(connectWS, 3000); };
+  ws.onclose = (e) => {
+    if (e && e.code === 1008) { $("statusText").textContent = "sessão inválida — redirecionando…"; location.href = "/login"; return; }
+    $("statusText").textContent = "desconectado — reconectando…";
+    setTimeout(connectWS, 3000);
+  };
   ws.onmessage = (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
