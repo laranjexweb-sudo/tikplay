@@ -122,29 +122,36 @@ function renderRegisterGate() {
   const form = document.getElementById("formRegister");
   const btn = form ? form.querySelector("button[type=submit]") : null;
   const tabRegister = document.getElementById("tabRegister");
-  if (!msg || !form) return;
+  if (!msg || !form || !tabRegister) return;
+
   if (registerMode === "public") {
+    tabRegister.style.display = "";
+    tabRegister.disabled = false;
     msg.style.display = "none";
     if (btn) btn.disabled = false;
-    if (tabRegister) tabRegister.disabled = false;
     return;
   }
-  if (tabRegister) tabRegister.disabled = false;
-  let message = "";
   if (registerMode === "closed") {
-    message = REGISTER_CLOSED_MSG;
-  } else if (registerMode === "invite") {
-    if (!inviteToken) message = REGISTER_INVITE_MSG;
-    else if (!inviteValid) message = "Este convite já foi utilizado ou expirou.";
+    tabRegister.style.display = "none";
+    return;
   }
-  if (message) {
-    msg.textContent = message;
+  // invite
+  if (!inviteToken) {
+    tabRegister.style.display = "none";
+    return;
+  }
+  if (!inviteValid) {
+    tabRegister.style.display = "";
+    tabRegister.disabled = false;
+    msg.textContent = "Este convite já foi utilizado ou expirou.";
     msg.style.display = "block";
     if (btn) btn.disabled = true;
-  } else {
-    msg.style.display = "none";
-    if (btn) btn.disabled = false;
+    return;
   }
+  tabRegister.style.display = "";
+  tabRegister.disabled = false;
+  msg.style.display = "none";
+  if (btn) btn.disabled = false;
 }
 
 async function doLogin(e) {
