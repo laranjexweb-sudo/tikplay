@@ -130,7 +130,7 @@
     <ol>
       <li>Conecte sua live no painel de controle.</li>
       <li>Ative um dos jogos (ou mais de um — eles funcionam juntos).</li>
-      <li>Abra a página pública no OBS (overlay, ranking, etc.).</li>
+      <li>Abra a página pública no OBS usando o <b>link público</b> gerado no painel (ex.: <code>/jogo?room=SEUCODIGO&amp;tk=...</code>).</li>
       <li>O público joga pelo chat e por presentes.</li>
     </ol>
   </div>
@@ -165,19 +165,21 @@
   <ul>
     <li>Escreva uma palavra no chat — opcionalmente com o prefixo configurado (padrão <code>#</code>): <code>#cachorro</code>.</li>
     <li>Cada palavra só vale uma vez; duplicatas são ignoradas.</li>
-    <li>O overlay mostra o rank do seu chute e dicas liberadas.</li>
+    <li>A tela mostra o rank do seu chute, as dicas liberadas e a quantidade de letras.</li>
   </ul>
   <h3>Dicas e presentes</h3>
   <ul>
     <li><b>Gifts de dica</b>: enviar um presente configurado libera palavras próximas da resposta (dicas quentes/mornas).</li>
     <li><b>DICA / CHARADA</b> (botões no painel ou por presentes): o streamer pode liberar uma dica manualmente ou uma charada gerada por IA.</li>
+    <li><b>Narração automática da charada</b>: com a opção ativada no painel, o áudio da charada toca sozinho (ideal para OBS, sem clique).</li>
     <li><b>Presente Revelador / Final Boss</b>: no fim da partida, um presente específico revela a palavra — quem enviar vence.</li>
-    <li><b>Presente de Tamanho</b>: se configurado, o tamanho da palavra fica oculto na tela até alguém enviar o presente — então as caixas aparecem.</li>
+    <li><b>Presente de Tamanho</b>: se configurado, o tamanho fica oculto até alguém enviar o presente — então a quantidade de letras aparece com uma <b>numeração</b> abaixo de cada caixa.</li>
+    <li><b>Presente — Revelar Primeira Letra</b>: após revelar o tamanho, um presente específico revela apenas a 1ª letra. Enquanto ela não for revelada, a tela mostra um <b>lembrete periódico</b> (a cada ~15s por alguns segundos) indicando o presente necessário.</li>
   </ul>
   <h3>Meta de Tap (barra de coração)</h3>
   <ul>
     <li>Uma barra vertical ao lado da roleta mostra o progresso de curtidas (taps) da live.</li>
-    <li>Ao atingir a <b>meta</b> (configurável no painel), o jogo libera automaticamente uma <b>dica ou charada</b> (seguindo a porcentagem da roleta).</li>
+    <li>A <b>meta é configurável no painel</b>; ao atingi-la, o jogo libera automaticamente uma <b>dica ou charada</b> (seguindo a porcentagem da roleta).</li>
     <li>No <b>Final Boss</b> (top 3 do ranking), a dica fica pendente e é liberada quando o jogo sair do top 3.</li>
   </ul>
   <h3>Rodada automática</h3>
@@ -185,9 +187,15 @@
     <li>Opção no painel: ao terminar uma partida, a próxima inicia automaticamente após a pausa configurada.</li>
     <li>O botão <b>Finalizar Partida</b> sempre encerra — a auto-rodada só vale para vitória natural ou Final Boss.</li>
   </ul>
+  <h3>Controle da tela (OBS)</h3>
+  <ul>
+    <li>Pelo painel (aba Palavra Secreta, card "Partida em andamento") o streamer controla a tela sem abrir a página: <b>Fechar Charada</b> e <b>Mudar Ranking</b>.</li>
+    <li>O ranking alterna entre <b>Rodada → Live → Semanal → Oculto</b>; o modo escolhido é persistido e se mantém após refresh/reconexão do OBS.</li>
+    <li>O banner de vencedor mostra avatar + nome + "Acertou a Palavra Secreta!" (sem a palavra); as caixas revelam as letras ao final.</li>
+  </ul>
   <h3>Rankings</h3>
   <ul>
-    <li><b>Ranking Semanal</b> e <b>Ranking da Live</b> podem ser alternados clicando no título do painel lateral.</li>
+    <li><b>Ranking da Rodada / da Live / Semanal / Oculto</b> — alternados pelo painel ("Mudar Ranking") ou clicando no título do ranking na tela.</li>
     <li>O primeiro lugar é destacado com medalha 🥇 e estilo dourado.</li>
   </ul>
 
@@ -270,14 +278,20 @@
   </p>
   <ul>
     <li><b>Dica 1</b> (difícil, mais pontos) → <b>Dica 2</b> → <b>Dica 3</b> (fácil).</li>
-    <li>Cada dica tem um tempo e pontuação configuráveis no painel.</li>
+    <li>Cada dica tem um tempo e pontuação configuráveis no painel (padrão: 30/20/10 pontos).</li>
     <li>O ranking semanal registra quem acertou mais vezes.</li>
+  </ul>
+  <h3>Regras do palpite</h3>
+  <ul>
+    <li>Escrita livre no chat: uma <b>palavra única</b> (sem espaços), sem emojis/dígitos, de 2 a 40 caracteres.</li>
+    <li>Acerto encerra a rodada e pontua conforme a dica vigente.</li>
   </ul>
   <h3>Presentes</h3>
   <ul>
     <li><b>Presente A</b> — revela o tamanho da palavra.</li>
-    <li><b>Presente B</b> — revela a primeira letra (só após o tamanho ter sido revelado).</li>
-    <li><b>Ingresso / Passe Livre</b> — se configurado, só quem enviou esse presente pode palpitar no chat.</li>
+    <li><b>Presente B</b> — revela a primeira letra (só após o Presente A ser enviado).</li>
+    <li><b>Ingresso / Passe Livre</b> — se configurado, <b>só quem enviou esse presente pode palpitar</b> no chat durante a live. Quem envia também vira <b>apoiador</b> e os acertos valem <b>2x pontos</b>.</li>
+    <li>Qualquer presente na rodada marca o usuário como apoiador (multiplicador 2x).</li>
   </ul>
   <h3>Botão de áudio</h3>
   <p>Cada dica tem um botão ▶ para ouvir a dica em voz alta (usa a voz configurada na narração de chat).</p>
@@ -287,8 +301,8 @@
     <tr><th>Jogo</th><th>Como interagir</th><th>O que ganha</th></tr>
     <tr>
       <td>Palavra Secreta</td>
-      <td><code>#palavra</code> no chat; presentes de dica</td>
-      <td>Dica, ranking, vitória</td>
+      <td><code>#palavra</code> no chat; presentes de dica, de tamanho e da 1ª letra</td>
+      <td>Dica, ranking, 1ª letra, vitória</td>
     </tr>
     <tr>
       <td>BATALHA</td>
@@ -307,8 +321,8 @@
     </tr>
     <tr>
       <td>3 Dicas</td>
-      <td>Escrever a palavra no chat (com Ingresso, se configurado); presentes A/B</td>
-      <td>Pontos no ranking semanal</td>
+      <td>Palavra no chat (exige Ingresso se configurado); Presentes A/B e Ingresso</td>
+      <td>Pontos (2x se apoiador), ranking semanal</td>
     </tr>
   </table>
 
@@ -324,22 +338,31 @@
     <tr><td class="url">/tres-pontinhos?room=SEUCODIGO</td><td>Tela do Jogo das 3 Dicas</td></tr>
     <tr><td class="url">/docs</td><td>Esta página de ajuda</td></tr>
   </table>
+  <div class="note">
+    <b>Overlay antigo removido:</b> a página <code>/overlay</code> não existe mais — use <code>/jogo</code> no OBS.
+  </div>
+  <div class="note">
+    <b>Link público para OBS/TikTok (sem login):</b> no painel, cada jogo tem o botão <b>"Link público"</b>, que copia
+    uma URL com <code>?tk=</code> (ex.: <code>/jogo?room=SEUCODIGO&amp;tk=...</code>) que abre a tela <b>sem precisar logar</b>.
+    Trate esse link como segredo da sala (vale 1 ano).
+  </div>
   <div class="card">
     <p><b>Painel de controle</b> (<span class="url">/painel</span>):</p>
     <ul>
       <li><b>Conectar Live</b> — usuário, motor, filtros de chat.</li>
       <li><b>Leitura de Chat</b> — narração do chat em voz alta e voz das charadas.</li>
       <li><b>Alertas Sonoros</b> — som por presente e som de conexão.</li>
-      <li><b>Palavra Secreta</b> — iniciar partida, gifts de dica, presente revelador, DICA/CHARADA manuais.</li>
+      <li><b>Palavra Secreta</b> — iniciar/finalizar partida, gifts de dica/revelador/tamanho/1ª letra, DICA/CHARADA, controle da tela (Fechar Charada e Mudar Ranking) e link público.</li>
       <li><b>BATALHA</b> — iniciar/finalizar rodada, ranking e histórico.</li>
-      <li><b>Caça Palavras</b> — iniciar grade, formato do comando, revelar palavra.</li>
+      <li><b>Caça Palavras</b> — iniciar/encerrar grade, formato do comando, revelar palavra.</li>
       <li><b>Bichinho</b> — ativar/desativar mascote, modo assistente e invocar o boss.</li>
       <li><b>3 Dicas</b> — tempos/pontos das dicas, presentes A/B/Ingresso, ranking semanal.</li>
     </ul>
   </div>
   <div class="note">
-    <b>Dica de OBS:</b> adicione uma fonte de <b>Navegador</b> apontando para a URL da página desejada
-    (com o parâmetro <code>?room=SEUCODIGO</code>). A tela acompanha a live automaticamente.
+    <b>Dica de OBS:</b> adicione uma fonte de <b>Navegador</b> apontando para o <b>link público</b> gerado no painel
+    (rota com <code>?room=SEUCODIGO&amp;tk=...</code>, ex.: <span class="url">/jogo?room=...</span>). A tela acompanha
+    a live automaticamente e não pede login.
   </div>
 
   <footer>Guia da plataforma TikPlay — jogos interativos para lives — <span class="url">/docs</span></footer>
