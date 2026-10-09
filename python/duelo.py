@@ -165,6 +165,7 @@ class DueloEngine:
                 "fighter": char,
                 "shield": self.shield[char],
                 "points": points,
+                "audio_url": f"/duelo-audio/{self.tenant_id}/{audio_sh}" if (audio_sh := str(match.get("audio") or "")) else "",
                 "user": user or "",
                 "nickname": nickname or user or "",
             })

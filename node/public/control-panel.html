@@ -819,11 +819,29 @@
           <div class="nb-card mb-3">
             <h2>Configuração de Presentes</h2>
             <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-              Cada presente dispara um golpe/escudo pelo personagem cadastrado. Selecione o presente na lista (nome). A defesa do oponente é automática.
+              Presentes de golpe/escudo são cadastrados por personagem. Flávio luta pela ESQUERDA; Lula pela DIREITA. O escudo absorve o dano antes do HP. A defesa do oponente é automática.
             </div>
-            <div id="dueloGiftsList" class="mb-2"></div>
+            <div class="row g-3 mb-3">
+              <div class="col-lg-6">
+                <div class="border border-2 border-primary rounded p-2" style="background:#eef6ff">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="mb-0" style="color:#1d4ed8">PRESENTES — FLÁVIO</h3>
+                    <button class="btn btn-nb btn-primary btn-sm" onclick="addDueloGiftRow('flavio')">+ Adicionar presente</button>
+                  </div>
+                  <div id="dueloGiftsList-flavio"></div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="border border-2 border-danger rounded p-2" style="background:#fff1f1">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="mb-0" style="color:#b91c1c">PRESENTES — LULA</h3>
+                    <button class="btn btn-nb btn-danger btn-sm" onclick="addDueloGiftRow('lula')">+ Adicionar presente</button>
+                  </div>
+                  <div id="dueloGiftsList-lula"></div>
+                </div>
+              </div>
+            </div>
             <div class="d-flex gap-2 align-items-center">
-              <button class="btn btn-nb btn-dark btn-sm" onclick="addDueloGiftRow()">+ Adicionar presente</button>
               <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração</button>
               <span class="text-secondary" style="font-size:0.75rem" id="dueloMsg"></span>
             </div>
@@ -3282,18 +3300,33 @@ function openDueloAc(i) {
 }
 
 function renderDueloGifts() {
-  const box = document.getElementById("dueloGiftsList");
-  if (!box) return;
-  box.innerHTML = "";
   const count = document.getElementById("dueloCount");
   if (count) count.textContent = dueloGifts.length;
-  dueloGifts.forEach((g, i) => {
-    const g_ = g || {};
-    const type = g_.type === "escudo" ? "escudo" : "golpe";
-    const row = document.createElement("div");
-    row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
-    row.innerHTML = `
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
+  for (const char of ["flavio", "lula"]) renderGiftSection(char);
+}
+
+function renderGiftSection(char) {
+  const box = document.getElementById("dueloGiftsList-" + char);
+  if (!box) return;
+  box.innerHTML = "";
+  const items = dueloGifts.map((g, i) => ({ g: (g || {}), i })).filter(({ g }) => (g.character || "flavio") === char);
+  if (!items.length) {
+    const none = document.createElement("div");
+    none.className = "text-secondary";
+    none.style.fontSize = "0.8rem";
+    none.textContent = "Nenhum presente cadastrado.";
+    box.appendChild(none);
+    return;
+  }
+  items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
+}
+
+function buildDueloRow(g_, i) {
+  const type = g_.type === "escudo" ? "escudo" : "golpe";
+  const row = document.createElement("div");
+  row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
+  row.innerHTML = `
+      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
         <div class="position-relative">
           <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
           <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
@@ -3303,12 +3336,9 @@ function renderDueloGifts() {
           <option value="golpe" ${type === 'escudo' ? '' : 'selected'}>Golpe</option>
           <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
         </select></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Personagem</label>
-        <select class="form-select form-select-sm" data-f="character" data-i="${i}">
-          <option value="flavio" ${g_.character === 'lula' ? '' : 'selected'}>Flávio</option>
-          <option value="lula" ${g_.character === 'lula' ? 'selected' : ''}>Lula</option>
-        </select></div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Ação / Escudo</label>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Gift ID</label>
+        <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" placeholder="opcional" data-f="gift_id" data-i="${i}"></div>
+      <div class="col-md-5"><label class="form-label mb-0" style="font-size:0.7rem">Golpe / Pontos de escudo</label>
         <div class="duelo-golpe-fields d-flex gap-1" ${type === 'escudo' ? 'style="display:none"' : ''}>
           <select class="form-select form-select-sm" data-f="action" data-i="${i}" style="flex:1">
             <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
@@ -3320,53 +3350,52 @@ function renderDueloGifts() {
         <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
           <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo" data-f="shield" data-i="${i}">
         </div></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
         <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
         <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : 'sem áudio'}</div></div>
-      <div class="col-md-1"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
-      <div class="col-md-1 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
-    box.appendChild(row);
-    row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
-      const esc = e.target.value === "escudo";
-      row.querySelector(".duelo-golpe-fields").style.display = esc ? "none" : "";
-      row.querySelector(".duelo-escudo-field").style.display = esc ? "" : "none";
-    });
-    const nameInput = row.querySelector('.duelo-name[data-name="' + i + '"]');
-    const acEl = row.querySelector('.duelo-ac[data-ac="' + i + '"]');
-    if (nameInput && acEl) {
-      nameInput.addEventListener("focus", () => openDueloAc(i));
-      nameInput.addEventListener("input", () => openDueloAc(i));
-      nameInput.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeDueloAc(i);
-        else if (e.key === "Enter") {
-          e.preventDefault();
-          const first = acEl.querySelector(".ac-item");
-          if (first) selectDueloGiftName(i, first.getAttribute("data-val"));
-        }
-      });
-      nameInput.addEventListener("blur", () => { setTimeout(() => closeDueloAc(i), 200); });
-    }
+      <div class="col-md-2"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
+      <div class="col-md-2 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
+  row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
+    const esc = e.target.value === "escudo";
+    row.querySelector(".duelo-golpe-fields").style.display = esc ? "none" : "";
+    row.querySelector(".duelo-escudo-field").style.display = esc ? "" : "none";
   });
-  box.querySelectorAll("[data-f]").forEach((el) => {
+  const nameInput = row.querySelector('.duelo-name[data-name="' + i + '"]');
+  const acEl = row.querySelector('.duelo-ac[data-ac="' + i + '"]');
+  if (nameInput && acEl) {
+    nameInput.addEventListener("focus", () => openDueloAc(i));
+    nameInput.addEventListener("input", () => openDueloAc(i));
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeDueloAc(i);
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        const first = acEl.querySelector(".ac-item");
+        if (first) selectDueloGiftName(i, first.getAttribute("data-val"));
+      }
+    });
+    nameInput.addEventListener("blur", () => { setTimeout(() => closeDueloAc(i), 200); });
+  }
+  row.querySelectorAll("[data-f]").forEach((el) => {
     el.addEventListener("change", () => {
       const f = el.getAttribute("data-f");
-      const i = Number(el.getAttribute("data-i"));
-      dueloGifts[i] = dueloGifts[i] || {};
+      const idx = Number(el.getAttribute("data-i"));
+      dueloGifts[idx] = dueloGifts[idx] || {};
       const v = f === "active" ? el.checked : el.value;
-      dueloGifts[i][f] = v;
-      if (f === "type" && v === "escudo" && !dueloGifts[i].shield) dueloGifts[i].shield = 15;
+      dueloGifts[idx][f] = v;
+      if (f === "type" && v === "escudo" && !dueloGifts[idx].shield) dueloGifts[idx].shield = 15;
     });
   });
-  box.querySelectorAll("[data-upload]").forEach((el) => {
-    el.addEventListener("change", () => {
-      const i = Number(el.getAttribute("data-upload"));
-      if (el.files && el.files[0]) uploadDueloAudio(i, el.files[0]);
+  const upEl = row.querySelector("[data-upload]");
+  if (upEl) {
+    upEl.addEventListener("change", () => {
+      if (upEl.files && upEl.files[0]) uploadDueloAudio(i, upEl.files[0]);
     });
-  });
+  }
+  return row;
 }
 
-function addDueloGiftRow() {
-  dueloGifts.push({ gift_id: "", name: "", character: "flavio", action: "punch", audio: "", active: true });
+function addDueloGiftRow(character) {
+  dueloGifts.push({ gift_id: "", name: "", character: (character === "lula" ? "lula" : "flavio"), action: "punch", audio: "", active: true });
   renderDueloGifts();
 }
 
