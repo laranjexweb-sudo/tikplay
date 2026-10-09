@@ -2947,7 +2947,7 @@ async function loadGiftConfig() {
 function renderPanelRiddle(text, stage) {
   const el = document.getElementById("panelRiddle");
   if (!el) return;
-  el.textContent = text ? `Estágio ${stage || 1}: ${text}` : "-";
+  el.textContent = text ? String(text) : "-";
 }
 
 function clearPanelRiddle() {
