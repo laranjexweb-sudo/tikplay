@@ -819,7 +819,7 @@
           <div class="nb-card mb-3">
             <h2>Configuração de Presentes</h2>
             <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-              Cada presente dispara um golpe do personagem cadastrado. Gift ID = TikTok Gift ID (com fallback pelo nome).
+              Cada presente dispara um golpe/escudo pelo personagem cadastrado. Selecione o presente na lista (nome). A defesa do oponente é automática.
             </div>
             <div id="dueloGiftsList" class="mb-2"></div>
             <div class="d-flex gap-2 align-items-center">
@@ -3290,8 +3290,6 @@ function renderDueloGifts() {
     const row = document.createElement("div");
     row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
     row.innerHTML = `
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Gift ID</label>
-        <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" data-f="gift_id" data-i="${i}"></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
         <div class="position-relative">
           <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
