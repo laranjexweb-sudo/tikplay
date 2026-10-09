@@ -3240,6 +3240,44 @@ function dueloMsg(text) {
   if (el) el.textContent = text;
 }
 
+function selectDueloGiftName(i, name) {
+  const input = document.querySelector('.duelo-name[data-name="' + i + '"]');
+  if (input) input.value = name;
+  dueloGifts[i] = dueloGifts[i] || {};
+  dueloGifts[i].name = name;
+  closeDueloAc(i);
+}
+
+function closeDueloAc(i) {
+  const ac = document.querySelector('.duelo-ac[data-ac="' + i + '"]');
+  if (ac) { ac.style.display = "none"; ac.innerHTML = ""; }
+}
+
+function openDueloAc(i) {
+  const input = document.querySelector('.duelo-name[data-name="' + i + '"]');
+  const ac = document.querySelector('.duelo-ac[data-ac="' + i + '"]');
+  if (!input || !ac || !giftTagList.length) return;
+  const q = input.value.trim().toLowerCase();
+  const current = (dueloGifts[i] && dueloGifts[i].name) ? String(dueloGifts[i].name).toLowerCase() : "";
+  const list = giftTagList.filter((g) => {
+    if (current && g.name.toLowerCase() === current) return false;
+    if (!q) return true;
+    return g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q);
+  }).slice(0, 20);
+  if (!list.length) { ac.style.display = "none"; ac.innerHTML = ""; return; }
+  ac.innerHTML = list.map((g) => {
+    const file = giftImageMap[g.name];
+    return `<div class="ac-item" data-val="${esc(g.name)}">${file ? `<img src="/gift-images/${esc(file)}" alt="">` : ""}<span class="ac-name">${esc(getGiftLabel(g.name))}</span><span class="ac-diam">${g.diamond_count} 💎</span></div>`;
+  }).join("");
+  ac.style.display = "block";
+  ac.querySelectorAll(".ac-item").forEach((el) => {
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectDueloGiftName(i, el.getAttribute("data-val"));
+    });
+  });
+}
+
 function renderDueloGifts() {
   const box = document.getElementById("dueloGiftsList");
   if (!box) return;
@@ -3255,7 +3293,10 @@ function renderDueloGifts() {
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Gift ID</label>
         <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" data-f="gift_id" data-i="${i}"></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
-        <input type="text" class="form-control form-control-sm" value="${esc(g_.name || '')}" data-f="name" data-i="${i}"></div>
+        <div class="position-relative">
+          <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
+          <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+        </div></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
         <select class="form-select form-select-sm" data-f="type" data-i="${i}">
           <option value="golpe" ${type === 'escudo' ? '' : 'selected'}>Golpe</option>
@@ -3289,6 +3330,21 @@ function renderDueloGifts() {
       row.querySelector(".duelo-golpe-fields").style.display = esc ? "none" : "";
       row.querySelector(".duelo-escudo-field").style.display = esc ? "" : "none";
     });
+    const nameInput = row.querySelector('.duelo-name[data-name="' + i + '"]');
+    const acEl = row.querySelector('.duelo-ac[data-ac="' + i + '"]');
+    if (nameInput && acEl) {
+      nameInput.addEventListener("focus", () => openDueloAc(i));
+      nameInput.addEventListener("input", () => openDueloAc(i));
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDueloAc(i);
+        else if (e.key === "Enter") {
+          e.preventDefault();
+          const first = acEl.querySelector(".ac-item");
+          if (first) selectDueloGiftName(i, first.getAttribute("data-val"));
+        }
+      });
+      nameInput.addEventListener("blur", () => { setTimeout(() => closeDueloAc(i), 200); });
+    }
   });
   box.querySelectorAll("[data-f]").forEach((el) => {
     el.addEventListener("change", () => {
