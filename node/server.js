@@ -405,8 +405,7 @@ function broadcastStatus(tenant, status) {
   if (status.state === "connected") {
     broadcastToClients(tenant.browserClients, { type: "python_connected" });
   } else if (status.state === "offline" || status.state === "disconnected") {
-    tenant.currentWord = "";
-    broadcastToClients(tenant.logClients, { type: "word", word: "" });
+    // Não limpa currentWord: mantém a palavra da rodada em andamento mesmo com queda
     broadcastToClients(tenant.browserClients, { type: "python_disconnected" });
     // Auto-pause: se o V-Pet está ativo, pausa para não zerar fome/energia offline
     const vs = tenant.vpetState;
@@ -1308,6 +1307,7 @@ function loadTenantGameState(tenantId) {
     hint_gifts: savedGifts.length ? savedGifts : liveGifts,
     riddle_gifts: savedRiddles.length ? savedRiddles : liveRiddles,
     settings: readTenantSettings(tenantId),
+    current_word: tenant.currentWord,
     python_connected: !!tenant.currentStatus && tenant.currentStatus.state === "connected",
     last_status: tenant.currentStatus,
   };

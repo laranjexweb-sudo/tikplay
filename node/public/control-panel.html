@@ -252,6 +252,7 @@
           <h2>Partida em andamento</h2>
           <div class="mb-3 p-2 bg-light border border-dark rounded">
             <div class="kv"><strong>Palavra atual:</strong> <span id="currentWord">-</span></div>
+            <div class="kv"><strong>Charada atual:</strong> <span id="panelRiddle" style="white-space:pre-wrap;word-break:break-word;text-align:right;max-width:70%">-</span></div>
           </div>
           <div class="d-flex gap-2">
             <button class="btn btn-nb btn-success flex-fill" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
@@ -843,12 +844,20 @@ function connectLogs() {
     } else if (msg.type === "word") {
       const el = document.getElementById("currentWord");
       if (el) el.textContent = msg.word || "-";
+    } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
+      renderPanelRiddle(msg.text, msg.stage);
+    } else if (msg.type === "roulette_drop" && msg.reward_type === "riddle_started") {
+      renderPanelRiddle("Gerando charada…", msg.stage);
+    } else if (msg.type === "display_action" && msg.action === "close_riddle") {
+      clearPanelRiddle();
     } else if (msg.type === "game_start") {
       gameActive = true;
+      clearPanelRiddle();
       syncPanelNewGameButton(window.lastStateStr || "connected");
       fetchHistoryAll();
     } else if (msg.type === "game_over") {
       gameActive = false;
+      clearPanelRiddle();
       syncPanelNewGameButton(window.lastStateStr || "connected");
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
@@ -2935,11 +2944,29 @@ async function loadGiftConfig() {
   } catch (e) {}
 }
 
+function renderPanelRiddle(text, stage) {
+  const el = document.getElementById("panelRiddle");
+  if (!el) return;
+  el.textContent = text ? `Estágio ${stage || 1}: ${text}` : "-";
+}
+
+function clearPanelRiddle() {
+  const el = document.getElementById("panelRiddle");
+  if (el) el.textContent = "-";
+}
+
 async function syncGameState() {
   try {
     const data = await apiFetch("/api/game-state");
     gameActive = data.active && !data.finished;
     setDisplayControlsEnabled(gameActive);
+    const cwEl = document.getElementById("currentWord");
+    if (cwEl) cwEl.textContent = data.current_word ? data.current_word : "-";
+    if (data.current_riddle && data.display && data.display.riddle_visible) {
+      renderPanelRiddle(data.current_riddle.text, data.current_riddle.stage);
+    } else {
+      clearPanelRiddle();
+    }
     if (data.display) updateObsControlStatus({ ranking_view: data.display.ranking_view });
     if (data.python_connected) {
       setRunningUI(true);
