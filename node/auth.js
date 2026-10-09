@@ -16,8 +16,9 @@ function verifyPassword(pw, hash) {
   }
 }
 
-function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+function signToken(user, opts = {}) {
+  const expiresIn = (opts && opts.ttl) || TOKEN_TTL;
+  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
 }
 
 function verifyToken(token) {

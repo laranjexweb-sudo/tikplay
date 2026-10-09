@@ -424,6 +424,10 @@
           <div class="text-secondary" style="font-size:0.85rem">
             Acompanhe ao vivo na página: <a href="#" id="linkGame" target="_blank">Abrir página PALAVRA SECRETA</a>.
           </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/jogo')">Link público Palavra Secreta</button>
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/ranking')">Link público Ranking</button>
+          </div>
         </div>
       </div>
 
@@ -533,6 +537,9 @@
           <div class="text-secondary" style="font-size:0.85rem">
             Acompanhe ao vivo na página: <a href="#" id="linkBatalha" target="_blank">Abrir página BATALHA</a>.
           </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/batalha')">Link público BATALHA</button>
+          </div>
         </div>
       </div>
 
@@ -581,6 +588,9 @@
           <div class="text-secondary" style="font-size:0.85rem">
             Acompanhe ao vivo na página: <a href="#" id="linkCaca" target="_blank">Abrir página CAÇA PALAVRAS</a>.
           </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/caca-palavra')">Link público Caça Palavras</button>
+          </div>
         </div>
 
         <div class="nb-card mb-3">
@@ -623,6 +633,9 @@
           <h2>Onde assistir</h2>
           <div class="text-secondary" style="font-size:0.85rem">
             Acompanhe ao vivo na página: <a href="#" id="linkBichinho" target="_blank">Abrir página BICHINHO</a>.
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/bichinho')">Link público Bichinho</button>
           </div>
         </div>
       </div>
@@ -735,6 +748,9 @@
           <h2>Onde assistir</h2>
           <div class="text-secondary" style="font-size:0.85rem">
             Acompanhe ao vivo na página: <a href="#" id="linkTres" target="_blank">Abrir página 3 DICAS</a>.
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/tres-pontinhos')">Link público 3 Dicas</button>
           </div>
         </div>
       </div>
@@ -3023,6 +3039,21 @@ function copyRoomUrl() {
   navigator.clipboard.writeText(url).then(() => {
     addLog("[Painel] Link da sala copiado");
   }).catch(() => {});
+}
+
+async function copyRoomLink(path) {
+  try {
+    const data = await apiFetch("/api/game/room-link", { method: "POST" });
+    if (!data.success) {
+      addLog(`[Link] [!] ${data.error || "Erro"}`);
+      return;
+    }
+    const url = `${location.origin}${path}?room=${encodeURIComponent(data.room)}&tk=${encodeURIComponent(data.token)}`;
+    await navigator.clipboard.writeText(url);
+    addLog(`[Link] Link público copiado: ${path}`);
+  } catch (err) {
+    addLog(`[Link] [!] Erro de rede: ${err.message}`);
+  }
 }
 
 (async function initGiftPanel() {

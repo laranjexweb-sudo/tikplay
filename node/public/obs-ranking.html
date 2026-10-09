@@ -74,7 +74,8 @@
 <div class="list" id="likeList"><div class="empty">Aguardando curtidas...</div></div>
 
 <script>
-const token = localStorage.getItem("token");
+const q = new URLSearchParams(location.search);
+const token = q.get("tk") || localStorage.getItem("token");
 if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 let ws = null;

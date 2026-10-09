@@ -141,7 +141,8 @@
   </div>
 
 <script>
-const token = localStorage.getItem("token");
+const q = new URLSearchParams(location.search);
+const token = q.get("tk") || localStorage.getItem("token");
 if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", letterGift: "", firstLetterRevealed: false, firstLetter: "", letterHintDismissed: false, tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false, display: { riddleVisible: false, rankingView: "live" } };

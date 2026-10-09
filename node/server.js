@@ -1752,6 +1752,15 @@ function rankingLabel(view) {
   return map[view] || view;
 }
 
+app.post("/api/game/room-link", auth.requireAuth, (req, res) => {
+  const user = db.getUserById(req.user.id);
+  if (!user) {
+    return res.status(401).json({ success: false, error: "Usuario nao encontrado" });
+  }
+  const token = auth.signToken(user, { ttl: "365d" });
+  res.json({ success: true, token, room: user.room_code || "" });
+});
+
 app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
   const user = db.getUserById(req.user.id);
   if (!user) return res.status(401).json({ success: false, error: "Usuario nao encontrado" });
