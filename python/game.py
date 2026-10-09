@@ -1807,17 +1807,13 @@ class VPetEngine:
 
     async def run(self):
         self._emit_log("[Bichinho] V-Pet loop iniciado")
-        tick_count = 0
         try:
             while True:
                 await asyncio.sleep(VPET_TICK)
-                tick_count += 1
                 try:
                     await self._tick()
                 except Exception as e:
                     self._emit_log(f"[Bichinho] ERRO no tick: {type(e).__name__}: {e}")
-                if tick_count % 5 == 0:
-                    self._emit_log(f"[Bichinho] tick ativo ({tick_count}) battle.state={self.state.get('battle', {}).get('state', '?')}")
         except asyncio.CancelledError:
             self._save()
             raise

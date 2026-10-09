@@ -1081,11 +1081,24 @@ class GameSession:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
 
         # DUELO 1x1: presente cadastrado dispara golpe/escudo (módulo isolado, retrocompatível)
-        if self.duelo.active:
-            res = self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
-            if res == "round_end":
-                delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
-                self._schedule_duelo_reset(delay)
+        duelo_would_match = False
+        if self.duelo.gifts:
+            duelo_would_match = any(
+                g and g.get("active", True) and self.duelo._matches(g, gift_id, gift_name)
+                for g in self.duelo.gifts
+            )
+        if duelo_would_match or self.duelo.active:
+            if not self.duelo.active:
+                emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' recebido, mas a ÁREA está INATIVA (clique em Ativar Área)")
+            else:
+                res = self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
+                if res == "round_end":
+                    delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
+                    self._schedule_duelo_reset(delay)
+                if res:
+                    emit(self.tenant_id, "log", f"[Duelo] @{user} presente '{gift_name}' aplicado ({res})")
+                elif not duelo_would_match:
+                    emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' NÃO cadastrado como golpe/escudo")
 
         allowed, reason = self._check_access(user_meta)
         if not allowed:
