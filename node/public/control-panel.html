@@ -108,7 +108,7 @@
         <span class="badge text-bg-light border border-dark border-2" id="userBadge"></span>
         <span class="badge text-bg-warning border border-dark border-2" id="roleBadge"></span>
         <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
-        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura">Plano: -</button>
+        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none">Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
         <button class="btn btn-nb btn-dark btn-sm" onclick="location.href='/docs'">Ajuda</button>
         <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
@@ -3221,7 +3221,7 @@ function fetchHistoryAll() { loadWordHistory(1); }
 loadMe().then(() => { fetchHistoryAll(); restoreActiveTab(); });
 syncGameState();
 loadPanelConfig();
-loadBilling();
+loadPanelConfig();
 loadSoundAlerts();
 loadCacaState();
 document.getElementById("username").addEventListener("blur", saveCredentials);
