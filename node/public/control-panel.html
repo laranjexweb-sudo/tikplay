@@ -3177,7 +3177,7 @@ function updateLinks() {
   const tl = `${base}/tres-pontinhos?room=${roomCode}`;
   const tlink = document.getElementById("linkTres");
   if (tlink) tlink.href = tl;
-  const dl = `${base}/duelo?room=${roomCode}`;
+  const dl = `${base}/duelo?room=${roomCode}&tk=${encodeURIComponent(token)}`;
   const dlink = document.getElementById("linkDuelo");
   if (dlink) dlink.href = dl;
 }

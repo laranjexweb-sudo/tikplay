@@ -528,9 +528,13 @@ function handleDaemonMessage(msg) {
     if (msg.type === "status") {
       broadcastStatus(tenant, msg.status || {});
     } else if (msg.type === "game") {
-      updateGameState(tenant, msg.msg || {});
-      broadcastToClients(tenant.browserClients, msg.msg || {});
-      broadcastToClients(tenant.logClients, msg.msg || {});
+      const gameMsg = msg.msg || {};
+      if (gameMsg.type === "duelo_state") {
+        tenant.dueloState = gameMsg;
+      }
+      updateGameState(tenant, gameMsg);
+      broadcastToClients(tenant.browserClients, gameMsg);
+      broadcastToClients(tenant.logClients, gameMsg);
     } else if (msg.type === "log") {
       broadcastLog(tenant, msg.text || "");
     } else if (msg.type === "panel_word") {
@@ -2079,6 +2083,9 @@ wss.on("connection", (ws, req) => {
     }
     if (tenant.vpetState) {
       ws.send(JSON.stringify({ type: "vpet_state", ...tenant.vpetState }));
+    }
+    if (tenant.dueloState) {
+      ws.send(JSON.stringify({ type: "duelo_state", ...tenant.dueloState }));
     }
     return;
   }

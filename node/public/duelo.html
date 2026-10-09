@@ -154,6 +154,7 @@
 const params = new URLSearchParams(location.search);
 const DEBUG = params.get("debug") === "1";
 const token = params.get("tk") || localStorage.getItem("token");
+if (!token) location.href = "/login";
 
 const FIGHTERS = {
   flavio: {
