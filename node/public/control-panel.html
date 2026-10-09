@@ -780,8 +780,38 @@
                 <button class="btn btn-nb btn-success flex-fill" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
                 <button class="btn btn-nb btn-danger flex-fill" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
               </div>
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-nb btn-dark flex-fill" onclick="dueloResetRound()">Resetar rodada</button>
+                <button class="btn btn-nb btn-warning flex-fill" onclick="dueloNewMatch()">Nova disputa (zerar votos)</button>
+              </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
-                Flávio luta pela ESQUERDA. Lula luta pela DIREITA. A defesa do oponente é automática.
+                Flávio luta pela ESQUERDA. Lula luta pela DIREITA. A defesa do oponente é automática. O escudo absorve o dano antes do HP.
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Configuração do modo</h2>
+            <div class="mb-3 p-2 bg-light border border-dark rounded">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label class="form-label mb-0" style="font-size:0.8rem">Modo</label>
+                  <select class="form-select form-select-sm" id="dueloMode">
+                    <option value="hp">HP</option>
+                    <option value="votes">Votos</option>
+                  </select>
+                </div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">HP inicial</label><input type="number" class="form-control form-control-sm" id="dueloHpStart" value="100" min="20"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo inicial</label><input type="number" class="form-control form-control-sm" id="dueloShieldStart" value="100" min="0"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo máximo</label><input type="number" class="form-control form-control-sm" id="dueloShieldMax" value="200" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Soco</label><input type="number" class="form-control form-control-sm" id="dueloDmgPunch" value="10" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Chute</label><input type="number" class="form-control form-control-sm" id="dueloDmgKick" value="15" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Levantada</label><input type="number" class="form-control form-control-sm" id="dueloDmgUppercut" value="20" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Máx. votos (0 = sem limite)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
+              </div>
+              <div class="text-secondary mt-2" style="font-size:0.75rem">
+                No modo Votos, cada rodada continua usando HP + Escudo; quem zerar o HP do outro vence a rodada e soma 1 voto. Resetar rodada NÃO zera votos.
               </div>
             </div>
           </div>
@@ -3152,6 +3182,7 @@ function updateLinks() {
 // ---------------- Duelo 1x1 ----------------
 let dueloGifts = [];
 let dueloActive = false;
+let dueloSettings = { mode: "hp", hp_start: 100, shield_start: 100, shield_max: 200, dmg_punch: 10, dmg_kick: 15, dmg_uppercut: 20, reset_delay_s: 6, max_votes: 0 };
 
 async function loadDueloState() {
   try {
@@ -3159,9 +3190,39 @@ async function loadDueloState() {
     if (!data.success) return;
     dueloGifts = Array.isArray(data.gifts) ? data.gifts : [];
     dueloActive = !!data.active;
+    if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
     renderDueloGifts();
+    renderDueloSettings();
     setDueloStatusButtons(dueloActive);
   } catch (e) {}
+}
+
+function renderDueloSettings() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set("dueloMode", dueloSettings.mode === "votes" ? "votes" : "hp");
+  set("dueloHpStart", dueloSettings.hp_start);
+  set("dueloShieldStart", dueloSettings.shield_start);
+  set("dueloShieldMax", dueloSettings.shield_max);
+  set("dueloDmgPunch", dueloSettings.dmg_punch);
+  set("dueloDmgKick", dueloSettings.dmg_kick);
+  set("dueloDmgUppercut", dueloSettings.dmg_uppercut);
+  set("dueloResetDelay", dueloSettings.reset_delay_s);
+  set("dueloMaxVotes", dueloSettings.max_votes || 0);
+}
+
+function readDueloSettings() {
+  const n = (id) => parseInt(document.getElementById(id) ? document.getElementById(id).value : "0", 10);
+  return {
+    mode: document.getElementById("dueloMode") ? document.getElementById("dueloMode").value : "hp",
+    hp_start: n("dueloHpStart") || 100,
+    shield_start: n("dueloShieldStart") || 100,
+    shield_max: n("dueloShieldMax") || 200,
+    dmg_punch: n("dueloDmgPunch") || 10,
+    dmg_kick: n("dueloDmgKick") || 15,
+    dmg_uppercut: n("dueloDmgUppercut") || 20,
+    reset_delay_s: n("dueloResetDelay") || 6,
+    max_votes: n("dueloMaxVotes") >= 0 ? n("dueloMaxVotes") : 0,
+  };
 }
 
 function setDueloStatusButtons(active) {
@@ -3187,6 +3248,7 @@ function renderDueloGifts() {
   if (count) count.textContent = dueloGifts.length;
   dueloGifts.forEach((g, i) => {
     const g_ = g || {};
+    const type = g_.type === "escudo" ? "escudo" : "golpe";
     const row = document.createElement("div");
     row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
     row.innerHTML = `
@@ -3194,34 +3256,48 @@ function renderDueloGifts() {
         <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" data-f="gift_id" data-i="${i}"></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
         <input type="text" class="form-control form-control-sm" value="${esc(g_.name || '')}" data-f="name" data-i="${i}"></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
+        <select class="form-select form-select-sm" data-f="type" data-i="${i}">
+          <option value="golpe" ${type === 'escudo' ? '' : 'selected'}>Golpe</option>
+          <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
+        </select></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Personagem</label>
         <select class="form-select form-select-sm" data-f="character" data-i="${i}">
           <option value="flavio" ${g_.character === 'lula' ? '' : 'selected'}>Flávio</option>
           <option value="lula" ${g_.character === 'lula' ? 'selected' : ''}>Lula</option>
         </select></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Golpe</label>
-        <select class="form-select form-select-sm" data-f="action" data-i="${i}">
-          <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
-          <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
-          <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
-        </select></div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Ação / Escudo</label>
+        <div class="duelo-golpe-fields d-flex gap-1" ${type === 'escudo' ? 'style="display:none"' : ''}>
+          <select class="form-select form-select-sm" data-f="action" data-i="${i}" style="flex:1">
+            <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
+            <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
+            <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
+          </select>
+          <input type="number" class="form-control form-control-sm" style="width:84px" value="${esc(g_.damage || '')}" placeholder="dano(0=p)" data-f="damage" data-i="${i}">
+        </div>
+        <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
+          <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo" data-f="shield" data-i="${i}">
+        </div></div>
       <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
         <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
         <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : 'sem áudio'}</div></div>
-      <div class="col-md-1">
-        <label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label>
-      </div>
-      <div class="col-md-1 d-flex align-items-end">
-        <button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button>
-      </div>`;
+      <div class="col-md-1"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
+      <div class="col-md-1 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
     box.appendChild(row);
+    row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
+      const esc = e.target.value === "escudo";
+      row.querySelector(".duelo-golpe-fields").style.display = esc ? "none" : "";
+      row.querySelector(".duelo-escudo-field").style.display = esc ? "" : "none";
+    });
   });
   box.querySelectorAll("[data-f]").forEach((el) => {
     el.addEventListener("change", () => {
       const f = el.getAttribute("data-f");
       const i = Number(el.getAttribute("data-i"));
       dueloGifts[i] = dueloGifts[i] || {};
-      dueloGifts[i][f] = f === "active" ? el.checked : el.value;
+      const v = f === "active" ? el.checked : el.value;
+      dueloGifts[i][f] = v;
+      if (f === "type" && v === "escudo" && !dueloGifts[i].shield) dueloGifts[i].shield = 15;
     });
   });
   box.querySelectorAll("[data-upload]").forEach((el) => {
@@ -3259,10 +3335,11 @@ async function uploadDueloAudio(i, file) {
 
 async function dueloSaveConfig() {
   try {
+    const settings = readDueloSettings();
     const data = await apiFetch("/api/duelo/config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gifts: dueloGifts, active: dueloActive }),
+      body: JSON.stringify({ gifts: dueloGifts, active: dueloActive, settings }),
     });
     dueloMsg(data.success ? "Configuração salva!" : (data.error || "Erro ao salvar"));
     renderDueloGifts();
@@ -3271,10 +3348,11 @@ async function dueloSaveConfig() {
 
 async function dueloStart() {
   try {
+    const settings = readDueloSettings();
     const data = await apiFetch("/api/duelo/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gifts: dueloGifts }),
+      body: JSON.stringify({ gifts: dueloGifts, settings }),
     });
     setDueloStatusButtons(data.active);
     dueloMsg(data.success ? "Área ativa!" : (data.error || "Erro"));
@@ -3286,6 +3364,20 @@ async function dueloStop() {
     const data = await apiFetch("/api/duelo/stop", { method: "POST" });
     setDueloStatusButtons(data.active);
     dueloMsg(data.success ? "Área desativada." : (data.error || "Erro"));
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloResetRound() {
+  try {
+    const data = await apiFetch("/api/duelo/reset-round", { method: "POST" });
+    dueloMsg(data.success ? "Rodada reiniciada." : (data.error || "Erro"));
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloNewMatch() {
+  try {
+    const data = await apiFetch("/api/duelo/new-match", { method: "POST" });
+    dueloMsg(data.success ? "Nova disputa iniciada (votos zerados)." : (data.error || "Erro"));
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 

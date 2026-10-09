@@ -1859,14 +1859,52 @@ const dueloUpload = multer({
 
 function normalizeDueloGifts(raw) {
   if (!Array.isArray(raw)) return [];
-  return raw.map((g) => ({
-    gift_id: String((g && g.gift_id) || "").trim(),
-    name: String((g && g.name) || "").trim(),
-    character: ["flavio", "lula"].includes(g && g.character) ? g.character : "flavio",
-    action: ["punch", "kick", "uppercut"].includes(g && g.action) ? g.action : "punch",
-    audio: String((g && g.audio) || ""),
-    active: (g && g.active) !== false,
-  })).filter((g) => g.gift_id || g.name);
+  return raw.map((g) => {
+    const type = (g && g.type) === "escudo" ? "escudo" : "golpe";
+    const base = {
+      type,
+      gift_id: String((g && g.gift_id) || "").trim(),
+      name: String((g && g.name) || "").trim(),
+      character: ["flavio", "lula"].includes(g && g.character) ? g.character : "flavio",
+      audio: String((g && g.audio) || ""),
+      active: (g && g.active) !== false,
+    };
+    if (type === "escudo") {
+      base.shield = Math.max(0, parseInt((g && g.shield) || 0, 10) || 0);
+    } else {
+      base.action = ["punch", "kick", "uppercut"].includes(g && g.action) ? g.action : "punch";
+      base.damage = Math.max(0, parseInt((g && g.damage) || 0, 10) || 0);
+    }
+    return base;
+  }).filter((g) => g.gift_id || g.name);
+}
+
+function normalizeDueloSettings(raw) {
+  const out = {
+    mode: (raw && raw.mode === "votes") ? "votes" : "hp",
+    hp_start: 100,
+    shield_start: 100,
+    shield_max: 200,
+    dmg_punch: 10,
+    dmg_kick: 15,
+    dmg_uppercut: 20,
+    reset_delay_s: 6,
+    max_votes: 0,
+  };
+  if (raw && typeof raw === "object") {
+    const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
+    const hn = n(raw.hp_start); if (hn !== null) out.hp_start = Math.max(20, Math.min(10000, hn));
+    const ss = n(raw.shield_start); if (ss !== null) out.shield_start = Math.max(0, Math.min(10000, ss));
+    const sm = n(raw.shield_max); if (sm !== null) out.shield_max = Math.max(out.shield_start, Math.min(100000, sm));
+    for (const k of ["dmg_punch", "dmg_kick", "dmg_uppercut"]) {
+      const d = n(raw[k]);
+      if (d !== null) out[k] = Math.max(1, Math.min(10000, d));
+    }
+    const rd = n(raw.reset_delay_s); if (rd !== null) out.reset_delay_s = Math.max(1, Math.min(300, rd));
+    const mv = n(raw.max_votes);
+    out.max_votes = (mv !== null && mv > 0) ? Math.max(1, Math.min(1000, mv)) : 0;
+  }
+  return out;
 }
 
 app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
@@ -1875,9 +1913,10 @@ app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, re
 
 app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const gifts = normalizeDueloGifts(req.body && req.body.gifts);
+  const settings = normalizeDueloSettings(req.body && req.body.settings);
   const active = !!(req.body && req.body.active);
-  const cfg = db.saveDueloConfig(req.user.id, { gifts, active });
-  daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts });
+  const cfg = db.saveDueloConfig(req.user.id, { gifts, active, settings });
+  daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts, settings });
   res.json({ success: true, ...cfg });
 });
 
@@ -1891,17 +1930,29 @@ app.post("/api/duelo/start", auth.requireAuth, requireFeature("duelo"), (req, re
     return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar o Duelo" });
   }
   const cfg = db.getDueloConfig(req.user.id);
-  const ok = daemonSend({ cmd: "duelo_start", tenant_id: req.user.id, gifts: cfg.gifts });
+  const settings = normalizeDueloSettings(cfg.settings);
+  const ok = daemonSend({ cmd: "duelo_start", tenant_id: req.user.id, gifts: cfg.gifts, settings });
   if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  db.saveDueloConfig(req.user.id, { gifts: cfg.gifts, active: true });
+  db.saveDueloConfig(req.user.id, { gifts: cfg.gifts, active: true, settings });
   res.json({ success: true, active: true });
 });
 
 app.post("/api/duelo/stop", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const ok = daemonSend({ cmd: "duelo_stop", tenant_id: req.user.id });
-  db.saveDueloConfig(req.user.id, { gifts: db.getDueloConfig(req.user.id).gifts, active: false });
+  const cfg = db.getDueloConfig(req.user.id);
+  db.saveDueloConfig(req.user.id, { gifts: cfg.gifts, active: false, settings: cfg.settings });
   if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
   res.json({ success: true, active: false });
+});
+
+app.post("/api/duelo/reset-round", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  daemonSend({ cmd: "duelo_reset_round", tenant_id: req.user.id });
+  res.json({ success: true });
+});
+
+app.post("/api/duelo/new-match", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  daemonSend({ cmd: "duelo_new_match", tenant_id: req.user.id });
+  res.json({ success: true });
 });
 
 app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res) => {

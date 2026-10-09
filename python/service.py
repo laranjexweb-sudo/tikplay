@@ -405,6 +405,7 @@ class GameSession:
         self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
+        self._duelo_reset_task = None
         # Passe Livre: usuários que enviaram o gift ingresso podem palpitar no 3 Pontinhos
         self._tres_allowed = set()
         HandlerCls = TikTokLiveHandler if self.engine == "tiktoklive" else TikToolsHandler
@@ -705,6 +706,22 @@ class GameSession:
             emit(self.tenant_id, "log", payload)
         else:
             emit(self.tenant_id, "game", {"type": type_, **payload})
+
+    def _schedule_duelo_reset(self, delay):
+        if self._duelo_reset_task:
+            self._duelo_reset_task.cancel()
+        self._duelo_reset_task = asyncio.ensure_future(self._duelo_auto_reset(delay))
+
+    async def _duelo_auto_reset(self, delay):
+        try:
+            await asyncio.sleep(delay)
+            if self.duelo.active and self.duelo.winner and not self.duelo.final and not self.duelo.roundActive:
+                self.duelo.reset_round()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._duelo_reset_task = None
 
     async def _narrate_tres_dica(self, stage, dica_text):
         """Gera o áudio TTS da dica revelada e envia a URL para o botão de play."""
@@ -1063,9 +1080,12 @@ class GameSession:
         if self.vpet.active:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
 
-        # DUELO 1x1: presente cadastrado dispara golpe (módulo isolado, retrocompatível)
+        # DUELO 1x1: presente cadastrado dispara golpe/escudo (módulo isolado, retrocompatível)
         if self.duelo.active:
-            self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
+            res = self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
+            if res == "round_end":
+                delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
+                self._schedule_duelo_reset(delay)
 
         allowed, reason = self._check_access(user_meta)
         if not allowed:
@@ -1474,16 +1494,33 @@ class GameSession:
                 if w:
                     self._emit_caca_found(w)
             elif c == "duelo_start":
-                self.duelo.start(gifts=cmd.get("gifts"))
-                emit(self.tenant_id, "game", {"type": "duelo_state", "active": True})
-                emit(self.tenant_id, "log", f"[Duelo] Área ativa ({len(self.duelo.gifts)} presentes cadastrados)")
+                self.duelo.start(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", f"[Duelo] Área ativa ({len(self.duelo.gifts)} presentes cadastrados, modo {self.duelo.mode})")
             elif c == "duelo_stop":
                 self.duelo.stop()
-                emit(self.tenant_id, "game", {"type": "duelo_state", "active": False})
+                if self._duelo_reset_task:
+                    self._duelo_reset_task.cancel()
+                    self._duelo_reset_task = None
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
                 emit(self.tenant_id, "log", "[Duelo] Área parada")
             elif c == "duelo_config":
-                self.duelo.set_config(cmd.get("gifts"))
+                self.duelo.set_config(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "log", f"[Duelo] Config de presentes atualizada ({len(self.duelo.gifts)})")
+            elif c == "duelo_reset_round":
+                if self._duelo_reset_task:
+                    self._duelo_reset_task.cancel()
+                    self._duelo_reset_task = None
+                self.duelo.reset_round()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", "[Duelo] Rodada reiniciada (HP/escudo resetados)")
+            elif c == "duelo_new_match":
+                if self._duelo_reset_task:
+                    self._duelo_reset_task.cancel()
+                    self._duelo_reset_task = None
+                self.duelo.reset_match()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", "[Duelo] Nova disputa iniciada (votos zerados)")
             elif c == "tres_start":
                 palavra = str(cmd.get("palavra") or "").strip()
                 dicas = cmd.get("dicas") or []
@@ -1670,7 +1707,7 @@ async def process_commands(queue):
             else:
                 emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
 
-        elif c in ("duelo_start", "duelo_stop", "duelo_config"):
+        elif c in ("duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)

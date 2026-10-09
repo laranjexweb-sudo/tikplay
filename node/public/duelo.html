@@ -16,70 +16,91 @@
     background-size: cover;
   }
 
-  .fighter {
-    position: absolute;
-    bottom: 9vh;
-    width: auto;
-    will-change: transform;
-  }
-  .fighter img {
-    display: block;
-    max-height: 52vh;
-    width: auto;
-    transform-origin: bottom center;
-  }
+  .fighter { position: absolute; bottom: 9vh; width: auto; will-change: transform; }
+  .fighter img { display: block; max-height: 52vh; width: auto; transform-origin: bottom center; }
   #fighter-flavio { left: 7vw; }
   #fighter-lula  { right: 7vw; }
 
-  .hud {
+  .hud-side {
     position: absolute;
-    top: 2vh;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 6vw;
-    pointer-events: none;
+    top: 1.6vh;
+    width: 40vw;
     z-index: 30;
+    pointer-events: none;
   }
-  .hud-name {
-    font-weight: 900;
-    font-size: clamp(1.2rem, 3.4vw, 2.4rem);
-    letter-spacing: 4px;
-    color: #fff;
-    text-shadow: 0 0 12px rgba(0,0,0,0.8);
-  }
-  .hud-name.left::before { content: '⚔ '; }
-  .hud-name.right::after { content: ' ⚔'; }
-
-  .combo {
+  .hud-side.left  { left: 4vw; text-align: left; }
+  .hud-side.right { right: 4vw; text-align: right; }
+  .hud-top {
     position: absolute;
-    top: 14vh;
+    top: 0.6vh;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 30;
     font-weight: 900;
-    font-size: clamp(1.6rem, 6vw, 4rem);
+    font-size: clamp(1.1rem, 4vw, 2.4rem);
+    letter-spacing: 4px;
     color: #ffd200;
-    text-shadow: 0 0 18px rgba(255, 150, 0, 0.9);
+    text-shadow: 0 0 16px rgba(255, 150, 0, 0.9);
+    z-index: 31;
+    white-space: nowrap;
+  }
+  .hud-name { font-weight: 900; font-size: clamp(1.1rem, 3vw, 2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.85); }
+  .hud-votes { font-weight: 900; font-size: clamp(1rem, 2.6vw, 1.6rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8); margin-bottom: 6px; }
+
+  .bar { width: 100%; height: clamp(12px, 2vmin, 22px); border-radius: 999px; background: rgba(0,0,0,0.45); border: 2px solid #111; overflow: hidden; margin: 4px 0; }
+  .bar > i { display: block; height: 100%; width: 100%; transition: width .3s ease; border-radius: 999px; }
+  .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
+  .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
+  .bar-label { font-size: clamp(0.6rem, 1.6vw, 0.85rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
+
+  .win-banner {
+    position: absolute;
+    top: 38vh;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 50;
+    background: rgba(0,0,0,0.78);
+    border: 4px solid #ffd200;
+    border-radius: 18px;
+    padding: 18px 34px;
+    text-align: center;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    box-shadow: 0 0 40px rgba(255,210,0,0.5);
     opacity: 0;
-    transition: opacity .2s ease;
+    transition: opacity .25s ease;
+    pointer-events: none;
+  }
+  .win-banner.show { opacity: 1; }
+  .win-banner .big { font-size: clamp(1.4rem, 5vw, 3rem); }
+  .win-banner .sub { font-size: clamp(0.9rem, 2.4vw, 1.4rem); color: #ffd200; margin-top: 6px; }
+
+  .shield-fx { position: absolute; bottom: 9vh; width: 0; height: 0; pointer-events: none; opacity: 0; }
+  .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
+  .shield-fx.left  { left: 7vw; }
+  .shield-fx.right { right: 7vw; }
+  @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
+  .float-text {
+    position: absolute;
+    bottom: 46vh;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 900;
+    font-size: clamp(1.1rem, 3vw, 1.8rem);
+    color: #7fd7ff;
+    text-shadow: 0 0 14px rgba(0,120,255,0.9);
+    z-index: 45;
+    opacity: 0;
     pointer-events: none;
     white-space: nowrap;
   }
-  .combo.show { opacity: 1; }
+  .float-text.show { animation: floatUp 1s ease-out forwards; }
+  @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 
-  .hit {
-    position: absolute;
-    bottom: 22vh;
-    left: 50%;
-    z-index: 20;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
+  .combat-shake { animation: shk .25s linear; }
+  @keyframes shk { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,2px); } 60% { transform: translate(6px,-2px); } }
+
+  .hit { position: absolute; bottom: 22vh; left: 50%; z-index: 20; width: 0; height: 0; opacity: 0; pointer-events: none; }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -88,61 +109,43 @@
   @keyframes hitKick { 0% { transform: translate(-50%,0) scale(.5); opacity: 1; } 100% { transform: translate(-50%,-8vh) scale(1.5); opacity: 0; } }
   @keyframes hitUppercut { 0% { transform: translate(-50%,0); opacity: 1; } 100% { transform: translate(-50%,-14vh); opacity: 0; } }
 
-  .shake { animation: shk .25s linear; }
-  @keyframes shk { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,2px); } 60% { transform: translate(6px,-2px); } }
-
-  .debug {
-    position: absolute;
-    bottom: 2vh;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 40;
-    display: flex;
-    gap: 8px;
-    background: rgba(0,0,0,0.6);
-    border: 2px solid #555;
-    border-radius: 12px;
-    padding: 8px 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 92vw;
-  }
-  .debug button {
-    border: 2px solid #000;
-    border-radius: 8px;
-    font-weight: 800;
-    padding: 6px 10px;
-    background: #fec90f;
-    color: #111;
-    cursor: pointer;
-  }
+  .status { position: absolute; top: 0.6vh; right: 34vw; z-index: 30; font-size: 0.68rem; color: #9aa; text-shadow: 0 0 8px #000; }
+  .debug { position: absolute; bottom: 2vh; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
+  .debug button { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 6px 10px; background: #fec90f; color: #111; cursor: pointer; }
   .debug button.flavio { background: #7fd7ff; }
   .debug button.lula { background: #ff9d7a; }
-  .status {
-    position: absolute;
-    top: 2vh;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 30;
-    font-size: 0.75rem;
-    color: #9aa;
-    text-shadow: 0 0 8px #000;
-  }
 </style>
 </head>
 <body>
 <div id="stage">
-  <div class="status" id="statusText">conectando…</div>
-  <div class="hud">
-    <span class="hud-name left">FLÁVIO</span>
-    <span class="combo" id="combo"></span>
-    <span class="hud-name right">LULA</span>
+  <span class="status" id="statusText">conectando…</span>
+  <div class="hud-top" id="htVs"></div>
+
+  <div class="hud-side left">
+    <div class="hud-name">FLÁVIO</div>
+    <div class="hud-votes" id="votes-flavio"></div>
+    <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
+    <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
   </div>
+
+  <div class="hud-side right">
+    <div class="hud-name">LULA</div>
+    <div class="hud-votes" id="votes-lula"></div>
+    <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
+    <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
+  </div>
+
+  <div class="shield-fx left" id="shield-flavio"></div>
+  <div class="shield-fx right" id="shield-lula"></div>
 
   <div class="fighter" id="fighter-flavio"><img id="img-flavio" alt=""></div>
   <div class="fighter" id="fighter-lula"><img id="img-lula" alt=""></div>
-
   <div class="hit" id="hit"></div>
+  <div class="float-text" id="floatText"></div>
+  <div class="win-banner" id="winBanner">
+    <div class="big" id="winBig"></div>
+    <div class="sub" id="winSub"></div>
+  </div>
 
   <div class="debug" id="debug" style="display:none"></div>
 </div>
@@ -155,29 +158,18 @@ const token = params.get("tk") || localStorage.getItem("token");
 const FIGHTERS = {
   flavio: {
     name: "FLÁVIO", dir: 1,
-    sprites: {
-      idle: "/duelo/Flavio/neutro.png",
-      defense: "/duelo/Flavio/defesa.png",
-      punch: "/duelo/Flavio/soco.png",
-      kick: "/duelo/Flavio/chute.png",
-      uppercut: "/duelo/Flavio/levantada.png",
-    },
+    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png" },
   },
   lula: {
     name: "LULA", dir: -1,
-    sprites: {
-      idle: "/duelo/lula/neutro.png",
-      defense: "/duelo/lula/defesa.png",
-      punch: "/duelo/lula/soco.png",
-      kick: "/duelo/lula/chute.png",
-      uppercut: "/duelo/lula/levantada.png",
-    },
+    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png" },
   },
 };
 
 const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 } };
 const MAX_ATTACK_QUEUE = 20;
 
+let state = { mode: "hp", hp: { flavio: 100, lula: 100 }, shield: { flavio: 100, lula: 100 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false };
 let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
@@ -186,54 +178,110 @@ const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const opponent = (f) => (f === "flavio" ? "lula" : "flavio");
 
-function setFighter(fighter, state) {
+function setFighter(fighter, stateName) {
   const img = $("img-" + fighter);
-  if (img) img.src = FIGHTERS[fighter].sprites[state] || FIGHTERS[fighter].sprites.idle;
+  const url = FIGHTERS[fighter].sprites[stateName] || FIGHTERS[fighter].sprites.idle;
+  if (img) {
+    img.onerror = function () { if (this.src.indexOf("vitoria") !== -1) this.src = FIGHTERS[fighter].sprites.idle; };
+    img.src = url;
+  }
   const el = $("fighter-" + fighter);
-  if (el) el.dataset.state = state;
+  if (el) el.dataset.state = stateName;
 }
 
 function resetPose(fighter) {
   const el = $("fighter-" + fighter);
   setFighter(fighter, "idle");
-  if (el) {
-    el.style.transition = "transform .28s ease";
-    el.style.transform = "translate(0,0) scale(1)";
+  if (el) { el.style.transition = "transform .28s ease"; el.style.transform = "translate(0,0) scale(1)"; }
+}
+
+function pctBar(v, max) { return Math.max(0, Math.min(100, (v / (max || 1)) * 100)); }
+
+function renderHud() {
+  const hpMax = state.hp_max || 100;
+  const shMax = state.shield_max || 200;
+  for (const f of ["flavio", "lula"]) {
+    $("#hpbar-" + f).style.width = pctBar(state.hp[f], hpMax) + "%";
+    $("#shbar-" + f).style.width = pctBar(state.shield[f], shMax) + "%";
+    const vr = $("#votes-" + f);
+    if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
+    else vr.textContent = "";
+  }
+  $("#htVs").textContent = state.mode === "votes"
+    ? `${state.votes.flavio} VS ${state.votes.lula}`
+    : "";
+}
+
+function renderWinner() {
+  const banner = $("winBanner");
+  const big = $("winBig");
+  const sub = $("winSub");
+  if (state.winner) {
+    const w = FIGHTERS[state.winner].name;
+    setFighter(state.winner, "victory");
+    setFighter(opponent(state.winner), "idle");
+    if (state.final) { big.textContent = "VENCEDOR FINAL"; sub.textContent = `${w.toUpperCase()} GANHOU`; }
+    else if (state.mode === "votes") { big.textContent = `${w.toUpperCase()} GANHOU 1 VOTO`; sub.textContent = `VOTOS: ${state.votes.flavio} x ${state.votes.lula}`; }
+    else { big.textContent = `${w.toUpperCase()} VENCEU A RODADA!`; sub.textContent = "Aguardando nova rodada…"; }
+    banner.classList.add("show");
+  } else {
+    banner.classList.remove("show");
+  }
+}
+
+function applyState(s) {
+  if (!s) return;
+  state = Object.assign({}, state, s);
+  renderHud();
+  renderWinner();
+  const roundReset = !s.winner && s.roundActive;
+  if (roundReset) {
+    attackQueue = [];
+    busy = false;
+    currentCombo = 0;
+    resetPose("flavio");
+    resetPose("lula");
+    $("combo") && clearCombo();
+    $("htVs") && renderHud();
   }
 }
 
 function updateCombo() {
+  if (state.winner) return;
   const c = $("combo");
   if (!c) return;
-  if (currentCombo > 1) {
-    c.textContent = "x" + currentCombo;
-    c.classList.add("show");
-  } else {
-    c.textContent = "";
-    c.classList.remove("show");
-  }
+  if (currentCombo > 1) { c.textContent = "x" + currentCombo; c.classList.add("show"); }
+  else { c.textContent = ""; c.classList.remove("show"); }
 }
+function clearCombo() { const c = $("combo"); if (c) { c.textContent = ""; c.classList.remove("show"); } }
 
 function spawnHit(type, dir) {
   const hit = $("hit");
   if (!hit) return;
-  const pos = dir > 0 ? 56 : 44; // lado do defensor
-  hit.style.left = pos + "%";
+  hit.style.left = (dir > 0 ? 56 : 44) + "%";
   hit.className = "hit " + (type === "uppercut" ? "uppercut" : type) + " show";
   setTimeout(() => { hit.className = "hit"; hit.style.left = "50%"; }, 380);
 }
 
 function playAudio(url) {
   if (!url) return;
-  try {
-    const a = new Audio(url);
-    a.volume = 0.92;
-    a.play().catch(() => {});
-  } catch (e) {}
+  try { const a = new Audio(url); a.volume = 0.92; a.play().catch(() => {}); } catch (e) {}
+}
+
+function shieldEffect(fighter, points) {
+  const fx = $("shield-" + fighter);
+  if (fx) { fx.classList.remove("show"); void fx.offsetWidth; fx.classList.add("show"); setTimeout(() => fx.classList.remove("show"), 850); }
+  const ft = $("floatText");
+  if (ft) {
+    ft.textContent = "+" + points + " ESCUDO";
+    ft.classList.remove("show"); void ft.offsetWidth; ft.classList.add("show");
+    setTimeout(() => ft.classList.remove("show"), 1000);
+  }
 }
 
 function enqueueAttack(att) {
   if (!att || !FIGHTERS[att.attacker]) return;
+  if (!state.roundActive || state.winner) return; // ignora gifts durante o banner de vitória
   attackQueue.push(att);
   if (attackQueue.length > MAX_ATTACK_QUEUE) attackQueue.shift();
   processQueue();
@@ -241,11 +289,12 @@ function enqueueAttack(att) {
 
 async function processQueue() {
   if (busy || !attackQueue.length) return;
+  if (!state.roundActive || state.winner) { attackQueue = []; return; }
   busy = true;
   const att = attackQueue.shift();
   try { await runAttack(att); } catch (e) {}
-  resetPose("flavio");
-  resetPose("lula");
+  if (!state.roundActive) { attackQueue = []; }
+  resetPose("flavio"); resetPose("lula");
   updateCombo();
   setTimeout(() => { busy = false; processQueue(); }, 150);
 }
@@ -261,25 +310,19 @@ async function runAttack(att) {
   setFighter(def, "defense");
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
-
   if (atEl) {
     atEl.style.transition = `transform ${dur.fwd}ms ease-out`;
     const up = att.action === "uppercut" ? " translateY(-18px)" : " translateY(0)";
     const sc = att.action === "kick" ? " scale(1.05)" : " scale(1)";
     atEl.style.transform = `translateX(${dir * move}px)${up}${sc}`;
   }
-  if (deEl) {
-    deEl.style.transition = `transform ${dur.fwd}ms ease-in`;
-    deEl.style.transform = `translateX(${-dir * 14}px)`;
-  }
+  if (deEl) { deEl.style.transition = `transform ${dur.fwd}ms ease-in`; deEl.style.transform = `translateX(${-dir * 14}px)`; }
   await sleep(dur.fwd);
-
   if (deEl) deEl.style.transform = `translateX(${-dir * 30}px)`;
   spawnHit(att.action, dir);
   if (att.combo > 0) { currentCombo = att.combo; updateCombo(); }
   playAudio(att.audio_url);
   await sleep(dur.hold);
-
   resetPose(att.attacker);
   resetPose(def);
   await sleep(dur.back);
@@ -295,20 +338,16 @@ function connectWS() {
   ws.onmessage = (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
-    if (msg.type === "duelo_attack") {
-      enqueueAttack({
-        attacker: msg.attacker,
-        action: msg.action,
-        combo: msg.combo || 1,
-        audio_url: msg.audio_url || "",
-      });
-    }
+    if (msg.type === "duelo_state") applyState(msg);
+    else if (msg.type === "duelo_attack") enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "" });
+    else if (msg.type === "duelo_shield") shieldEffect(msg.fighter, msg.points || 0);
   };
 }
 
 // ---- Bootstrap ----
 resetPose("flavio");
 resetPose("lula");
+renderHud();
 
 if (DEBUG) {
   const dbg = $("debug");
