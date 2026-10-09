@@ -663,11 +663,46 @@ function validEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ""));
 }
 
+const REGISTER_MODE = (process.env.REGISTER_MODE || "public").toLowerCase();
+const REGISTER_INVITE_MSG = "O cadastro na TikPlay está disponível apenas por convite durante o período de testes.";
+const REGISTER_CLOSED_MSG = "Cadastro indisponível no momento.";
+function registerModeMessage() {
+  if (REGISTER_MODE === "closed") return REGISTER_CLOSED_MSG;
+  if (REGISTER_MODE === "invite") return REGISTER_INVITE_MSG;
+  return "";
+}
+
+app.get("/api/auth/register-mode", (req, res) => {
+  res.json({ success: true, mode: REGISTER_MODE, message: registerModeMessage() });
+});
+
+app.get("/api/auth/invite/:token", (req, res) => {
+  if (REGISTER_MODE === "closed") return res.json({ valid: false, closed: true, status: "closed", message: REGISTER_CLOSED_MSG });
+  const inv = db.getInviteByToken(String(req.params.token || ""));
+  if (!inv) return res.json({ valid: false, status: null, message: REGISTER_INVITE_MSG });
+  const st = db.validateInvite(inv);
+  res.json({
+    valid: st.ok,
+    status: st.ok ? "active" : inv.status,
+    expires_at: inv.expires_at || null,
+    message: st.ok ? "" : (st.error || REGISTER_INVITE_MSG),
+  });
+});
+
 app.post("/api/auth/register", (req, res) => {
-  if (process.env.REGISTER_ENABLED === "false") {
-    return res.status(403).json({ success: false, error: "Cadastro desabilitado" });
+  const { name = "", email, password, inviteToken } = req.body;
+  if (REGISTER_MODE === "closed") {
+    return res.status(403).json({ success: false, error: REGISTER_CLOSED_MSG });
   }
-  const { name = "", email, password } = req.body;
+  if (REGISTER_MODE === "invite") {
+    if (!inviteToken) {
+      return res.status(403).json({ success: false, error: REGISTER_INVITE_MSG });
+    }
+    const st = db.validateInvite(db.getInviteByToken(String(inviteToken)));
+    if (!st.ok) {
+      return res.status(403).json({ success: false, error: st.error });
+    }
+  }
   if (!validEmail(email)) {
     return res.json({ success: false, error: "Email invalido" });
   }
@@ -678,16 +713,31 @@ app.post("/api/auth/register", (req, res) => {
     return res.json({ success: false, error: "Email ja cadastrado" });
   }
   const role = db.countUsers() === 0 ? "admin" : "user";
-  const id = db.createUser({
-    email: String(email).toLowerCase().trim(),
-    name: String(name).trim(),
-    password_hash: auth.hashPassword(password),
-    role,
-    features: { bichinho: false },
-  });
+  let id;
+  try {
+    if (REGISTER_MODE === "invite") {
+      id = db.registerWithInvite({
+        email: String(email).toLowerCase().trim(),
+        name: String(name).trim(),
+        password_hash: auth.hashPassword(password),
+        token: String(inviteToken),
+        role,
+      });
+    } else {
+      id = db.createUser({
+        email: String(email).toLowerCase().trim(),
+        name: String(name).trim(),
+        password_hash: auth.hashPassword(password),
+        role,
+        features: { bichinho: false },
+      });
+    }
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
   const user = db.getUserById(id);
   const token = auth.signToken(user);
-  res.json({ success: true, role, token, user: db.publicUser(user) });
+  res.json({ success: true, role: user.role, token, user: db.publicUser(user) });
 });
 
 app.post("/api/auth/login", (req, res) => {
@@ -909,6 +959,25 @@ app.post("/api/admin/banned-words", auth.requireAdmin, (req, res) => {
   const words = (req.body && req.body.words) || [];
   const clean = db.saveBannedWords(words);
   res.json({ success: true, words: clean, count: clean.length });
+});
+
+// ---------------- Convites de cadastro (Admin) ----------------
+
+app.post("/api/admin/invites", auth.requireAdmin, (req, res) => {
+  const raw = parseInt((req.body && req.body.expires_in_days) ?? 7, 10);
+  const expires_in_days = Number.isFinite(raw) ? Math.max(0, Math.min(365, raw)) : 7;
+  const inv = db.createInvite({ created_by: req.user.id, expires_in_days });
+  const base = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
+  res.json({ success: true, ...inv, link: `${base}/register?invite=${inv.token}` });
+});
+
+app.get("/api/admin/invites", auth.requireAdmin, (req, res) => {
+  res.json({ success: true, invites: db.listInvites(200) });
+});
+
+app.post("/api/admin/invites/:id/revoke", auth.requireAdmin, (req, res) => {
+  const ok = db.revokeInvite(Number(req.params.id));
+  res.json({ success: ok, ...(ok ? {} : { error: "Convite nao encontrado ou ja utilizado/revogado" }) });
 });
 
 // ---------------- Panel config ----------------

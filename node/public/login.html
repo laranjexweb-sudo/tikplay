@@ -54,6 +54,8 @@
     </form>
 
     <form id="formRegister" style="display:none" onsubmit="doRegister(event)">
+      <div class="alert-box err" id="regGateMsg" style="display:none"></div>
+      <input type="hidden" id="regInviteToken" value="">
       <div class="mb-3">
         <label class="form-label">Nome</label>
         <input type="text" class="form-control" id="regName">
@@ -83,6 +85,66 @@ function switchTab(tab) {
   document.getElementById("tabRegister").classList.toggle("active", tab === "register");
   document.getElementById("formLogin").style.display = tab === "login" ? "" : "none";
   document.getElementById("formRegister").style.display = tab === "register" ? "" : "none";
+  if (tab === "register") renderRegisterGate();
+}
+
+// ---- Cadastro por convite (REGISTER_MODE) ----
+const regParams = new URLSearchParams(location.search);
+const inviteToken = regParams.get("invite") || "";
+let registerMode = "public";
+let inviteValid = false;
+
+const REGISTER_INVITE_MSG = "O cadastro na TikPlay está disponível apenas por convite durante o período de testes.";
+const REGISTER_CLOSED_MSG = "Cadastro indisponível no momento.";
+
+async function checkRegisterMode() {
+  try {
+    const r = await fetch("/api/auth/register-mode");
+    const data = await r.json();
+    registerMode = data.mode || "public";
+  } catch { registerMode = "public"; }
+}
+
+async function validateInvite() {
+  if (registerMode !== "invite" || !inviteToken) return;
+  try {
+    const r = await fetch("/api/auth/invite/" + encodeURIComponent(inviteToken));
+    const data = await r.json();
+    if (data.valid) {
+      inviteValid = true;
+      document.getElementById("regInviteToken").value = inviteToken;
+    }
+  } catch {}
+}
+
+function renderRegisterGate() {
+  const msg = document.getElementById("regGateMsg");
+  const form = document.getElementById("formRegister");
+  const btn = form ? form.querySelector("button[type=submit]") : null;
+  const tabRegister = document.getElementById("tabRegister");
+  if (!msg || !form) return;
+  if (registerMode === "public") {
+    msg.style.display = "none";
+    if (btn) btn.disabled = false;
+    if (tabRegister) tabRegister.disabled = false;
+    return;
+  }
+  if (tabRegister) tabRegister.disabled = false;
+  let message = "";
+  if (registerMode === "closed") {
+    message = REGISTER_CLOSED_MSG;
+  } else if (registerMode === "invite") {
+    if (!inviteToken) message = REGISTER_INVITE_MSG;
+    else if (!inviteValid) message = "Este convite já foi utilizado ou expirou.";
+  }
+  if (message) {
+    msg.textContent = message;
+    msg.style.display = "block";
+    if (btn) btn.disabled = true;
+  } else {
+    msg.style.display = "none";
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function doLogin(e) {
@@ -114,6 +176,7 @@ async function doRegister(e) {
       name: document.getElementById("regName").value,
       email: document.getElementById("regEmail").value,
       password: document.getElementById("regPassword").value,
+      inviteToken: document.getElementById("regInviteToken").value,
     }),
   });
   const data = await res.json();
@@ -128,6 +191,12 @@ async function doRegister(e) {
 }
 
 if (localStorage.getItem("token")) location.href = "/painel";
+
+(async () => {
+  await checkRegisterMode();
+  await validateInvite();
+  renderRegisterGate();
+})();
 </script>
 </body>
 </html>

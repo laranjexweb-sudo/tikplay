@@ -84,6 +84,16 @@ CREATE TABLE IF NOT EXISTS users (
   features TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS registration_invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT UNIQUE NOT NULL,
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT,
+  used_at TEXT,
+  used_by INTEGER,
+  status TEXT NOT NULL DEFAULT 'active'
+);
 CREATE TABLE IF NOT EXISTS players (
   username TEXT PRIMARY KEY,
   nickname TEXT,
@@ -225,6 +235,80 @@ function createUser({ email, name, password_hash, role = "user", plan = "free", 
   );
   const info = stmt.run(email, name, password_hash, role, plan, tiktok_username, tiktools_api_key, tiktok_engine, code, JSON.stringify(features || {}));
   return info.lastInsertRowid;
+}
+
+// ---------------- Convites de cadastro ----------------
+
+function createInvite({ created_by = null, expires_in_days = 7 } = {}) {
+  const token = crypto.randomBytes(18).toString("base64url");
+  const expiresAt = expires_in_days > 0
+    ? new Date(Date.now() + expires_in_days * 86400000).toISOString()
+    : null;
+  const info = db.prepare(
+    "INSERT INTO registration_invites (token, created_by, expires_at, status) VALUES (?, ?, ?, 'active')"
+  ).run(token, created_by, expiresAt);
+  return { id: info.lastInsertRowid, token, expires_at: expiresAt };
+}
+
+function getInviteByToken(token) {
+  return db.prepare("SELECT * FROM registration_invites WHERE token = ?").get(token);
+}
+
+function listInvites(limit = 100) {
+  return db.prepare(
+    `SELECT i.id, i.token, i.created_by, i.created_at, i.expires_at, i.used_at, i.status,
+            u.email AS used_by_email
+     FROM registration_invites i
+     LEFT JOIN users u ON u.id = i.used_by
+     ORDER BY i.created_at DESC
+     LIMIT ?`
+  ).all(limit);
+}
+
+function revokeInvite(id) {
+  const info = db.prepare(
+    "UPDATE registration_invites SET status = 'revoked' WHERE id = ? AND status = 'active'"
+  ).run(id);
+  return info.changes > 0;
+}
+
+function validateInvite(inv) {
+  if (!inv) return { ok: false, error: "Este convite já foi utilizado ou expirou." };
+  if (inv.status === "revoked") return { ok: false, error: "Este convite foi revogado." };
+  if (inv.status === "used") return { ok: false, error: "Este convite já foi utilizado ou expirou." };
+  if (inv.expires_at && inv.expires_at < new Date().toISOString()) {
+    return { ok: false, error: "Este convite já foi utilizado ou expirou.", expired: true };
+  }
+  return { ok: true };
+}
+
+function registerWithInvite({ email, name, password_hash, token, role = "user" }) {
+  const run = db.transaction(() => {
+    const inv = getInviteByToken(token);
+    const st = validateInvite(inv);
+    if (!st.ok) {
+      if (st.expired) {
+        db.prepare("UPDATE registration_invites SET status = 'expired' WHERE id = ?").run(inv.id);
+      }
+      throw new Error(st.error);
+    }
+    const id = createUser({
+      email,
+      name,
+      password_hash,
+      role,
+      plan: "free",
+      features: { bichinho: false },
+    });
+    const consumed = db.prepare(
+      "UPDATE registration_invites SET status = 'used', used_at = datetime('now'), used_by = ? WHERE token = ? AND status = 'active'"
+    ).run(id, token);
+    if (consumed.changes !== 1) {
+      throw new Error("Este convite já foi utilizado ou expirou.");
+    }
+    return id;
+  });
+  return run();
 }
 
 function getUserByEmail(email) {
@@ -792,6 +876,12 @@ module.exports = {
   db,
   DEFAULT_SETTINGS,
   createUser,
+  createInvite,
+  getInviteByToken,
+  listInvites,
+  revokeInvite,
+  validateInvite,
+  registerWithInvite,
   getUserByEmail,
   getUserById,
   getUserByRoomCode,

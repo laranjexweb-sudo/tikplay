@@ -46,6 +46,31 @@
   </div>
 </div>
 
+<div class="nb-card mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="m-0">Convites de Cadastro</h2>
+    <div class="d-flex gap-2 align-items-center">
+      <label class="text-secondary" style="font-size:0.8rem">Validade:
+        <input type="number" id="inviteDays" value="7" min="0" max="365" style="width:70px">
+        dias (0 = sem expiração)
+      </label>
+      <button class="btn btn-nb btn-success" onclick="generateInvite()">Gerar novo convite</button>
+    </div>
+  </div>
+  <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
+    Cada convite é de uso único. Compartilhe o link com a pessoa; sem convite o cadastro fica bloqueado.
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr><th>Status</th><th>Criado em</th><th>Expira</th><th>Usado por</th><th>Ações</th></tr>
+      </thead>
+      <tbody id="inviteTable"></tbody>
+    </table>
+  </div>
+  <div class="text-secondary" style="font-size:0.8rem" id="inviteMsg"></div>
+</div>
+
 <div class="nb-card">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Usuarios <span id="userCount" class="badge text-bg-dark"></span></h2>
@@ -164,6 +189,71 @@ function esc(s) {
 
 let usersData = [];
 let editingId = null;
+
+function inviteStatusBadge(st) {
+  const map = { active: ["text-bg-success", "Ativo"], used: ["text-bg-secondary", "Usado"], revoked: ["text-bg-danger", "Revogado"], expired: ["text-bg-warning", "Expirado"] };
+  const [cls, label] = map[st] || ["text-bg-light", st];
+  return `<span class="badge ${cls} badge-outline">${label}</span>`;
+}
+
+async function loadInvites() {
+  try {
+    const data = await apiFetch("/api/admin/invites");
+    if (!data.success) return;
+    const tbody = document.getElementById("inviteTable");
+    tbody.innerHTML = "";
+    for (const inv of (data.invites || [])) {
+      const tr = document.createElement("tr");
+      const isActive = inv.status === "active";
+      tr.innerHTML = `
+        <td>${inviteStatusBadge(inv.status)}</td>
+        <td><code>${esc(inv.created_at)}</code></td>
+        <td>${inv.expires_at ? `<code>${esc(inv.expires_at)}</code>` : "sem expiração"}</td>
+        <td>${inv.used_by_email ? esc(inv.used_by_email) : "—"}</td>
+        <td class="d-flex gap-2 flex-wrap">
+          ${isActive ? `<button class="btn btn-nb btn-dark" onclick="copyInviteLink('${esc(inv.token)}')">Copiar link</button>
+          <button class="btn btn-nb btn-danger" onclick="revokeInvite(${inv.id})">Revogar</button>` : ""}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  } catch (e) {}
+}
+
+async function generateInvite() {
+  const msg = document.getElementById("inviteMsg");
+  const expires_in_days = parseInt(document.getElementById("inviteDays").value || "7", 10);
+  try {
+    const data = await apiFetch("/api/admin/invites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expires_in_days: Number.isFinite(expires_in_days) ? expires_in_days : 7 }),
+    });
+    if (data.success) {
+      msg.textContent = "Convite gerado!";
+      loadInvites();
+      copyInviteLink(data.token);
+    } else {
+      msg.textContent = data.error || "Erro ao gerar convite";
+    }
+  } catch (e) { msg.textContent = "Erro de rede: " + e.message; }
+}
+
+async function copyInviteLink(token) {
+  const link = `${location.origin}/register?invite=${encodeURIComponent(String(token))}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    document.getElementById("inviteMsg").textContent = "Link copiado!";
+  } catch (e) {
+    prompt("Copie o link:", link);
+  }
+}
+
+async function revokeInvite(id) {
+  const data = await apiFetch(`/api/admin/invites/${id}/revoke`, { method: "POST" });
+  document.getElementById("inviteMsg").textContent = data.success ? "Convite revogado." : (data.error || "Erro");
+  loadInvites();
+}
 
 async function loadBannedWords() {
   try {
@@ -436,6 +526,7 @@ async function pollContextos() {
 
 loadBannedWords();
 loadUsers();
+loadInvites();
 pollContextos();
 </script>
 </body>
