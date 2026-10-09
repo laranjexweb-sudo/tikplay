@@ -281,7 +281,8 @@ function shieldEffect(fighter, points) {
 
 function enqueueAttack(att) {
   if (!att || !FIGHTERS[att.attacker]) return;
-  if (!state.roundActive || state.winner) return; // ignora gifts durante o banner de vitória
+  // Presentes reais: bloqueados durante banner/final. Testes (isTest) passam sempre.
+  if (!att.isTest && (!state.roundActive || state.winner)) return;
   attackQueue.push(att);
   if (attackQueue.length > MAX_ATTACK_QUEUE) attackQueue.shift();
   processQueue();
@@ -289,13 +290,21 @@ function enqueueAttack(att) {
 
 async function processQueue() {
   if (busy || !attackQueue.length) return;
-  if (!state.roundActive || state.winner) { attackQueue = []; return; }
+  if (!state.roundActive || state.winner) {
+    // Parado: mantém a fila só se houver testes visuais; senão descarta reais.
+    if (!attackQueue.some((a) => a.isTest)) { attackQueue = []; return; }
+  }
   busy = true;
   const att = attackQueue.shift();
   try { await runAttack(att); } catch (e) {}
-  if (!state.roundActive) { attackQueue = []; }
-  resetPose("flavio"); resetPose("lula");
-  updateCombo();
+  if (!state.roundActive && !att.isTest) { attackQueue = []; }
+  if (att.isTest && state.winner) {
+    renderWinner(); // reaplica o estado real (banner + pose de vitória)
+  } else {
+    resetPose("flavio");
+    resetPose("lula");
+  }
+  if (!att.isTest) updateCombo();
   setTimeout(() => { busy = false; processQueue(); }, 150);
 }
 
@@ -305,6 +314,12 @@ async function runAttack(att) {
   const dur = ACTION_DUR[att.action] || ACTION_DUR.punch;
   const dir = a.dir;
   const move = att.action === "uppercut" ? 30 : (att.action === "kick" ? 46 : 34);
+
+  // Teste visual durante banner de vitória: esconde o banner apenas localmente.
+  if (att.isTest && state.winner) {
+    const banner = $("winBanner");
+    if (banner) banner.classList.remove("show");
+  }
 
   setFighter(att.attacker, att.action);
   setFighter(def, "defense");
@@ -339,7 +354,7 @@ function connectWS() {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
     if (msg.type === "duelo_state") applyState(msg);
-    else if (msg.type === "duelo_attack") enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "" });
+    else if (msg.type === "duelo_attack") enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
     else if (msg.type === "duelo_shield") shieldEffect(msg.fighter, msg.points || 0);
   };
 }
@@ -357,7 +372,7 @@ if (DEBUG) {
       const b = document.createElement("button");
       b.className = f;
       b.textContent = `${FIGHTERS[f].name} ${label}`;
-      b.onclick = () => enqueueAttack({ attacker: f, action, combo: 1, audio_url: "" });
+      b.onclick = () => enqueueAttack({ attacker: f, action, combo: 1, audio_url: "", isTest: true });
       dbg.appendChild(b);
     });
   });

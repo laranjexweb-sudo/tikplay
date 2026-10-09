@@ -1962,8 +1962,11 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const cfg = db.getDueloConfig(req.user.id);
   const gift = (cfg.gifts || []).find((g) => g.character === attacker && g.action === action);
   const tenant = getTenant(req.user.id);
+  // Teste é SOMENTE visual: isTest true faz a arena ignorar as travas de winner/roundActive,
+  // sem alterar HP, escudo, votos, winner ou roundActive (não passa pelo motor).
   broadcastToClients(tenant.browserClients, {
     type: "duelo_attack",
+    isTest: true,
     attacker,
     action,
     combo,
