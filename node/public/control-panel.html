@@ -126,6 +126,7 @@
       <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca')">Caça Palavras</button>
       <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho')">Bichinho</button>
       <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')">3 Dicas</button>
+      <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo')">Duelo 1x1</button>
     </div>
   </div>
 
@@ -766,8 +767,67 @@
             <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/tres-pontinhos')">Link público 3 Dicas</button>
           </div>
         </div>
+</div>
+
+        <!-- ===================== DUELO 1x1 ===================== -->
+        <div class="tab-page" id="tab-duelo" style="display:none">
+          <div class="nb-card mb-3">
+            <h2>Duelo 1x1</h2>
+            <div class="mb-3 p-2 bg-light border border-dark rounded">
+              <div class="kv"><strong>Status:</strong> <span id="dueloStatus">Parado</span></div>
+              <div class="kv"><strong>Presentes cadastrados:</strong> <span id="dueloCount">0</span></div>
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-nb btn-success flex-fill" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
+                <button class="btn btn-nb btn-danger flex-fill" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
+              </div>
+              <div class="text-secondary mt-2" style="font-size:0.75rem">
+                Flávio luta pela ESQUERDA. Lula luta pela DIREITA. A defesa do oponente é automática.
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Configuração de Presentes</h2>
+            <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
+              Cada presente dispara um golpe do personagem cadastrado. Gift ID = TikTok Gift ID (com fallback pelo nome).
+            </div>
+            <div id="dueloGiftsList" class="mb-2"></div>
+            <div class="d-flex gap-2 align-items-center">
+              <button class="btn btn-nb btn-dark btn-sm" onclick="addDueloGiftRow()">+ Adicionar presente</button>
+              <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração</button>
+              <span class="text-secondary" style="font-size:0.75rem" id="dueloMsg"></span>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Testar ataques</h2>
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="mb-1 text-secondary" style="font-size:0.8rem;font-weight:700">FLÁVIO</div>
+                <button class="btn btn-nb btn-primary btn-sm w-100 mb-1" onclick="dueloTest('flavio','punch')">Testar soco</button>
+                <button class="btn btn-nb btn-warning btn-sm w-100 mb-1" onclick="dueloTest('flavio','kick')">Testar chute</button>
+                <button class="btn btn-nb btn-danger btn-sm w-100" onclick="dueloTest('flavio','uppercut')">Testar levantada</button>
+              </div>
+              <div class="col-6">
+                <div class="mb-1 text-secondary" style="font-size:0.8rem;font-weight:700">LULA</div>
+                <button class="btn btn-nb btn-primary btn-sm w-100 mb-1" onclick="dueloTest('lula','punch')">Testar soco</button>
+                <button class="btn btn-nb btn-warning btn-sm w-100 mb-1" onclick="dueloTest('lula','kick')">Testar chute</button>
+                <button class="btn btn-nb btn-danger btn-sm w-100" onclick="dueloTest('lula','uppercut')">Testar levantada</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Onde assistir</h2>
+            <div class="text-secondary" style="font-size:0.85rem">
+              Acompanhe ao vivo na página: <a href="#" id="linkDuelo" target="_blank">Abrir página DUELO 1x1</a>.
+            </div>
+            <div class="d-flex gap-2 mt-2">
+              <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/duelo')">Link público Duelo</button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
 
     <div class="col-lg-4 d-flex" style="min-height:0">
       <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
@@ -803,6 +863,7 @@ function switchTab(tab) {
   if (tab === "caca") { loadCacaState(); }
   if (tab === "bichinho") { vpetLoadState(); }
   if (tab === "tres") { tresLoadState(); }
+  if (tab === "duelo") { loadDueloState(); }
   try { localStorage.setItem("panel_tab", tab); } catch (e) {}
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", location.pathname + location.search + "#" + tab); } catch (e) {}
 }
@@ -901,6 +962,8 @@ function connectLogs() {
       handleVpetMsg(msg);
     } else if (["tres_state", "tres_dica", "tres_tick", "tres_winner", "tres_timeout", "tres_weekly"].includes(msg.type)) {
       handleTresMsg(msg);
+    } else if (msg.type === "duelo_state") {
+      setDueloStatusButtons(msg.active);
     } else if (msg.type === "battle_reset") {
       loadBattleState();
     }
@@ -3031,7 +3094,7 @@ async function loadMe() {
   } catch {}
 }
 
-const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres"];
+const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
 
 function applyFeatureGating(user) {
   if (!user || user.role === "admin") {
@@ -3081,6 +3144,159 @@ function updateLinks() {
   const tl = `${base}/tres-pontinhos?room=${roomCode}`;
   const tlink = document.getElementById("linkTres");
   if (tlink) tlink.href = tl;
+  const dl = `${base}/duelo?room=${roomCode}`;
+  const dlink = document.getElementById("linkDuelo");
+  if (dlink) dlink.href = dl;
+}
+
+// ---------------- Duelo 1x1 ----------------
+let dueloGifts = [];
+let dueloActive = false;
+
+async function loadDueloState() {
+  try {
+    const data = await apiFetch("/api/duelo/config");
+    if (!data.success) return;
+    dueloGifts = Array.isArray(data.gifts) ? data.gifts : [];
+    dueloActive = !!data.active;
+    renderDueloGifts();
+    setDueloStatusButtons(dueloActive);
+  } catch (e) {}
+}
+
+function setDueloStatusButtons(active) {
+  dueloActive = !!active;
+  const st = document.getElementById("dueloStatus");
+  if (st) st.textContent = active ? "Ativo" : "Parado";
+  const start = document.getElementById("btnDueloStart");
+  const stop = document.getElementById("btnDueloStop");
+  if (start) start.disabled = !!active || window.lastStateStr !== "connected";
+  if (stop) stop.disabled = !active;
+}
+
+function dueloMsg(text) {
+  const el = document.getElementById("dueloMsg");
+  if (el) el.textContent = text;
+}
+
+function renderDueloGifts() {
+  const box = document.getElementById("dueloGiftsList");
+  if (!box) return;
+  box.innerHTML = "";
+  const count = document.getElementById("dueloCount");
+  if (count) count.textContent = dueloGifts.length;
+  dueloGifts.forEach((g, i) => {
+    const g_ = g || {};
+    const row = document.createElement("div");
+    row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
+    row.innerHTML = `
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Gift ID</label>
+        <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" data-f="gift_id" data-i="${i}"></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
+        <input type="text" class="form-control form-control-sm" value="${esc(g_.name || '')}" data-f="name" data-i="${i}"></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Personagem</label>
+        <select class="form-select form-select-sm" data-f="character" data-i="${i}">
+          <option value="flavio" ${g_.character === 'lula' ? '' : 'selected'}>Flávio</option>
+          <option value="lula" ${g_.character === 'lula' ? 'selected' : ''}>Lula</option>
+        </select></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Golpe</label>
+        <select class="form-select form-select-sm" data-f="action" data-i="${i}">
+          <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
+          <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
+          <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
+        </select></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
+        <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
+        <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : 'sem áudio'}</div></div>
+      <div class="col-md-1">
+        <label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label>
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button>
+      </div>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-f]").forEach((el) => {
+    el.addEventListener("change", () => {
+      const f = el.getAttribute("data-f");
+      const i = Number(el.getAttribute("data-i"));
+      dueloGifts[i] = dueloGifts[i] || {};
+      dueloGifts[i][f] = f === "active" ? el.checked : el.value;
+    });
+  });
+  box.querySelectorAll("[data-upload]").forEach((el) => {
+    el.addEventListener("change", () => {
+      const i = Number(el.getAttribute("data-upload"));
+      if (el.files && el.files[0]) uploadDueloAudio(i, el.files[0]);
+    });
+  });
+}
+
+function addDueloGiftRow() {
+  dueloGifts.push({ gift_id: "", name: "", character: "flavio", action: "punch", audio: "", active: true });
+  renderDueloGifts();
+}
+
+function removeDueloGift(i) {
+  dueloGifts.splice(i, 1);
+  renderDueloGifts();
+}
+
+async function uploadDueloAudio(i, file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) {
+      dueloGifts[i] = dueloGifts[i] || {};
+      dueloGifts[i].audio = data.filename;
+      dueloMsg("Áudio enviado: " + data.filename);
+      renderDueloGifts();
+    } else dueloMsg(data.error || "Erro no upload");
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloSaveConfig() {
+  try {
+    const data = await apiFetch("/api/duelo/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gifts: dueloGifts, active: dueloActive }),
+    });
+    dueloMsg(data.success ? "Configuração salva!" : (data.error || "Erro ao salvar"));
+    renderDueloGifts();
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloStart() {
+  try {
+    const data = await apiFetch("/api/duelo/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gifts: dueloGifts }),
+    });
+    setDueloStatusButtons(data.active);
+    dueloMsg(data.success ? "Área ativa!" : (data.error || "Erro"));
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloStop() {
+  try {
+    const data = await apiFetch("/api/duelo/stop", { method: "POST" });
+    setDueloStatusButtons(data.active);
+    dueloMsg(data.success ? "Área desativada." : (data.error || "Erro"));
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+async function dueloTest(attacker, action) {
+  try {
+    await apiFetch("/api/duelo/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attacker, action }),
+    });
+  } catch (e) { dueloMsg("Erro no teste: " + e.message); }
 }
 
 function copyRoomUrl() {

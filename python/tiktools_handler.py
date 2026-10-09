@@ -130,6 +130,7 @@ class TikToolsHandler:
 
         elif etype == "gift":
             gift_name = data.get("giftName", "")
+            gift_id = str(data.get("giftId") or "")
             diamond_count = int(data.get("diamondCount") or 0)
             repeat_count = max(1, int(data.get("repeatCount") or 1))
             repeat_end = bool(data.get("repeatEnd", True))
@@ -141,13 +142,14 @@ class TikToolsHandler:
             # para nao perder gifts caso o frame final se perca (queda/reconexao).
             if repeat_end:
                 self._pending_gifts.pop(key, None)
-                await self._emit_gift(user, gift_name, diamond_count, repeat_count, key)
+                await self._emit_gift(user, gift_name, diamond_count, repeat_count, key, gift_id)
             else:
                 prev = self._pending_gifts.get(key)
                 if prev is None:
                     self._pending_gifts[key] = {
                         "user": user,
                         "gift_name": gift_name,
+                        "gift_id": gift_id,
                         "diamond_count": diamond_count,
                         "repeat_count": repeat_count,
                         "ts": time.time(),
@@ -170,7 +172,7 @@ class TikToolsHandler:
                     user_meta=self._user_meta(user),
                 )
 
-    async def _emit_gift(self, user, gift_name, diamond_count, repeat_count, key):
+    async def _emit_gift(self, user, gift_name, diamond_count, repeat_count, key, gift_id=""):
         now = time.time()
         self._emitted_gifts = {k: v for k, v in self._emitted_gifts.items() if now - v <= 12}
         if key in self._emitted_gifts:
@@ -182,6 +184,7 @@ class TikToolsHandler:
                 nickname=self._nickname(user),
                 avatar=self._avatar(user),
                 gift_name=gift_name,
+                gift_id=gift_id,
                 diamond_count=diamond_count,
                 repeat_count=repeat_count,
                 user_meta=self._user_meta(user),
@@ -201,6 +204,7 @@ class TikToolsHandler:
                         entry["diamond_count"],
                         entry["repeat_count"],
                         key,
+                        entry.get("gift_id", "") or "",
                     )
 
     async def _connect(self):

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay — Duelo 1x1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: #000; overflow: hidden; }
+  #stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #101014 url('/duelo/arena.png') no-repeat center bottom;
+    background-size: cover;
+  }
+
+  .fighter {
+    position: absolute;
+    bottom: 9vh;
+    width: auto;
+    will-change: transform;
+  }
+  .fighter img {
+    display: block;
+    max-height: 52vh;
+    width: auto;
+    transform-origin: bottom center;
+  }
+  #fighter-flavio { left: 7vw; }
+  #fighter-lula  { right: 7vw; }
+
+  .hud {
+    position: absolute;
+    top: 2vh;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 6vw;
+    pointer-events: none;
+    z-index: 30;
+  }
+  .hud-name {
+    font-weight: 900;
+    font-size: clamp(1.2rem, 3.4vw, 2.4rem);
+    letter-spacing: 4px;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(0,0,0,0.8);
+  }
+  .hud-name.left::before { content: '⚔ '; }
+  .hud-name.right::after { content: ' ⚔'; }
+
+  .combo {
+    position: absolute;
+    top: 14vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 6vw, 4rem);
+    color: #ffd200;
+    text-shadow: 0 0 18px rgba(255, 150, 0, 0.9);
+    opacity: 0;
+    transition: opacity .2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .combo.show { opacity: 1; }
+
+  .hit {
+    position: absolute;
+    bottom: 22vh;
+    left: 50%;
+    z-index: 20;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .hit.show { opacity: 1; }
+  .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; animation: hitPunch .28s ease-out forwards; }
+  .hit.kick { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
+  .hit.uppercut { width: 6px; height: 140px; background: linear-gradient(#fff, #ff8800); border-radius: 4px; box-shadow: 0 0 26px #ff8800; animation: hitUppercut .34s ease-out forwards; }
+  @keyframes hitPunch { 0% { transform: translate(-50%,0) scale(.4); opacity: 1; } 100% { transform: translate(-50%,-6vh) scale(1.15); opacity: 0; } }
+  @keyframes hitKick { 0% { transform: translate(-50%,0) scale(.5); opacity: 1; } 100% { transform: translate(-50%,-8vh) scale(1.5); opacity: 0; } }
+  @keyframes hitUppercut { 0% { transform: translate(-50%,0); opacity: 1; } 100% { transform: translate(-50%,-14vh); opacity: 0; } }
+
+  .shake { animation: shk .25s linear; }
+  @keyframes shk { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,2px); } 60% { transform: translate(6px,-2px); } }
+
+  .debug {
+    position: absolute;
+    bottom: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    gap: 8px;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #555;
+    border-radius: 12px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 92vw;
+  }
+  .debug button {
+    border: 2px solid #000;
+    border-radius: 8px;
+    font-weight: 800;
+    padding: 6px 10px;
+    background: #fec90f;
+    color: #111;
+    cursor: pointer;
+  }
+  .debug button.flavio { background: #7fd7ff; }
+  .debug button.lula { background: #ff9d7a; }
+  .status {
+    position: absolute;
+    top: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    font-size: 0.75rem;
+    color: #9aa;
+    text-shadow: 0 0 8px #000;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="status" id="statusText">conectando…</div>
+  <div class="hud">
+    <span class="hud-name left">FLÁVIO</span>
+    <span class="combo" id="combo"></span>
+    <span class="hud-name right">LULA</span>
+  </div>
+
+  <div class="fighter" id="fighter-flavio"><img id="img-flavio" alt=""></div>
+  <div class="fighter" id="fighter-lula"><img id="img-lula" alt=""></div>
+
+  <div class="hit" id="hit"></div>
+
+  <div class="debug" id="debug" style="display:none"></div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const DEBUG = params.get("debug") === "1";
+const token = params.get("tk") || localStorage.getItem("token");
+
+const FIGHTERS = {
+  flavio: {
+    name: "FLÁVIO", dir: 1,
+    sprites: {
+      idle: "/duelo/Flavio/neutro.png",
+      defense: "/duelo/Flavio/defesa.png",
+      punch: "/duelo/Flavio/soco.png",
+      kick: "/duelo/Flavio/chute.png",
+      uppercut: "/duelo/Flavio/levantada.png",
+    },
+  },
+  lula: {
+    name: "LULA", dir: -1,
+    sprites: {
+      idle: "/duelo/lula/neutro.png",
+      defense: "/duelo/lula/defesa.png",
+      punch: "/duelo/lula/soco.png",
+      kick: "/duelo/lula/chute.png",
+      uppercut: "/duelo/lula/levantada.png",
+    },
+  },
+};
+
+const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 } };
+const MAX_ATTACK_QUEUE = 20;
+
+let attackQueue = [];
+let busy = false;
+let currentCombo = 0;
+
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const opponent = (f) => (f === "flavio" ? "lula" : "flavio");
+
+function setFighter(fighter, state) {
+  const img = $("img-" + fighter);
+  if (img) img.src = FIGHTERS[fighter].sprites[state] || FIGHTERS[fighter].sprites.idle;
+  const el = $("fighter-" + fighter);
+  if (el) el.dataset.state = state;
+}
+
+function resetPose(fighter) {
+  const el = $("fighter-" + fighter);
+  setFighter(fighter, "idle");
+  if (el) {
+    el.style.transition = "transform .28s ease";
+    el.style.transform = "translate(0,0) scale(1)";
+  }
+}
+
+function updateCombo() {
+  const c = $("combo");
+  if (!c) return;
+  if (currentCombo > 1) {
+    c.textContent = "x" + currentCombo;
+    c.classList.add("show");
+  } else {
+    c.textContent = "";
+    c.classList.remove("show");
+  }
+}
+
+function spawnHit(type, dir) {
+  const hit = $("hit");
+  if (!hit) return;
+  const pos = dir > 0 ? 56 : 44; // lado do defensor
+  hit.style.left = pos + "%";
+  hit.className = "hit " + (type === "uppercut" ? "uppercut" : type) + " show";
+  setTimeout(() => { hit.className = "hit"; hit.style.left = "50%"; }, 380);
+}
+
+function playAudio(url) {
+  if (!url) return;
+  try {
+    const a = new Audio(url);
+    a.volume = 0.92;
+    a.play().catch(() => {});
+  } catch (e) {}
+}
+
+function enqueueAttack(att) {
+  if (!att || !FIGHTERS[att.attacker]) return;
+  attackQueue.push(att);
+  if (attackQueue.length > MAX_ATTACK_QUEUE) attackQueue.shift();
+  processQueue();
+}
+
+async function processQueue() {
+  if (busy || !attackQueue.length) return;
+  busy = true;
+  const att = attackQueue.shift();
+  try { await runAttack(att); } catch (e) {}
+  resetPose("flavio");
+  resetPose("lula");
+  updateCombo();
+  setTimeout(() => { busy = false; processQueue(); }, 150);
+}
+
+async function runAttack(att) {
+  const a = FIGHTERS[att.attacker];
+  const def = opponent(att.attacker);
+  const dur = ACTION_DUR[att.action] || ACTION_DUR.punch;
+  const dir = a.dir;
+  const move = att.action === "uppercut" ? 30 : (att.action === "kick" ? 46 : 34);
+
+  setFighter(att.attacker, att.action);
+  setFighter(def, "defense");
+  const atEl = $("fighter-" + att.attacker);
+  const deEl = $("fighter-" + def);
+
+  if (atEl) {
+    atEl.style.transition = `transform ${dur.fwd}ms ease-out`;
+    const up = att.action === "uppercut" ? " translateY(-18px)" : " translateY(0)";
+    const sc = att.action === "kick" ? " scale(1.05)" : " scale(1)";
+    atEl.style.transform = `translateX(${dir * move}px)${up}${sc}`;
+  }
+  if (deEl) {
+    deEl.style.transition = `transform ${dur.fwd}ms ease-in`;
+    deEl.style.transform = `translateX(${-dir * 14}px)`;
+  }
+  await sleep(dur.fwd);
+
+  if (deEl) deEl.style.transform = `translateX(${-dir * 30}px)`;
+  spawnHit(att.action, dir);
+  if (att.combo > 0) { currentCombo = att.combo; updateCombo(); }
+  playAudio(att.audio_url);
+  await sleep(dur.hold);
+
+  resetPose(att.attacker);
+  resetPose(def);
+  await sleep(dur.back);
+}
+
+// ---- WebSocket ----
+function connectWS() {
+  if (!token) return;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${location.host}/browser?token=${encodeURIComponent(token)}`);
+  ws.onopen = () => { $("statusText").textContent = "conectado"; };
+  ws.onclose = () => { $("statusText").textContent = "desconectado — reconectando…"; setTimeout(connectWS, 3000); };
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === "duelo_attack") {
+      enqueueAttack({
+        attacker: msg.attacker,
+        action: msg.action,
+        combo: msg.combo || 1,
+        audio_url: msg.audio_url || "",
+      });
+    }
+  };
+}
+
+// ---- Bootstrap ----
+resetPose("flavio");
+resetPose("lula");
+
+if (DEBUG) {
+  const dbg = $("debug");
+  dbg.style.display = "flex";
+  ["flavio", "lula"].forEach((f) => {
+    [["punch", "Soco"], ["kick", "Chute"], ["uppercut", "Levantada"]].forEach(([action, label]) => {
+      const b = document.createElement("button");
+      b.className = f;
+      b.textContent = `${FIGHTERS[f].name} ${label}`;
+      b.onclick = () => enqueueAttack({ attacker: f, action, combo: 1, audio_url: "" });
+      dbg.appendChild(b);
+    });
+  });
+}
+
+connectWS();
+</script>
+</body>
+</html>

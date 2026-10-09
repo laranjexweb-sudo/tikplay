@@ -145,6 +145,7 @@ class TikTokLiveHandler:
         user = getattr(event, "user", None)
         gift = getattr(event, "gift", None)
         gift_name = str(getattr(gift, "name", None) or "")
+        gift_id = str(getattr(gift, "id", None) or "")
         diamond_count = int(getattr(gift, "diamond_count", 0) or 0)
         if gift is not None and diamond_count == 0:
             self.log(f"[TikTokLive] AVISO: gift '{gift_name}' sem diamond_count (dano mínimo será aplicado)")
@@ -158,6 +159,7 @@ class TikTokLiveHandler:
             nickname=self._nickname(user),
             avatar=self._avatar(user),
             gift_name=gift_name,
+            gift_id=gift_id,
             diamond_count=diamond_count,
             repeat_count=repeat_count,
             user_meta=self._user_meta(user),

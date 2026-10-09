@@ -14,6 +14,7 @@ except Exception:
     pass
 
 from game import JogoContexto, CacaPalavras, VPetEngine, TresPontinhos, strip_accents, GIFT_PT_MAP
+from duelo import DueloEngine
 from tiktools_handler import TikToolsHandler
 from tiktoklive_handler import TikTokLiveHandler
 import db
@@ -403,6 +404,7 @@ class GameSession:
         self._vpet_task = None
         self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
         self._tres_task = None
+        self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         # Passe Livre: usuários que enviaram o gift ingresso podem palpitar no 3 Pontinhos
         self._tres_allowed = set()
         HandlerCls = TikTokLiveHandler if self.engine == "tiktoklive" else TikToolsHandler
@@ -696,6 +698,13 @@ class GameSession:
             # Gera o áudio da dica para o botão de play (sem narração automática)
             if type_ == "tres_dica" and payload.get("dica"):
                 asyncio.ensure_future(self._narrate_tres_dica(payload.get("stage", 0), payload["dica"]))
+
+    def _emit_duelo(self, type_, payload):
+        """Encaminha eventos do Duelo 1x1 para o node (game/browser)."""
+        if type_ == "log":
+            emit(self.tenant_id, "log", payload)
+        else:
+            emit(self.tenant_id, "game", {"type": type_, **payload})
 
     async def _narrate_tres_dica(self, stage, dica_text):
         """Gera o áudio TTS da dica revelada e envia a URL para o botão de play."""
@@ -1021,7 +1030,7 @@ class GameSession:
             emit(self.tenant_id, "log", f"[FIM] Vencedor: {final_user}! Palavra: {self.game.secret_word}")
             self._schedule_auto_next_game()
 
-    async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None):
+    async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None, gift_id=""):
         emit(self.tenant_id, "game", {
             "type": "gift_event",
             "user": user,
@@ -1053,6 +1062,10 @@ class GameSession:
         # BICHINHO VIRTUAL: presente alimenta/choca/ataca o boss (não afeta o fluxo dos jogos)
         if self.vpet.active:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
+
+        # DUELO 1x1: presente cadastrado dispara golpe (módulo isolado, retrocompatível)
+        if self.duelo.active:
+            self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
 
         allowed, reason = self._check_access(user_meta)
         if not allowed:
@@ -1460,6 +1473,17 @@ class GameSession:
                 )
                 if w:
                     self._emit_caca_found(w)
+            elif c == "duelo_start":
+                self.duelo.start(gifts=cmd.get("gifts"))
+                emit(self.tenant_id, "game", {"type": "duelo_state", "active": True})
+                emit(self.tenant_id, "log", f"[Duelo] Área ativa ({len(self.duelo.gifts)} presentes cadastrados)")
+            elif c == "duelo_stop":
+                self.duelo.stop()
+                emit(self.tenant_id, "game", {"type": "duelo_state", "active": False})
+                emit(self.tenant_id, "log", "[Duelo] Área parada")
+            elif c == "duelo_config":
+                self.duelo.set_config(cmd.get("gifts"))
+                emit(self.tenant_id, "log", f"[Duelo] Config de presentes atualizada ({len(self.duelo.gifts)})")
             elif c == "tres_start":
                 palavra = str(cmd.get("palavra") or "").strip()
                 dicas = cmd.get("dicas") or []
@@ -1640,6 +1664,13 @@ async def process_commands(queue):
                 emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
 
         elif c in ("tres_start", "tres_stop", "tres_pause", "tres_resume", "tres_reset", "tres_config"):
+            s = sessions.get(tid)
+            if s:
+                s.queue.put_nowait(cmd)
+            else:
+                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+
+        elif c in ("duelo_start", "duelo_stop", "duelo_config"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)

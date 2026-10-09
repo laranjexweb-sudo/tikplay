@@ -34,6 +34,7 @@ const FRIENDLY_PAGES = {
   "/bichinho": "bichinho.html",
   "/bichinho-overlay": "bichinho-overlay.html",
   "/tres-pontinhos": "tres-pontinhos.html",
+  "/duelo": "duelo.html",
   "/docs": "docs.html",
 };
 const LEGACY_PAGES = {
@@ -56,6 +57,7 @@ app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 express.static.mime.define({ "image/webp": ["webp"] });
 app.use("/gift-images", express.static(path.join(__dirname, "public", "gift-images"), { maxAge: "1d" }));
+app.use("/duelo-audio", express.static(path.join(__dirname, "public", "duelo-audio")));
 app.use("/alert-audio", express.static(path.join(__dirname, "public", "alert-audio"), { maxAge: "1d" }));
 app.use("/vendor", express.static(path.join(__dirname, "vendor")));
 
@@ -131,7 +133,7 @@ function liveOnline(tenant) {
 }
 
 // Funcionalidades liberáveis por cliente (abas do painel)
-const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres"];
+const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
 
 // features: {} ou chaves ausentes = tudo liberado; false = bloqueada
 function featureAllowed(user, feat) {
@@ -1830,6 +1832,101 @@ app.post("/api/game/room-link", auth.requireAuth, (req, res) => {
   }
   const token = auth.signToken(user, { ttl: "365d" });
   res.json({ success: true, token, room: user.room_code || "" });
+});
+
+// ---------------- Duelo 1x1 ----------------
+
+const dueloUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = path.join(__dirname, "public", "duelo-audio", String(req.user.id));
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      const base = (req.body && req.body.gift_id) || "duelo";
+      const safe = String(base).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "duelo";
+      const ext = (path.extname(file.originalname) || ".mp3").toLowerCase();
+      cb(null, `${safe}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const name = file.originalname || "";
+    cb(null, /\.(mp3|wav|ogg|m4a|aac|flac|webm|mp4|opus)$/i.test(name));
+  },
+});
+
+function normalizeDueloGifts(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((g) => ({
+    gift_id: String((g && g.gift_id) || "").trim(),
+    name: String((g && g.name) || "").trim(),
+    character: ["flavio", "lula"].includes(g && g.character) ? g.character : "flavio",
+    action: ["punch", "kick", "uppercut"].includes(g && g.action) ? g.action : "punch",
+    audio: String((g && g.audio) || ""),
+    active: (g && g.active) !== false,
+  })).filter((g) => g.gift_id || g.name);
+}
+
+app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  res.json({ success: true, ...db.getDueloConfig(req.user.id) });
+});
+
+app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  const gifts = normalizeDueloGifts(req.body && req.body.gifts);
+  const active = !!(req.body && req.body.active);
+  const cfg = db.saveDueloConfig(req.user.id, { gifts, active });
+  daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts });
+  res.json({ success: true, ...cfg });
+});
+
+app.get("/api/duelo/state", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  res.json({ success: true, ...db.getDueloConfig(req.user.id) });
+});
+
+app.post("/api/duelo/start", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  const tenant = getTenant(req.user.id);
+  if (!liveOnline(tenant)) {
+    return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar o Duelo" });
+  }
+  const cfg = db.getDueloConfig(req.user.id);
+  const ok = daemonSend({ cmd: "duelo_start", tenant_id: req.user.id, gifts: cfg.gifts });
+  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
+  db.saveDueloConfig(req.user.id, { gifts: cfg.gifts, active: true });
+  res.json({ success: true, active: true });
+});
+
+app.post("/api/duelo/stop", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  const ok = daemonSend({ cmd: "duelo_stop", tenant_id: req.user.id });
+  db.saveDueloConfig(req.user.id, { gifts: db.getDueloConfig(req.user.id).gifts, active: false });
+  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
+  res.json({ success: true, active: false });
+});
+
+app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  const attacker = ["flavio", "lula"].includes(req.body && req.body.attacker) ? req.body.attacker : "flavio";
+  const action = ["punch", "kick", "uppercut"].includes(req.body && req.body.action) ? req.body.action : "punch";
+  const combo = Math.max(1, parseInt((req.body && req.body.combo) || 1, 10) || 1);
+  const cfg = db.getDueloConfig(req.user.id);
+  const gift = (cfg.gifts || []).find((g) => g.character === attacker && g.action === action);
+  const tenant = getTenant(req.user.id);
+  broadcastToClients(tenant.browserClients, {
+    type: "duelo_attack",
+    attacker,
+    action,
+    combo,
+    audio_url: (gift && gift.audio) ? `/duelo-audio/${req.user.id}/${gift.audio}` : "",
+    gift: gift ? gift.name : "",
+    user: "streamer",
+    nickname: "Streamer",
+  });
+  res.json({ success: true });
+});
+
+app.post("/api/duelo/audio", auth.requireAuth, requireFeature("duelo"), dueloUpload.single("file"), (req, res) => {
+  if (!req.file) return res.json({ success: false, error: "Arquivo de audio obrigatorio" });
+  res.json({ success: true, filename: req.file.filename, url: `/duelo-audio/${req.user.id}/${req.file.filename}` });
 });
 
 app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {

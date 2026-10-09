@@ -94,6 +94,12 @@ CREATE TABLE IF NOT EXISTS registration_invites (
   used_by INTEGER,
   status TEXT NOT NULL DEFAULT 'active'
 );
+CREATE TABLE IF NOT EXISTS duelo_config (
+  tenant_id INTEGER PRIMARY KEY,
+  gifts TEXT NOT NULL DEFAULT '[]',
+  active INTEGER NOT NULL DEFAULT 0,
+  settings TEXT NOT NULL DEFAULT '{}'
+);
 CREATE TABLE IF NOT EXISTS players (
   username TEXT PRIMARY KEY,
   nickname TEXT,
@@ -280,6 +286,33 @@ function validateInvite(inv) {
     return { ok: false, error: "Este convite já foi utilizado ou expirou.", expired: true };
   }
   return { ok: true };
+}
+
+// ---------------- Duelo 1x1 ----------------
+
+function getDueloConfig(tenantId) {
+  const row = db.prepare("SELECT gifts, active, settings FROM duelo_config WHERE tenant_id = ?").get(tenantId);
+  if (!row) return { gifts: [], active: false, settings: {} };
+  let gifts = [];
+  let settings = {};
+  try { gifts = JSON.parse(row.gifts || "[]"); } catch {}
+  try { settings = JSON.parse(row.settings || "{}"); } catch {}
+  return { gifts, active: !!row.active, settings };
+}
+
+function saveDueloConfig(tenantId, cfg) {
+  const gifts = Array.isArray(cfg && cfg.gifts) ? cfg.gifts : [];
+  const active = !!(cfg && cfg.active);
+  const settings = (cfg && cfg.settings && typeof cfg.settings === "object") ? cfg.settings : {};
+  db.prepare(`
+    INSERT INTO duelo_config (tenant_id, gifts, active, settings)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET
+      gifts=excluded.gifts,
+      active=excluded.active,
+      settings=excluded.settings
+  `).run(tenantId, JSON.stringify(gifts), active ? 1 : 0, JSON.stringify(settings));
+  return getDueloConfig(tenantId);
 }
 
 function registerWithInvite({ email, name, password_hash, token, role = "user" }) {
@@ -882,6 +915,8 @@ module.exports = {
   revokeInvite,
   validateInvite,
   registerWithInvite,
+  getDueloConfig,
+  saveDueloConfig,
   getUserByEmail,
   getUserById,
   getUserByRoomCode,
