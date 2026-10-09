@@ -202,15 +202,22 @@ function renderHud() {
   const hpMax = state.hp_max || 100;
   const shMax = state.shield_max || 200;
   for (const f of ["flavio", "lula"]) {
-    $("#hpbar-" + f).style.width = pctBar(state.hp[f], hpMax) + "%";
-    $("#shbar-" + f).style.width = pctBar(state.shield[f], shMax) + "%";
-    const vr = $("#votes-" + f);
-    if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
-    else vr.textContent = "";
+    const hpEl = $("hpbar-" + f);
+    if (hpEl) hpEl.style.width = pctBar(state.hp[f], hpMax) + "%";
+    const shEl = $("shbar-" + f);
+    if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
+    const vr = $("votes-" + f);
+    if (vr) {
+      if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
+      else vr.textContent = "";
+    }
   }
-  $("#htVs").textContent = state.mode === "votes"
-    ? `${state.votes.flavio} VS ${state.votes.lula}`
-    : "";
+  const vs = $("htVs");
+  if (vs) {
+    vs.textContent = state.mode === "votes"
+      ? `${state.votes.flavio} VS ${state.votes.lula}`
+      : "";
+  }
 }
 
 function renderWinner() {
@@ -221,10 +228,12 @@ function renderWinner() {
     const w = FIGHTERS[state.winner].name;
     setFighter(state.winner, "victory");
     setFighter(opponent(state.winner), "idle");
-    if (state.final) { big.textContent = "VENCEDOR FINAL"; sub.textContent = `${w.toUpperCase()} GANHOU`; }
-    else if (state.mode === "votes") { big.textContent = `${w.toUpperCase()} GANHOU 1 VOTO`; sub.textContent = `VOTOS: ${state.votes.flavio} x ${state.votes.lula}`; }
-    else { big.textContent = `${w.toUpperCase()} VENCEU A RODADA!`; sub.textContent = "Aguardando nova rodada…"; }
-    banner.classList.add("show");
+    if (banner) {
+      if (state.final) { big.textContent = "VENCEDOR FINAL"; sub.textContent = `${w.toUpperCase()} GANHOU`; }
+      else if (state.mode === "votes") { big.textContent = `${w.toUpperCase()} GANHOU 1 VOTO`; sub.textContent = `VOTOS: ${state.votes.flavio} x ${state.votes.lula}`; }
+      else { big.textContent = `${w.toUpperCase()} VENCEU A RODADA!`; sub.textContent = "Aguardando nova rodada…"; }
+      banner.classList.add("show");
+    }
   } else {
     banner.classList.remove("show");
   }
