@@ -6,162 +6,181 @@
 <title>TikPlay — Guia do Streamer</title>
 <style>
   :root {
-    --bg: #0b0e14;
-    --bg2: #0f1117;
-    --panel: #171b26;
-    --panel2: #1c2230;
-    --border: #2a3242;
-    --text: #e9edf6;
-    --muted: #9aa4bd;
-    --gold: #fbbf24;
-    --green: #34d399;
-    --red: #f87171;
-    --blue: #60a5fa;
-    --purple: #a78bfa;
+    --bg: #fdfaf3;
+    --ink: #111;
+    --muted: #6b6b66;
+    --accent: #fec90f;
+    --accent-2: #ffdd66;
+    --green: #3ddc84;
+    --red: #ff6b6b;
+    --blue: #5b8cff;
+    --cream: #fff7de;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    background: radial-gradient(1200px 600px at 50% -10%, #1a2030 0%, var(--bg) 55%);
-    color: var(--text);
-    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
     font-size: 17px;
-    line-height: 1.7;
+    line-height: 1.75;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
-  a { color: var(--blue); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a { color: #1a56c4; font-weight: 600; }
+  a:hover { color: var(--ink); }
 
   header {
     text-align: center;
-    padding: 28px 18px 18px;
-    position: relative;
+    padding: 30px 18px 22px;
+    border-bottom: 4px solid var(--ink);
   }
   .logo {
-    width: 76px;
-    height: 76px;
-    border-radius: 20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
     object-fit: cover;
-    box-shadow: 0 10px 30px rgba(251, 191, 36, 0.25);
-    margin-bottom: 10px;
+    border: 3px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink);
   }
   header h1 {
-    font-size: 1.7rem;
-    letter-spacing: 0.5px;
-    background: linear-gradient(90deg, var(--gold), #ffd66b);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    font-size: 1.55rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--ink);
+    margin-top: 12px;
   }
-  header p { color: var(--muted); font-size: 0.98rem; margin-top: 4px; }
+  header p { color: var(--muted); font-weight: 600; margin-top: 4px; }
 
-  .wrap { max-width: 620px; margin: 0 auto; padding: 14px 18px 96px; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 16px 18px 90px; }
 
-  /* Sumário fixo (sticky) — navegação rápida numa live */
+  /* Navegação — estilo botões do painel (.btn-nb) */
   .toc {
     position: sticky;
-    top: 0;
+    top: 8px;
     z-index: 20;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    background: rgba(11, 14, 20, 0.92);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    background: var(--bg);
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 var(--ink);
     padding: 10px 12px;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
   }
   .toc a {
-    color: var(--text);
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 0.85rem;
+    color: var(--ink);
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    font-weight: 800;
+    padding: 5px 12px;
+    font-size: 0.82rem;
     white-space: nowrap;
+    box-shadow: 3px 3px 0 var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-  .toc a:hover { color: #0b0e14; background: var(--gold); text-decoration: none; border-color: var(--gold); }
+  .toc a:hover { background: var(--accent); color: var(--ink); text-decoration: none; }
+  .toc a:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 
   h2 {
-    font-size: 1.35rem;
-    color: var(--gold);
-    margin: 34px 0 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--border);
+    font-size: 1.2rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--ink);
+    margin: 36px 0 4px;
+    padding-bottom: 10px;
+    border-bottom: 4px solid var(--ink);
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
   }
-  h3 { font-size: 1.06rem; color: var(--blue); margin: 22px 0 8px; }
-  p { margin: 8px 0; color: var(--text); }
+  h3 {
+    font-size: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink);
+    margin: 22px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h3::before { content: ''; width: 12px; height: 12px; background: var(--accent); border: 2px solid var(--ink); transform: rotate(45deg); flex-shrink: 0; }
+  p { margin: 8px 0; }
   ul, ol { margin: 8px 0 8px 22px; }
   li { margin: 6px 0; }
-  b { color: #fff; }
 
   code {
-    background: #0a0d13;
-    border: 1px solid var(--border);
+    background: var(--ink);
+    color: var(--accent-2);
     border-radius: 6px;
     padding: 1px 6px;
     font-family: 'JetBrains Mono', Consolas, monospace;
     font-size: 0.86em;
-    color: var(--green);
     word-break: break-word;
   }
 
   .tag {
     display: inline-block;
-    background: #0a0d13;
-    border: 1px solid var(--border);
+    border: 2px solid var(--ink);
     border-radius: 999px;
-    padding: 2px 10px;
-    font-weight: 800;
-    font-size: 0.72rem;
+    padding: 1px 10px;
+    font-weight: 900;
+    font-size: 0.7rem;
     letter-spacing: 1px;
+    box-shadow: 2px 2px 0 var(--ink);
   }
-  .tag.game1 { color: var(--green); }
-  .tag.game2 { color: var(--red); }
-  .tag.game3 { color: var(--blue); }
+  .tag.game1 { background: var(--green); color: var(--ink); }
+  .tag.game2 { background: var(--red); color: var(--ink); }
+  .tag.game3 { background: var(--blue); color: var(--ink); }
 
+  /* Cards iguais ao painel (.nb-card) */
   .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 5px 5px 0 var(--ink);
     padding: 14px 16px;
-    margin: 14px 0;
+    margin: 16px 0;
   }
+  .card b, .card p b, .note b { color: var(--ink); }
+
   .note {
-    background: rgba(251, 191, 36, 0.08);
-    border-left: 4px solid var(--gold);
+    background: var(--cream);
+    border: 3px solid var(--ink);
+    border-left: 10px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 var(--ink);
     padding: 12px 14px;
-    border-radius: 0 12px 12px 0;
-    margin: 12px 0;
+    margin: 16px 0;
   }
-  .note b { color: var(--gold); }
-  .ok { color: var(--green); font-weight: 700; }
-  .warn { color: var(--red); font-weight: 700; }
+  .ok { color: #0b7a3a; font-weight: 800; }
+  .warn { color: #b30000; font-weight: 800; }
 
-  .url { color: var(--blue); word-break: break-all; }
+  .url { color: #1a56c4; word-break: break-all; font-weight: 600; }
 
-  /* Tabelas: no mobile viram cards (sem rolagem horizontal) */
+  /* Tabelas: cards no mobile (sem rolagem horizontal) */
   table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92rem; }
-  td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
-  .mobile-table th { display: none; }
-  .mobile-table td { display: block; border: 0; padding: 3px 0; }
+  th { display: none; }
+  td { display: block; border: 0; padding: 2px 0; }
   .mobile-table tr {
     display: block;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 10px;
+    box-shadow: 3px 3px 0 var(--ink);
     padding: 10px 12px;
-    margin: 10px 0;
+    margin: 12px 0;
   }
-  .mobile-table td:first-child { font-weight: 800; color: #fff; padding-top: 0; }
+  .mobile-table td:first-child { font-weight: 900; color: var(--ink); padding-top: 0; }
 
-  footer { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 44px; }
+  footer { text-align: center; color: var(--muted); font-weight: 600; margin-top: 46px; }
 </style>
 </head>
 <body>
@@ -181,7 +200,7 @@
     <a href="#streamer">Telas</a>
   </nav>
 
-  <h2 id="visao">🎮 Visão geral</h2>
+  <h2>🎮 Visão geral</h2>
   <p>
     A plataforma transforma sua live em um jogo interativo. O público participa pelo
     <b>chat</b> (comandos de texto) e pelos <b>presentes</b> (gifts) do TikTok — tudo aparece em
