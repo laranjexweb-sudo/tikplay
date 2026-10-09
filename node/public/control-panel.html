@@ -143,22 +143,24 @@
       <div class="tab-page" id="tab-connect">
         <div class="nb-card mb-3">
           <h2>Conexão TikTok</h2>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label" for="username">Usuário TikTok</label>
-              <input type="text" class="form-control" id="username" placeholder="Digite o usuário do TikTok...">
+          <div class="mb-3 p-3 bg-light border border-dark rounded">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label mb-1" for="username">Usuário TikTok</label>
+                <input type="text" class="form-control" id="username" placeholder="@ da sua conta TikTok (sem o @)">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label mb-1" for="tiktokEngine">Motor de conexão</label>
+                <select class="form-select" id="tiktokEngine" onchange="onEngineChange()">
+                  <option value="tiktoklive">TikTokLive — direto, sem chave</option>
+                  <option value="tiktools">Tik.Tools — precisa de API key</option>
+                </select>
+              </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label mb-0" for="tiktokEngine">Motor de conexão</label>
-              <select class="form-select form-select-sm mt-1" id="tiktokEngine" onchange="onEngineChange()">
-                <option value="tiktoklive">TikTokLive (direto, sem chave)</option>
-                <option value="tiktools">Tik.Tools (API key)</option>
-              </select>
-              <div class="text-secondary" style="font-size:0.75rem;margin-top:4px" id="engineHint">Conexão direta via TikTokLive — não precisa de API key.</div>
-            </div>
+            <div class="text-secondary mt-2" style="font-size:0.8rem" id="engineHint">Conexão direta via TikTokLive — não precisa de API key.</div>
           </div>
-          <div id="apiKeyRow" class="mt-3" style="display:none">
-            <label class="form-label" for="apiKey">API Key Tik.Tools</label>
+          <div id="apiKeyRow" class="mb-3 p-3 bg-light border border-dark rounded" style="display:none">
+            <label class="form-label mb-1" for="apiKey">API Key Tik.Tools</label>
             <div class="d-flex gap-2">
               <input type="password" class="form-control" id="apiKey" placeholder="Chave da api.tik.tools" autocomplete="off">
               <button type="button" class="btn btn-nb btn-danger btn-sm flex-shrink-0" id="btnClearKey" onclick="clearApiKey()" title="Remover chave salva" style="display:none">Limpar</button>
