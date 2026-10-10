@@ -66,8 +66,8 @@
   }
   .sb-meta {
     text-align: center;
-    font-size: clamp(0.72rem, 1.9vh, 1.05rem);
-    color: #cfe0ff;
+    font-size: clamp(0.6rem, 1.5vh, 0.85rem);
+    color: #9fb0cc;
     text-shadow: 0 0 6px #000;
     font-weight: 700;
     letter-spacing: 1px;
@@ -99,11 +99,15 @@
   .gift-panel-flavio { left: calc(var(--fg-x) * 1%); top: calc(var(--fg-y) * 1%); transform: scale(var(--fg-scale)); transform-origin: top left; }
   .gift-panel-lula { left: calc(var(--lg-x) * 1%); top: calc(var(--lg-y) * 1%); transform: translateX(-100%) scale(var(--lg-scale)); transform-origin: top right; }
   .gift-panel .gift-tags { margin-top: 0; }
-  .hud-name { font-weight: 900; font-size: clamp(1.2rem, 3.2vh, 2.2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); margin-bottom: 4px; }
-  .hud-votes { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.8rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8), 0 0 3px #000; margin-bottom: 10px; }
+  .hud-name { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.9rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); margin-bottom: 6px; }
+  .hud-metric { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-width: 0; font-size: clamp(0.72rem, 1.7vh, 1rem); }
+  .hud-metric .hm-label { font-weight: 800; color: #c9d7f0; text-shadow: 0 0 6px #000; letter-spacing: 1px; white-space: nowrap; }
+  .hud-metric .hm-val { font-weight: 900; color: #fff; text-shadow: 0 0 6px #000; white-space: nowrap; }
+  .hud-lula .hud-metric { flex-direction: row-reverse; }
 
-  .bar { width: 100%; height: clamp(14px, 1.9vh, 22px); border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid #000; overflow: hidden; margin: 8px 0; position: relative; }
+  .bar { width: 100%; height: clamp(12px, 1.7vh, 18px); border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid #000; overflow: hidden; margin: 4px 0 2px; position: relative; }
   .bar > i { display: block; height: 100%; width: 100%; transition: width .3s ease; border-radius: 999px; }
+  .hud-flavio .bar.sh, .hud-lula .bar.sh { margin-top: 9px; }
   .bar > span.label-in {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
     z-index: 2; font-size: clamp(0.68rem, 1.6vh, 1rem); font-weight: 800;
@@ -270,14 +274,18 @@
 
   <div class="hud-flavio">
     <div class="hud-name">FLÁVIO</div>
-    <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
-    <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
+    <div class="hud-metric"><span class="hm-label">HP</span><span class="hm-val" id="hpval-flavio">100/100</span></div>
+    <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
+    <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-flavio">0/200</span></div>
+    <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
   </div>
 
   <div class="hud-lula">
     <div class="hud-name">LULA</div>
-    <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
-    <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
+    <div class="hud-metric"><span class="hm-label">HP</span><span class="hm-val" id="hpval-lula">100/100</span></div>
+    <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
+    <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-lula">0/200</span></div>
+    <div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
   </div>
 
   <div class="gift-panel gift-panel-flavio"><div class="gift-tags" id="gifts-flavio"></div></div>
@@ -456,9 +464,9 @@ function renderHud() {
     const shEl = $("shbar-" + f);
     if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
     const hpL = $("hpval-" + f);
-    if (hpL) hpL.textContent = "HP " + (state.hp[f] || 0) + " / " + hpMax;
+    if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
     const shL = $("shval-" + f);
-    if (shL) shL.textContent = "ESCUDO " + (state.shield[f] || 0) + " / " + shMax;
+    if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
     const vr = $("votes-" + f);
     if (vr) {
       if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
