@@ -12,7 +12,8 @@ except ImportError:
 
 DEFAULT_SETTINGS = {
     "mode": "hp",                 # 'hp' | 'votes'
-    "hp_start": 100,
+    "hp_start": 100,              # valor inicial de HP da rodada
+    "hp_max": 100,                # escala da barra de HP
     "shield_start": 100,
     "shield_max": 200,
     "dmg_punch": 10,
@@ -94,7 +95,7 @@ class DueloEngine:
             "hp": dict(self.hp),
             "shield": dict(self.shield),
             "votes": dict(self.votes),
-            "hp_max": int(self.settings.get("hp_start", 100) or 100),
+            "hp_max": int(self.settings.get("hp_max", 100) or 100),
             "shield_max": int(self.settings.get("shield_max", 200) or 200),
             "winner": self.winner,
             "roundActive": self.roundActive,

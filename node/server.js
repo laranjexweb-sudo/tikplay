@@ -1891,7 +1891,7 @@ function dueloInitialState(cfg) {
     hp: { flavio: s.hp_start, lula: s.hp_start },
     shield: { flavio: s.shield_start, lula: s.shield_start },
     votes: { flavio: 0, lula: 0 },
-    hp_max: s.hp_start,
+    hp_max: s.hp_max,
     shield_max: s.shield_max,
     winner: null,
     roundActive: true,
@@ -1916,6 +1916,7 @@ function normalizeDueloSettings(raw) {
   const out = {
     mode: (raw && raw.mode === "votes") ? "votes" : "hp",
     hp_start: 100,
+    hp_max: 100,
     shield_start: 100,
     shield_max: 200,
     dmg_punch: 10,
@@ -1927,6 +1928,7 @@ function normalizeDueloSettings(raw) {
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
     const hn = n(raw.hp_start); if (hn !== null) out.hp_start = Math.max(20, Math.min(10000, hn));
+    const hx = n(raw.hp_max); if (hx !== null) out.hp_max = Math.max(1, Math.min(10000, hx));
     const ss = n(raw.shield_start); if (ss !== null) out.shield_start = Math.max(0, Math.min(10000, ss));
     const sm = n(raw.shield_max); if (sm !== null) out.shield_max = Math.max(out.shield_start, Math.min(100000, sm));
     for (const k of ["dmg_punch", "dmg_kick", "dmg_uppercut"]) {

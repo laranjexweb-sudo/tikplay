@@ -451,7 +451,7 @@ async function loadInitialState() {
       state.mode = s.mode === "votes" ? "votes" : "hp";
       const hpStart = !isNaN(Number(s.hp_start)) ? Number(s.hp_start) : 100;
       const shStart = !isNaN(Number(s.shield_start)) ? Number(s.shield_start) : 0;
-      state.hp_max = hpStart;
+      state.hp_max = !isNaN(Number(s.hp_max)) ? Number(s.hp_max) : 100;
       state.shield_max = !isNaN(Number(s.shield_max)) ? Number(s.shield_max) : hpStart;
       state.hp = { flavio: hpStart, lula: hpStart };
       state.shield = { flavio: shStart, lula: shStart };
