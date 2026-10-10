@@ -12,7 +12,10 @@
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background: #101014 url('/duelo/brasilia.png') no-repeat center bottom;
+    background-color: #101014;
+    background-image: var(--scene-bg, url('/duelo/brasilia.png'));
+    background-repeat: no-repeat;
+    background-position: center bottom;
     background-size: cover;
     --score-x: 50; --score-y: 5; --score-scale: 1;
     --fh-x: 2; --fh-y: 14; --fh-scale: 1;
@@ -314,6 +317,7 @@
   </div>
 
   <div class="debug" id="debug" style="display:none"></div>
+  <audio id="bgMusic" preload="auto" style="display:none"></audio>
 </div>
 
 <script>
@@ -388,6 +392,66 @@ function applyLayout() {
   st.style.setProperty("--fire-y", clampN(fi.y, 0, 100, 20));
   st.style.setProperty("--fire-scale", clampN(fi.scale, 0.2, 2, 0.9));
   st.style.setProperty("--fire-gap", clampN(fi.gap, 0, 30, 9) + "vh");
+}
+
+// ---- Áudio: efeitos + música de fundo ----
+let sfxVolume = 0.92;
+let musicCfg = { files: [], volume: 0.5, enabled: false, base: "" };
+let musicPlaying = false;
+let musicIdx = 0;
+
+function applyScene(sc) {
+  const st = $("stage");
+  if (st) st.style.setProperty("--scene-bg", "url('/duelo/" + sceneName(sc) + ".png')");
+}
+
+function sceneName(sc) {
+  return /^(brasilia|sao-paulo|rio-de-janeiro|salvador)$/.test(String(sc)) ? String(sc) : "brasilia";
+}
+
+function applyAudioSettings(settings) {
+  if (!settings) return;
+  if (settings.sfx_volume != null) {
+    sfxVolume = Math.max(0, Math.min(100, Number(settings.sfx_volume) || 0)) / 100;
+  }
+  if (settings.music) {
+    musicCfg = {
+      files: Array.isArray(settings.music.files) ? settings.music.files : [],
+      volume: Math.max(0, Math.min(100, Number(settings.music.volume) || 0)) / 100,
+      enabled: !!settings.music.enabled,
+      base: settings.music.base || "",
+    };
+    musicIdx = 0;
+  }
+  refreshMusic();
+}
+
+function stopMusic() {
+  const el = $("bgMusic");
+  if (el) { el.pause(); el.onended = null; el.removeAttribute("src"); }
+  musicPlaying = false;
+}
+
+function playMusicTrack(i) {
+  const files = musicCfg.files;
+  const el = $("bgMusic");
+  if (!files.length || !el) return;
+  const idx = ((i % files.length) + files.length) % files.length;
+  musicIdx = idx;
+  el.src = musicCfg.base + "/" + files[idx];
+  el.volume = musicCfg.volume;
+  el.loop = false;
+  el.onended = () => { musicIdx = idx + 1; refreshMusic(); };
+  const p = el.play();
+  if (p && p.then) {
+    p.catch((err) => { try { console.debug("[DUELO MUSIC] autoplay bloqueado (tocará no 1º toque):", (err && err.name) || err); } catch (e) {} });
+  }
+  musicPlaying = true;
+}
+
+function refreshMusic() {
+  if (!musicCfg.enabled || !musicCfg.files.length) { stopMusic(); return; }
+  if (!musicPlaying) playMusicTrack(musicIdx);
 }
 
 const GIFT_ACTION_LABEL = { punch: "Soco", kick: "Chute", uppercut: "Levantada" };
@@ -593,7 +657,7 @@ function tryPlay(url) {
     let a = audioEls[url];
     if (!a) {
       a = new Audio(url);
-      a.volume = 0.92;
+      a.volume = sfxVolume;
       a.preload = "auto";
       a.load();
       audioEls[url] = a;
@@ -623,6 +687,7 @@ function unlockAudio() {
   } catch (e) {}
   const urls = pendingAudio.splice(0, pendingAudio.length);
   for (const u of urls) tryPlay(u);
+  refreshMusic();
 }
 
 function playAudio(url) {
@@ -838,6 +903,7 @@ function connectWS() {
     }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
+    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyScene(msg.settings && msg.settings.scene); }
   };
 }
 
@@ -855,6 +921,8 @@ async function loadInitialState() {
       state.shield_max = !isNaN(Number(s.shield_max)) ? Number(s.shield_max) : hpStart;
       state.hp = { flavio: hpStart, lula: hpStart };
       state.shield = { flavio: shStart, lula: shStart };
+      applyAudioSettings(s);
+      applyScene(s.scene);
       renderHud();
     }
     if (data && Array.isArray(data.gifts)) { dueloGifts = data.gifts; renderGiftTags(); }

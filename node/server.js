@@ -1914,6 +1914,14 @@ function dueloGiftsPayload(gifts) {
   });
 }
 
+function dueloClientSettings(userId, settings) {
+  const s = Object.assign({}, settings || {});
+  if (s.music && Array.isArray(s.music.files)) {
+    s.music = Object.assign({}, s.music, { base: `/duelo-audio/${userId}` });
+  }
+  return s;
+}
+
 function normalizeDueloSettings(raw) {
   const out = {
     mode: (raw && raw.mode === "votes") ? "votes" : "hp",
@@ -1927,6 +1935,9 @@ function normalizeDueloSettings(raw) {
     reset_delay_s: 6,
     vote_target: 0,
     layout: {},
+    sfx_volume: 92,
+    music: { files: [], volume: 50, enabled: false },
+    scene: "brasilia",
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -1946,6 +1957,14 @@ function normalizeDueloSettings(raw) {
     const vtRaw = raw.vote_target != null ? raw.vote_target : raw.max_votes;
     const vt = n(vtRaw);
     out.vote_target = (vt !== null && vt > 0) ? Math.max(1, Math.min(100000000, vt)) : 0;
+    const sv = n(raw.sfx_volume);
+    out.sfx_volume = (sv !== null) ? Math.max(0, Math.min(100, sv)) : 92;
+    const safeName = (v) => String((v == null ? "" : v)).trim().replace(/[^a-zA-Z0-9._-]/g, "");
+    const mf = (raw.music && Array.isArray(raw.music.files)) ? raw.music.files.map(safeName).filter(Boolean).slice(0, 20) : [];
+    const mv = n(raw.music && raw.music.volume);
+    out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled) };
+    const sc = String(raw.scene || "").trim().toLowerCase();
+    out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador"].includes(sc) ? sc : "brasilia";
     if (raw.layout && typeof raw.layout === "object") {
       const c = (o, name, def) => {
         const src = (o && o[name] && typeof o[name] === "object") ? o[name] : {};
@@ -1968,7 +1987,8 @@ function normalizeDueloSettings(raw) {
 }
 
 app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
-  res.json({ success: true, ...db.getDueloConfig(req.user.id) });
+  const cfg = db.getDueloConfig(req.user.id);
+  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
@@ -1979,11 +1999,13 @@ app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, r
   daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts, settings });
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts: dueloGiftsPayload(gifts) });
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_layout", layout: settings.layout || {} });
-  res.json({ success: true, ...cfg });
+  broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_settings", settings: dueloClientSettings(req.user.id, settings) });
+  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.get("/api/duelo/state", auth.requireAuth, requireFeature("duelo"), (req, res) => {
-  res.json({ success: true, ...db.getDueloConfig(req.user.id) });
+  const cfg = db.getDueloConfig(req.user.id);
+  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.post("/api/duelo/start", auth.requireAuth, requireFeature("duelo"), (req, res) => {

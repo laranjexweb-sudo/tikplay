@@ -802,10 +802,40 @@
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Levantada</label><input type="number" class="form-control form-control-sm" id="dueloDmgUppercut" value="20" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Meta de votos (0 = ilimitado)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
+                <div class="col-md-4">
+                  <label class="form-label mb-0" style="font-size:0.8rem">Cenário</label>
+                  <select class="form-select form-select-sm" id="dueloScene">
+                    <option value="brasilia">Brasília</option>
+                    <option value="sao-paulo">São Paulo</option>
+                    <option value="rio-de-janeiro">Rio de Janeiro</option>
+                    <option value="salvador" disabled>Salvador (adicione a imagem)</option>
+                  </select>
+                </div>
               </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
                 Todo presente válido soma votos (moedas × combo) para o seu personagem (Placar). Golpes/escudos também influenciam o debate (HP/Escudo). KO não zera votos. Ao atingir a Meta de votos: VENCEDOR FINAL. Resetar rodada NÃO zera votos; Nova disputa zera.
               </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Áudio & Música</h2>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label mb-1" style="font-size:0.8rem">Volume dos efeitos (golpes/escudo): <b id="dueloSfxLbl">92%</b></label>
+                <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'">
+              </div>
+              <div class="col-md-4">
+                <label class="form-check mb-1" style="font-size:0.8rem"><input type="checkbox" class="form-check-input" id="dueloMusicOn"> Tocar música de fundo</label>
+                <label class="form-label mb-1" style="font-size:0.8rem">Volume da música: <b id="dueloMusicLbl">50%</b></label>
+                <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label mb-1" style="font-size:0.8rem">Adicionar música</label>
+                <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" id="dueloMusicFile" onchange="uploadDueloMusic(this)">
+                <div class="text-secondary mt-1" style="font-size:0.72rem">Playlist em sequência com loop.</div>
+              </div>
+              <div class="col-12"><div id="dueloMusicList"></div></div>
             </div>
           </div>
 
@@ -3233,6 +3263,12 @@ async function loadDueloState() {
       if (data.settings.layout && typeof data.settings.layout === "object") {
         dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), data.settings.layout);
       }
+      dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador"].includes(data.settings.scene) ? data.settings.scene : "brasilia";
+      dueloSfxVol = data.settings.sfx_volume != null ? data.settings.sfx_volume : 92;
+      const mu = data.settings.music || {};
+      dueloMusicOn = !!mu.enabled;
+      dueloMusicVol = mu.volume != null ? mu.volume : 50;
+      dueloMusicFiles = Array.isArray(mu.files) ? mu.files.slice() : [];
     }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
@@ -3252,6 +3288,60 @@ function renderDueloSettings() {
   set("dueloDmgUppercut", dueloSettings.dmg_uppercut);
   set("dueloResetDelay", dueloSettings.reset_delay_s);
   set("dueloMaxVotes", dueloSettings.vote_target != null ? dueloSettings.vote_target : (dueloSettings.max_votes || 0));
+  const sc = document.getElementById("dueloScene");
+  if (sc) sc.value = dueloScene;
+  const sfx = document.getElementById("dueloSfxVol");
+  if (sfx) sfx.value = dueloSfxVol;
+  const lblS = document.getElementById("dueloSfxLbl");
+  if (lblS) lblS.textContent = dueloSfxVol + "%";
+  const on = document.getElementById("dueloMusicOn");
+  if (on) on.checked = dueloMusicOn;
+  const mvol = document.getElementById("dueloMusicVol");
+  if (mvol) mvol.value = dueloMusicVol;
+  const lblM = document.getElementById("dueloMusicLbl");
+  if (lblM) lblM.textContent = dueloMusicVol + "%";
+  renderMusicList();
+}
+
+function renderMusicList() {
+  const box = document.getElementById("dueloMusicList");
+  if (!box) return;
+  if (!dueloMusicFiles.length) { box.innerHTML = '<div class="text-secondary" style="font-size:0.75rem">Nenhuma música — adicione acima.</div>'; return; }
+  box.innerHTML = dueloMusicFiles.map((f, i) => `
+    <div class="d-flex justify-content-between align-items-center bg-white border border-dark rounded p-1 mb-1" style="font-size:0.78rem">
+      <span class="text-truncate" style="max-width:60%">${esc(f)}</span>
+      <span>
+        <button class="btn btn-nb btn-dark btn-tiny me-1" onclick="musicMove(${i}, -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn btn-nb btn-dark btn-tiny me-1" onclick="musicMove(${i}, 1)" ${i === dueloMusicFiles.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn btn-nb btn-danger btn-tiny" onclick="musicRemove(${i})">×</button>
+      </span>
+    </div>`).join("");
+}
+
+function musicMove(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= dueloMusicFiles.length) return;
+  const t = dueloMusicFiles[i]; dueloMusicFiles[i] = dueloMusicFiles[j]; dueloMusicFiles[j] = t;
+  renderMusicList();
+}
+
+function musicRemove(i) {
+  dueloMusicFiles.splice(i, 1);
+  renderMusicList();
+}
+
+async function uploadDueloMusic(input) {
+  if (!input.files || !input.files[0]) return;
+  const fd = new FormData();
+  fd.append("file", input.files[0]);
+  fd.append("gift_id", "musica");
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) { dueloMusicFiles.push(data.filename); renderMusicList(); dueloMsg("Música adicionada: " + data.filename); }
+    else dueloMsg(data.error || "Erro no upload da música");
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+  input.value = "";
 }
 
 function readDueloSettings() {
@@ -3272,6 +3362,13 @@ function readDueloSettings() {
     reset_delay_s: num("dueloResetDelay", 6),
     vote_target: num("dueloMaxVotes", 0),
     layout: cleanLayout(),
+    scene: document.getElementById("dueloScene") ? document.getElementById("dueloScene").value : dueloScene,
+    sfx_volume: num("dueloSfxVol", 92),
+    music: {
+      files: dueloMusicFiles.slice(0, 20),
+      volume: num("dueloMusicVol", 50),
+      enabled: document.getElementById("dueloMusicOn") ? document.getElementById("dueloMusicOn").checked : false,
+    },
   };
 }
 
@@ -3480,6 +3577,11 @@ const DUELO_LAYOUT_ITEMS = [
   { key: "lulaGifts", label: "PRESENTES LULA" },
 ];
 let dueloLayout = JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT));
+let dueloScene = "brasilia";
+let dueloSfxVol = 92;
+let dueloMusicOn = false;
+let dueloMusicVol = 50;
+let dueloMusicFiles = [];
 
 function layoutNum(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
 
