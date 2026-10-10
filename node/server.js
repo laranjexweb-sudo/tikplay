@@ -1892,6 +1892,7 @@ function dueloInitialState(cfg) {
     hp: { flavio: s.hp_start, lula: s.hp_start },
     shield: { flavio: s.shield_start, lula: s.shield_start },
     votes: { flavio: 0, lula: 0 },
+    debate_wins: { flavio: 0, lula: 0 },
     hp_max: s.hp_max,
     shield_max: s.shield_max,
     vote_target: s.vote_target,

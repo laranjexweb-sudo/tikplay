@@ -47,6 +47,7 @@ class DueloEngine:
         self.hp = {"flavio": 100, "lula": 100}
         self.shield = {"flavio": 100, "lula": 100}
         self.votes = {"flavio": 0, "lula": 0}
+        self.debate_wins = {"flavio": 0, "lula": 0}
         self.roundActive = True
         self.winner = None
         self.final = False
@@ -94,9 +95,10 @@ class DueloEngine:
         self._reset_hp_shield()
 
     def reset_match(self):
-        """Nova disputa: zera votos e remove vencedor final."""
+        """Nova disputa: zera votos e debate_wins e remove vencedor final."""
         self.final = False
         self.votes = {"flavio": 0, "lula": 0}
+        self.debate_wins = {"flavio": 0, "lula": 0}
         self.reset_round()
 
     def state(self):
@@ -105,6 +107,7 @@ class DueloEngine:
             "hp": dict(self.hp),
             "shield": dict(self.shield),
             "votes": dict(self.votes),
+            "debate_wins": dict(self.debate_wins),
             "hp_max": int(self.settings.get("hp_max", 100) or 100),
             "shield_max": int(self.settings.get("shield_max", 200) or 200),
             "vote_target": int(self.settings.get("vote_target", 0) or 0),
@@ -280,6 +283,7 @@ class DueloEngine:
         if ko:
             self.roundActive = False
             self.winner = char
+            self.debate_wins[char] = (self.debate_wins.get(char, 0) or 0) + 1
             self._emit("duelo_round_end", {
                 "winner": char,
                 "votes": dict(self.votes),

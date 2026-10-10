@@ -118,6 +118,11 @@
   .bar { width: 100%; height: clamp(12px, 1.7vh, 18px); border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid #000; overflow: hidden; margin: 4px 0 2px; position: relative; }
   .bar > i { display: block; height: 100%; width: 100%; transition: width .3s ease; border-radius: 999px; }
   .hud-flavio .bar.sh, .hud-lula .bar.sh { margin-top: 9px; }
+  .hud-debates { display: flex; align-items: baseline; gap: 6px; margin-top: 8px; font-size: clamp(0.66rem, 1.6vh, 0.95rem); font-weight: 800; color: #fff; text-shadow: 0 0 6px #000; white-space: nowrap; }
+  .hud-debates .hdl { letter-spacing: 1px; color: #c9d7f0; }
+  .hud-debates .hdn.flavio { color: #5bc0ff; }
+  .hud-debates .hdn.lula { color: #ff6b6b; }
+  .hud-lula .hud-debates { justify-content: flex-end; }
   .bar > span.label-in {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
     z-index: 2; font-size: clamp(0.68rem, 1.6vh, 1rem); font-weight: 800;
@@ -265,6 +270,7 @@
     <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-flavio">0/200</span></div>
     <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
+    <div class="hud-debates"><span class="hdl">DEBATES</span><span class="hdn flavio" id="dwval-flavio">0</span></div>
   </div>
 
   <div class="hud-lula">
@@ -273,6 +279,7 @@
     <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-lula">0/200</span></div>
     <div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
+    <div class="hud-debates"><span class="hdl">DEBATES</span><span class="hdn lula" id="dwval-lula">0</span></div>
   </div>
 
   <div class="gift-panel gift-panel-flavio"><div class="gift-tags" id="gifts-flavio"></div></div>
@@ -630,6 +637,8 @@ function renderHud() {
     if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
     const shL = $("shval-" + f);
     if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
+    const dw = $("dwval-" + f);
+    if (dw) dw.textContent = (state.debate_wins && state.debate_wins[f]) || 0;
     const vr = $("votes-" + f);
     if (vr) {
       if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
@@ -700,7 +709,10 @@ function renderWinner() {
 
   const banner = $("winBanner");
   if (banner) {
-    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + winner + '-ganhou.png" alt="">';
+    // Vitória de DEBATE (KO por HP) usa o banner específico; FINAL usa o "-ganhou".
+    const base = state.final ? winner + "-ganhou" : winner + "-ganhou-o-debate";
+    const fb = "/duelo/banners/" + winner + "-ganhou.png";
+    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
     banner.classList.add("show");
   }
 }
