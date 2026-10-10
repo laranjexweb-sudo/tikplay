@@ -199,6 +199,21 @@
   @keyframes shk { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,2px); } 60% { transform: translate(6px,-2px); } }
 
   .hit { position: absolute; bottom: 22vh; left: 50%; z-index: 20; width: 0; height: 0; opacity: 0; pointer-events: none; }
+
+  #supporterWrap { position: absolute; z-index: 13; bottom: calc(var(--fire-y) * 1%); display: none; }
+  #supporterWrap.side-flavio { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
+  #supporterWrap.side-lula { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
+  #supporterImg { display: block; max-height: 34vh; transform-origin: bottom center; }
+  #supporterWrap.enter { display: block; animation: supEnter .35s ease; }
+  #supporterWrap.exit { animation: supExit .3s ease forwards; }
+  @keyframes supEnter { 0% { opacity: 0; transform: translateX(-46px) scale(.92); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  @keyframes supExit { 0% { opacity: 1; transform: translateX(0) scale(1); } 100% { opacity: 0; transform: translateX(46px) scale(.9); } }
+  #supporterWrap.side-lula.enter { animation-name: supEnterR; }
+  #supporterWrap.side-lula.exit { animation-name: supExitR; }
+  @keyframes supEnterR { 0% { opacity: 0; transform: translateX(46px) scale(.92); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  @keyframes supExitR { 0% { opacity: 1; transform: translateX(0) scale(1); } 100% { opacity: 0; transform: translateX(-46px) scale(.9); } }
+  #supporterBubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 45; }
+  #supporterBubble img { max-height: clamp(60px, 13vh, 120px); }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -311,6 +326,7 @@
     <div class="f-anchor f-vote" id="vote-lula"></div>
   </div>
   <div class="hit" id="hit"></div>
+  <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
   <div class="float-text" id="floatText"></div>
   <div class="win-banner" id="winBanner">
     <div class="big" id="winBig"></div>
@@ -450,7 +466,7 @@ function exitIdleState() {
 }
 
 function enterIdleState() {
-  if (idleActive || !idleCfg.enabled) return;
+  if (idleActive || !idleCfg.enabled || supportActive) return;
   if (!state.active || state.winner || !state.roundActive || state.final) return;
   idleActive = true;
   for (const f of ["flavio", "lula"]) {
@@ -463,7 +479,7 @@ function enterIdleState() {
 
 function scheduleIdleEnter() {
   if (idleEnterTimer) { clearTimeout(idleEnterTimer); idleEnterTimer = null; }
-  if (!idleCfg.enabled || idleActive) return;
+  if (!idleCfg.enabled || idleActive || supportActive) return;
   if (!state.active || state.winner || !state.roundActive || state.final) return;
   idleEnterTimer = setTimeout(() => { idleEnterTimer = null; enterIdleState(); }, idleCfg.enterAfter * 1000);
 }
@@ -862,7 +878,7 @@ let lastPhrase = "";
 
 function say(fighter, bucket) {
   const list = (SPEECH[fighter] && SPEECH[fighter][bucket]) || [];
-  if (!list.length || state.winner) return;
+  if (!list.length || state.winner || supportActive) return;
   clearIdleBalloon();
   const now = Date.now();
   if (now < speechCd[fighter]) return;
@@ -900,6 +916,103 @@ function comboLabel(combo) {
 function spawnCombo(char, combo) {
   if (!combo || combo < 2) return;
   voteFloat(char, comboLabel(combo), "combo");
+}
+
+// ---- Apoios Especiais ----
+const SUPPORTERS = {
+  nikolas: {
+    side: "flavio",
+    sprites: { punch: "/duelo/nikolas/soco.png", kick: "/duelo/nikolas/chute.png", uppercut: "/duelo/nikolas/levantada.png" },
+    falas: ["a-verdade-sempre-venceu", "anota-ai", "bora-pra-cima", "brasil-acima-de-tudo", "chega-de-narrativa", "ja-deu-dessa-palhacaca", "nunca-subestime-um-pia", "o-sistema-treme", "vamo-virar-esse-jogo"].map((n) => `/duelo/nikolas/falas/${n}.png`),
+  },
+  "lucas-pavanato": {
+    side: "flavio",
+    sprites: { punch: "/duelo/lucas-pavanato/soco.png", kick: "/duelo/lucas-pavanato/chute.png", uppercut: "/duelo/lucas-pavanato/levantada.png" },
+    falas: ["aqui-nao-tem-medo", "cheguei-na-area", "e-pelo-brasil", "juventude-na-luta", "nao-vou-recuar", "pra-frente-sempre", "vamos-pra-cima"].map((n) => `/duelo/lucas-pavanato/falas/${n}.png`),
+  },
+  "ana-elisa": {
+    side: "lula",
+    sprites: { punch: "/duelo/ana-elisa/soco.png", kick: "/duelo/ana-elisa/chute.png", uppercut: "/duelo/ana-elisa/levantada.png" },
+    falas: ["a-politica-tambem-e-nossa", "agora-e-a-juventude", "cheguei-pra-somar", "direitos-educacao-futuro", "juventude-faz-diferenca", "sem-recuar", "to-naarea"].map((n) => `/duelo/ana-elisa/falas/${n}.png`),
+  },
+  "erika-hilton": {
+    side: "lula",
+    sprites: { punch: "/duelo/erika-hilton/soco.png", kick: "/duelo/erika-hilton/chute.png", uppercut: "/duelo/erika-hilton/levantada.png" },
+    falas: ["a-gente-existe-e-resiste", "direitos-sao-ara-todos", "hoje-nao", "jamais-tolerarei", "nao-vou-recuar", "respeito-sempre", "vai-aceitar-ou-passar-mal"].map((n) => `/duelo/erika-hilton/falas/${n}.png`),
+  },
+};
+const SUPPORT_ACTIONS = ["punch", "kick", "uppercut"];
+let supportQueue = [];
+let supportActive = false;
+const SUPPORT_MAX_Q = 10;
+const lastSupFala = {};
+
+function pickSupFala(sup) {
+  const arr = Array.isArray(sup.falas) ? sup.falas : [];
+  if (!arr.length) return "";
+  const key = sup.side || "x";
+  const pool = arr.length > 1 ? arr.filter((f) => f !== lastSupFala[key]) : arr;
+  const pick = pool[Math.floor(Math.random() * pool.length)] || arr[0];
+  lastSupFala[key] = pick;
+  return pick;
+}
+
+function enqueueSupport(item) {
+  if (!item || !SUPPORTERS[item.supporter]) return;
+  if (state.winner || !state.roundActive || state.final) return;
+  supportQueue.push(item);
+  if (supportQueue.length > SUPPORT_MAX_Q) supportQueue.shift();
+  pump();
+}
+
+async function runSupport(item) {
+  const sup = SUPPORTERS[item.supporter];
+  supportActive = true;
+  const side = item.side || sup.side;
+  const wrap = $("supporterWrap");
+  const img = $("supporterImg");
+  const bubble = $("supporterBubble");
+  if (!wrap || !img) return;
+  const retreat = side === "flavio" ? -1 : 1;
+  const mEl = $("fighter-" + side);
+  if (mEl) { mEl.style.transition = "transform .3s ease"; mEl.style.transform = `translateX(${retreat * 70}px)`; }
+  wrap.className = "supporter side-" + side;
+  img.style.opacity = "1";
+  img.onerror = function () { img.style.opacity = 0.5; };
+  const acts = SUPPORT_ACTIONS.filter((a) => sup.sprites[a]);
+  const action = acts.length ? acts[Math.floor(Math.random() * acts.length)] : "punch";
+  img.src = sup.sprites[action] || "";
+  wrap.classList.add("enter");
+  const fala = pickSupFala(sup);
+  if (fala && bubble) bubble.innerHTML = '<img src="' + fala + '" alt="">';
+  if (item.audio_url) playAudio(item.audio_url);
+  await sleep(350);
+  await sleep(500);
+  spawnHit(action, side === "flavio" ? 1 : -1);
+  if (item.added_votes > 0) {
+    voteFloat(side, "+" + item.added_votes + " VOTOS");
+    const ap = $("lbScore");
+    if (ap) { ap.classList.remove("pulse"); void ap.offsetWidth; ap.classList.add("pulse"); }
+  }
+  await sleep(700);
+  if (bubble) bubble.innerHTML = "";
+  wrap.classList.remove("enter");
+  wrap.classList.add("exit");
+  await sleep(300);
+  wrap.className = "supporter";
+  wrap.style.display = "none";
+  if (!state.winner) resetPose(side);
+}
+
+function pump() {
+  if (busy) return;
+  if (supportQueue.length) {
+    const item = supportQueue.shift();
+    busy = true;
+    runSupport(item).catch(() => {}).finally(() => { supportActive = false; busy = false; pump(); });
+  } else {
+    processQueue();
+  }
 }
 
 function showFlash(name) {
@@ -946,7 +1059,7 @@ function enqueueAttack(att) {
   if (!att.isTest && (!state.roundActive || state.winner)) return;
   attackQueue.push(att);
   if (attackQueue.length > MAX_ATTACK_QUEUE) attackQueue.shift();
-  processQueue();
+  pump();
 }
 
 async function processQueue() {
@@ -966,7 +1079,7 @@ async function processQueue() {
     resetPose("lula");
   }
   if (!att.isTest) updateCombo();
-  setTimeout(() => { busy = false; processQueue(); }, 150);
+  setTimeout(() => { busy = false; pump(); }, 150);
 }
 
 async function runAttack(att) {
@@ -1039,6 +1152,7 @@ function connectWS() {
       trackLeadChange(msg.votes || {});
     }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
+    else if (msg.type === "duelo_support_attack") { markInteraction(); enqueueSupport(msg); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
     else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); }
   };

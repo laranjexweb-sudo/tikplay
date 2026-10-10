@@ -846,6 +846,14 @@
           </div>
 
           <div class="nb-card mb-3">
+              <h2>Apoios Especiais</h2>
+              <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
+                Presente que invoca um apoio (entra, fala, golpeia e sai) aplicando o DANO configurado + votos (moedas × combo). Lado definido por apoio: Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.
+              </div>
+              <div id="dueloSupportersBox"></div>
+            </div>
+
+          <div class="nb-card mb-3">
             <h2>Configuração de Presentes</h2>
             <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
               Escolha o presente que dispara cada golpe/escudo de cada personagem. Os sons dos golpes são fixos do sistema. O dano vem da Configuração do modo. O escudo absorve o dano antes do HP. A defesa do oponente é automática.
@@ -3280,11 +3288,13 @@ async function loadDueloState() {
       dueloIdleEnter = idl.enter_after != null ? idl.enter_after : 10;
       dueloIdleInterval = idl.interval != null ? idl.interval : 7;
       dueloMatchRestart = data.settings.match_restart_delay_s != null ? data.settings.match_restart_delay_s : 8;
+      dueloSupporters = Object.assign(dueloSupportersDefault(), data.settings.supporters || {});
     }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
     renderDueloSettings();
     renderLayoutEditor();
+    renderSupporters();
     setDueloStatusButtons(dueloActive);
   } catch (e) {}
 }
@@ -3363,6 +3373,145 @@ async function uploadDueloMusic(input) {
   input.value = "";
 }
 
+// ---- Apoios Especiais ----
+const DUELO_SUPPORTERS_META = {
+  nikolas: { side: "flavio", label: "NIKOLAS FERREIRA" },
+  "lucas-pavanato": { side: "flavio", label: "LUCAS PAVANATO" },
+  "ana-elisa": { side: "lula", label: "ANA ELISA" },
+  "erika-hilton": { side: "lula", label: "ERIKA HILTON" },
+};
+let dueloSupporters = {};
+
+function dueloSupportersDefault() {
+  const d = {};
+  for (const k of Object.keys(DUELO_SUPPORTERS_META)) d[k] = { enabled: true, side: DUELO_SUPPORTERS_META[k].side, gift_id: "", gift_name: "", damage: 30, audio: "" };
+  return d;
+}
+
+function renderSupporters() {
+  const box = document.getElementById("dueloSupportersBox");
+  if (!box) return;
+  box.innerHTML = `<div class="row g-3">${["flavio", "lula"].map((side) => `
+    <div class="col-lg-6">
+      <div class="border border-2 ${side === 'flavio' ? 'border-primary' : 'border-danger'} rounded p-2" style="background:${side === 'flavio' ? '#eef6ff' : '#fff1f1'}">
+        <div class="fw-bold mb-2" style="color:${side === 'flavio' ? '#1d4ed8' : '#b91c1c'}">APOIADORES — ${side === 'flavio' ? 'FLÁVIO' : 'LULA'}</div>
+        ${Object.keys(DUELO_SUPPORTERS_META).filter((k) => DUELO_SUPPORTERS_META[k].side === side).map(supBlock).join("")}
+      </div>
+    </div>`).join("")}</div>`;
+  Object.keys(DUELO_SUPPORTERS_META).forEach(bindSup);
+}
+
+function supBlock(k) {
+  const m = DUELO_SUPPORTERS_META[k];
+  const s = dueloSupporters[k] || {};
+  return `<div class="bg-white border border-dark rounded p-2 mb-2">
+      <div class="fw-bold mb-1" style="font-size:0.85rem">${m.label}</div>
+      <div class="row g-1 align-items-end">
+        <div class="col-md-4"><label style="font-size:0.68rem">Presente</label>
+          <div class="position-relative">
+            <input type="text" class="form-control form-control-sm sup-name" data-sup="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
+            <div class="duelo-ac gift-ac" data-supac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+          </div></div>
+        <div class="col-md-2"><label style="font-size:0.68rem">Gift ID</label><input type="number" class="form-control form-control-sm" data-supf="gift_id" data-sup="${k}" value="${esc(s.gift_id || '')}"></div>
+        <div class="col-md-2"><label style="font-size:0.68rem">Dano</label><input type="number" class="form-control form-control-sm" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1"></div>
+        <div class="col-md-4"><label style="font-size:0.68rem">Áudio</label><input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}"><div class="text-secondary" style="font-size:0.68rem">${s.audio ? esc(s.audio) : 'sem áudio'}</div></div>
+        <div class="col-md-2"><label class="form-check" style="font-size:0.72rem"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label></div>
+      </div>
+    </div>`;
+}
+
+function bindSup(k) {
+  const doc = document;
+  const inputs = doc.querySelectorAll('[data-sup="' + k + '"]');
+  inputs.forEach((el) => {
+    const f = el.getAttribute("data-supf");
+    if (!f) return;
+    el.addEventListener("change", () => {
+      dueloSupporters[k] = dueloSupporters[k] || {};
+      dueloSupporters[k][f] = f === "enabled" ? el.checked : el.value;
+      dueloQuickSave();
+    });
+  });
+  const au = doc.querySelector('[data-supaudio="' + k + '"]');
+  if (au) {
+    au.addEventListener("change", () => uploadDueloSupportAudio(k, au));
+  }
+  const name = doc.querySelector('.sup-name[data-sup="' + k + '"]');
+  const ac = doc.querySelector('[data-supac="' + k + '"]');
+  if (name && ac) {
+    name.addEventListener("focus", () => openSupAc(k));
+    name.addEventListener("input", () => openSupAc(k));
+    name.addEventListener("blur", () => { setTimeout(() => { ac.style.display = "none"; ac.innerHTML = ""; }, 200); });
+    name.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { ac.style.display = "none"; ac.innerHTML = ""; }
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        const first = ac.querySelector(".ac-item");
+        if (first) selectSupName(k, first.getAttribute("data-val"));
+      }
+    });
+  }
+}
+
+function openSupAc(k) {
+  const name = document.querySelector('.sup-name[data-sup="' + k + '"]');
+  const ac = document.querySelector('[data-supac="' + k + '"]');
+  if (!name || !ac || !giftTagList.length) return;
+  const q = name.value.trim().toLowerCase();
+  const list = giftTagList.filter((g) => !q || g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q)).slice(0, 20);
+  if (!list.length) { ac.style.display = "none"; ac.innerHTML = ""; return; }
+  ac.innerHTML = list.map((g) => {
+    const file = giftImageMap[g.name];
+    return `<div class="ac-item" data-val="${esc(g.name)}">${file ? `<img src="/gift-images/${esc(file)}" alt="">` : ""}<span class="ac-name">${esc(getGiftLabel(g.name))}</span><span class="ac-diam">${g.diamond_count} 💎</span></div>`;
+  }).join("");
+  ac.style.display = "block";
+  ac.querySelectorAll(".ac-item").forEach((el) => {
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectSupName(k, el.getAttribute("data-val"));
+    });
+  });
+}
+
+function selectSupName(k, name) {
+  const input = document.querySelector('.sup-name[data-sup="' + k + '"]');
+  if (input) input.value = name;
+  dueloSupporters[k] = dueloSupporters[k] || {};
+  dueloSupporters[k].gift_name = name;
+  const ac = document.querySelector('[data-supac="' + k + '"]');
+  if (ac) { ac.style.display = "none"; ac.innerHTML = ""; }
+  dueloQuickSave();
+}
+
+async function uploadDueloSupportAudio(k, input) {
+  if (!input.files || !input.files[0]) return;
+  const fd = new FormData();
+  fd.append("file", input.files[0]);
+  fd.append("gift_id", "support-" + k);
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) { dueloSupporters[k] = dueloSupporters[k] || {}; dueloSupporters[k].audio = data.filename; dueloQuickSave(); dueloMsg("Áudio do apoio definido: " + data.filename); }
+    else dueloMsg(data.error || "Erro no upload");
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
+function dueloSupportersClean() {
+  const out = {};
+  for (const k of Object.keys(DUELO_SUPPORTERS_META)) {
+    const s = dueloSupporters[k] || {};
+    out[k] = {
+      enabled: s.enabled !== false,
+      side: DUELO_SUPPORTERS_META[k].side,
+      gift_id: String(s.gift_id || "").trim(),
+      gift_name: String(s.gift_name || "").trim(),
+      damage: Math.max(1, parseInt(s.damage, 10) || 30),
+      audio: typeof s.audio === "string" ? s.audio : "",
+    };
+  }
+  return out;
+}
+
 function readDueloSettings() {
   const n = (id) => parseInt(document.getElementById(id) ? document.getElementById(id).value : "0", 10);
   const num = (id, fb) => { const x = n(id); return Number.isFinite(x) ? x : fb; };
@@ -3394,6 +3543,7 @@ function readDueloSettings() {
       interval: num("dueloIdleInterval", 7),
     },
     match_restart_delay_s: num("dueloMatchRestart", 8),
+    supporters: dueloSupportersClean(),
   };
 }
 

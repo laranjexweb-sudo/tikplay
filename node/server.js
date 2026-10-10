@@ -1941,6 +1941,7 @@ function normalizeDueloSettings(raw) {
     music: { files: [], volume: 50, enabled: false },
     scene: "brasilia",
     idle: { enabled: true, enter_after: 10, interval: 7 },
+    supporters: {},
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -1975,6 +1976,21 @@ function normalizeDueloSettings(raw) {
       enter_after: (n(idr.enter_after) !== null) ? Math.max(3, Math.min(120, n(idr.enter_after))) : 10,
       interval: (n(idr.interval) !== null) ? Math.max(3, Math.min(60, n(idr.interval))) : 7,
     };
+    const SUPPORT_KEYS = { nikolas: "flavio", "lucas-pavanato": "flavio", "ana-elisa": "lula", "erika-hilton": "lula" };
+    out.supporters = {};
+    if (raw.supporters && typeof raw.supporters === "object") {
+      for (const key of Object.keys(SUPPORT_KEYS)) {
+        const s = (raw.supporters[key] && typeof raw.supporters[key] === "object") ? raw.supporters[key] : {};
+        out.supporters[key] = {
+          enabled: s.enabled !== false,
+          side: (s.side === "lula" || s.side === "flavio") ? s.side : SUPPORT_KEYS[key],
+          gift_id: String(s.gift_id || "").trim().slice(0, 40),
+          gift_name: String(s.gift_name || "").trim().slice(0, 80),
+          damage: (n(s.damage) !== null) ? Math.max(1, Math.min(10000, n(s.damage))) : 30,
+          audio: String(s.audio || "").trim().replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 80),
+        };
+      }
+    }
     if (raw.layout && typeof raw.layout === "object") {
       const c = (o, name, def) => {
         const src = (o && o[name] && typeof o[name] === "object") ? o[name] : {};

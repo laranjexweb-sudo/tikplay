@@ -22,6 +22,7 @@ DEFAULT_SETTINGS = {
     "reset_delay_s": 6,
     "match_restart_delay_s": 8,   # tempo após o VENCEDOR FINAL para nova partida automática
     "vote_target": 0,             # meta de VOTOS (0 = ilimitado) → VENCEDOR FINAL
+    "supporters": {},             # apoios especiais: {nikolas: {...}, ...}
     "shield_gift_amount": 15,     # pontos padrão do presente de escudo
 }
 
@@ -185,10 +186,72 @@ class DueloEngine:
             return "match_end"
         return None
 
+    # ---- Apoios especiais ----
+    def _resolve_supporter(self, gift_id="", gift_name=""):
+        """Retorna (key, cfg) do apoio especial que casa com o presente, ou None."""
+        supporters = self.settings.get("supporters") or {}
+        if not isinstance(supporters, dict):
+            return None
+        for key, s in supporters.items():
+            if not isinstance(s, dict) or not s.get("enabled", True):
+                continue
+            side = self._norm(s.get("side") or "")
+            if side not in self.VALID_CHARACTERS:
+                continue
+            sid = str(s.get("gift_id") or "").strip()
+            sname = str(s.get("gift_name") or "").strip()
+            hit = bool(sid and gift_id and self._norm(sid) == self._norm(gift_id))
+            if not hit and sname:
+                hit = self._norm(sname) == self._norm(gift_name)
+            if hit:
+                return (key, s)
+        return None
+
     def on_gift(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
         # Durante banner de vitória / rodada pausada / disputa final, ignora todos os gifts.
         if not self.active or not self.roundActive or self.winner:
             return None
+
+        # ----- APOIO ESPECIAL (prioridade de match; soma votos + causa dano) -----
+        sup = self._resolve_supporter(gift_id, gift_name)
+        if sup:
+            key, cfg = sup
+            combo = max(1, int(combo or 1))
+            char = self._norm(cfg.get("side") or "")
+            defender = "lula" if char == "flavio" else "flavio"
+            added = int(coins or 0) * combo
+            if added > 0:
+                self.votes[char] = (self.votes.get(char, 0) or 0) + added
+            base = max(1, int(cfg.get("damage") or 0))
+            dmg = base * combo
+            self._apply_damage(defender, dmg)
+            own = str(cfg.get("audio") or "").strip()
+            audio_url = f"/duelo-audio/{self.tenant_id}/{own}" if own else ""
+            self._emit("duelo_support_attack", {
+                "supporter": key,
+                "side": char,
+                "gift_id": str(gift_id or ""),
+                "gift_name": str(cfg.get("gift_name") or gift_name or ""),
+                "damage": base,
+                "combo": combo,
+                "final_damage": dmg,
+                "added_votes": added,
+                "target": defender,
+                "audio_url": audio_url,
+                "user": user or "",
+                "nickname": nickname or user or "",
+            })
+            ko = self.hp[defender] <= 0
+            if ko:
+                self.roundActive = False
+                self.winner = char
+                self.debate_wins[char] = (self.debate_wins.get(char, 0) or 0) + 1
+                self._emit("duelo_round_end", {"winner": char, "votes": dict(self.votes), "final": False})
+            result = self._check_meta(char)
+            if result:
+                return result
+            self._emit("duelo_state", self.state())
+            return ("round_end" if ko else "support_attack")
 
         match = None
         for g in self.gifts:
