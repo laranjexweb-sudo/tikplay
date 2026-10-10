@@ -159,6 +159,70 @@
   @keyframes hitUppercut { 0% { transform: translate(-50%,0); opacity: 1; } 100% { transform: translate(-50%,-14vh); opacity: 0; } }
 
   .status { position: absolute; top: clamp(22px, 2vh, 44px); right: 4vw; z-index: 30; font-size: 0.8rem; color: #9aa; text-shadow: 0 0 8px #000; }
+
+  .bubble {
+    position: absolute;
+    bottom: calc(clamp(60px, 8vh, 150px) + 34vh);
+    z-index: 44;
+    max-width: 30vw;
+    background: rgba(0, 0, 0, 0.82);
+    border: 3px solid #ffd200;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-weight: 800;
+    font-size: clamp(0.85rem, 2vh, 1.1rem);
+    color: #fff;
+    text-shadow: 0 0 6px #000;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .bubble::after {
+    content: ""; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+    border: 7px solid transparent; border-top-color: #ffd200;
+  }
+  .bubble.show { opacity: 1; transform: translate(-50%, 0); }
+  #bubble-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
+  #bubble-lula { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
+
+  .vote-float {
+    position: absolute;
+    z-index: 46;
+    font-weight: 900;
+    font-size: clamp(1.1rem, 3vh, 1.7rem);
+    color: #ffd200;
+    text-shadow: 0 0 10px rgba(255, 170, 0, 0.9), 0 0 3px #000;
+    pointer-events: none;
+    animation: voteUp 1s ease-out forwards;
+  }
+  @keyframes voteUp { 0% { opacity: 0; transform: translate(-50%, 14px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -46px); } }
+
+  .lead-flash {
+    position: absolute;
+    top: 30vh;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.8);
+    border: 4px solid #ffd200;
+    border-radius: 16px;
+    padding: 10px 26px;
+    font-weight: 900;
+    font-size: clamp(1.1rem, 3.2vh, 1.9rem);
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(255,200,0,.7);
+    opacity: 0;
+    transition: opacity .2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .lead-flash.show { opacity: 1; }
+
+  .hud-top.pulse { animation: scorePulse .4s ease; }
+  @keyframes scorePulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.15); } 100% { transform: translateX(-50%) scale(1); } }
   .debug { position: absolute; bottom: 2vh; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
   .debug button { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 6px 10px; background: #fec90f; color: #111; cursor: pointer; }
   .debug button.flavio { background: #7fd7ff; }
@@ -187,6 +251,10 @@
       <div class="gift-tags" id="gifts-lula"></div>
     </div>
   </div>
+
+  <div class="bubble" id="bubble-flavio"></div>
+  <div class="bubble" id="bubble-lula"></div>
+  <div class="lead-flash" id="leadFlash"></div>
 
   <div class="shield-fx left" id="shield-flavio"></div>
   <div class="shield-fx right" id="shield-lula"></div>
@@ -252,9 +320,8 @@ function renderGiftTags() {
         span.appendChild(img);
       }
       const label = document.createElement("span");
-      const nome = new Option(g.name || "?");
       const acao = isEsc ? "Escudo" : (GIFT_ACTION_LABEL[g.action] || "Soco");
-      label.textContent = `${nome.value} · ${acao}`;
+      label.textContent = acao;
       span.appendChild(label);
       return span;
     });
@@ -305,10 +372,8 @@ function renderHud() {
   }
   const vs = $("htVs");
   if (vs) {
-    vs.textContent = state.mode === "votes"
-      ? `${state.votes.flavio} VS ${state.votes.lula}`
-      : "";
-    vs.classList.toggle("has", vs.textContent.length > 0);
+    vs.textContent = `${(state.votes.flavio || 0)} VS ${(state.votes.lula || 0)}`;
+    vs.classList.add("has");
   }
 }
 
@@ -322,7 +387,8 @@ function clearWinnerVisual() {
 }
 
 function renderWinner() {
-  if (!state.winner) { clearWinnerVisual(); return; }
+  if (!state.winner) { lastWinner = null; clearWinnerVisual(); return; }
+  if (lastWinner !== state.winner) { lastWinner = state.winner; say(state.winner, "victory"); }
   const winner = state.winner;
   const loser = opponent(winner);
   // Pose PERSISTENTE: vencedor em victory e perdedor "down" enquanto state.winner preenchido.
@@ -350,9 +416,8 @@ function renderWinner() {
   const sub = $("winSub");
   if (banner) {
     const w = FIGHTERS[winner].name;
-    if (state.final) { big.textContent = "VENCEDOR FINAL"; sub.textContent = `${w.toUpperCase()} GANHOU`; }
-    else if (state.mode === "votes") { big.textContent = `${w.toUpperCase()} GANHOU 1 VOTO`; sub.textContent = `VOTOS: ${state.votes.flavio} x ${state.votes.lula}`; }
-    else { big.textContent = `${w.toUpperCase()} VENCEU A RODADA!`; sub.textContent = "Aguardando nova rodada…"; }
+    if (state.final) { big.textContent = "VENCEDOR FINAL"; sub.textContent = `${w.toUpperCase()} GANHOU A DISPUTA`; }
+    else { big.textContent = `${w.toUpperCase()} FOI MELHOR NO DEBATE!`; sub.textContent = `VOTOS: ${state.votes.flavio} x ${state.votes.lula}`; }
     banner.classList.add("show");
   }
 }
@@ -360,9 +425,18 @@ function renderWinner() {
 function applyState(s) {
   if (!s) return;
   const prevInactive = !state.roundActive || !!state.winner;
+  const prevHp = { flavio: state.hp && state.hp.flavio, lula: state.hp && state.hp.lula };
   state = Object.assign({}, state, s);
   renderHud();
   renderWinner();
+  if (s.votes && (s.votes.flavio || 0) === 0 && (s.votes.lula || 0) === 0) lastLead = null;
+  if (!state.winner) {
+    for (const f of ["flavio", "lula"]) {
+      const pv = prevHp[f];
+      const nv = state.hp[f];
+      if (pv && nv != null && pv > 30 && nv <= 30) say(f, "lowHp");
+    }
+  }
   if (s.winner) {
     attackQueue = [];
     busy = false;
@@ -448,6 +522,80 @@ function playAudio(url) {
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 document.addEventListener("touchstart", unlockAudio, { once: true });
+
+// ---- Falas (client-side) ----
+const SPEECH = {
+  attack: ["Agora foi!", "Toma essa!", "Responde essa!", "Vai!"],
+  hit: ["Opa!", "Essa pegou!", "Preciso reagir!"],
+  shield: ["Agora estou protegido!", "Boa!", "Reforço chegou!"],
+  lowHp: ["Tá apertando!", "Não acabou!", "Preciso reagir!"],
+  victory: ["Fui melhor no debate!", "Levei essa!"],
+};
+const speechTimer = {};
+const speechCd = { flavio: 0, lula: 0 };
+let lastPhrase = "";
+
+function say(fighter, bucket) {
+  if (!fighter || !SPEECH[bucket] || state.winner) return;
+  const now = Date.now();
+  if (now < speechCd[fighter]) return;
+  const opts = SPEECH[bucket].filter((p) => p !== lastPhrase);
+  const phrase = opts[Math.floor(Math.random() * opts.length)];
+  lastPhrase = phrase;
+  speechCd[fighter] = now + 4000;
+  const el = $("bubble-" + fighter);
+  if (!el) return;
+  el.textContent = phrase;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  clearTimeout(speechTimer[fighter]);
+  speechTimer[fighter] = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+// ---- Feedback de votos / virada ----
+function voteFloat(char, txt) {
+  const s = document.createElement("div");
+  s.className = "vote-float";
+  s.textContent = txt;
+  const vh = window.innerHeight / 100;
+  const off = Math.max(40, Math.min(200, 9 * vh));
+  const half = 14 * vh;
+  const d = char === "flavio" ? -1 : 1;
+  s.style.left = "50%";
+  s.style.marginLeft = (d * (half + off)) + "px";
+  s.style.bottom = (Math.max(60, Math.min(150, 8 * vh)) + 30 * vh) + "px";
+  $("stage").appendChild(s);
+  setTimeout(() => s.remove(), 1000);
+}
+
+function showFlash(txt) {
+  const el = $("leadFlash");
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function leadOf(votes) {
+  const f = (votes && votes.flavio) || 0;
+  const l = (votes && votes.lula) || 0;
+  return f === l ? 0 : (f > l ? 1 : -1);
+}
+
+let lastLead = null;
+function trackLeadChange(votes) {
+  const lead = leadOf(votes);
+  if (lastLead !== null && lastLead !== lead) {
+    if (lead === 0) showFlash("EMPATE!");
+    else showFlash((lead === 1 ? "FLÁVIO" : "LULA") + " VIROU!");
+  }
+  lastLead = lead;
+}
+
+let lastWinner = null;
 
 function shieldEffect(fighter, points) {
   const fx = $("shield-" + fighter);
@@ -539,8 +687,20 @@ function connectWS() {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
     if (msg.type === "duelo_state") applyState(msg);
-    else if (msg.type === "duelo_attack") enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
-    else if (msg.type === "duelo_shield") { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); }
+    else if (msg.type === "duelo_attack") {
+      enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
+      say(msg.attacker, "attack");
+      setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
+    }
+    else if (msg.type === "duelo_shield") { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); }
+    else if (msg.type === "duelo_vote") {
+      if (msg.added > 0) {
+        voteFloat(msg.character, "+" + msg.added + " VOTOS");
+        const vs = $("htVs");
+        if (vs) { vs.classList.remove("pulse"); void vs.offsetWidth; vs.classList.add("pulse"); }
+      }
+      trackLeadChange(msg.votes || {});
+    }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
   };
 }

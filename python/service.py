@@ -1091,14 +1091,20 @@ class GameSession:
             if not self.duelo.active:
                 emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' recebido, mas a ÁREA está INATIVA (clique em Ativar Área)")
             else:
-                res = self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user)
+                res = self.duelo.on_gift(gift_id, gift_name, repeat_count, user, nickname or user, coins=int(diamond_count or 0))
                 if res == "round_end":
                     delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
                     self._schedule_duelo_reset(delay)
+                elif res == "match_end":
+                    if self._duelo_reset_task:
+                        self._duelo_reset_task.cancel()
+                        self._duelo_reset_task = None
+                    emit(self.tenant_id, "log", "[Duelo] Meta de votos atingida — VENCEDOR FINAL (aguardando Nova disputa)")
                 if res:
-                    emit(self.tenant_id, "log", f"[Duelo] @{user} presente '{gift_name}' aplicado ({res})")
+                    added = int(diamond_count or 0) * max(1, repeat_count)
+                    emit(self.tenant_id, "log", f"[Duelo] @{user} presente '{gift_name}' x{max(1, repeat_count)} aplicado ({res}) +{added} votos")
                 elif not duelo_would_match:
-                    emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' NÃO cadastrado como golpe/escudo")
+                    emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' NÃO cadastrado como golpe/escudo/apoio")
 
         allowed, reason = self._check_access(user_meta)
         if not allowed:

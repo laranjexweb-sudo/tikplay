@@ -794,13 +794,6 @@
             <h2>Configuração do modo</h2>
             <div class="mb-3 p-2 bg-light border border-dark rounded">
               <div class="row g-2">
-                <div class="col-md-4">
-                  <label class="form-label mb-0" style="font-size:0.8rem">Modo</label>
-                  <select class="form-select form-select-sm" id="dueloMode">
-                    <option value="hp">HP</option>
-                    <option value="votes">Votos</option>
-                  </select>
-                </div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Vida da rodada (HP inicial = máximo)</label><input type="number" class="form-control form-control-sm" id="dueloHpRound" value="100" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo inicial</label><input type="number" class="form-control form-control-sm" id="dueloShieldStart" value="100" min="0"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo máximo</label><input type="number" class="form-control form-control-sm" id="dueloShieldMax" value="200" min="1"></div>
@@ -808,10 +801,10 @@
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Chute</label><input type="number" class="form-control form-control-sm" id="dueloDmgKick" value="15" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Levantada</label><input type="number" class="form-control form-control-sm" id="dueloDmgUppercut" value="20" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Máx. votos (0 = sem limite)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Meta de votos (0 = ilimitado)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
               </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
-                No modo Votos, cada rodada continua usando HP + Escudo; quem zerar o HP do outro vence a rodada e soma 1 voto. Resetar rodada NÃO zera votos. As configurações acima (Modo, HP e Escudo inicial, danos) são aplicadas ao Ativar Área ou Salvar.
+                Todo presente válido soma votos (moedas × combo) para o seu personagem (Placar). Golpes/escudos também influenciam o debate (HP/Escudo). KO não zera votos. Ao atingir a Meta de votos: VENCEDOR FINAL. Resetar rodada NÃO zera votos; Nova disputa zera.
               </div>
             </div>
           </div>
@@ -824,13 +817,19 @@
             <div class="row g-3 mb-3">
               <div class="col-lg-6">
                 <div class="border border-2 border-primary rounded p-2" style="background:#eef6ff">
-                  <h3 class="mb-2" style="color:#1d4ed8">PRESENTES — FLÁVIO</h3>
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="mb-0" style="color:#1d4ed8">PRESENTES — FLÁVIO</h3>
+                    <button class="btn btn-nb btn-primary btn-sm" onclick="addDueloGiftRow('flavio')">+ Adicionar presente</button>
+                  </div>
                   <div id="dueloGiftsList-flavio"></div>
                 </div>
               </div>
               <div class="col-lg-6">
                 <div class="border border-2 border-danger rounded p-2" style="background:#fff1f1">
-                  <h3 class="mb-2" style="color:#b91c1c">PRESENTES — LULA</h3>
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="mb-0" style="color:#b91c1c">PRESENTES — LULA</h3>
+                    <button class="btn btn-nb btn-danger btn-sm" onclick="addDueloGiftRow('lula')">+ Adicionar presente</button>
+                  </div>
                   <div id="dueloGiftsList-lula"></div>
                 </div>
               </div>
@@ -3195,21 +3194,9 @@ function updateLinks() {
 }
 
 // ---------------- Duelo 1x1 ----------------
-const DUELO_SLOTS = [
-  { char: "flavio", slot: "soco", label: "SOCO", type: "golpe", action: "punch" },
-  { char: "flavio", slot: "chute", label: "CHUTE", type: "golpe", action: "kick" },
-  { char: "flavio", slot: "levantada", label: "LEVANTADA", type: "golpe", action: "uppercut" },
-  { char: "flavio", slot: "escudo", label: "ESCUDO", type: "escudo", action: "" },
-  { char: "lula", slot: "soco", label: "SOCO", type: "golpe", action: "punch" },
-  { char: "lula", slot: "chute", label: "CHUTE", type: "golpe", action: "kick" },
-  { char: "lula", slot: "levantada", label: "LEVANTADA", type: "golpe", action: "uppercut" },
-  { char: "lula", slot: "escudo", label: "ESCUDO", type: "escudo", action: "" },
-];
 let dueloActive = false;
-let dueloSettings = { mode: "hp", hp_start: 100, hp_max: 100, shield_start: 100, shield_max: 200, dmg_punch: 10, dmg_kick: 15, dmg_uppercut: 20, reset_delay_s: 6, max_votes: 0 };
-let dueloGifts = DUELO_SLOTS.map(() => null);
-
-function slotIdx(char, slot) { return DUELO_SLOTS.findIndex((d) => d.char === char && d.slot === slot); }
+let dueloSettings = { mode: "hp", hp_start: 100, hp_max: 100, shield_start: 100, shield_max: 200, dmg_punch: 10, dmg_kick: 15, dmg_uppercut: 20, reset_delay_s: 6, vote_target: 0 };
+let dueloGifts = [];
 
 async function loadDueloState() {
   try {
@@ -3217,24 +3204,7 @@ async function loadDueloState() {
     if (!data.success) return;
     dueloActive = !!data.active;
     if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
-    const list = Array.isArray(data.gifts) ? data.gifts : [];
-    dueloGifts = DUELO_SLOTS.map(() => null);
-    list.forEach((g) => {
-      if (!g || !g.name) return;
-      const c = g.character === "lula" ? "lula" : "flavio";
-      let slot = null;
-      if (String(g.type || "").toLowerCase() === "escudo") slot = "escudo";
-      else {
-        const a = String(g.action || "").toLowerCase();
-        if (a === "punch") slot = "soco";
-        else if (a === "kick") slot = "chute";
-        else if (a === "uppercut") slot = "levantada";
-      }
-      if (slot) {
-        const idx = slotIdx(c, slot);
-        if (idx !== -1) dueloGifts[idx] = { name: g.name, character: c, type: slot === "escudo" ? "escudo" : "golpe", action: slot === "escudo" ? "" : DUELO_SLOTS[idx].action, audio: "", active: true };
-      }
-    });
+    dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
     renderDueloSettings();
     setDueloStatusButtons(dueloActive);
@@ -3243,7 +3213,6 @@ async function loadDueloState() {
 
 function renderDueloSettings() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  set("dueloMode", dueloSettings.mode === "votes" ? "votes" : "hp");
   set("dueloHpRound", dueloSettings.hp_max || dueloSettings.hp_start || 100);
   set("dueloShieldStart", dueloSettings.shield_start);
   set("dueloShieldMax", dueloSettings.shield_max);
@@ -3251,7 +3220,7 @@ function renderDueloSettings() {
   set("dueloDmgKick", dueloSettings.dmg_kick);
   set("dueloDmgUppercut", dueloSettings.dmg_uppercut);
   set("dueloResetDelay", dueloSettings.reset_delay_s);
-  set("dueloMaxVotes", dueloSettings.max_votes || 0);
+  set("dueloMaxVotes", dueloSettings.vote_target != null ? dueloSettings.vote_target : (dueloSettings.max_votes || 0));
 }
 
 function readDueloSettings() {
@@ -3261,7 +3230,7 @@ function readDueloSettings() {
   const shMax = Math.max(0, num("dueloShieldMax", 200));
   const shStart = Math.min(Math.max(0, num("dueloShieldStart", 100)), shMax);
   return {
-    mode: document.getElementById("dueloMode") ? document.getElementById("dueloMode").value : "hp",
+    mode: "hp",
     hp_start: vida,
     hp_max: vida,
     shield_start: shStart,
@@ -3270,7 +3239,7 @@ function readDueloSettings() {
     dmg_kick: num("dueloDmgKick", 15),
     dmg_uppercut: num("dueloDmgUppercut", 20),
     reset_delay_s: num("dueloResetDelay", 6),
-    max_votes: num("dueloMaxVotes", 0),
+    vote_target: num("dueloMaxVotes", 0),
   };
 }
 
@@ -3292,8 +3261,8 @@ function dueloMsg(text) {
 function selectDueloGiftName(i, name) {
   const input = document.querySelector('.duelo-name[data-name="' + i + '"]');
   if (input) input.value = name;
-  const def = DUELO_SLOTS[i];
-  dueloGifts[i] = { name: name, character: def.char, type: def.type, action: def.action, audio: "", active: true };
+  dueloGifts[i] = dueloGifts[i] || {};
+  dueloGifts[i].name = name;
   closeDueloAc(i);
 }
 
@@ -3327,10 +3296,35 @@ function openDueloAc(i) {
   });
 }
 
+function addDueloGiftRow(character) {
+  dueloGifts.push({ name: "", character: (character === "lula" ? "lula" : "flavio"), type: "golpe", action: "punch", damage: 0, audio: "", active: true });
+  renderDueloGifts();
+}
+
+function removeDueloGift(i) {
+  dueloGifts.splice(i, 1);
+  renderDueloGifts();
+}
+
+async function uploadDueloAudio(i, file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) {
+      dueloGifts[i] = dueloGifts[i] || {};
+      dueloGifts[i].audio = data.filename;
+      dueloMsg("Áudio enviado: " + data.filename);
+      renderDueloGifts();
+    } else dueloMsg(data.error || "Erro no upload");
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
+}
+
 function renderDueloGifts() {
   const count = document.getElementById("dueloCount");
   const n = dueloGifts.filter((g) => g && g.name).length;
-  if (count) count.textContent = n + " / 8";
+  if (count) count.textContent = n;
   for (const char of ["flavio", "lula"]) renderGiftSection(char);
 }
 
@@ -3338,24 +3332,60 @@ function renderGiftSection(char) {
   const box = document.getElementById("dueloGiftsList-" + char);
   if (!box) return;
   box.innerHTML = "";
-  DUELO_SLOTS.forEach((def, i) => {
-    if (def.char !== char) return;
-    box.appendChild(buildDueloRow(def, i, dueloGifts[i]));
-  });
+  const items = dueloGifts.map((g, i) => ({ g: (g || {}), i })).filter(({ g }) => (g.character || "flavio") === char);
+  if (!items.length) {
+    const none = document.createElement("div");
+    none.className = "text-secondary";
+    none.style.fontSize = "0.8rem";
+    none.textContent = "Nenhum presente cadastrado.";
+    box.appendChild(none);
+    return;
+  }
+  items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
 }
 
-function buildDueloRow(def, i, g_) {
-  g_ = g_ || {};
+function buildDueloRow(g_, i) {
+  const type = ["escudo", "apoio"].includes(String(g_.type || "").toLowerCase()) ? String(g_.type).toLowerCase() : "golpe";
   const row = document.createElement("div");
-  row.className = "row g-2 mb-2 align-items-center p-2 bg-white border border-dark rounded";
+  row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
   row.innerHTML = `
-      <div class="col-md-4"><div class="fw-bold" style="font-size:0.9rem">${def.label}</div>
-        <div class="text-secondary" style="font-size:0.68rem">${def.type === 'escudo' ? 'adiciona escudo ao personagem' : 'dano da Configuração do modo'}</div></div>
-      <div class="col-md-8"><label class="form-label mb-0" style="font-size:0.7rem">Presente</label>
+      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
         <div class="position-relative">
-          <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Selecionar presente..." autocomplete="off">
+          <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
           <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
-        </div></div>`;
+        </div></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
+        <select class="form-select form-select-sm" data-f="type" data-i="${i}">
+          <option value="golpe" ${type === 'golpe' ? 'selected' : ''}>Golpe</option>
+          <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
+          <option value="apoio" ${type === 'apoio' ? 'selected' : ''}>Apoio</option>
+        </select></div>
+      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Golpe / Escudo / Apoio</label>
+        <div class="duelo-golpe-fields d-flex gap-1" ${type === 'golpe' ? '' : 'style="display:none"'}>
+          <select class="form-select form-select-sm" data-f="action" data-i="${i}" style="flex:1">
+            <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
+            <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
+            <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
+          </select>
+          <input type="number" class="form-control form-control-sm" style="width:84px" value="${esc(g_.damage || '')}" placeholder="dano(0=padrão)" data-f="damage" data-i="${i}">
+        </div>
+        <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
+          <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo" data-f="shield" data-i="${i}">
+        </div>
+        <div class="duelo-apoio-field text-secondary" style="font-size:0.75rem;display:${type === 'apoio' ? 'block' : 'none'}">Só soma votos (moedas × combo). Não afeta o debate.</div></div>
+      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
+        <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
+        <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : (type === 'apoio' ? 'sem áudio' : 'padrão do sistema')}</div></div>
+      <div class="col-md-1"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
+      <div class="col-md-1 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
+
+  row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
+    const t = e.target.value;
+    row.querySelector(".duelo-golpe-fields").style.display = t === "golpe" ? "" : "none";
+    row.querySelector(".duelo-escudo-field").style.display = t === "escudo" ? "" : "none";
+    const apEl = row.querySelector(".duelo-apoio-field");
+    if (apEl) apEl.style.display = t === "apoio" ? "block" : "none";
+  });
   const nameInput = row.querySelector('.duelo-name[data-name="' + i + '"]');
   const acEl = row.querySelector('.duelo-ac[data-ac="' + i + '"]');
   if (nameInput && acEl) {
@@ -3371,11 +3401,34 @@ function buildDueloRow(def, i, g_) {
     });
     nameInput.addEventListener("blur", () => { setTimeout(() => closeDueloAc(i), 200); });
   }
+  row.querySelectorAll("[data-f]").forEach((el) => {
+    el.addEventListener("change", () => {
+      const f = el.getAttribute("data-f");
+      const idx = Number(el.getAttribute("data-i"));
+      dueloGifts[idx] = dueloGifts[idx] || {};
+      dueloGifts[idx][f] = f === "active" ? el.checked : el.value;
+    });
+  });
+  const upEl = row.querySelector("[data-upload]");
+  if (upEl) {
+    upEl.addEventListener("change", () => {
+      if (upEl.files && upEl.files[0]) uploadDueloAudio(i, upEl.files[0]);
+    });
+  }
   return row;
 }
 
 function dueloConfiguredGifts() {
-  return dueloGifts.filter((g) => g && g.name).map((g) => ({ name: g.name, character: g.character, type: g.type, action: g.action, active: true }));
+  return dueloGifts.filter((g) => g && g.name && g.active !== false).map((g) => ({
+    name: g.name,
+    character: g.character,
+    type: ["escudo", "apoio"].includes(String(g.type || "").toLowerCase()) ? String(g.type).toLowerCase() : "golpe",
+    action: String(g.type || "").toLowerCase() === "golpe" ? (g.action || "punch") : "",
+    damage: Math.max(0, parseInt(g.damage, 10) || 0),
+    shield: Math.max(0, parseInt(g.shield, 10) || 0),
+    audio: typeof g.audio === "string" ? g.audio : "",
+    active: true,
+  }));
 }
 
 async function dueloSaveConfig() {

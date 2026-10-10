@@ -1864,7 +1864,8 @@ const dueloUpload = multer({
 function normalizeDueloGifts(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.map((g) => {
-    const type = (g && g.type) === "escudo" ? "escudo" : "golpe";
+    const t = String((g && g.type) || "").toLowerCase();
+    const type = (t === "escudo" || t === "shield") ? "escudo" : ((t === "apoio" || t === "support" || t === "vote") ? "apoio" : "golpe");
     const base = {
       type,
       gift_id: String((g && g.gift_id) || "").trim(),
@@ -1875,7 +1876,7 @@ function normalizeDueloGifts(raw) {
     };
     if (type === "escudo") {
       base.shield = Math.max(0, parseInt((g && g.shield) || 0, 10) || 0);
-    } else {
+    } else if (type === "golpe") {
       base.action = ["punch", "kick", "uppercut"].includes(g && g.action) ? g.action : "punch";
       base.damage = Math.max(0, parseInt((g && g.damage) || 0, 10) || 0);
     }
@@ -1923,7 +1924,7 @@ function normalizeDueloSettings(raw) {
     dmg_kick: 15,
     dmg_uppercut: 20,
     reset_delay_s: 6,
-    max_votes: 0,
+    vote_target: 0,
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -1940,8 +1941,9 @@ function normalizeDueloSettings(raw) {
       if (d !== null) out[k] = Math.max(1, Math.min(10000, d));
     }
     const rd = n(raw.reset_delay_s); if (rd !== null) out.reset_delay_s = Math.max(1, Math.min(300, rd));
-    const mv = n(raw.max_votes);
-    out.max_votes = (mv !== null && mv > 0) ? Math.max(1, Math.min(1000, mv)) : 0;
+    const vtRaw = raw.vote_target != null ? raw.vote_target : raw.max_votes;
+    const vt = n(vtRaw);
+    out.vote_target = (vt !== null && vt > 0) ? Math.max(1, Math.min(100000000, vt)) : 0;
   }
   return out;
 }

@@ -20,7 +20,7 @@ DEFAULT_SETTINGS = {
     "dmg_kick": 15,
     "dmg_uppercut": 20,
     "reset_delay_s": 6,
-    "max_votes": 0,               # 0 = sem limite
+    "vote_target": 0,             # meta de VOTOS (0 = ilimitado) → VENCEDOR FINAL
     "shield_gift_amount": 15,     # pontos padrão do presente de escudo
 }
 
@@ -29,6 +29,8 @@ DEFAULT_ACTION_AUDIO = {
     "kick": "/duelo-audio/_system/chute-novo.mp3",
     "uppercut": "/duelo-audio/_system/levantada-novo.mp3",
 }
+
+DEFAULT_SHIELD_AUDIO = "/duelo-audio/_system/escudo-padrao.mp3"
 
 
 class DueloEngine:
@@ -144,8 +146,36 @@ class DueloEngine:
         self.hp[defender] = max(0, self.hp[defender] - (dmg - absorbed))
 
     # ---------------- Gift ----------------
-    def on_gift(self, gift_id="", gift_name="", combo=1, user=None, nickname=None):
-        # Durante banner de vitória / rodada pausada, ignora todos os gifts do Duelo.
+    def _click_audio(self, match, gtype, action):
+        """Áudio do presente, com override opcional: padrão do sistema caso contrário."""
+        own = str(match.get("audio") or "").strip()
+        if own:
+            return f"/duelo-audio/{self.tenant_id}/{own}"
+        if gtype == "escudo":
+            return DEFAULT_SHIELD_AUDIO
+        if gtype == "golpe":
+            return DEFAULT_ACTION_AUDIO.get(action, "")
+        return ""
+
+    def _check_meta(self, char):
+        """Encerra a disputa se a meta de votos foi atingida. Retorna 'match_end' ou None."""
+        target = int(self.settings.get("vote_target", 0) or 0)
+        if target > 0 and (self.votes.get(char, 0) or 0) >= target and not self.final:
+            self.roundActive = False
+            self.winner = char
+            self.final = True
+            self._emit("duelo_match_end", {
+                "winner": char,
+                "votes": dict(self.votes),
+                "target": target,
+                "final": True,
+            })
+            self._emit("duelo_state", self.state())
+            return "match_end"
+        return None
+
+    def on_gift(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
+        # Durante banner de vitória / rodada pausada / disputa final, ignora todos os gifts.
         if not self.active or not self.roundActive or self.winner:
             return None
 
@@ -158,13 +188,41 @@ class DueloEngine:
             return None
 
         gtype = self._norm(match.get("type") or "")
+        if gtype in ("apoio", "support", "vote"):
+            gtype = "apoio"
+        elif gtype in ("escudo", "shield"):
+            gtype = "escudo"
+        else:
+            gtype = "golpe"
         char = self._norm(match.get("character") or "")
+        if char not in self.VALID_CHARACTERS:
+            return None
         combo = max(1, int(combo or 1))
 
-        # ----- Presente de ESCUDO -----
+        # ----- VOTOS: todo presente soma moedas × quantidade -----
+        added = int(coins or 0) * combo
+        if added > 0:
+            self.votes[char] = (self.votes.get(char, 0) or 0) + added
+        self._emit("duelo_vote", {
+            "character": char,
+            "added": added,
+            "combo": combo,
+            "coins": int(coins or 0),
+            "votes": dict(self.votes),
+            "user": user or "",
+            "nickname": nickname or user or "",
+        })
+
+        # ----- APOIO: só votos, não influencia o debate -----
+        if gtype == "apoio":
+            result = self._check_meta(char)
+            if result:
+                return result
+            self._emit("duelo_state", self.state())
+            return "support"
+
+        # ----- ESCUDO -----
         if gtype == "escudo":
-            if char not in self.VALID_CHARACTERS:
-                return None
             points = int(match.get("shield") or 0)
             if points <= 0:
                 points = max(1, int(self.settings.get("shield_gift_amount", 15) or 15))
@@ -174,56 +232,56 @@ class DueloEngine:
                 "fighter": char,
                 "shield": self.shield[char],
                 "points": points,
-                "audio_url": f"/duelo-audio/{self.tenant_id}/{audio_sh}" if (audio_sh := str(match.get("audio") or "")) else "",
+                "added_votes": added,
+                "audio_url": self._click_audio(match, gtype, ""),
                 "user": user or "",
                 "nickname": nickname or user or "",
             })
+            result = self._check_meta(char)
+            if result:
+                return result
             self._emit("duelo_state", self.state())
             return "shield"
 
-        # ----- Presente de GOLPE -----
+        # ----- GOLPE -----
         action = self._norm(match.get("action") or "")
-        if char not in self.VALID_CHARACTERS or action not in self.VALID_ACTIONS:
+        if action not in self.VALID_ACTIONS:
             return None
         base = int(match.get("damage") or 0)
         if base <= 0:
             base = int(self.settings.get("dmg_" + action, 10) or 10)
-        dmg = base * self._combo_mult(combo)
+        dmg = base * combo
         defender = "lula" if char == "flavio" else "flavio"
         self._apply_damage(defender, dmg)
 
-        audio = str(match.get("audio") or "").strip()
-        if audio:
-            audio_url = f"/duelo-audio/{self.tenant_id}/{audio}"
-        else:
-            audio_url = DEFAULT_ACTION_AUDIO.get(action, "")
         self._emit("duelo_attack", {
             "attacker": char,
+            "defender": defender,
             "action": action,
             "combo": combo,
+            "base_damage": base,
             "damage": dmg,
-            "audio_url": audio_url,
+            "added_votes": added,
+            "audio_url": self._click_audio(match, gtype, action),
             "gift_id": str(match.get("gift_id") or ""),
             "gift": str(match.get("name") or gift_name or ""),
             "user": user or "",
             "nickname": nickname or user or "",
         })
 
-        if self.hp[defender] <= 0:
+        ko = self.hp[defender] <= 0
+        if ko:
             self.roundActive = False
             self.winner = char
-            if self.mode == "votes":
-                self.votes[char] += 1
-            max_votes = int(self.settings.get("max_votes", 0) or 0)
-            self.final = bool(max_votes and self.votes[char] >= max_votes)
             self._emit("duelo_round_end", {
                 "winner": char,
-                "mode": self.mode,
                 "votes": dict(self.votes),
-                "final": self.final,
+                "final": False,
             })
-            self._emit("duelo_state", self.state())
-            return "match_end" if self.final else "round_end"
+
+        result = self._check_meta(char)
+        if result:
+            return result
 
         self._emit("duelo_state", self.state())
-        return "attack"
+        return ("round_end" if ko else "attack")
