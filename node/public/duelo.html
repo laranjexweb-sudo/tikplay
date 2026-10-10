@@ -992,7 +992,9 @@ async function runSupport(item) {
   const action = acts.length ? acts[Math.floor(Math.random() * acts.length)] : "punch";
   img.src = sup.sprites[action] || "";
   try { await Promise.race([img.decode(), sleep(600)]); } catch (e) { img.style.opacity = 0.5; }
+  void wrap.offsetWidth;
   wrap.classList.add("enter");
+  try { console.debug("[SUPPORT]", item.supporter, side, action, img.src, "w=" + img.naturalWidth, "display=" + getComputedStyle(wrap).display); } catch (e) {}
   const fala = pickSupFala(sup);
   if (fala && bubble) bubble.innerHTML = '<img src="' + fala + '" alt="">';
   if (item.audio_url) playAudio(item.audio_url);
@@ -1010,7 +1012,7 @@ async function runSupport(item) {
   wrap.classList.add("exit");
   await sleep(350);
   wrap.className = "supporter";
-  wrap.style.display = "none";
+  img.style.opacity = "";
   if (!state.winner) resetPose(side);
 }
 
