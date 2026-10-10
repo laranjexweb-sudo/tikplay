@@ -1894,6 +1894,7 @@ function dueloInitialState(cfg) {
     votes: { flavio: 0, lula: 0 },
     hp_max: s.hp_max,
     shield_max: s.shield_max,
+    vote_target: s.vote_target,
     winner: null,
     roundActive: true,
     final: false,

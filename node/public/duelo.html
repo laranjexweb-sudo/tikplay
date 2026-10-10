@@ -16,7 +16,8 @@
     background-size: cover;
   }
 
-  .fighter { position: absolute; bottom: clamp(60px, 8vh, 150px); width: auto; will-change: transform; z-index: 1; }
+  .fighter-wrap { position: absolute; bottom: clamp(60px, 8vh, 150px); width: auto; }
+  .fighter { position: relative; width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
   .fighter.winner img { animation: winBounce .65s ease; }
@@ -29,51 +30,47 @@
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
   .fighter img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
-  #fighter-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
-  #fighter-lula  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
+  #wrap-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
+  #wrap-lula  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
 
-  .hud {
+  .scoreboard {
     position: absolute;
-    top: clamp(180px, 16vh, 290px);
+    top: clamp(120px, 13vh, 240px);
     left: 50%;
     transform: translateX(-50%);
-    width: min(92vw, 980px);
-    z-index: 30;
+    width: min(92vw, 900px);
+    z-index: 31;
     pointer-events: none;
-    display: flex;
-    justify-content: space-between;
-    gap: clamp(14px, 3vw, 44px);
-    padding: 18px 20px 16px;
-    border-radius: 20px;
-    background: rgba(8, 8, 14, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.18);
+    background: rgba(10, 10, 16, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    border-radius: 18px;
+    padding: 12px 18px 14px;
   }
-  .hud-side {
-    flex: 1;
-    min-width: 0;
-    pointer-events: none;
-  }
-  .hud-side.left  { text-align: left; }
-  .hud-side.right { text-align: right; }
-  .hud-top {
-    position: absolute;
-    top: clamp(76px, 8vh, 150px);
-    left: 50%;
-    transform: translateX(-50%);
+  .sb-votes {
+    text-align: center;
     font-weight: 900;
-    font-size: clamp(1.3rem, 3.6vh, 2.6rem);
+    font-size: clamp(1.6rem, 4.4vh, 3rem);
     letter-spacing: 4px;
     color: #ffd200;
-    text-shadow: 0 0 12px rgba(255, 150, 0, 0.9), 0 0 3px #000;
-    z-index: 31;
+    text-shadow: 0 0 14px rgba(255, 150, 0, 0.9), 0 0 3px #000;
     white-space: nowrap;
   }
-  .hud-top.has {
-    background: rgba(8, 8, 14, 0.55);
-    border: 2px solid rgba(255, 210, 0, 0.45);
-    border-radius: 999px;
-    padding: 6px 22px;
+  .sb-meta {
+    text-align: center;
+    font-size: clamp(0.72rem, 1.9vh, 1.05rem);
+    color: #cfe0ff;
+    text-shadow: 0 0 6px #000;
+    margin-top: 2px;
+    font-weight: 700;
+    letter-spacing: 1px;
   }
+  .sb-bar-host { text-align: center; margin: 6px 0 10px; }
+  .sb-bar { display: inline-block; width: min(58vw, 420px); height: 9px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .sb-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #ffd200, #ff8800); transition: width .4s ease; }
+  .sb-sides { display: flex; justify-content: space-between; gap: clamp(12px, 3vw, 44px); }
+  .sb-side { flex: 1; min-width: 0; pointer-events: none; }
+  .sb-side.left  { text-align: left; }
+  .sb-side.right { text-align: right; }
   .hud-name { font-weight: 900; font-size: clamp(1.2rem, 3.2vh, 2.2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); margin-bottom: 4px; }
   .hud-votes { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.8rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8), 0 0 3px #000; margin-bottom: 10px; }
 
@@ -97,7 +94,9 @@
     overflow: hidden; white-space: nowrap;
   }
   .gift-tag img { width: clamp(26px, 3.6vh, 40px); height: clamp(26px, 3.6vh, 40px); object-fit: contain; border-radius: 50%; background: rgba(0,0,0,0.45); }
-  .hud-side.right .gift-tag { align-self: flex-end; }
+  .gift-tag .gift-icon { font-size: 1.25em; line-height: 1; }
+  .gift-tag.sup { background: rgba(233, 30, 99, 0.22); border: 2px solid #e91e63; color: #ffc0d5; }
+  .sb-side.right .gift-tag { align-self: flex-end; }
   .gift-tag.atk { background: rgba(255, 210, 0, 0.28); border: 2px solid #ffd200; color: #ffe58a; }
   .gift-tag.esc { background: rgba(91, 192, 255, 0.28); border: 2px solid #5bc0ff; color: #cfe9ff; }
 
@@ -160,11 +159,11 @@
 
   .status { position: absolute; top: clamp(22px, 2vh, 44px); right: 4vw; z-index: 30; font-size: 0.8rem; color: #9aa; text-shadow: 0 0 8px #000; }
 
-  .bubble {
-    position: absolute;
-    bottom: calc(clamp(60px, 8vh, 150px) + 34vh);
+  .f-anchor { position: absolute; left: 50%; pointer-events: none; }
+  .f-speech {
+    bottom: calc(100% + 8px);
     z-index: 44;
-    max-width: 30vw;
+    max-width: 32vw;
     background: rgba(0, 0, 0, 0.82);
     border: 3px solid #ffd200;
     border-radius: 14px;
@@ -176,16 +175,14 @@
     opacity: 0;
     transform: translate(-50%, 8px);
     transition: opacity .2s ease, transform .2s ease;
-    pointer-events: none;
     white-space: nowrap;
   }
-  .bubble::after {
+  .f-speech::after {
     content: ""; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
     border: 7px solid transparent; border-top-color: #ffd200;
   }
-  .bubble.show { opacity: 1; transform: translate(-50%, 0); }
-  #bubble-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
-  #bubble-lula { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
+  .f-speech.show { opacity: 1; transform: translate(-50%, 0); }
+  .f-vote { bottom: 62%; z-index: 46; }
 
   .vote-float {
     position: absolute;
@@ -195,8 +192,12 @@
     color: #ffd200;
     text-shadow: 0 0 10px rgba(255, 170, 0, 0.9), 0 0 3px #000;
     pointer-events: none;
+    transform: translate(-50%, 0);
+    white-space: nowrap;
     animation: voteUp 1s ease-out forwards;
   }
+  .vote-float.sh { color: #7fd7ff; text-shadow: 0 0 10px rgba(91,192,255,0.9), 0 0 3px #000; }
+  .vote-float.combo { color: #fff; background: rgba(0,0,0,0.6); border: 2px solid #ffd200; border-radius: 12px; padding: 2px 12px; }
   @keyframes voteUp { 0% { opacity: 0; transform: translate(-50%, 14px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -46px); } }
 
   .lead-flash {
@@ -221,8 +222,8 @@
   }
   .lead-flash.show { opacity: 1; }
 
-  .hud-top.pulse { animation: scorePulse .4s ease; }
-  @keyframes scorePulse { 0% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.15); } 100% { transform: translateX(-50%) scale(1); } }
+  .sb-votes.pulse { animation: scorePulse .4s ease; }
+  @keyframes scorePulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
   .debug { position: absolute; bottom: 2vh; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
   .debug button { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 6px 10px; background: #fec90f; color: #111; cursor: pointer; }
   .debug button.flavio { background: #7fd7ff; }
@@ -232,35 +233,44 @@
 <body>
 <div id="stage">
   <div class="status" id="statusText">conectando…</div>
-  <div class="hud-top" id="htVs"></div>
 
-  <div class="hud">
-    <div class="hud-side left">
-      <div class="hud-name">FLÁVIO</div>
-      <div class="hud-votes" id="votes-flavio"></div>
-      <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
-      <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
-      <div class="gift-tags" id="gifts-flavio"></div>
-    </div>
-
-    <div class="hud-side right">
-      <div class="hud-name">LULA</div>
-      <div class="hud-votes" id="votes-lula"></div>
-      <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
-      <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
-      <div class="gift-tags" id="gifts-lula"></div>
+  <div class="scoreboard">
+    <div class="sb-votes" id="htVs">0 VS 0</div>
+    <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
+    <div class="sb-bar-host"><div class="sb-bar"><i id="sbBar" style="width:0%"></i></div></div>
+    <div class="sb-sides">
+      <div class="sb-side left">
+        <div class="hud-name">FLÁVIO</div>
+        <div class="hud-votes" id="votes-flavio"></div>
+        <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
+        <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
+        <div class="gift-tags" id="gifts-flavio"></div>
+      </div>
+      <div class="sb-side right">
+        <div class="hud-name">LULA</div>
+        <div class="hud-votes" id="votes-lula"></div>
+        <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
+        <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
+        <div class="gift-tags" id="gifts-lula"></div>
+      </div>
     </div>
   </div>
 
-  <div class="bubble" id="bubble-flavio"></div>
-  <div class="bubble" id="bubble-lula"></div>
   <div class="lead-flash" id="leadFlash"></div>
 
   <div class="shield-fx left" id="shield-flavio"></div>
   <div class="shield-fx right" id="shield-lula"></div>
 
-  <div class="fighter" id="fighter-flavio"><img id="img-flavio" alt=""></div>
-  <div class="fighter" id="fighter-lula"><img id="img-lula" alt=""></div>
+  <div class="fighter-wrap" id="wrap-flavio">
+    <div class="fighter" id="fighter-flavio"><img id="img-flavio" alt=""></div>
+    <div class="f-anchor f-speech" id="speech-flavio"></div>
+    <div class="f-anchor f-vote" id="vote-flavio"></div>
+  </div>
+  <div class="fighter-wrap" id="wrap-lula">
+    <div class="fighter" id="fighter-lula"><img id="img-lula" alt=""></div>
+    <div class="f-anchor f-speech" id="speech-lula"></div>
+    <div class="f-anchor f-vote" id="vote-lula"></div>
+  </div>
   <div class="hit" id="hit"></div>
   <div class="float-text" id="floatText"></div>
   <div class="win-banner" id="winBanner">
@@ -298,6 +308,9 @@ let currentCombo = 0;
 let dueloGifts = [];
 
 const GIFT_ACTION_LABEL = { punch: "Soco", kick: "Chute", uppercut: "Levantada" };
+const GIFT_SUPPORT_TYPES = ["apoio", "support", "vote"];
+
+function fmtNum(n) { return Number(n || 0).toLocaleString("pt-BR"); }
 
 function renderGiftTags() {
   for (const f of ["flavio", "lula"]) {
@@ -310,17 +323,24 @@ function renderGiftTags() {
     head.textContent = "PRESENTES";
     const tags = list.map((g) => {
       const span = document.createElement("span");
-      const isEsc = String(g.type || "").toLowerCase() === "escudo";
-      span.className = "gift-tag " + (isEsc ? "esc" : "atk");
+      const tg = String(g.type || "").toLowerCase();
+      const isSup = GIFT_SUPPORT_TYPES.includes(tg);
+      const isEsc = tg === "escudo";
+      span.className = "gift-tag " + (isEsc ? "esc" : (isSup ? "sup" : "atk"));
       if (g.image) {
         const img = document.createElement("img");
         img.src = g.image;
         img.alt = "";
         img.onerror = function () { this.style.display = "none"; };
         span.appendChild(img);
+      } else {
+        const ic = document.createElement("span");
+        ic.className = "gift-icon";
+        ic.textContent = isSup ? "💗" : isEsc ? "🛡" : "🎁";
+        span.appendChild(ic);
       }
       const label = document.createElement("span");
-      const acao = isEsc ? "Escudo" : (GIFT_ACTION_LABEL[g.action] || "Soco");
+      const acao = isSup ? "Apoio" : (isEsc ? "Escudo" : (GIFT_ACTION_LABEL[g.action] || "Golpe"));
       label.textContent = acao;
       span.appendChild(label);
       return span;
@@ -371,9 +391,19 @@ function renderHud() {
     }
   }
   const vs = $("htVs");
-  if (vs) {
-    vs.textContent = `${(state.votes.flavio || 0)} VS ${(state.votes.lula || 0)}`;
-    vs.classList.add("has");
+  if (vs) vs.textContent = `${fmtNum(state.votes.flavio)} VS ${fmtNum(state.votes.lula)}`;
+  const meta = $("sbMeta");
+  const bar = $("sbBar");
+  const vt = state.vote_target || 0;
+  const leader = Math.max(state.votes.flavio || 0, state.votes.lula || 0);
+  if (meta) {
+    if (vt > 0) {
+      meta.textContent = "META: " + fmtNum(leader) + " / " + fmtNum(vt);
+      if (bar) bar.style.width = Math.max(0, Math.min(100, (leader / vt) * 100)) + "%";
+    } else {
+      meta.textContent = "SEM LIMITE";
+      if (bar) bar.style.width = "0%";
+    }
   }
 }
 
@@ -543,7 +573,7 @@ function say(fighter, bucket) {
   const phrase = opts[Math.floor(Math.random() * opts.length)];
   lastPhrase = phrase;
   speechCd[fighter] = now + 4000;
-  const el = $("bubble-" + fighter);
+  const el = $("speech-" + fighter);
   if (!el) return;
   el.textContent = phrase;
   el.classList.remove("show");
@@ -554,19 +584,25 @@ function say(fighter, bucket) {
 }
 
 // ---- Feedback de votos / virada ----
-function voteFloat(char, txt) {
+function voteFloat(char, txt, cls) {
+  const host = $("vote-" + char);
+  if (!host) return;
   const s = document.createElement("div");
-  s.className = "vote-float";
+  s.className = "vote-float" + (cls ? " " + cls : "");
   s.textContent = txt;
-  const vh = window.innerHeight / 100;
-  const off = Math.max(40, Math.min(200, 9 * vh));
-  const half = 14 * vh;
-  const d = char === "flavio" ? -1 : 1;
-  s.style.left = "50%";
-  s.style.marginLeft = (d * (half + off)) + "px";
-  s.style.bottom = (Math.max(60, Math.min(150, 8 * vh)) + 30 * vh) + "px";
-  $("stage").appendChild(s);
+  host.appendChild(s);
   setTimeout(() => s.remove(), 1000);
+}
+
+function comboLabel(combo) {
+  if (combo >= 100) return "MEGA COMBO!";
+  if (combo >= 50) return "SUPER COMBO!";
+  return "COMBO x" + combo + "!";
+}
+
+function spawnCombo(char, combo) {
+  if (!combo || combo < 2) return;
+  voteFloat(char, comboLabel(combo), "combo");
 }
 
 function showFlash(txt) {
@@ -600,12 +636,7 @@ let lastWinner = null;
 function shieldEffect(fighter, points) {
   const fx = $("shield-" + fighter);
   if (fx) { fx.classList.remove("show"); void fx.offsetWidth; fx.classList.add("show"); setTimeout(() => fx.classList.remove("show"), 850); }
-  const ft = $("floatText");
-  if (ft) {
-    ft.textContent = "+" + points + " ESCUDO";
-    ft.classList.remove("show"); void ft.offsetWidth; ft.classList.add("show");
-    setTimeout(() => ft.classList.remove("show"), 1000);
-  }
+  voteFloat(fighter, "+" + points + " ESCUDO", "sh");
 }
 
 function enqueueAttack(att) {
@@ -666,6 +697,7 @@ async function runAttack(att) {
   if (deEl) deEl.style.transform = `translateX(${-dir * 30}px)`;
   spawnHit(att.action, dir);
   if (att.combo > 0) { currentCombo = att.combo; updateCombo(); }
+  spawnCombo(att.attacker, att.combo || 1);
   playAudio(att.audio_url);
   await sleep(dur.hold);
   if (state.winner) { renderWinner(); } else { resetPose(att.attacker); resetPose(def); }

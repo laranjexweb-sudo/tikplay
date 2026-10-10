@@ -3349,35 +3349,35 @@ function buildDueloRow(g_, i) {
   const row = document.createElement("div");
   row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
   row.innerHTML = `
-      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
+      <div class="col-12 col-md-5"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
         <div class="position-relative">
           <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
           <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
         </div></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
+      <div class="col-6 col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
         <select class="form-select form-select-sm" data-f="type" data-i="${i}">
           <option value="golpe" ${type === 'golpe' ? 'selected' : ''}>Golpe</option>
           <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
           <option value="apoio" ${type === 'apoio' ? 'selected' : ''}>Apoio</option>
         </select></div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Golpe / Escudo / Apoio</label>
-        <div class="duelo-golpe-fields d-flex gap-1" ${type === 'golpe' ? '' : 'style="display:none"'}>
-          <select class="form-select form-select-sm" data-f="action" data-i="${i}" style="flex:1">
+      <div class="col-6 col-md-4"><label class="form-label mb-0" style="font-size:0.7rem">${type === 'golpe' ? 'Golpe e dano' : (type === 'escudo' ? 'Pontos de escudo' : 'Apoio')}</label>
+        <div class="duelo-golpe-fields" ${type === 'golpe' ? '' : 'style="display:none"'}>
+          <select class="form-select form-select-sm mb-1" data-f="action" data-i="${i}">
             <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
             <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
             <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
           </select>
-          <input type="number" class="form-control form-control-sm" style="width:84px" value="${esc(g_.damage || '')}" placeholder="dano(0=padrão)" data-f="damage" data-i="${i}">
+          <input type="number" class="form-control form-control-sm" value="${esc(g_.damage || '')}" placeholder="dano (0 = padrão)" data-f="damage" data-i="${i}">
         </div>
         <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
-          <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo" data-f="shield" data-i="${i}">
+          <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo (0 = 15)" data-f="shield" data-i="${i}">
         </div>
-        <div class="duelo-apoio-field text-secondary" style="font-size:0.75rem;display:${type === 'apoio' ? 'block' : 'none'}">Só soma votos (moedas × combo). Não afeta o debate.</div></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
+        <div class="duelo-apoio-field text-secondary" style="font-size:0.78rem;display:${type === 'apoio' ? 'block' : 'none'}">Só soma votos (moedas × combo). Não afeta o debate.</div></div>
+      <div class="col-12 col-md-6"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
         <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
         <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : (type === 'apoio' ? 'sem áudio' : 'padrão do sistema')}</div></div>
-      <div class="col-md-1"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
-      <div class="col-md-1 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
+      <div class="col-6 col-md-3"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
+      <div class="col-6 col-md-3 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
 
   row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
     const t = e.target.value;

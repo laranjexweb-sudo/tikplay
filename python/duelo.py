@@ -107,6 +107,7 @@ class DueloEngine:
             "votes": dict(self.votes),
             "hp_max": int(self.settings.get("hp_max", 100) or 100),
             "shield_max": int(self.settings.get("shield_max", 200) or 200),
+            "vote_target": int(self.settings.get("vote_target", 0) or 0),
             "winner": self.winner,
             "roundActive": self.roundActive,
             "final": self.final,
