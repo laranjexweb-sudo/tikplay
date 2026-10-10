@@ -737,7 +737,7 @@ app.post("/api/auth/register", (req, res) => {
         name: String(name).trim(),
         password_hash: auth.hashPassword(password),
         role,
-        features: { bichinho: false },
+        features: { bichinho: false, duelo: false },
       });
     }
   } catch (e) {

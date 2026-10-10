@@ -331,7 +331,7 @@ function registerWithInvite({ email, name, password_hash, token, role = "user" }
       password_hash,
       role,
       plan: "free",
-      features: { bichinho: false },
+      features: { bichinho: false, duelo: false },
     });
     const consumed = db.prepare(
       "UPDATE registration_invites SET status = 'used', used_at = datetime('now'), used_by = ? WHERE token = ? AND status = 'active'"
