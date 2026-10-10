@@ -1956,6 +1956,13 @@ function normalizeDueloSettings(raw) {
     scene: "brasilia",
     idle: { enabled: true, enter_after: 10, interval: 7 },
     supporters: {},
+    game_mode: "hp",
+    round_time_s: 180,
+    round_result_delay_s: 8,
+    kick_combo_min: 5,
+    uppercut_combo_min: 20,
+    main_gifts: {},
+    extra_gifts: {},
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -2005,6 +2012,31 @@ function normalizeDueloSettings(raw) {
         };
       }
     }
+    const gm = String(raw.game_mode || "").trim().toLowerCase();
+    out.game_mode = gm === "timed" ? "timed" : "hp";
+    const nt = (v, lo, hi, fb) => { const x = Number(v); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : fb; };
+    out.round_time_s = nt(raw.round_time_s, 15, 3600, 180);
+    out.round_result_delay_s = nt(raw.round_result_delay_s, 2, 120, 8);
+    out.kick_combo_min = nt(raw.kick_combo_min, 2, 100, 5);
+    out.uppercut_combo_min = nt(raw.uppercut_combo_min, 3, 1000, 20);
+    const mkGift = (o, o2) => ({
+      gift_id: String((o && o.gift_id) || (o2 && o2.gift_id) || "").trim().slice(0, 40),
+      gift_name: String((o && o.gift_name) || (o2 && o.gift_name) || "").trim().slice(0, 80),
+    });
+    out.main_gifts = {
+      flavio: mkGift(raw.main_gifts && raw.main_gifts.flavio),
+      lula: mkGift(raw.main_gifts && raw.main_gifts.lula),
+    };
+    const mkExtra = (arr) => (Array.isArray(arr) ? arr : []).slice(0, 20).map((x) => ({
+      gift_id: String((x && x.gift_id) || "").trim().slice(0, 40),
+      gift_name: String((x && x.gift_name) || "").trim().slice(0, 80),
+      enabled: !!(x && x.enabled !== false),
+      action: /^[a-z_]+$/.test(String((x && x.action) || "")) ? String(x.action) : "vote_only",
+    })).filter((x) => x.gift_id || x.gift_name);
+    out.extra_gifts = {
+      flavio: mkExtra(raw.extra_gifts && raw.extra_gifts.flavio),
+      lula: mkExtra(raw.extra_gifts && raw.extra_gifts.lula),
+    };
     if (raw.layout && typeof raw.layout === "object") {
       const c = (o, name, def) => {
         const src = (o && o[name] && typeof o[name] === "object") ? o[name] : {};
