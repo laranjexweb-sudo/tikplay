@@ -224,7 +224,10 @@ class DueloEngine:
                 self.votes[char] = (self.votes.get(char, 0) or 0) + added
             base = max(1, int(cfg.get("damage") or 0))
             dmg = base * combo
+            sh_before = self.shield[defender]
             self._apply_damage(defender, dmg)
+            absorbed = min(int(sh_before), dmg)
+            hp_damage = dmg - absorbed
             own = str(cfg.get("audio") or "").strip()
             audio_url = f"/duelo-audio/{self.tenant_id}/{own}" if own else ""
             self._emit("duelo_support_attack", {
@@ -235,6 +238,8 @@ class DueloEngine:
                 "damage": base,
                 "combo": combo,
                 "final_damage": dmg,
+                "absorbed": absorbed,
+                "hp_damage": hp_damage,
                 "added_votes": added,
                 "target": defender,
                 "audio_url": audio_url,
@@ -326,7 +331,10 @@ class DueloEngine:
             base = int(self.settings.get("dmg_" + action, 10) or 10)
         dmg = base * combo
         defender = "lula" if char == "flavio" else "flavio"
+        sh_before = self.shield[defender]
         self._apply_damage(defender, dmg)
+        absorbed = min(int(sh_before), dmg)
+        hp_damage = dmg - absorbed
 
         self._emit("duelo_attack", {
             "attacker": char,
@@ -335,6 +343,8 @@ class DueloEngine:
             "combo": combo,
             "base_damage": base,
             "damage": dmg,
+            "absorbed": absorbed,
+            "hp_damage": hp_damage,
             "added_votes": added,
             "audio_url": self._click_audio(match, gtype, action),
             "gift_id": str(match.get("gift_id") or ""),
