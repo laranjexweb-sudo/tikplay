@@ -1978,6 +1978,7 @@ app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, r
   const cfg = db.saveDueloConfig(req.user.id, { gifts, active, settings });
   daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts, settings });
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts: dueloGiftsPayload(gifts) });
+  broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_layout", layout: settings.layout || {} });
   res.json({ success: true, ...cfg });
 });
 

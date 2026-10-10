@@ -829,6 +829,7 @@ function connectWS() {
       trackLeadChange(msg.votes || {});
     }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
+    else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
   };
 }
 
