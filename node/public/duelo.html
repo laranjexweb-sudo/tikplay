@@ -25,7 +25,7 @@
     --fire-y: 20; --fire-scale: 0.9; --fire-gap: 9vh;
   }
 
-  .fighter-wrap { position: absolute; left: 51.5%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
+  .fighter-wrap { position: absolute; left: 52.5%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
   .fighter { position: relative; width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
@@ -159,8 +159,8 @@
 
   .shield-fx { position: absolute; bottom: calc(var(--fire-y) * 1%); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
-  .shield-fx.left  { left: 51.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
-  .shield-fx.right { left: 51.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
+  .shield-fx.left  { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
+  .shield-fx.right { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
   @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
   .float-text {
     position: absolute;
