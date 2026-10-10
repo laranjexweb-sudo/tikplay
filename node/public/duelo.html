@@ -16,7 +16,7 @@
     background-size: cover;
   }
 
-  .fighter { position: absolute; bottom: clamp(40px, 6vh, 120px); width: auto; will-change: transform; z-index: 1; }
+  .fighter { position: absolute; bottom: clamp(60px, 8vh, 150px); width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
   .fighter.winner img { animation: winBounce .65s ease; }
@@ -28,13 +28,13 @@
     0% { transform: rotate(0deg) translateY(0); opacity: 1; filter: none; }
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
-  .fighter img { display: block; max-height: 34vh; width: auto; transform-origin: bottom center; }
+  .fighter img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
   #fighter-flavio { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
   #fighter-lula  { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
 
   .hud {
     position: absolute;
-    top: clamp(150px, 14vh, 260px);
+    top: clamp(180px, 16vh, 290px);
     left: 50%;
     transform: translateX(-50%);
     width: min(92vw, 980px);
@@ -43,7 +43,7 @@
     display: flex;
     justify-content: space-between;
     gap: clamp(14px, 3vw, 44px);
-    padding: 14px 18px 12px;
+    padding: 18px 20px 16px;
     border-radius: 20px;
     background: rgba(8, 8, 14, 0.5);
     border: 2px solid rgba(255, 255, 255, 0.18);
@@ -64,24 +64,30 @@
     font-size: clamp(1.3rem, 3.6vh, 2.6rem);
     letter-spacing: 4px;
     color: #ffd200;
-    text-shadow: 0 0 16px rgba(255, 150, 0, 0.9), 0 0 3px #000;
+    text-shadow: 0 0 12px rgba(255, 150, 0, 0.9), 0 0 3px #000;
     z-index: 31;
     white-space: nowrap;
   }
-  .hud-name { font-weight: 900; font-size: clamp(1.2rem, 3.2vh, 2.2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); }
-  .hud-votes { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.8rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8), 0 0 3px #000; margin-bottom: 8px; }
+  .hud-top.has {
+    background: rgba(8, 8, 14, 0.55);
+    border: 2px solid rgba(255, 210, 0, 0.45);
+    border-radius: 999px;
+    padding: 6px 22px;
+  }
+  .hud-name { font-weight: 900; font-size: clamp(1.2rem, 3.2vh, 2.2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); margin-bottom: 4px; }
+  .hud-votes { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.8rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8), 0 0 3px #000; margin-bottom: 10px; }
 
-  .bar { width: 100%; height: clamp(18px, 2.4vh, 26px); border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid #000; overflow: hidden; margin: 6px 0; position: relative; }
+  .bar { width: 100%; height: clamp(14px, 1.9vh, 22px); border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid #000; overflow: hidden; margin: 8px 0; position: relative; }
   .bar > i { display: block; height: 100%; width: 100%; transition: width .3s ease; border-radius: 999px; }
   .bar > span.label-in {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-    z-index: 2; font-size: clamp(0.72rem, 1.7vh, 1.1rem); font-weight: 800;
+    z-index: 2; font-size: clamp(0.68rem, 1.6vh, 1rem); font-weight: 800;
     color: #fff; text-shadow: 0 0 4px #000, 0 0 12px #000; letter-spacing: 2px; pointer-events: none; white-space: nowrap;
   }
   .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
   .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
   .bar-label { font-size: clamp(0.62rem, 1.7vw, 0.9rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
-  .gift-tags { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .gift-tags { margin-top: 14px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.28); padding: 7px 9px; border-radius: 12px; }
   .gift-head { font-weight: 900; letter-spacing: 2px; color: #ffd200; font-size: clamp(0.72rem, 1.8vh, 1rem); text-shadow: 0 0 8px #000; margin-bottom: 2px; }
   .gift-tag {
     display: inline-flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%;
@@ -118,7 +124,7 @@
   .win-banner .big { font-size: clamp(1.4rem, 5vw, 3rem); }
   .win-banner .sub { font-size: clamp(0.9rem, 2.4vw, 1.4rem); color: #ffd200; margin-top: 6px; }
 
-  .shield-fx { position: absolute; bottom: clamp(40px, 6vh, 120px); width: 0; height: 0; pointer-events: none; opacity: 0; }
+  .shield-fx { position: absolute; bottom: clamp(60px, 8vh, 150px); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
   .shield-fx.left  { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
   .shield-fx.right { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
@@ -302,6 +308,7 @@ function renderHud() {
     vs.textContent = state.mode === "votes"
       ? `${state.votes.flavio} VS ${state.votes.lula}`
       : "";
+    vs.classList.toggle("has", vs.textContent.length > 0);
   }
 }
 
