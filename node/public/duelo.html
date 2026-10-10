@@ -957,6 +957,15 @@ function pickSupFala(sup) {
   return pick;
 }
 
+function preloadSupporterAssets() {
+  const srcs = [];
+  Object.values(SUPPORTERS).forEach((s) => {
+    Object.values(s.sprites || {}).forEach((u) => srcs.push(u));
+    (s.falas || []).forEach((u) => srcs.push(u));
+  });
+  srcs.forEach((u) => { const im = new Image(); im.src = u; });
+}
+
 function enqueueSupport(item) {
   if (!item || !SUPPORTERS[item.supporter]) return;
   if (state.winner || !state.roundActive || state.final) return;
@@ -982,23 +991,24 @@ async function runSupport(item) {
   const acts = SUPPORT_ACTIONS.filter((a) => sup.sprites[a]);
   const action = acts.length ? acts[Math.floor(Math.random() * acts.length)] : "punch";
   img.src = sup.sprites[action] || "";
+  try { await Promise.race([img.decode(), sleep(600)]); } catch (e) { img.style.opacity = 0.5; }
   wrap.classList.add("enter");
   const fala = pickSupFala(sup);
   if (fala && bubble) bubble.innerHTML = '<img src="' + fala + '" alt="">';
   if (item.audio_url) playAudio(item.audio_url);
-  await sleep(350);
-  await sleep(500);
+  await sleep(400);
+  await sleep(520);
   spawnHit(action, side === "flavio" ? 1 : -1);
   if (item.added_votes > 0) {
     voteFloat(side, "+" + item.added_votes + " VOTOS");
     const ap = $("lbScore");
     if (ap) { ap.classList.remove("pulse"); void ap.offsetWidth; ap.classList.add("pulse"); }
   }
-  await sleep(700);
+  await sleep(800);
   if (bubble) bubble.innerHTML = "";
   wrap.classList.remove("enter");
   wrap.classList.add("exit");
-  await sleep(300);
+  await sleep(350);
   wrap.className = "supporter";
   wrap.style.display = "none";
   if (!state.winner) resetPose(side);
@@ -1187,6 +1197,7 @@ resetPose("flavio");
 resetPose("lula");
 applyLayout();
 scheduleIdleEnter();
+preloadSupporterAssets();
 renderHud();
 renderGiftTags();
 loadInitialState();
