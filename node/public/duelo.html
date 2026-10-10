@@ -25,7 +25,8 @@
     --fire-y: 20; --fire-scale: 0.9; --fire-gap: 9vh;
   }
 
-  .fighter-wrap { position: absolute; left: 52.5%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
+  .fighter-wrap { position: absolute; left: 52.5%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; z-index: 1; }
+  .fighter-wrap.attacking, .fighter-wrap.fronting { z-index: 15; }
   .fighter { position: relative; width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
@@ -78,8 +79,11 @@
     font-weight: 700;
     letter-spacing: 1px;
   }
-  .sb-bar { width: min(40vw, 300px); height: 8px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
-  .sb-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #ffd200, #ff8800); transition: width .4s ease; }
+  .sb-bar { position: relative; width: min(44vw, 320px); height: 12px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .sb-bar .seg { position: absolute; top: 0; bottom: 0; display: block; transition: width .4s ease; }
+  .sb-bar .seg.flavio { left: 0; background: linear-gradient(90deg, #2471a3, #5bc0ff); }
+  .sb-bar .seg.lula { right: 0; background: linear-gradient(90deg, #c0392b, #ff6b6b); }
+  .sb-bar .sb-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255,255,255,.75); }
 
   .hud-flavio, .hud-lula {
     position: absolute;
@@ -252,7 +256,7 @@
   <div class="lb-score">
     <div class="sb-votes" id="htVs">0 VS 0</div>
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
-    <div class="sb-bar"><i id="sbBar" style="width:0%"></i></div>
+    <div class="sb-bar"><i class="seg flavio" id="sbBarF" style="width:0%"></i><i class="seg lula" id="sbBarL" style="width:0%"></i><span class="sb-mid"></span></div>
   </div>
 
   <div class="hud-flavio">
@@ -607,6 +611,8 @@ function setFighter(fighter, stateName) {
 function resetPose(fighter) {
   const el = $("fighter-" + fighter);
   setFighter(fighter, "idle");
+  const wr = $("wrap-" + fighter);
+  if (wr) { wr.classList.remove("attacking"); wr.classList.remove("fronting"); }
   if (el) { el.classList.remove("attacking"); el.classList.remove("winner"); el.classList.remove("down"); el.classList.remove("victory-enter"); el.style.transition = "transform .28s ease"; el.style.transform = "translate(0,0) scale(1)"; }
 }
 
@@ -631,19 +637,26 @@ function renderHud() {
     }
   }
   const vs = $("htVs");
-  if (vs) vs.textContent = `${fmtNum(state.votes.flavio)} VS ${fmtNum(state.votes.lula)}`;
   const meta = $("sbMeta");
-  const bar = $("sbBar");
+  const barF = $("sbBarF");
+  const barL = $("sbBarL");
+  const barBox = $("sbBar");
   const vt = state.vote_target || 0;
-  const leader = Math.max(state.votes.flavio || 0, state.votes.lula || 0);
-  if (meta) {
-    if (vt > 0) {
-      meta.textContent = "META: " + fmtNum(leader) + " / " + fmtNum(vt);
-      if (bar) bar.style.width = Math.max(0, Math.min(100, (leader / vt) * 100)) + "%";
-    } else {
-      meta.textContent = "SEM LIMITE";
-      if (bar) bar.style.width = "0%";
-    }
+  const fv = state.votes.flavio || 0, lv = state.votes.lula || 0;
+  if (vt > 0) {
+    const majority = Math.floor(vt / 2) + 1;
+    const fp = Math.max(0, Math.min(100, (fv / vt) * 100));
+    const lp = Math.max(0, Math.min(100, (lv / vt) * 100));
+    const ap = Math.max(0, Math.min(100, ((fv + lv) / vt) * 100));
+    if (vs) vs.textContent = "FLÁVIO " + Math.round(fp) + "% VS " + Math.round(lp) + "% LULA";
+    if (meta) meta.textContent = "APURADO " + Math.round(ap) + "% · META " + fmtNum(vt) + " · MAIORIA " + fmtNum(majority);
+    if (barBox) barBox.style.display = "";
+    if (barF) barF.style.width = fp + "%";
+    if (barL) barL.style.width = lp + "%";
+  } else {
+    if (vs) vs.textContent = fmtNum(fv) + " VS " + fmtNum(lv);
+    if (meta) meta.textContent = "SEM LIMITE";
+    if (barBox) barBox.style.display = "none";
   }
 }
 
@@ -653,6 +666,8 @@ function clearWinnerVisual() {
   for (const f of ["flavio", "lula"]) {
     const el = $("fighter-" + f);
     if (el) { el.classList.remove("winner"); el.classList.remove("down"); el.classList.remove("victory-enter"); }
+    const wr = $("wrap-" + f);
+    if (wr) wr.classList.remove("fronting");
   }
 }
 
@@ -666,6 +681,8 @@ function renderWinner() {
   setFighter(loser, "idle");
   const wEl = $("fighter-" + winner);
   const lEl = $("fighter-" + loser);
+  const wWrap = $("wrap-" + winner);
+  if (wWrap) wWrap.classList.add("fronting");
   if (wEl) {
     wEl.classList.remove("attacking");
     wEl.style.transform = "translate(0,0) scale(1)";
@@ -946,6 +963,8 @@ async function runAttack(att) {
   setFighter(def, "defense");
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
+  const atWrap = $("wrap-" + att.attacker);
+  if (atWrap) atWrap.classList.add("attacking");
   if (atEl) {
     atEl.classList.add("attacking");
     atEl.style.transition = `transform ${dur.fwd}ms ease-out`;

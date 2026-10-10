@@ -159,9 +159,14 @@ class DueloEngine:
         return ""
 
     def _check_meta(self, char):
-        """Encerra a disputa se a meta de votos foi atingida. Retorna 'match_end' ou None."""
+        """Encerra a disputa pela MAIORIA ABSOLUTA da meta (vote_target).
+
+        Regra: vence quem atingir floor(vote_target/2) + 1 votos.
+        Se vote_target == 0 (SEM LIMITE), não há final automático.
+        """
         target = int(self.settings.get("vote_target", 0) or 0)
-        if target > 0 and (self.votes.get(char, 0) or 0) >= target and not self.final:
+        threshold = (target // 2) + 1 if target > 0 else 0
+        if threshold > 0 and (self.votes.get(char, 0) or 0) >= threshold and not self.final:
             self.roundActive = False
             self.winner = char
             self.final = True
@@ -169,6 +174,7 @@ class DueloEngine:
                 "winner": char,
                 "votes": dict(self.votes),
                 "target": target,
+                "majority": threshold,
                 "final": True,
             })
             self._emit("duelo_state", self.state())
