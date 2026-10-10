@@ -555,21 +555,37 @@ document.addEventListener("touchstart", unlockAudio, { once: true });
 
 // ---- Falas (client-side) ----
 const SPEECH = {
-  attack: ["Agora foi!", "Toma essa!", "Responde essa!", "Vai!"],
-  hit: ["Opa!", "Essa pegou!", "Preciso reagir!"],
-  shield: ["Agora estou protegido!", "Boa!", "Reforço chegou!"],
-  lowHp: ["Tá apertando!", "Não acabou!", "Preciso reagir!"],
-  victory: ["Fui melhor no debate!", "Levei essa!"],
+  flavio: {
+    punch: ["Mentiroso!", "Responde aí!", "Fala a verdade!", "Agora aguenta!"],
+    kick: ["O sistema tá contra mim!", "Mentiroso!", "Segura essa!", "Agora aguenta!"],
+    uppercut: ["Agora você inventa!", "Essa é pra valer!", "Cuidado com a verdade!"],
+    hit: ["Opa!", "Essa foi baixa!", "Tá difícil!", "Calma aí!", "Ainda tô de pé!"],
+    lowHp: ["Tá apertando!", "Ainda tô de pé!", "Preciso reagir!"],
+    shield: ["Agora tô protegido!", "Blindado!", "Não entra!"],
+    victory: ["Fui melhor no debate!", "Levei essa!", "Ganhei no argumento!", "O povo tá comigo!"],
+    leadChange: ["Tô na frente!", "Agora é meu jogo!", "Vem que tem!"],
+  },
+  lula: {
+    punch: ["Mentiroso é você!", "Responde essa!", "Agora fala!", "Se comporte!"],
+    kick: ["Tá descompensado!", "Se comporte como presidente!", "Segura essa!", "Agora fala!"],
+    uppercut: ["Samba de uma nota só!", "Agora complicou!", "Essa subiu!", "Você mente todo dia!"],
+    hit: ["Rapaz!", "Calma aí!", "Essa pegou!", "Tá nervoso?", "Não acabou!"],
+    lowHp: ["Tá apertando!", "Não acabou!", "Preciso reagir!"],
+    shield: ["Agora tô protegido!", "Boa!", "Reforço chegou!"],
+    victory: ["Fui melhor no debate!", "Levei essa!", "Ganhei no argumento!", "O povo tá comigo!"],
+    leadChange: ["Agora virei!", "O povo tá comigo!", "Vem que tem!"],
+  },
 };
 const speechTimer = {};
 const speechCd = { flavio: 0, lula: 0 };
 let lastPhrase = "";
 
 function say(fighter, bucket) {
-  if (!fighter || !SPEECH[bucket] || state.winner) return;
+  const list = (SPEECH[fighter] && SPEECH[fighter][bucket]) || [];
+  if (!list.length || state.winner) return;
   const now = Date.now();
   if (now < speechCd[fighter]) return;
-  const opts = SPEECH[bucket].filter((p) => p !== lastPhrase);
+  const opts = list.filter((p) => p !== lastPhrase);
   const phrase = opts[Math.floor(Math.random() * opts.length)];
   lastPhrase = phrase;
   speechCd[fighter] = now + 4000;
@@ -626,7 +642,11 @@ function trackLeadChange(votes) {
   const lead = leadOf(votes);
   if (lastLead !== null && lastLead !== lead) {
     if (lead === 0) showFlash("EMPATE!");
-    else showFlash((lead === 1 ? "FLÁVIO" : "LULA") + " VIROU!");
+    else {
+      const c = lead === 1 ? "flavio" : "lula";
+      showFlash((lead === 1 ? "FLÁVIO" : "LULA") + " VIROU!");
+      say(c, "leadChange");
+    }
   }
   lastLead = lead;
 }
@@ -721,7 +741,7 @@ function connectWS() {
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") {
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
-      say(msg.attacker, "attack");
+      say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
     else if (msg.type === "duelo_shield") { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); }
