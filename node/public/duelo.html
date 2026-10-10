@@ -354,11 +354,11 @@ if (!token && !DEBUG) location.href = "/login";
 const FIGHTERS = {
   flavio: {
     name: "FLÁVIO", dir: 1,
-    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png", esperando: "/duelo/Flavio/esperando.png" },
+    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", defesaEscudo: "/duelo/Flavio/defesa-escudo.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png", esperando: "/duelo/Flavio/esperando.png" },
   },
   lula: {
     name: "LULA", dir: -1,
-    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png", esperando: "/duelo/lula/esperando.png" },
+    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", defesaEscudo: "/duelo/lula/defesa-escudo.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png", esperando: "/duelo/lula/esperando.png" },
   },
 };
 
@@ -659,11 +659,20 @@ const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const opponent = (f) => (f === "flavio" ? "lula" : "flavio");
 
+function getDefensePose(target, msg) {
+  const absorbed = Number(msg && msg.absorbed) > 0;
+  const currentShield = Number(state.shield && state.shield[target]) > 0;
+  return (absorbed || currentShield) ? "defesaEscudo" : "defense";
+}
+
 function setFighter(fighter, stateName) {
   const img = $("img-" + fighter);
   const url = FIGHTERS[fighter].sprites[stateName] || FIGHTERS[fighter].sprites.idle;
   if (img) {
-    img.onerror = function () { if (this.src.indexOf("vitoria") !== -1) this.src = FIGHTERS[fighter].sprites.idle; };
+    img.onerror = function () {
+      if (this.src.indexOf("vitoria") !== -1) this.src = FIGHTERS[fighter].sprites.idle;
+      else if (this.src.indexOf("defesa-escudo") !== -1) this.src = FIGHTERS[fighter].sprites.defense;
+    };
     img.src = url;
   }
   const el = $("fighter-" + fighter);
@@ -1081,6 +1090,8 @@ async function runSupport(item) {
   if (item.audio_url) playAudio(item.audio_url);
   await sleep(400);
   await sleep(520);
+  const tgt = item.target || opponent(side);
+  setFighter(tgt, getDefensePose(tgt, item));
   spawnHit(action, side === "flavio" ? 1 : -1);
   if (item.added_votes > 0) {
     voteFloat(side, "+" + item.added_votes + " VOTOS");
@@ -1094,7 +1105,7 @@ async function runSupport(item) {
   await sleep(350);
   wrap.className = "supporter";
   img.style.opacity = "";
-  if (!state.winner) resetPose(side);
+  if (!state.winner) { resetPose(side); if (tgt) resetPose(tgt); }
 }
 
 let pendingWinnerVisual = null;
@@ -1189,7 +1200,7 @@ async function runAttack(att) {
   }
 
   setFighter(att.attacker, att.action);
-  setFighter(def, "defense");
+  setFighter(def, getDefensePose(def, att));
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
   const atWrap = $("wrap-" + att.attacker);
