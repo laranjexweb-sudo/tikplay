@@ -1924,18 +1924,9 @@ function normalizeDueloSettings(raw) {
     dmg_uppercut: 20,
     reset_delay_s: 6,
     max_votes: 0,
-    action_audio: { punch: "", kick: "", uppercut: "" },
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
-    const safeName = (v) => String((v == null ? "" : v)).trim().replace(/[^a-zA-Z0-9._-]/g, "");
-    if (raw.action_audio && typeof raw.action_audio === "object") {
-      out.action_audio = {
-        punch: safeName(raw.action_audio.punch),
-        kick: safeName(raw.action_audio.kick),
-        uppercut: safeName(raw.action_audio.uppercut),
-      };
-    }
     const hn = n(raw.hp_start);
     const hx = n(raw.hp_max);
     out.hp_max = hx !== null ? Math.max(1, Math.min(10000, hx)) : 100;
@@ -2014,12 +2005,7 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const cfg = db.getDueloConfig(req.user.id);
   const gift = (cfg.gifts || []).find((g) => g.character === attacker && g.action === action);
   let audio = (gift && gift.audio) ? String(gift.audio) : "";
-  if (!audio) {
-    const settings = normalizeDueloSettings(cfg.settings || {});
-    audio = (settings.action_audio && settings.action_audio[action]) ? String(settings.action_audio[action]) : "";
-  }
-  const DEFAULT_ACTION_AUDIO = { punch: "soco-novo.mp3", kick: "chute-novo.mp3", uppercut: "levantada-novo.mp3" };
-  if (!audio) audio = DEFAULT_ACTION_AUDIO[action] || "";
+  const DEFAULT_ACTION_AUDIO = { punch: "/duelo-audio/_system/soco-novo.mp3", kick: "/duelo-audio/_system/chute-novo.mp3", uppercut: "/duelo-audio/_system/levantada-novo.mp3" };
   const tenant = getTenant(req.user.id);
   // Teste é SOMENTE visual: isTest true faz a arena ignorar as travas de winner/roundActive,
   // sem alterar HP, escudo, votos, winner ou roundActive (não passa pelo motor).
@@ -2029,7 +2015,7 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
     attacker,
     action,
     combo,
-    audio_url: audio ? `/duelo-audio/${req.user.id}/${audio}` : "",
+    audio_url: audio ? `/duelo-audio/${req.user.id}/${audio}` : (DEFAULT_ACTION_AUDIO[action] || ""),
     gift: gift ? gift.name : "",
     user: "streamer",
     nickname: "Streamer",

@@ -21,14 +21,13 @@ DEFAULT_SETTINGS = {
     "dmg_uppercut": 20,
     "reset_delay_s": 6,
     "max_votes": 0,               # 0 = sem limite
-    "shield_gift_amount": 15,     # fallback quando o presente de escudo não define seus pontos
-    "action_audio": {},           # ex.: {"punch": "soco-novo.mp3", "kick": "chute-novo.mp3", "uppercut": "levantada-novo.mp3"}
+    "shield_gift_amount": 15,     # pontos padrão do presente de escudo
 }
 
 DEFAULT_ACTION_AUDIO = {
-    "punch": "soco-novo.mp3",
-    "kick": "chute-novo.mp3",
-    "uppercut": "levantada-novo.mp3",
+    "punch": "/duelo-audio/_system/soco-novo.mp3",
+    "kick": "/duelo-audio/_system/chute-novo.mp3",
+    "uppercut": "/duelo-audio/_system/levantada-novo.mp3",
 }
 
 
@@ -194,16 +193,16 @@ class DueloEngine:
         self._apply_damage(defender, dmg)
 
         audio = str(match.get("audio") or "").strip()
-        if not audio:
-            audio = str((self.settings.get("action_audio") or {}).get(action) or "")
-        if not audio:
-            audio = DEFAULT_ACTION_AUDIO.get(action, "")
+        if audio:
+            audio_url = f"/duelo-audio/{self.tenant_id}/{audio}"
+        else:
+            audio_url = DEFAULT_ACTION_AUDIO.get(action, "")
         self._emit("duelo_attack", {
             "attacker": char,
             "action": action,
             "combo": combo,
             "damage": dmg,
-            "audio_url": f"/duelo-audio/{self.tenant_id}/{audio}" if audio else "",
+            "audio_url": audio_url,
             "gift_id": str(match.get("gift_id") or ""),
             "gift": str(match.get("name") or gift_name or ""),
             "user": user or "",
