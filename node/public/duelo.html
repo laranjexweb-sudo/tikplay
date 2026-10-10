@@ -16,7 +16,7 @@
     background-size: cover;
   }
 
-  .fighter { position: absolute; bottom: 9vh; width: auto; will-change: transform; z-index: 1; }
+  .fighter { position: absolute; bottom: calc(9vh + 50px); width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter img { display: block; max-height: 42vh; width: auto; transform-origin: bottom center; }
   #fighter-flavio { left: 7vw; }
@@ -33,7 +33,7 @@
   .hud-side.right { right: 4vw; text-align: right; }
   .hud-top {
     position: absolute;
-    top: 0.6vh;
+    top: 18vh;
     left: 50%;
     transform: translateX(-50%);
     font-weight: 900;
