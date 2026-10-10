@@ -29,8 +29,8 @@
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
   .fighter img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
-  #fighter-flavio { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
-  #fighter-lula  { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
+  #fighter-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(0px, 5vh, 120px)); }
+  #fighter-lula  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(0px, 5vh, 120px)); }
 
   .hud {
     position: absolute;
@@ -126,8 +126,8 @@
 
   .shield-fx { position: absolute; bottom: clamp(60px, 8vh, 150px); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
-  .shield-fx.left  { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
-  .shield-fx.right { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
+  .shield-fx.left  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(0px, 5vh, 120px)); }
+  .shield-fx.right { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(0px, 5vh, 120px)); }
   @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
   .float-text {
     position: absolute;
