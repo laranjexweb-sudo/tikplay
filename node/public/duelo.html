@@ -722,8 +722,8 @@ function renderWinner() {
   if (banner) {
     // Vitória de DEBATE (KO por HP) usa o banner específico; FINAL usa o "-ganhou".
     const base = state.final ? winner + "-ganhou" : winner + "-ganhou-o-debate";
-    const fb = "/duelo/banners/" + winner + "-ganhou.png";
-    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
+    const fb = "/duelo/banners/" + winner + "-ganhou.png?v=2";
+    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png?v=2" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
     banner.classList.add("show");
   }
 }
@@ -905,7 +905,7 @@ function spawnCombo(char, combo) {
 function showFlash(name) {
   const el = $("leadFlash");
   if (!el) return;
-  el.innerHTML = '<img class="banner-img" src="/duelo/banners/' + name + '.png" alt="">';
+  el.innerHTML = '<img class="banner-img" src="/duelo/banners/' + name + '.png?v=2" alt="">';
   el.classList.remove("show");
   void el.offsetWidth;
   el.classList.add("show");
