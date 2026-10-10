@@ -1085,13 +1085,17 @@ async function runSupport(item) {
   void wrap.offsetWidth;
   wrap.classList.add("enter");
   try { console.debug("[SUPPORT]", item.supporter, side, action, img.src, "w=" + img.naturalWidth, "display=" + getComputedStyle(wrap).display); } catch (e) {}
+  const tgt = item.target || opponent(side);
+  const tpose = getDefensePose(tgt, item);
+  setFighter(tgt, tpose);
+  const tEl = $("fighter-" + tgt);
+  if (tEl) void tEl.offsetWidth;
+  try { console.debug("[SUPPORT] defesa target=" + tgt + " pose=" + tpose); } catch (e) {}
   const fala = pickSupFala(sup);
   if (fala && bubble) bubble.innerHTML = '<img src="' + fala + '" alt="">';
   if (item.audio_url) playAudio(item.audio_url);
   await sleep(400);
   await sleep(520);
-  const tgt = item.target || opponent(side);
-  setFighter(tgt, getDefensePose(tgt, item));
   spawnHit(action, side === "flavio" ? 1 : -1);
   if (item.added_votes > 0) {
     voteFloat(side, "+" + item.added_votes + " VOTOS");
