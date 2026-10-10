@@ -2134,6 +2134,9 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
     return res.json({ success: false, error: "Servico Python indisponivel" });
   }
   getTenant(user.id).sessionStarted = true;
+  // Ao iniciar a live, a ÁREA do Duelo fica DESATIVADA por padrão;
+  // só entra quando o operador clicar em "Ativar Área".
+  dueloForceStop(user.id);
   res.json({ success: true, message: "Jogo iniciado" });
 });
 
@@ -2143,8 +2146,19 @@ app.post("/stop-game", auth.requireAuth, (req, res) => {
     return res.json({ success: false, error: "Servico Python indisponivel" });
   }
   getTenant(req.user.id).sessionStarted = false;
+  dueloForceStop(req.user.id); // desconectar live também desativa a Área do Duelo
   res.json({ success: true, message: "Jogo encerrado" });
 });
+
+function dueloForceStop(userId) {
+  const cfg = db.getDueloConfig(userId);
+  daemonSend({ cmd: "duelo_stop", tenant_id: userId });
+  const saved = db.saveDueloConfig(userId, { gifts: cfg.gifts || [], active: false, settings: cfg.settings || {} });
+  const st = Object.assign({ type: "duelo_state" }, dueloInitialState(Object.assign({}, saved, { active: false })));
+  const tenant = getTenant(userId);
+  broadcastToClients(tenant.browserClients, st);
+  broadcastToClients(tenant.logClients, st);
+}
 
 // ---------------- WebSocket ----------------
 

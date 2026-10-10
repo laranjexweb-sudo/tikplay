@@ -238,6 +238,8 @@
   .f-speech.show { opacity: 1; transform: translate(-50%, 0); }
   .f-speech .speech-img { display: block; max-height: clamp(64px, 14vh, 130px); width: auto; }
   .f-vote { bottom: 62%; z-index: 46; }
+  #wrap-flavio .f-vote { left: -4px; }
+  #wrap-lula .f-vote { left: auto; right: -4px; }
 
   .vote-float {
     position: absolute;
@@ -247,7 +249,7 @@
     color: #ffd200;
     text-shadow: 0 0 10px rgba(255, 170, 0, 0.9), 0 0 3px #000;
     pointer-events: none;
-    transform: translate(-50%, 0);
+    transform: translate(0, 0);
     white-space: nowrap;
     animation: voteUp 1.4s ease-out forwards;
   }
@@ -256,7 +258,7 @@
   .vote-float.dmg { color: #ff8a5c; }
   .vote-float.flavio { color: #5bc0ff; }
   .vote-float.lula { color: #ff6b6b; }
-  @keyframes voteUp { 0% { opacity: 0; transform: translate(-50%, 14px) scale(.9); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -72px) scale(1.08); } }
+  @keyframes voteUp { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-72px) scale(1.08); } }
 
   .lead-flash {
     position: absolute;
@@ -1230,7 +1232,7 @@ function connectWS() {
     else if (msg.type === "duelo_attack") {
       markInteraction();
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
-      damageFloat(opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
+      damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
