@@ -25,7 +25,7 @@
     --fire-y: 20; --fire-scale: 0.9; --fire-gap: 9vh;
   }
 
-  .fighter-wrap { position: absolute; left: 50%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
+  .fighter-wrap { position: absolute; left: 51.5%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
   .fighter { position: relative; width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
@@ -140,12 +140,15 @@
 
   .win-banner {
     position: absolute;
-    inset: 0;
+    top: 45%;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 70;
     opacity: 0;
+    transform: translateY(-50%);
     transition: opacity .25s ease;
     pointer-events: none;
   }
@@ -156,8 +159,8 @@
 
   .shield-fx { position: absolute; bottom: calc(var(--fire-y) * 1%); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
-  .shield-fx.left  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
-  .shield-fx.right { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
+  .shield-fx.left  { left: 51.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
+  .shield-fx.right { left: 51.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
   @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
   .float-text {
     position: absolute;
@@ -427,7 +430,7 @@ function exitIdleState() {
 
 function enterIdleState() {
   if (idleActive || !idleCfg.enabled) return;
-  if (state.winner || !state.roundActive || state.final) return;
+  if (!state.active || state.winner || !state.roundActive || state.final) return;
   idleActive = true;
   for (const f of ["flavio", "lula"]) {
     setFighter(f, "esperando");
@@ -440,6 +443,7 @@ function enterIdleState() {
 function scheduleIdleEnter() {
   if (idleEnterTimer) { clearTimeout(idleEnterTimer); idleEnterTimer = null; }
   if (!idleCfg.enabled || idleActive) return;
+  if (!state.active || state.winner || !state.roundActive || state.final) return;
   idleEnterTimer = setTimeout(() => { idleEnterTimer = null; enterIdleState(); }, idleCfg.enterAfter * 1000);
 }
 
@@ -689,8 +693,9 @@ function applyState(s) {
   const prevInactive = !state.roundActive || !!state.winner;
   const prevHp = { flavio: state.hp && state.hp.flavio, lula: state.hp && state.hp.lula };
   state = Object.assign({}, state, s);
-  if (s.winner || s.final) exitIdleState();
-  else if (!s.winner && s.roundActive && !s.final) scheduleIdleEnter();
+  const idleOk = state.active && state.roundActive && !state.winner && !state.final;
+  if (idleOk) scheduleIdleEnter();
+  else exitIdleState();
   renderHud();
   renderWinner();
   if (s.votes && (s.votes.flavio || 0) === 0 && (s.votes.lula || 0) === 0) lastLead = null;
@@ -1003,6 +1008,7 @@ async function loadInitialState() {
     const data = await res.json();
     if (data && data.success && data.settings) {
       const s = data.settings;
+      state.active = !!data.active;
       if (s.layout) { dueloLayout = normalizeLayout(s.layout); applyLayout(); }
       state.mode = s.mode === "votes" ? "votes" : "hp";
       const hpStart = !isNaN(Number(s.hp_start)) ? Number(s.hp_start) : 100;
