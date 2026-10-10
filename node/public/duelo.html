@@ -633,11 +633,11 @@ function renderGiftTags() {
       ts.className = "gift-tag";
       const ic = document.createElement("span");
       ic.className = "gift-icon";
-      ic.textContent = "🥊";
+      ic.textContent = "🎁";
       ts.appendChild(ic);
       const e2 = document.createElement("span");
       e2.className = "gift-effect";
-      e2.textContent = SUP_LABELS[k] + " — APOIO" + (c.damage ? " " + c.damage + " DANO" : "");
+      e2.textContent = SUP_LABELS[k];
       ts.appendChild(e2);
       tags.push(ts);
     }
