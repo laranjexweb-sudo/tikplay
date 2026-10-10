@@ -804,7 +804,7 @@
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Meta de votos (0 = ilimitado)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
                 <div class="col-md-4">
                   <label class="form-label mb-0" style="font-size:0.8rem">Cenário</label>
-                  <select class="form-select form-select-sm" id="dueloScene">
+                  <select class="form-select form-select-sm" id="dueloScene" onchange="dueloQuickSave()">
                     <option value="brasilia">Brasília</option>
                     <option value="sao-paulo">São Paulo</option>
                     <option value="rio-de-janeiro">Rio de Janeiro</option>
@@ -823,12 +823,12 @@
             <div class="row g-3">
               <div class="col-md-4">
                 <label class="form-label mb-1" style="font-size:0.8rem">Volume dos efeitos (golpes/escudo): <b id="dueloSfxLbl">92%</b></label>
-                <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'">
+                <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'; dueloQuickSave()">
               </div>
               <div class="col-md-4">
-                <label class="form-check mb-1" style="font-size:0.8rem"><input type="checkbox" class="form-check-input" id="dueloMusicOn"> Tocar música de fundo</label>
+                <label class="form-check mb-1" style="font-size:0.8rem"><input type="checkbox" class="form-check-input" id="dueloMusicOn" onchange="dueloQuickSave()"> Tocar música de fundo</label>
                 <label class="form-label mb-1" style="font-size:0.8rem">Volume da música: <b id="dueloMusicLbl">50%</b></label>
-                <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'">
+                <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'; dueloQuickSave()">
               </div>
               <div class="col-md-4">
                 <label class="form-label mb-1" style="font-size:0.8rem">Adicionar música</label>
@@ -3723,6 +3723,22 @@ function renderLayoutEditor() {
       window.addEventListener("pointerup", up);
     });
   });
+}
+
+let dueloAutoTimer = null;
+function dueloQuickSave() {
+  clearTimeout(dueloAutoTimer);
+  dueloAutoTimer = setTimeout(async () => {
+    try {
+      const settings = readDueloSettings();
+      await apiFetch("/api/duelo/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gifts: dueloConfiguredGifts(), active: dueloActive, settings }),
+      });
+      dueloMsg("Áudio/cenário salvos automaticamente.");
+    } catch (e) { dueloMsg("Erro ao salvar: " + e.message); }
+  }, 300);
 }
 
 async function dueloSaveConfig() {
