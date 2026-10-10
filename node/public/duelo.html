@@ -46,8 +46,13 @@
   .hud-name { font-weight: 900; font-size: clamp(1.1rem, 3vw, 2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.85); }
   .hud-votes { font-weight: 900; font-size: clamp(1rem, 2.6vw, 1.6rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8); margin-bottom: 6px; }
 
-  .bar { width: 100%; height: clamp(12px, 2vmin, 22px); border-radius: 999px; background: rgba(0,0,0,0.45); border: 2px solid #111; overflow: hidden; margin: 4px 0; }
+  .bar { width: 100%; height: clamp(12px, 2vmin, 22px); border-radius: 999px; background: rgba(0,0,0,0.45); border: 2px solid #111; overflow: hidden; margin: 4px 0; position: relative; }
   .bar > i { display: block; height: 100%; width: 100%; transition: width .3s ease; border-radius: 999px; }
+  .bar > span.label-in {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 2; font-size: clamp(0.5rem, 1.3vw, 0.72rem); font-weight: 800;
+    color: #fff; text-shadow: 0 0 6px #000; letter-spacing: 2px; pointer-events: none; white-space: nowrap;
+  }
   .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
   .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
   .bar-label { font-size: clamp(0.6rem, 1.6vw, 0.85rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
@@ -136,16 +141,16 @@
   <div class="hud-side left">
     <div class="hud-name">FLÁVIO</div>
     <div class="hud-votes" id="votes-flavio"></div>
-    <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
-    <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
+    <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in">HP</span></div>
+    <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in">ESCUDO</span></div>
     <div class="gift-tags" id="gifts-flavio"></div>
   </div>
 
   <div class="hud-side right">
     <div class="hud-name">LULA</div>
     <div class="hud-votes" id="votes-lula"></div>
-    <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
-    <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
+    <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in">HP</span></div>
+    <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in">ESCUDO</span></div>
     <div class="gift-tags" id="gifts-lula"></div>
   </div>
 
