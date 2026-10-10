@@ -1983,7 +1983,7 @@ function normalizeDueloSettings(raw) {
     const mv = n(raw.music && raw.music.volume);
     out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled) };
     const sc = String(raw.scene || "").trim().toLowerCase();
-    out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador"].includes(sc) ? sc : "brasilia";
+    out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(sc) ? sc : "brasilia";
     const idr = (raw.idle && typeof raw.idle === "object") ? raw.idle : {};
     out.idle = {
       enabled: idr.enabled !== false,

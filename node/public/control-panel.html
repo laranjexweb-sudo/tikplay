@@ -808,6 +808,7 @@
                     <option value="sao-paulo">São Paulo</option>
                     <option value="rio-de-janeiro">Rio de Janeiro</option>
                     <option value="salvador">Salvador</option>
+                    <option value="tribunal">STF</option>
                   </select>
                 </div>
                 <div class="col-md-4">
@@ -3277,7 +3278,7 @@ async function loadDueloState() {
       if (data.settings.layout && typeof data.settings.layout === "object") {
         dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), data.settings.layout);
       }
-      dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador"].includes(data.settings.scene) ? data.settings.scene : "brasilia";
+      dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(data.settings.scene) ? data.settings.scene : "brasilia";
       dueloSfxVol = data.settings.sfx_volume != null ? data.settings.sfx_volume : 92;
       const mu = data.settings.music || {};
       dueloMusicOn = !!mu.enabled;
