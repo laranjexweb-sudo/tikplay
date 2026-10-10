@@ -2013,6 +2013,13 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const combo = Math.max(1, parseInt((req.body && req.body.combo) || 1, 10) || 1);
   const cfg = db.getDueloConfig(req.user.id);
   const gift = (cfg.gifts || []).find((g) => g.character === attacker && g.action === action);
+  let audio = (gift && gift.audio) ? String(gift.audio) : "";
+  if (!audio) {
+    const settings = normalizeDueloSettings(cfg.settings || {});
+    audio = (settings.action_audio && settings.action_audio[action]) ? String(settings.action_audio[action]) : "";
+  }
+  const DEFAULT_ACTION_AUDIO = { punch: "soco-novo.mp3", kick: "chute-novo.mp3", uppercut: "levantada-novo.mp3" };
+  if (!audio) audio = DEFAULT_ACTION_AUDIO[action] || "";
   const tenant = getTenant(req.user.id);
   // Teste é SOMENTE visual: isTest true faz a arena ignorar as travas de winner/roundActive,
   // sem alterar HP, escudo, votos, winner ou roundActive (não passa pelo motor).
@@ -2022,7 +2029,7 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
     attacker,
     action,
     combo,
-    audio_url: (gift && gift.audio) ? `/duelo-audio/${req.user.id}/${gift.audio}` : "",
+    audio_url: audio ? `/duelo-audio/${req.user.id}/${audio}` : "",
     gift: gift ? gift.name : "",
     user: "streamer",
     nickname: "Streamer",

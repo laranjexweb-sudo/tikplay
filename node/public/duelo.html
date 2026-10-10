@@ -415,7 +415,13 @@ function tryPlay(url) {
     const p = a.play();
     if (p && p.then) {
       p.catch((err) => {
-        try { console.debug("[DUELO AUDIO] bloqueado por autoplay:", (err && err.name) || err); } catch (e) {}
+        try {
+          if (!audioUnlocked) {
+            const st = $("statusText");
+            if (st) st.textContent = "toque na tela para liberar o som";
+          }
+          console.debug("[DUELO AUDIO] bloqueado por autoplay:", (err && err.name) || err);
+        } catch (e) {}
       });
     }
   } catch (e) { try { console.debug("[DUELO AUDIO] erro:", e); } catch (_) {} }
