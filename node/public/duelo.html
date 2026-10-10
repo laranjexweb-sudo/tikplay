@@ -29,22 +29,32 @@
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
   .fighter img { display: block; max-height: 34vh; width: auto; transform-origin: bottom center; }
-  #fighter-flavio { left: clamp(70px, 12vw, 220px); }
-  #fighter-lula  { right: clamp(70px, 12vw, 220px); }
+  #fighter-flavio { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
+  #fighter-lula  { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
 
-  .hud-side {
+  .hud {
     position: absolute;
-    top: clamp(180px, 14vh, 260px);
-    width: clamp(320px, 40vw, 580px);
+    top: clamp(150px, 14vh, 260px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 980px);
     z-index: 30;
     pointer-events: none;
-    padding: 14px 16px 12px;
-    border-radius: 18px;
-    background: rgba(8, 8, 14, 0.46);
+    display: flex;
+    justify-content: space-between;
+    gap: clamp(14px, 3vw, 44px);
+    padding: 14px 18px 12px;
+    border-radius: 20px;
+    background: rgba(8, 8, 14, 0.5);
     border: 2px solid rgba(255, 255, 255, 0.18);
   }
-  .hud-side.left  { left: clamp(48px, 5vw, 88px); text-align: left; }
-  .hud-side.right { right: clamp(48px, 5vw, 88px); text-align: right; }
+  .hud-side {
+    flex: 1;
+    min-width: 0;
+    pointer-events: none;
+  }
+  .hud-side.left  { text-align: left; }
+  .hud-side.right { text-align: right; }
   .hud-top {
     position: absolute;
     top: clamp(76px, 8vh, 150px);
@@ -71,16 +81,16 @@
   .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
   .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
   .bar-label { font-size: clamp(0.62rem, 1.7vw, 0.9rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
-  .gift-tags { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
-  .gift-head { font-weight: 900; letter-spacing: 2px; color: #ffd200; font-size: clamp(0.8rem, 2vh, 1.1rem); text-shadow: 0 0 8px #000; margin-bottom: 2px; }
+  .gift-tags { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .gift-head { font-weight: 900; letter-spacing: 2px; color: #ffd200; font-size: clamp(0.72rem, 1.8vh, 1rem); text-shadow: 0 0 8px #000; margin-bottom: 2px; }
   .gift-tag {
     display: inline-flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%;
-    font-size: clamp(0.85rem, 2.1vh, 1.15rem); font-weight: 800;
-    padding: 6px 12px 6px 6px; border-radius: 14px; letter-spacing: 0.3px;
+    font-size: clamp(0.78rem, 1.9vh, 1.05rem); font-weight: 800;
+    padding: 4px 10px 4px 4px; border-radius: 13px; letter-spacing: 0.3px;
     color: #fff; text-shadow: 0 0 6px #000;
     overflow: hidden; white-space: nowrap;
   }
-  .gift-tag img { width: clamp(30px, 4.2vh, 46px); height: clamp(30px, 4.2vh, 46px); object-fit: contain; border-radius: 50%; background: rgba(0,0,0,0.45); }
+  .gift-tag img { width: clamp(26px, 3.6vh, 40px); height: clamp(26px, 3.6vh, 40px); object-fit: contain; border-radius: 50%; background: rgba(0,0,0,0.45); }
   .hud-side.right .gift-tag { align-self: flex-end; }
   .gift-tag.atk { background: rgba(255, 210, 0, 0.28); border: 2px solid #ffd200; color: #ffe58a; }
   .gift-tag.esc { background: rgba(91, 192, 255, 0.28); border: 2px solid #5bc0ff; color: #cfe9ff; }
@@ -110,8 +120,8 @@
 
   .shield-fx { position: absolute; bottom: clamp(40px, 6vh, 120px); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
-  .shield-fx.left  { left: clamp(70px, 12vw, 220px); }
-  .shield-fx.right { right: clamp(70px, 12vw, 220px); }
+  .shield-fx.left  { left: 50%; margin-left: calc(clamp(110px, 13vh, 240px) * -1); }
+  .shield-fx.right { left: 50%; margin-left: clamp(110px, 13vh, 240px); }
   @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
   .float-text {
     position: absolute;
@@ -151,23 +161,25 @@
 </head>
 <body>
 <div id="stage">
-  <span class="status" id="statusText">conectando…</span>
+  <div class="status" id="statusText">conectando…</div>
   <div class="hud-top" id="htVs"></div>
 
-  <div class="hud-side left">
-    <div class="hud-name">FLÁVIO</div>
-    <div class="hud-votes" id="votes-flavio"></div>
-    <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
-    <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
-    <div class="gift-tags" id="gifts-flavio"></div>
-  </div>
+  <div class="hud">
+    <div class="hud-side left">
+      <div class="hud-name">FLÁVIO</div>
+      <div class="hud-votes" id="votes-flavio"></div>
+      <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
+      <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
+      <div class="gift-tags" id="gifts-flavio"></div>
+    </div>
 
-  <div class="hud-side right">
-    <div class="hud-name">LULA</div>
-    <div class="hud-votes" id="votes-lula"></div>
-    <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
-    <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
-    <div class="gift-tags" id="gifts-lula"></div>
+    <div class="hud-side right">
+      <div class="hud-name">LULA</div>
+      <div class="hud-votes" id="votes-lula"></div>
+      <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
+      <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
+      <div class="gift-tags" id="gifts-lula"></div>
+    </div>
   </div>
 
   <div class="shield-fx left" id="shield-flavio"></div>
