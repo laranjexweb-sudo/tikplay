@@ -421,7 +421,6 @@ function applyAudioSettings(settings) {
       enabled: !!settings.music.enabled,
       base: settings.music.base || "",
     };
-    musicIdx = 0;
   }
   refreshMusic();
 }
@@ -451,7 +450,10 @@ function playMusicTrack(i) {
 
 function refreshMusic() {
   if (!musicCfg.enabled || !musicCfg.files.length) { stopMusic(); return; }
-  if (!musicPlaying) playMusicTrack(musicIdx);
+  const el = $("bgMusic");
+  if (el && musicPlaying) { el.volume = musicCfg.volume; return; }
+  if (el) el.volume = musicCfg.volume;
+  playMusicTrack(musicIdx);
 }
 
 const GIFT_ACTION_LABEL = { punch: "Soco", kick: "Chute", uppercut: "Levantada" };
@@ -657,11 +659,11 @@ function tryPlay(url) {
     let a = audioEls[url];
     if (!a) {
       a = new Audio(url);
-      a.volume = sfxVolume;
       a.preload = "auto";
       a.load();
       audioEls[url] = a;
     }
+    a.volume = sfxVolume;
     a.currentTime = 0;
     const p = a.play();
     if (p && p.then) {
