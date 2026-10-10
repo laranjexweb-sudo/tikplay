@@ -1938,6 +1938,7 @@ function normalizeDueloSettings(raw) {
     sfx_volume: 92,
     music: { files: [], volume: 50, enabled: false },
     scene: "brasilia",
+    idle: { enabled: true, enter_after: 10, interval: 7 },
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -1965,6 +1966,12 @@ function normalizeDueloSettings(raw) {
     out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled) };
     const sc = String(raw.scene || "").trim().toLowerCase();
     out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador"].includes(sc) ? sc : "brasilia";
+    const idr = (raw.idle && typeof raw.idle === "object") ? raw.idle : {};
+    out.idle = {
+      enabled: idr.enabled !== false,
+      enter_after: (n(idr.enter_after) !== null) ? Math.max(3, Math.min(120, n(idr.enter_after))) : 10,
+      interval: (n(idr.interval) !== null) ? Math.max(3, Math.min(60, n(idr.interval))) : 7,
+    };
     if (raw.layout && typeof raw.layout === "object") {
       const c = (o, name, def) => {
         const src = (o && o[name] && typeof o[name] === "object") ? o[name] : {};

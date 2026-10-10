@@ -811,6 +811,12 @@
                     <option value="salvador">Salvador</option>
                   </select>
                 </div>
+                <div class="col-md-4">
+                  <label class="form-label mb-0" style="font-size:0.8rem">Sem interação (idle)</label>
+                  <div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label class="form-check-label" for="dueloIdleOn">Ativo</label></div>
+                </div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para entrar (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
               </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
                 Todo presente válido soma votos (moedas × combo) para o seu personagem (Placar). Golpes/escudos também influenciam o debate (HP/Escudo). KO não zera votos. Ao atingir a Meta de votos: VENCEDOR FINAL. Resetar rodada NÃO zera votos; Nova disputa zera.
@@ -3269,6 +3275,10 @@ async function loadDueloState() {
       dueloMusicOn = !!mu.enabled;
       dueloMusicVol = mu.volume != null ? mu.volume : 50;
       dueloMusicFiles = Array.isArray(mu.files) ? mu.files.slice() : [];
+      const idl = data.settings.idle || {};
+      dueloIdleOn = idl.enabled !== false;
+      dueloIdleEnter = idl.enter_after != null ? idl.enter_after : 10;
+      dueloIdleInterval = idl.interval != null ? idl.interval : 7;
     }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
@@ -3300,6 +3310,12 @@ function renderDueloSettings() {
   if (mvol) mvol.value = dueloMusicVol;
   const lblM = document.getElementById("dueloMusicLbl");
   if (lblM) lblM.textContent = dueloMusicVol + "%";
+  const idOn = document.getElementById("dueloIdleOn");
+  if (idOn) idOn.checked = dueloIdleOn;
+  const idEnt = document.getElementById("dueloIdleEnter");
+  if (idEnt) idEnt.value = dueloIdleEnter;
+  const idInt = document.getElementById("dueloIdleInterval");
+  if (idInt) idInt.value = dueloIdleInterval;
   renderMusicList();
 }
 
@@ -3368,6 +3384,11 @@ function readDueloSettings() {
       files: dueloMusicFiles.slice(0, 20),
       volume: num("dueloMusicVol", 50),
       enabled: document.getElementById("dueloMusicOn") ? document.getElementById("dueloMusicOn").checked : false,
+    },
+    idle: {
+      enabled: document.getElementById("dueloIdleOn") ? document.getElementById("dueloIdleOn").checked : true,
+      enter_after: num("dueloIdleEnter", 10),
+      interval: num("dueloIdleInterval", 7),
     },
   };
 }
@@ -3582,6 +3603,9 @@ let dueloSfxVol = 92;
 let dueloMusicOn = false;
 let dueloMusicVol = 50;
 let dueloMusicFiles = [];
+let dueloIdleOn = true;
+let dueloIdleEnter = 10;
+let dueloIdleInterval = 7;
 
 function layoutNum(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
 

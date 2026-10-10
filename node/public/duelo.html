@@ -39,6 +39,9 @@
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
   .fighter img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
+  .fighter:not(.attacking):not(.winner):not(.down) img { animation: breath 3s ease-in-out infinite; }
+  .fighter.idleState img { animation-duration: 2.6s; }
+  @keyframes breath { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-3px) scaleY(1.012); } }
   #wrap-flavio { margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
   #wrap-lula  { margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); transform: scale(calc(var(--fire-scale) * 0.92)); transform-origin: bottom center; }
 
@@ -303,11 +306,11 @@ if (!token && !DEBUG) location.href = "/login";
 const FIGHTERS = {
   flavio: {
     name: "FLÁVIO", dir: 1,
-    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png" },
+    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png", esperando: "/duelo/Flavio/esperando.png" },
   },
   lula: {
     name: "LULA", dir: -1,
-    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png" },
+    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png", esperando: "/duelo/lula/esperando.png" },
   },
 };
 
@@ -366,6 +369,116 @@ function applyLayout() {
   st.style.setProperty("--fire-y", clampN(fi.y, 0, 100, 20));
   st.style.setProperty("--fire-scale", clampN(fi.scale, 0.2, 2, 0.9));
   st.style.setProperty("--fire-gap", clampN(fi.gap, 0, 30, 9) + "vh");
+}
+
+// ---- Sem interação (idle) ----
+const DUELO_IDLE_DEFAULT = { enabled: true, enterAfter: 10, interval: 7 };
+let idleCfg = Object.assign({}, DUELO_IDLE_DEFAULT);
+let idleActive = false;
+let idleEnterTimer = null;
+let idleSpeechTimer = null;
+let idleSpeechShowTimer = null;
+let idleSpeakingChar = null;
+let idleLastPhrase = "";
+let idleLastChar = null;
+let idleSpeechCd = 0;
+
+const IDLE_BALLOONS = [
+  "/duelo/falas-sem-interacao/bora-interagir.png",
+  "/duelo/falas-sem-interacao/cade-o-apoio.png",
+  "/duelo/falas-sem-interacao/manda-presente.png",
+  "/duelo/falas-sem-interacao/quem-leva-essa.png",
+  "/duelo/falas-sem-interacao/to-esperando.png",
+  "/duelo/falas-sem-interacao/vamos-de-debate.png",
+];
+
+function applyIdleConfig(idle) {
+  if (!idle) idle = {};
+  idleCfg = {
+    enabled: idle.enabled !== false,
+    enterAfter: clampN(idle.enter_after != null ? idle.enter_after : idle.enterAfter, 3, 120, 10),
+    interval: clampN(idle.interval, 3, 60, 7),
+  };
+  if (!idleCfg.enabled) exitIdleState();
+  else scheduleIdleEnter();
+}
+
+function clearIdleBalloon() {
+  if (idleSpeakingChar) {
+    const el = $("speech-" + idleSpeakingChar);
+    if (el) el.classList.remove("show");
+    idleSpeakingChar = null;
+  }
+  if (idleSpeechShowTimer) { clearTimeout(idleSpeechShowTimer); idleSpeechShowTimer = null; }
+}
+
+function exitIdleState() {
+  clearIdleBalloon();
+  if (idleEnterTimer) { clearTimeout(idleEnterTimer); idleEnterTimer = null; }
+  if (idleSpeechTimer) { clearTimeout(idleSpeechTimer); idleSpeechTimer = null; }
+  if (!idleActive) return;
+  idleActive = false;
+  for (const f of ["flavio", "lula"]) {
+    const el = $("fighter-" + f);
+    if (el) el.classList.remove("idleState");
+    resetPose(f);
+  }
+}
+
+function enterIdleState() {
+  if (idleActive || !idleCfg.enabled) return;
+  if (state.winner || !state.roundActive || state.final) return;
+  idleActive = true;
+  for (const f of ["flavio", "lula"]) {
+    setFighter(f, "esperando");
+    const el = $("fighter-" + f);
+    if (el) { el.classList.add("idleState"); el.style.transform = "translate(0,0) scale(1)"; }
+  }
+  scheduleIdleSpeech(2000);
+}
+
+function scheduleIdleEnter() {
+  if (idleEnterTimer) { clearTimeout(idleEnterTimer); idleEnterTimer = null; }
+  if (!idleCfg.enabled || idleActive) return;
+  idleEnterTimer = setTimeout(() => { idleEnterTimer = null; enterIdleState(); }, idleCfg.enterAfter * 1000);
+}
+
+function markInteraction() {
+  if (idleActive) exitIdleState();
+  else { clearIdleBalloon(); if (idleSpeechTimer) { clearTimeout(idleSpeechTimer); idleSpeechTimer = null; } }
+  scheduleIdleEnter();
+}
+
+function scheduleIdleSpeech(delayMs) {
+  if (idleSpeechTimer) { clearTimeout(idleSpeechTimer); idleSpeechTimer = null; }
+  idleSpeechTimer = setTimeout(() => { idleSpeechTimer = null; if (idleActive && !state.winner) showIdleSpeech(); }, delayMs);
+}
+
+function showIdleSpeech() {
+  if (!idleActive || state.winner || idleSpeakingChar) return;
+  const now = Date.now();
+  if (now < idleSpeechCd) { scheduleIdleSpeech(idleSpeechCd - now + 50); return; }
+  const char = idleLastChar === "flavio" ? "lula" : "flavio";
+  const pool = IDLE_BALLOONS.filter((b) => b !== idleLastPhrase);
+  const url = pool.length ? pool[Math.floor(Math.random() * pool.length)] : IDLE_BALLOONS[0];
+  idleLastPhrase = url;
+  idleLastChar = char;
+  idleSpeakingChar = char;
+  idleSpeechCd = now + idleCfg.interval * 1000;
+  const el = $("speech-" + char);
+  if (el) {
+    el.innerHTML = '<img class="speech-img" src="' + url + '" alt="">';
+    el.classList.remove("show");
+    void el.offsetWidth;
+    el.classList.add("show");
+  }
+  idleSpeechShowTimer = setTimeout(() => {
+    const e2 = $("speech-" + char);
+    if (e2) e2.classList.remove("show");
+    if (idleSpeakingChar === char) idleSpeakingChar = null;
+    idleSpeechShowTimer = null;
+    if (idleActive && !state.winner) scheduleIdleSpeech(1500);
+  }, 3000);
 }
 
 // ---- Áudio: efeitos + música de fundo ----
@@ -576,6 +689,8 @@ function applyState(s) {
   const prevInactive = !state.roundActive || !!state.winner;
   const prevHp = { flavio: state.hp && state.hp.flavio, lula: state.hp && state.hp.lula };
   state = Object.assign({}, state, s);
+  if (s.winner || s.final) exitIdleState();
+  else if (!s.winner && s.roundActive && !s.final) scheduleIdleEnter();
   renderHud();
   renderWinner();
   if (s.votes && (s.votes.flavio || 0) === 0 && (s.votes.lula || 0) === 0) lastLead = null;
@@ -703,6 +818,7 @@ let lastPhrase = "";
 function say(fighter, bucket) {
   const list = (SPEECH[fighter] && SPEECH[fighter][bucket]) || [];
   if (!list.length || state.winner) return;
+  clearIdleBalloon();
   const now = Date.now();
   if (now < speechCd[fighter]) return;
   const opts = list.filter((p) => p !== lastPhrase);
@@ -860,12 +976,14 @@ function connectWS() {
     try { msg = JSON.parse(e.data); } catch { return; }
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") {
+      markInteraction();
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
-    else if (msg.type === "duelo_shield") { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); }
+    else if (msg.type === "duelo_shield") { markInteraction(); shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); }
     else if (msg.type === "duelo_vote") {
+      markInteraction();
       if (msg.added > 0) {
         voteFloat(msg.character, "+" + msg.added + " VOTOS");
         const vs = $("htVs");
@@ -875,7 +993,7 @@ function connectWS() {
     }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
-    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyScene(msg.settings && msg.settings.scene); }
+    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); }
   };
 }
 
@@ -894,6 +1012,7 @@ async function loadInitialState() {
       state.hp = { flavio: hpStart, lula: hpStart };
       state.shield = { flavio: shStart, lula: shStart };
       applyAudioSettings(s);
+      applyIdleConfig(s.idle);
       applyScene(s.scene);
       renderHud();
     }
@@ -905,6 +1024,7 @@ async function loadInitialState() {
 resetPose("flavio");
 resetPose("lula");
 applyLayout();
+scheduleIdleEnter();
 renderHud();
 renderGiftTags();
 loadInitialState();
