@@ -622,7 +622,7 @@ function renderGiftTags() {
       }
       const eff = document.createElement("span");
       eff.className = "gift-effect";
-      if (isSup) eff.textContent = "APOIO";
+      if (isSup) eff.textContent = "+" + (Number(g.diamond_count) || 1) + " VOTOS";
       else if (isEsc) eff.textContent = "ESCUDO +" + (Number(g.shield) > 0 ? g.shield : 15);
       else eff.textContent = (GIFT_ACTION_LABEL[g.action] || "GOLPE").toUpperCase();
       span.appendChild(eff);

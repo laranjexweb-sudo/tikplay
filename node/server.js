@@ -1905,12 +1905,13 @@ function dueloInitialState(cfg) {
 
 function dueloGiftsPayload(gifts) {
   let map = {};
-  try {
-    map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {};
-  } catch {}
+  try { map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {}; } catch {}
+  let price = {};
+  try { (JSON.parse(fs.readFileSync(GIFT_TAGS_PATH, "utf-8")) || []).forEach((g) => { if (g && g.name) price[g.name] = g.diamond_count; }); } catch {}
   return (Array.isArray(gifts) ? gifts : []).map((g) => {
     const out = Object.assign({}, g);
     out.image = (g && g.name && map[g.name]) ? `/gift-images/${map[g.name]}` : "";
+    out.diamond_count = (g && g.name && price[g.name] != null) ? price[g.name] : 0;
     return out;
   });
 }
@@ -2027,7 +2028,7 @@ function normalizeDueloSettings(raw) {
 
 app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const cfg = db.getDueloConfig(req.user.id);
-  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
+  res.json({ success: true, gifts: dueloGiftsPayload(cfg.gifts), active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
@@ -2039,12 +2040,12 @@ app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, r
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts: dueloGiftsPayload(gifts) });
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_layout", layout: settings.layout || {} });
   broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_settings", settings: dueloClientSettings(req.user.id, settings) });
-  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
+  res.json({ success: true, gifts: dueloGiftsPayload(cfg.gifts), active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.get("/api/duelo/state", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const cfg = db.getDueloConfig(req.user.id);
-  res.json({ success: true, gifts: cfg.gifts, active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
+  res.json({ success: true, gifts: dueloGiftsPayload(cfg.gifts), active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
 });
 
 app.post("/api/duelo/start", auth.requireAuth, requireFeature("duelo"), (req, res) => {
