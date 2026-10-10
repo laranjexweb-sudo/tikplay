@@ -3233,16 +3233,17 @@ function renderDueloSettings() {
 
 function readDueloSettings() {
   const n = (id) => parseInt(document.getElementById(id) ? document.getElementById(id).value : "0", 10);
+  const num = (id, fb) => { const x = n(id); return Number.isFinite(x) ? x : fb; };
   return {
     mode: document.getElementById("dueloMode") ? document.getElementById("dueloMode").value : "hp",
-    hp_start: n("dueloHpStart") || 100,
-    shield_start: n("dueloShieldStart") || 100,
-    shield_max: n("dueloShieldMax") || 200,
-    dmg_punch: n("dueloDmgPunch") || 10,
-    dmg_kick: n("dueloDmgKick") || 15,
-    dmg_uppercut: n("dueloDmgUppercut") || 20,
-    reset_delay_s: n("dueloResetDelay") || 6,
-    max_votes: n("dueloMaxVotes") >= 0 ? n("dueloMaxVotes") : 0,
+    hp_start: num("dueloHpStart", 100),
+    shield_start: num("dueloShieldStart", 100),
+    shield_max: num("dueloShieldMax", 200),
+    dmg_punch: num("dueloDmgPunch", 10),
+    dmg_kick: num("dueloDmgKick", 15),
+    dmg_uppercut: num("dueloDmgUppercut", 20),
+    reset_delay_s: num("dueloResetDelay", 6),
+    max_votes: num("dueloMaxVotes", 0),
   };
 }
 
@@ -3424,8 +3425,14 @@ async function dueloSaveConfig() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ gifts: dueloGifts, active: dueloActive, settings }),
     });
-    dueloMsg(data.success ? "Configuração salva!" : (data.error || "Erro ao salvar"));
-    renderDueloGifts();
+    if (data.success) {
+      if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
+      renderDueloGifts();
+      renderDueloSettings();
+      dueloMsg(`Configuração salva! HP ${data.settings && data.settings.hp_start} · Escudo ${data.settings && data.settings.shield_start} · Modo ${(data.settings && data.settings.mode || "hp").toUpperCase()}`);
+    } else {
+      dueloMsg(data.error || "Erro ao salvar");
+    }
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 
