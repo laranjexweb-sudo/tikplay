@@ -1920,6 +1920,19 @@ function dueloClientSettings(userId, settings) {
   if (s.music && Array.isArray(s.music.files)) {
     s.music = Object.assign({}, s.music, { base: `/duelo-audio/${userId}` });
   }
+  if (s.supporters && typeof s.supporters === "object") {
+    let map = {};
+    try { map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {}; } catch {}
+    const out = {};
+    for (const k of Object.keys(s.supporters)) {
+      const v = s.supporters[k];
+      if (!v || typeof v !== "object") { out[k] = v; continue; }
+      out[k] = Object.assign({}, v, {
+        image: (v.gift_name && map[v.gift_name]) ? `/gift-images/${map[v.gift_name]}` : "",
+      });
+    }
+    s.supporters = out;
+  }
   return s;
 }
 

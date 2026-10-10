@@ -631,10 +631,18 @@ function renderGiftTags() {
       if (!c || c.enabled === false || !c.gift_name || (c.side || (SUPPORTERS[k] && SUPPORTERS[k].side)) !== f) continue;
       const ts = document.createElement("span");
       ts.className = "gift-tag";
-      const ic = document.createElement("span");
-      ic.className = "gift-icon";
-      ic.textContent = "🎁";
-      ts.appendChild(ic);
+      if (c.image) {
+        const img = document.createElement("img");
+        img.src = c.image;
+        img.alt = "";
+        img.onerror = function () { this.style.display = "none"; };
+        ts.appendChild(img);
+      } else {
+        const ic = document.createElement("span");
+        ic.className = "gift-icon";
+        ic.textContent = "🎁";
+        ts.appendChild(ic);
+      }
       const e2 = document.createElement("span");
       e2.className = "gift-effect";
       e2.textContent = SUP_LABELS[k];
@@ -1007,7 +1015,7 @@ function applySupporterConfig(s) {
   if (s && typeof s === "object") {
     for (const k of Object.keys(SUP_LABELS)) {
       const v = s[k];
-      if (v && typeof v === "object") supCfg[k] = { enabled: v.enabled !== false, gift_name: String(v.gift_name || ""), damage: Number(v.damage) || 0, side: v.side };
+      if (v && typeof v === "object") supCfg[k] = { enabled: v.enabled !== false, gift_name: String(v.gift_name || ""), damage: Number(v.damage) || 0, side: v.side, image: String(v.image || "") };
     }
   }
   renderGiftTags();
