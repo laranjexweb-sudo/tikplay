@@ -1946,11 +1946,14 @@ app.post("/api/duelo/start", auth.requireAuth, requireFeature("duelo"), (req, re
   if (!liveOnline(tenant)) {
     return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar o Duelo" });
   }
+  const bodyGifts = Array.isArray(req.body && req.body.gifts) ? normalizeDueloGifts(req.body.gifts) : null;
+  const bodySettings = (req.body && req.body.settings && typeof req.body.settings === "object") ? normalizeDueloSettings(req.body.settings) : null;
   const cfg = db.getDueloConfig(req.user.id);
-  const settings = normalizeDueloSettings(cfg.settings);
-  const ok = daemonSend({ cmd: "duelo_start", tenant_id: req.user.id, gifts: cfg.gifts, settings });
+  const gifts = bodyGifts || cfg.gifts || [];
+  const settings = bodySettings || normalizeDueloSettings(cfg.settings);
+  db.saveDueloConfig(req.user.id, { gifts, active: true, settings });
+  const ok = daemonSend({ cmd: "duelo_start", tenant_id: req.user.id, gifts, settings });
   if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  db.saveDueloConfig(req.user.id, { gifts: cfg.gifts, active: true, settings });
   res.json({ success: true, active: true });
 });
 

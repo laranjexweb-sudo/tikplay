@@ -1520,6 +1520,8 @@ class GameSession:
             elif c == "duelo_config":
                 self.duelo.set_config(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "log", f"[Duelo] Config de presentes atualizada ({len(self.duelo.gifts)})")
+                if self.duelo.active:
+                    emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
             elif c == "duelo_reset_round":
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
