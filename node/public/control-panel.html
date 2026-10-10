@@ -792,7 +792,14 @@
           <div class="nb-card mb-3">
             <h2>Configuração do modo</h2>
             <div class="mb-3 p-2 bg-light border border-dark rounded">
-              <div class="row g-2">
+              <div class="row g-2 mb-2">
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem;font-weight:700">MODO DE JOGO</label>
+                  <select class="form-select form-select-sm" id="dueloModeGame" onchange="dueloModeChanged()">
+                    <option value="hp">Debate por HP</option>
+                    <option value="timed">Debate por Tempo</option>
+                  </select></div>
+              </div>
+              <div class="row g-2" id="dueloHpFields">
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Vida da rodada (HP inicial = máximo)</label><input type="number" class="form-control form-control-sm" id="dueloHpRound" value="100" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo inicial</label><input type="number" class="form-control form-control-sm" id="dueloShieldStart" value="100" min="0"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo máximo</label><input type="number" class="form-control form-control-sm" id="dueloShieldMax" value="200" min="1"></div>
@@ -819,8 +826,34 @@
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para nova partida (s)</label><input type="number" class="form-control form-control-sm" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
               </div>
+              <div class="row g-2" id="dueloTimedFields" style="display:none">
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo de resultado (s)</label><input type="number" class="form-control form-control-sm" id="dueloResultDelay" min="2" max="120" onchange="dueloQuickSave()"></div>
+                <div class="col-md-4"><div class="text-secondary" style="font-size:0.75rem">Combo → golpe: x1–4 Soco · x5–19 Chute · x20+ Levantada. Sem dano.</div></div>
+                <div class="col-md-7"><label class="form-label mb-0" style="font-size:0.8rem">PRESENTE PRINCIPAL — FLÁVIO (nome e/ou gift id)</label>
+                  <div class="d-flex gap-1"><input type="text" class="form-control form-control-sm duelo-main" id="dueloMainFName" data-main="f" placeholder="nome do presente" autocomplete="off" onchange="dueloQuickSave()">
+                  <input type="text" class="form-control form-control-sm" style="flex:0 0 130px" id="dueloMainFId" placeholder="gift id" onchange="dueloQuickSave()"></div>
+                  <div class="duelo-ac gift-ac" data-mainac="f" style="display:none;position:absolute;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+                </div>
+                <div class="col-md-7"><label class="form-label mb-0" style="font-size:0.8rem">PRESENTE PRINCIPAL — LULA (nome e/ou gift id)</label>
+                  <div class="d-flex gap-1"><input type="text" class="form-control form-control-sm duelo-main" id="dueloMainLName" data-main="l" placeholder="nome do presente" autocomplete="off" onchange="dueloQuickSave()">
+                  <input type="text" class="form-control form-control-sm" style="flex:0 0 130px" id="dueloMainLId" placeholder="gift id" onchange="dueloQuickSave()"></div>
+                  <div class="duelo-ac gift-ac" data-mainac="l" style="display:none;position:absolute;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+                </div>
+                <div class="col-12"><hr class="my-1"></div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center mb-1"><div class="fw-bold" style="font-size:0.85rem">PRESENTES EXTRAS — FLÁVIO</div>
+                    <button class="btn btn-nb btn-primary btn-tiny" onclick="dueloAddExtra('flavio')">+ Adicionar presente</button></div>
+                  <div id="dueloExtraFlavio"></div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center mb-1"><div class="fw-bold" style="font-size:0.85rem">PRESENTES EXTRAS — LULA</div>
+                    <button class="btn btn-nb btn-danger btn-tiny" onclick="dueloAddExtra('lula')">+ Adicionar presente</button></div>
+                  <div id="dueloExtraLula"></div>
+                </div>
+              </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
-                Todo presente válido soma votos (moedas × combo) para o seu personagem (Placar). Golpes/escudos também influenciam o debate (HP/Escudo). KO não zera votos. Quem atingir 50% + 1 da Meta de votos: VENCEDOR FINAL. Resetar rodada NÃO zera votos; Nova disputa zera.
+                Todo presente válido soma votos (moedas × combo). Modo HP: golpes/escudos influenciam o debate; KO não zera votos; quem atingir 50%+1 da Meta: VENCEDOR FINAL. Modo Tempo: rodada cronometrada, vence quem tiver mais votos. Nova disputa zera votos e debates.
               </div>
             </div>
           </div>
@@ -3290,6 +3323,17 @@ async function loadDueloState() {
       dueloIdleInterval = idl.interval != null ? idl.interval : 7;
       dueloMatchRestart = data.settings.match_restart_delay_s != null ? data.settings.match_restart_delay_s : 8;
       dueloSupporters = Object.assign(dueloSupportersDefault(), data.settings.supporters || {});
+      dueloGameMode = data.settings.game_mode === "timed" ? "timed" : "hp";
+      dueloRoundTime = data.settings.round_time_s != null ? data.settings.round_time_s : 180;
+      dueloResultDelay = data.settings.round_result_delay_s != null ? data.settings.round_result_delay_s : 8;
+      const mg = data.settings.main_gifts || {};
+      dueloMainFlavio = { gift_name: String(mg.flavio && mg.flavio.gift_name || "").trim(), gift_id: String(mg.flavio && mg.flavio.gift_id || "").trim() };
+      dueloMainLula = { gift_name: String(mg.lula && mg.lula.gift_name || "").trim(), gift_id: String(mg.lula && mg.lula.gift_id || "").trim() };
+      const eg = data.settings.extra_gifts || {};
+      dueloExtras = {
+        flavio: Array.isArray(eg.flavio) ? eg.flavio.map((x) => ({ gift_id: String(x.gift_id || ""), gift_name: String(x.gift_name || ""), enabled: x.enabled !== false })) : [],
+        lula: Array.isArray(eg.lula) ? eg.lula.map((x) => ({ gift_id: String(x.gift_id || ""), gift_name: String(x.gift_name || ""), enabled: x.enabled !== false })) : [],
+      };
     }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
@@ -3330,6 +3374,21 @@ function renderDueloSettings() {
   if (idInt) idInt.value = dueloIdleInterval;
   const mr = document.getElementById("dueloMatchRestart");
   if (mr) mr.value = dueloMatchRestart;
+  const mg = document.getElementById("dueloModeGame");
+  if (mg) mg.value = dueloGameMode;
+  set("dueloRoundTime", dueloRoundTime);
+  set("dueloResultDelay", dueloResultDelay);
+  const mfn = document.getElementById("dueloMainFName");
+  if (mfn) mfn.value = dueloMainFlavio.gift_name;
+  const mfi = document.getElementById("dueloMainFId");
+  if (mfi) mfi.value = dueloMainFlavio.gift_id;
+  const mln = document.getElementById("dueloMainLName");
+  if (mln) mln.value = dueloMainLula.gift_name;
+  const mli = document.getElementById("dueloMainLId");
+  if (mli) mli.value = dueloMainLula.gift_id;
+  applyDueloModeUI();
+  renderDueloExtras();
+  bindMainAutocompletes();
   renderMusicList();
 }
 
@@ -3497,6 +3556,101 @@ async function uploadDueloSupportAudio(k, input) {
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 
+function dueloModeChanged() {
+  dueloGameMode = (document.getElementById("dueloModeGame") || {}).value === "timed" ? "timed" : "hp";
+  applyDueloModeUI();
+  dueloQuickSave();
+}
+
+function applyDueloModeUI() {
+  const timed = dueloGameMode === "timed";
+  const hp = document.getElementById("dueloHpFields");
+  const td = document.getElementById("dueloTimedFields");
+  if (hp) hp.style.display = timed ? "none" : "";
+  if (td) td.style.display = timed ? "" : "none";
+}
+
+function dueloExtrasClean() {
+  const out = { flavio: [], lula: [] };
+  for (const side of ["flavio", "lula"]) {
+    (dueloExtras[side] || []).forEach((g) => {
+      if (g && (String(g.gift_name || "").trim() || String(g.gift_id || "").trim())) {
+        out[side].push({ gift_id: String(g.gift_id || "").trim(), gift_name: String(g.gift_name || "").trim(), enabled: g.enabled !== false, action: "vote_only" });
+      }
+    });
+  }
+  return out;
+}
+
+function dueloAddExtra(side) {
+  dueloExtras[side] = dueloExtras[side] || [];
+  dueloExtras[side].push({ gift_id: "", gift_name: "", enabled: true });
+  renderDueloExtras();
+}
+
+function dueloRemoveExtra(side, i) {
+  if (Array.isArray(dueloExtras[side])) dueloExtras[side].splice(i, 1);
+  renderDueloExtras();
+  dueloQuickSave();
+}
+
+function renderDueloExtras() {
+  const map = { flavio: "dueloExtraFlavio", lula: "dueloExtraLula" };
+  for (const side of Object.keys(map)) {
+    const box = document.getElementById(map[side]);
+    if (!box) continue;
+    const items = dueloExtras[side] || [];
+    if (!items.length) { box.innerHTML = '<div class="text-secondary" style="font-size:0.75rem">Nenhum presente extra.</div>'; continue; }
+    box.innerHTML = items.map((e, i) => `
+      <div class="d-flex gap-1 align-items-center mb-1" style="font-size:0.78rem">
+        <input type="text" class="form-control form-control-sm" style="flex:2" placeholder="nome" value="${esc(e.gift_name || '')}" data-extra="${side}" data-idx="${i}" data-field="gift_name">
+        <input type="text" class="form-control form-control-sm" style="flex:1" placeholder="gift id" value="${esc(e.gift_id || '')}" data-extra="${side}" data-idx="${i}" data-field="gift_id">
+        <input type="checkbox" class="form-check-input" title="Ativo" data-extra="${side}" data-idx="${i}" data-field="enabled" ${e.enabled !== false ? 'checked' : ''}>
+        <button class="btn btn-nb btn-danger btn-tiny" onclick="dueloRemoveExtra('${side}',${i})">×</button>
+      </div>`).join("");
+    box.querySelectorAll("[data-extra]").forEach((el) => {
+      el.addEventListener("change", () => {
+        const s = el.getAttribute("data-extra");
+        const idx = Number(el.getAttribute("data-idx"));
+        const f = el.getAttribute("data-field");
+        if (dueloExtras[s] && dueloExtras[s][idx]) dueloExtras[s][idx][f] = f === "enabled" ? el.checked : el.value;
+        dueloQuickSave();
+      });
+    });
+  }
+}
+
+function bindMainAutocompletes() {
+  document.querySelectorAll("input.duelo-main").forEach((input) => {
+    const sideK = input.getAttribute("data-main");
+    const ac = document.querySelector('[data-mainac="' + sideK + '"]');
+    if (input._mainBound) return;
+    input._mainBound = true;
+    const stop = () => { if (ac) { ac.style.display = "none"; ac.innerHTML = ""; } };
+    const open = () => {
+      if (!ac || !giftTagList.length) return;
+      const q = input.value.trim().toLowerCase();
+      const list = giftTagList.filter((g) => !q || g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q)).slice(0, 20);
+      if (!list.length) { ac.style.display = "none"; ac.innerHTML = ""; return; }
+      ac.innerHTML = list.map((g) => {
+        const file = giftImageMap[g.name];
+        return `<div class="ac-item" data-val="${esc(g.name)}">${file ? `<img src="/gift-images/${esc(file)}" alt="">` : ""}<span class="ac-name">${esc(getGiftLabel(g.name))}</span><span class="ac-diam">${g.diamond_count} 💎</span></div>`;
+      }).join("");
+      ac.style.display = "block";
+      ac.querySelectorAll(".ac-item").forEach((it) => {
+        it.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = it.getAttribute("data-val"); stop(); dueloQuickSave(); });
+      });
+    };
+    input.addEventListener("focus", open);
+    input.addEventListener("input", open);
+    input.addEventListener("blur", () => setTimeout(stop, 200));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") stop();
+      else if (e.key === "Enter") { e.preventDefault(); const first = ac && ac.querySelector(".ac-item"); if (first) input.value = first.getAttribute("data-val"); stop(); dueloQuickSave(); }
+    });
+  });
+}
+
 function dueloSupportersClean() {
   const out = {};
   for (const k of Object.keys(DUELO_SUPPORTERS_META)) {
@@ -3545,6 +3699,14 @@ function readDueloSettings() {
     },
     match_restart_delay_s: num("dueloMatchRestart", 8),
     supporters: dueloSupportersClean(),
+    game_mode: document.getElementById("dueloModeGame") ? document.getElementById("dueloModeGame").value : dueloGameMode,
+    round_time_s: num("dueloRoundTime", 180),
+    round_result_delay_s: num("dueloResultDelay", 8),
+    main_gifts: {
+      flavio: { gift_name: (document.getElementById("dueloMainFName") || {}).value || "", gift_id: (document.getElementById("dueloMainFId") || {}).value || "" },
+      lula: { gift_name: (document.getElementById("dueloMainLName") || {}).value || "", gift_id: (document.getElementById("dueloMainLId") || {}).value || "" },
+    },
+    extra_gifts: dueloExtrasClean(),
   };
 }
 
@@ -3762,6 +3924,12 @@ let dueloIdleOn = true;
 let dueloIdleEnter = 10;
 let dueloIdleInterval = 7;
 let dueloMatchRestart = 8;
+let dueloGameMode = "hp";
+let dueloRoundTime = 180;
+let dueloResultDelay = 8;
+let dueloMainFlavio = { gift_name: "", gift_id: "" };
+let dueloMainLula = { gift_name: "", gift_id: "" };
+let dueloExtras = { flavio: [], lula: [] };
 
 function layoutNum(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
 
