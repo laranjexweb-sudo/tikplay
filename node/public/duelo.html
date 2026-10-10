@@ -156,7 +156,7 @@
 
   .win-banner {
     position: absolute;
-    top: 45%;
+    top: 34%;
     left: 0;
     right: 0;
     display: flex;
@@ -239,17 +239,20 @@
 
   .lead-flash {
     position: absolute;
-    inset: 0;
+    top: 36%;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 70;
     opacity: 0;
+    transform: translateY(-50%);
     transition: opacity .2s ease;
     pointer-events: none;
   }
   .lead-flash.show { opacity: 1; }
-  .banner-img { display: block; max-width: 94vw; max-height: 82vh; object-fit: contain; }
+  .banner-img { display: block; max-width: min(74vw, 640px); max-height: 56vh; object-fit: contain; }
   .lead-flash .banner-img { animation: bannerPop .35s ease; }
   @keyframes bannerPop { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
