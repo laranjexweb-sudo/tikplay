@@ -22,6 +22,13 @@ DEFAULT_SETTINGS = {
     "reset_delay_s": 6,
     "max_votes": 0,               # 0 = sem limite
     "shield_gift_amount": 15,     # fallback quando o presente de escudo não define seus pontos
+    "action_audio": {},           # ex.: {"punch": "soco-novo.mp3", "kick": "chute-novo.mp3", "uppercut": "levantada-novo.mp3"}
+}
+
+DEFAULT_ACTION_AUDIO = {
+    "punch": "soco-novo.mp3",
+    "kick": "chute-novo.mp3",
+    "uppercut": "levantada-novo.mp3",
 }
 
 
@@ -186,7 +193,11 @@ class DueloEngine:
         defender = "lula" if char == "flavio" else "flavio"
         self._apply_damage(defender, dmg)
 
-        audio = str(match.get("audio") or "")
+        audio = str(match.get("audio") or "").strip()
+        if not audio:
+            audio = str((self.settings.get("action_audio") or {}).get(action) or "")
+        if not audio:
+            audio = DEFAULT_ACTION_AUDIO.get(action, "")
         self._emit("duelo_attack", {
             "attacker": char,
             "action": action,

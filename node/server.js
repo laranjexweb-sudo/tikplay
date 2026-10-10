@@ -1924,9 +1924,18 @@ function normalizeDueloSettings(raw) {
     dmg_uppercut: 20,
     reset_delay_s: 6,
     max_votes: 0,
+    action_audio: { punch: "", kick: "", uppercut: "" },
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
+    const safeName = (v) => String((v == null ? "" : v)).trim().replace(/[^a-zA-Z0-9._-]/g, "");
+    if (raw.action_audio && typeof raw.action_audio === "object") {
+      out.action_audio = {
+        punch: safeName(raw.action_audio.punch),
+        kick: safeName(raw.action_audio.kick),
+        uppercut: safeName(raw.action_audio.uppercut),
+      };
+    }
     const hn = n(raw.hp_start);
     const hx = n(raw.hp_max);
     out.hp_max = hx !== null ? Math.max(1, Math.min(10000, hx)) : 100;

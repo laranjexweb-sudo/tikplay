@@ -399,11 +399,19 @@ function spawnHit(type, dir) {
 
 let audioUnlocked = false;
 let pendingAudio = [];
+let audioEls = {};
 
 function tryPlay(url) {
   try {
-    const a = new Audio(url);
-    a.volume = 0.92;
+    let a = audioEls[url];
+    if (!a) {
+      a = new Audio(url);
+      a.volume = 0.92;
+      a.preload = "auto";
+      a.load();
+      audioEls[url] = a;
+    }
+    a.currentTime = 0;
     const p = a.play();
     if (p && p.then) {
       p.catch((err) => {

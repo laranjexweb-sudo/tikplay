@@ -810,6 +810,12 @@
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Máx. votos (0 = sem limite)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
               </div>
+              <div class="row g-2 mt-3">
+                <div class="col-12"><div class="text-secondary mb-1" style="font-size:0.8rem;font-weight:700">SONS PADRÃO DOS GOLPES <span style="font-weight:400">(tocam quando o presente não tem áudio próprio)</span></div></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Soco</label><input type="file" accept="audio/*,.mp3,.wav,.ogg" class="form-control form-control-sm" onchange="uploadDueloSound('punch', this)"><div class="text-secondary" style="font-size:0.7rem" id="dueloSndLbl-punch">—</div></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Chute</label><input type="file" accept="audio/*,.mp3,.wav,.ogg" class="form-control form-control-sm" onchange="uploadDueloSound('kick', this)"><div class="text-secondary" style="font-size:0.7rem" id="dueloSndLbl-kick">—</div></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Levantada</label><input type="file" accept="audio/*,.mp3,.wav,.ogg" class="form-control form-control-sm" onchange="uploadDueloSound('uppercut', this)"><div class="text-secondary" style="font-size:0.7rem" id="dueloSndLbl-uppercut">—</div></div>
+              </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
                 No modo Votos, cada rodada continua usando HP + Escudo; quem zerar o HP do outro vence a rodada e soma 1 voto. Resetar rodada NÃO zera votos. As configurações acima (Modo, HP e Escudo inicial, danos) são aplicadas ao Ativar Área ou Salvar.
               </div>
@@ -3203,6 +3209,7 @@ function updateLinks() {
 // ---------------- Duelo 1x1 ----------------
 let dueloGifts = [];
 let dueloActive = false;
+let dueloActionAudio = { punch: "", kick: "", uppercut: "" };
 let dueloSettings = { mode: "hp", hp_start: 100, hp_max: 100, shield_start: 100, shield_max: 200, dmg_punch: 10, dmg_kick: 15, dmg_uppercut: 20, reset_delay_s: 6, max_votes: 0 };
 
 async function loadDueloState() {
@@ -3212,6 +3219,7 @@ async function loadDueloState() {
     dueloGifts = Array.isArray(data.gifts) ? data.gifts : [];
     dueloActive = !!data.active;
     if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
+    dueloActionAudio = Object.assign({ punch: "", kick: "", uppercut: "" }, data.settings && data.settings.action_audio ? data.settings.action_audio : {});
     renderDueloGifts();
     renderDueloSettings();
     setDueloStatusButtons(dueloActive);
@@ -3229,6 +3237,11 @@ function renderDueloSettings() {
   set("dueloDmgUppercut", dueloSettings.dmg_uppercut);
   set("dueloResetDelay", dueloSettings.reset_delay_s);
   set("dueloMaxVotes", dueloSettings.max_votes || 0);
+  const sndMap = { punch: "soco", kick: "chute", uppercut: "levantada" };
+  for (const [slot, label] of Object.entries(sndMap)) {
+    const lb = document.getElementById("dueloSndLbl-" + slot);
+    if (lb) lb.textContent = dueloActionAudio[slot] ? label + "-novo: " + dueloActionAudio[slot] : label + "-novo (padrão); anexe para trocar";
+  }
 }
 
 function readDueloSettings() {
@@ -3248,7 +3261,23 @@ function readDueloSettings() {
     dmg_uppercut: num("dueloDmgUppercut", 20),
     reset_delay_s: num("dueloResetDelay", 6),
     max_votes: num("dueloMaxVotes", 0),
+    action_audio: Object.assign({ punch: "", kick: "", uppercut: "" }, dueloActionAudio),
   };
+}
+
+async function uploadDueloSound(slot, el) {
+  if (!el.files || !el.files[0]) return;
+  const fd = new FormData();
+  fd.append("file", el.files[0]);
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) {
+      dueloActionAudio[slot] = data.filename;
+      renderDueloSettings();
+      dueloMsg("Som do " + slot + " definido: " + data.filename);
+    } else dueloMsg(data.error || "Erro no upload do som");
+  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 
 function setDueloStatusButtons(active) {
