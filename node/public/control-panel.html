@@ -819,7 +819,7 @@
           <div class="nb-card mb-3">
             <h2>Configuração de Presentes</h2>
             <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-              Presentes de golpe/escudo são cadastrados por personagem. Flávio luta pela ESQUERDA; Lula pela DIREITA. O escudo absorve o dano antes do HP. A defesa do oponente é automática.
+              Presentes de golpe/escudo são cadastrados por personagem. Flávio luta pela ESQUERDA; Lula pela DIREITA. O dano do golpe vem da Configuração do modo (Soco/Chute/Levantada). O escudo absorve o dano antes do HP. A defesa do oponente é automática.
             </div>
             <div class="row g-3 mb-3">
               <div class="col-lg-6">
@@ -3336,16 +3336,13 @@ function buildDueloRow(g_, i) {
           <option value="golpe" ${type === 'escudo' ? '' : 'selected'}>Golpe</option>
           <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
         </select></div>
-      <div class="col-md-2"><label class="form-label mb-0" style="font-size:0.7rem">Gift ID</label>
-        <input type="number" class="form-control form-control-sm" value="${esc(g_.gift_id || '')}" placeholder="opcional" data-f="gift_id" data-i="${i}"></div>
       <div class="col-md-5"><label class="form-label mb-0" style="font-size:0.7rem">Golpe / Pontos de escudo</label>
-        <div class="duelo-golpe-fields d-flex gap-1" ${type === 'escudo' ? 'style="display:none"' : ''}>
-          <select class="form-select form-select-sm" data-f="action" data-i="${i}" style="flex:1">
+        <div class="duelo-golpe-fields" ${type === 'escudo' ? 'style="display:none"' : ''}>
+          <select class="form-select form-select-sm" data-f="action" data-i="${i}">
             <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
             <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
             <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
           </select>
-          <input type="number" class="form-control form-control-sm" style="width:84px" value="${esc(g_.damage || '')}" placeholder="dano(0=p)" data-f="damage" data-i="${i}">
         </div>
         <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
           <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo" data-f="shield" data-i="${i}">
@@ -3395,7 +3392,7 @@ function buildDueloRow(g_, i) {
 }
 
 function addDueloGiftRow(character) {
-  dueloGifts.push({ gift_id: "", name: "", character: (character === "lula" ? "lula" : "flavio"), action: "punch", audio: "", active: true });
+  dueloGifts.push({ name: "", character: (character === "lula" ? "lula" : "flavio"), action: "punch", audio: "", active: true });
   renderDueloGifts();
 }
 
