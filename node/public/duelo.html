@@ -54,36 +54,43 @@
     transform-origin: top center;
     z-index: 31;
     pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
+    width: min(80vw, 580px);
+    padding: 7px 14px 5px;
+    background: rgba(8, 13, 26, 0.9);
+    border: 3px solid #c9a227;
+    border-top-color: #f0c84a;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px #000, 4px 4px 0 rgba(0,0,0,0.45);
   }
-  .sb-votes {
+  .sb-row { display: flex; align-items: center; gap: 12px; }
+  .sb-val {
     font-weight: 900;
-    font-size: clamp(1.7rem, 4.6vh, 3.1rem);
-    letter-spacing: 4px;
-    color: #ffd200;
-    text-shadow: 0 0 14px rgba(255, 150, 0, 0.9), 0 0 3px #000;
-    white-space: nowrap;
-    background: rgba(10, 10, 16, 0.55);
-    border: 2px solid rgba(255, 210, 0, 0.4);
-    border-radius: 999px;
-    padding: 4px 22px;
-  }
-  .sb-meta {
+    font-size: clamp(1.15rem, 3.2vh, 2.1rem);
+    min-width: 86px;
     text-align: center;
-    font-size: clamp(0.6rem, 1.5vh, 0.85rem);
-    color: #9fb0cc;
-    text-shadow: 0 0 6px #000;
-    font-weight: 700;
     letter-spacing: 1px;
+    white-space: nowrap;
+    text-shadow: 2px 2px 0 #000;
   }
-  .sb-bar { position: relative; width: min(44vw, 320px); height: 12px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .sb-val.flavio { color: #5bc0ff; }
+  .sb-val.lula { color: #ff6b6b; }
+  .sb-meta {
+    margin-top: 3px;
+    text-align: center;
+    font-size: clamp(0.58rem, 1.4vh, 0.82rem);
+    color: #f0d488;
+    text-shadow: 1px 1px 0 #000;
+    font-weight: 800;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .sb-bar { position: relative; flex: 1; height: clamp(14px, 2.1vh, 24px); background: rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; border: 2px solid #000; box-shadow: inset 0 2px 0 rgba(0,0,0,.4); }
   .sb-bar .seg { position: absolute; top: 0; bottom: 0; display: block; transition: width .4s ease; }
-  .sb-bar .seg.flavio { left: 0; background: linear-gradient(90deg, #2471a3, #5bc0ff); }
+  .sb-bar .seg.flavio { left: 0; background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
   .sb-bar .seg.lula { right: 0; background: linear-gradient(90deg, #c0392b, #ff6b6b); }
-  .sb-bar .sb-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255,255,255,.75); }
+  .sb-bar .sb-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 3px; background: #ffd200; box-shadow: 0 0 6px #ffd200; }
+  .lb-score.pulse .sb-row { animation: scorePulse .4s ease; }
+  @keyframes scorePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 
   .hud-flavio, .hud-lula {
     position: absolute;
@@ -129,7 +136,9 @@
     color: #fff; text-shadow: 0 0 4px #000, 0 0 12px #000; letter-spacing: 2px; pointer-events: none; white-space: nowrap;
   }
   .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
-  .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
+  .hud-flavio .bar.hp > i { background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
+  .hud-lula .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
+  .bar.sh > i { background: linear-gradient(90deg, #2b3a5c, #5b7aa8); }
   .bar-label { font-size: clamp(0.62rem, 1.7vw, 0.9rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
   .gift-tags { margin-top: 14px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.28); padding: 7px 9px; border-radius: 12px; }
   .gift-head { font-weight: 900; letter-spacing: 2px; color: #ffd200; font-size: clamp(0.72rem, 1.8vh, 1rem); text-shadow: 0 0 8px #000; margin-bottom: 2px; }
@@ -246,7 +255,6 @@
   .lead-flash .banner-img { animation: bannerPop .35s ease; }
   @keyframes bannerPop { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-  .sb-votes.pulse { animation: scorePulse .4s ease; }
   @keyframes scorePulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
   .debug { position: absolute; bottom: 2vh; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
   .debug button { border: 2px solid #000; border-radius: 8px; font-weight: 800; padding: 6px 10px; background: #fec90f; color: #111; cursor: pointer; }
@@ -258,14 +266,16 @@
 <div id="stage">
   <div class="status" id="statusText">conectando…</div>
 
-  <div class="lb-score">
-    <div class="sb-votes" id="htVs">0 VS 0</div>
+  <div class="lb-score" id="lbScore">
+    <div class="sb-row">
+      <span class="sb-val flavio" id="htVsF">0%</span>
+      <div class="sb-bar"><i class="seg flavio" id="sbBarF" style="width:0%"></i><i class="seg lula" id="sbBarL" style="width:0%"></i><span class="sb-mid"></span></div>
+      <span class="sb-val lula" id="htVsL">0%</span>
+    </div>
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
-    <div class="sb-bar"><i class="seg flavio" id="sbBarF" style="width:0%"></i><i class="seg lula" id="sbBarL" style="width:0%"></i><span class="sb-mid"></span></div>
   </div>
 
   <div class="hud-flavio">
-    <div class="hud-name">FLÁVIO</div>
     <div class="hud-metric"><span class="hm-label">HP</span><span class="hm-val" id="hpval-flavio">100/100</span></div>
     <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-flavio">0/200</span></div>
@@ -274,7 +284,6 @@
   </div>
 
   <div class="hud-lula">
-    <div class="hud-name">LULA</div>
     <div class="hud-metric"><span class="hm-label">HP</span><span class="hm-val" id="hpval-lula">100/100</span></div>
     <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-lula">0/200</span></div>
@@ -645,7 +654,8 @@ function renderHud() {
       else vr.textContent = "";
     }
   }
-  const vs = $("htVs");
+  const vsF = $("htVsF");
+  const vsL = $("htVsL");
   const meta = $("sbMeta");
   const barF = $("sbBarF");
   const barL = $("sbBarL");
@@ -653,17 +663,17 @@ function renderHud() {
   const vt = state.vote_target || 0;
   const fv = state.votes.flavio || 0, lv = state.votes.lula || 0;
   if (vt > 0) {
-    const majority = Math.floor(vt / 2) + 1;
     const fp = Math.max(0, Math.min(100, (fv / vt) * 100));
     const lp = Math.max(0, Math.min(100, (lv / vt) * 100));
-    const ap = Math.max(0, Math.min(100, ((fv + lv) / vt) * 100));
-    if (vs) vs.textContent = "FLÁVIO " + Math.round(fp) + "% VS " + Math.round(lp) + "% LULA";
-    if (meta) meta.textContent = "APURADO " + Math.round(ap) + "% · META " + fmtNum(vt) + " · MAIORIA " + fmtNum(majority);
+    if (vsF) vsF.textContent = Math.round(fp) + "%";
+    if (vsL) vsL.textContent = Math.round(lp) + "%";
+    if (meta) meta.textContent = "META " + fmtNum(vt);
     if (barBox) barBox.style.display = "";
     if (barF) barF.style.width = fp + "%";
     if (barL) barL.style.width = lp + "%";
   } else {
-    if (vs) vs.textContent = fmtNum(fv) + " VS " + fmtNum(lv);
+    if (vsF) vsF.textContent = fmtNum(fv);
+    if (vsL) vsL.textContent = fmtNum(lv);
     if (meta) meta.textContent = "SEM LIMITE";
     if (barBox) barBox.style.display = "none";
   }
@@ -1022,8 +1032,8 @@ function connectWS() {
       markInteraction();
       if (msg.added > 0) {
         voteFloat(msg.character, "+" + msg.added + " VOTOS");
-        const vs = $("htVs");
-        if (vs) { vs.classList.remove("pulse"); void vs.offsetWidth; vs.classList.add("pulse"); }
+        const ap = $("lbScore");
+        if (ap) { ap.classList.remove("pulse"); void ap.offsetWidth; ap.classList.add("pulse"); }
       }
       trackLeadChange(msg.votes || {});
     }
