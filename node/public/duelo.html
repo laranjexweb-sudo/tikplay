@@ -16,7 +16,8 @@
     background-size: cover;
   }
 
-  .fighter { position: absolute; bottom: 9vh; width: auto; will-change: transform; }
+  .fighter { position: absolute; bottom: 9vh; width: auto; will-change: transform; z-index: 1; }
+  .fighter.attacking { z-index: 12; }
   .fighter img { display: block; max-height: 42vh; width: auto; transform-origin: bottom center; }
   #fighter-flavio { left: 7vw; }
   #fighter-lula  { right: 7vw; }
@@ -242,7 +243,7 @@ function setFighter(fighter, stateName) {
 function resetPose(fighter) {
   const el = $("fighter-" + fighter);
   setFighter(fighter, "idle");
-  if (el) { el.style.transition = "transform .28s ease"; el.style.transform = "translate(0,0) scale(1)"; }
+  if (el) { el.classList.remove("attacking"); el.style.transition = "transform .28s ease"; el.style.transform = "translate(0,0) scale(1)"; }
 }
 
 function pctBar(v, max) { return Math.max(0, Math.min(100, (v / (max || 1)) * 100)); }
@@ -386,6 +387,7 @@ async function runAttack(att) {
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
   if (atEl) {
+    atEl.classList.add("attacking");
     atEl.style.transition = `transform ${dur.fwd}ms ease-out`;
     const up = att.action === "uppercut" ? " translateY(-18px)" : " translateY(0)";
     const sc = att.action === "kick" ? " scale(1.05)" : " scale(1)";
