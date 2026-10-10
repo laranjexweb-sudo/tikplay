@@ -397,10 +397,43 @@ function spawnHit(type, dir) {
   setTimeout(() => { hit.className = "hit"; hit.style.left = "50%"; }, 380);
 }
 
-function playAudio(url) {
-  if (!url) return;
-  try { const a = new Audio(url); a.volume = 0.92; a.play().catch(() => {}); } catch (e) {}
+let audioUnlocked = false;
+let pendingAudio = [];
+
+function tryPlay(url) {
+  try {
+    const a = new Audio(url);
+    a.volume = 0.92;
+    const p = a.play();
+    if (p && p.then) {
+      p.catch((err) => {
+        try { console.debug("[DUELO AUDIO] bloqueado por autoplay:", (err && err.name) || err); } catch (e) {}
+      });
+    }
+  } catch (e) { try { console.debug("[DUELO AUDIO] erro:", e); } catch (_) {} }
 }
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) { const ctx = new AC(); if (ctx.resume) ctx.resume(); }
+  } catch (e) {}
+  const urls = pendingAudio.splice(0, pendingAudio.length);
+  for (const u of urls) tryPlay(u);
+}
+
+function playAudio(url) {
+  if (!url) { try { console.debug("[DUELO AUDIO] audio_url vazio (golpe sem áudio anexado?)"); } catch (e) {} return; }
+  if (audioUnlocked) { tryPlay(url); return; }
+  pendingAudio.push(url);
+  tryPlay(url);
+}
+
+document.addEventListener("pointerdown", unlockAudio, { once: true });
+document.addEventListener("keydown", unlockAudio, { once: true });
+document.addEventListener("touchstart", unlockAudio, { once: true });
 
 function shieldEffect(fighter, points) {
   const fx = $("shield-" + fighter);
