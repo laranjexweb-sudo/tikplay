@@ -1883,6 +1883,23 @@ function normalizeDueloGifts(raw) {
   }).filter((g) => g.gift_id || g.name);
 }
 
+function dueloInitialState(cfg) {
+  const s = normalizeDueloSettings(cfg && cfg.settings);
+  return {
+    type: "duelo_state",
+    mode: s.mode,
+    hp: { flavio: s.hp_start, lula: s.hp_start },
+    shield: { flavio: s.shield_start, lula: s.shield_start },
+    votes: { flavio: 0, lula: 0 },
+    hp_max: s.hp_start,
+    shield_max: s.shield_max,
+    winner: null,
+    roundActive: true,
+    final: false,
+    active: !!(cfg && cfg.active),
+  };
+}
+
 function dueloGiftsPayload(gifts) {
   let map = {};
   try {
@@ -2100,11 +2117,9 @@ wss.on("connection", (ws, req) => {
     if (tenant.vpetState) {
       ws.send(JSON.stringify({ type: "vpet_state", ...tenant.vpetState }));
     }
-    if (tenant.dueloState) {
-      ws.send(JSON.stringify({ type: "duelo_state", ...tenant.dueloState }));
-    }
     const dueloCfg = db.getDueloConfig(user.id);
     if (dueloCfg) {
+      ws.send(JSON.stringify({ type: "duelo_state", ...(tenant.dueloState || dueloInitialState(dueloCfg)) }));
       ws.send(JSON.stringify({ type: "duelo_gifts", gifts: dueloGiftsPayload(dueloCfg.gifts) }));
     }
     return;

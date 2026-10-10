@@ -198,7 +198,7 @@ const FIGHTERS = {
 const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 } };
 const MAX_ATTACK_QUEUE = 20;
 
-let state = { mode: "hp", hp: { flavio: 100, lula: 100 }, shield: { flavio: 100, lula: 100 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false };
+let state = { mode: "hp", hp: { flavio: 0, lula: 0 }, shield: { flavio: 0, lula: 0 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false };
 let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
