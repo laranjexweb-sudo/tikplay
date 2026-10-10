@@ -198,26 +198,12 @@
   .f-speech {
     bottom: calc(100% + 8px);
     z-index: 44;
-    max-width: 32vw;
-    background: rgba(0, 0, 0, 0.82);
-    border: 3px solid #ffd200;
-    border-radius: 14px;
-    padding: 8px 12px;
-    font-weight: 800;
-    font-size: clamp(0.85rem, 2vh, 1.1rem);
-    color: #fff;
-    text-shadow: 0 0 6px #000;
     opacity: 0;
     transform: translate(-50%, 8px);
     transition: opacity .2s ease, transform .2s ease;
-    white-space: nowrap;
-  }
-  .f-speech::after {
-    content: ""; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
-    border: 7px solid transparent; border-top-color: #ffd200;
   }
   .f-speech.show { opacity: 1; transform: translate(-50%, 0); }
-  .f-speech .speech-img { display: block; max-height: clamp(64px, 14vh, 130px); width: auto; border-radius: 10px; }
+  .f-speech .speech-img { display: block; max-height: clamp(64px, 14vh, 130px); width: auto; }
   .f-vote { bottom: 62%; z-index: 46; }
 
   .vote-float {
