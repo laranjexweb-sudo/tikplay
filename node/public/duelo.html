@@ -217,6 +217,7 @@
     border: 7px solid transparent; border-top-color: #ffd200;
   }
   .f-speech.show { opacity: 1; transform: translate(-50%, 0); }
+  .f-speech .speech-img { display: block; max-height: clamp(64px, 14vh, 130px); width: auto; border-radius: 10px; }
   .f-vote { bottom: 62%; z-index: 46; }
 
   .vote-float {
@@ -706,24 +707,24 @@ document.addEventListener("touchstart", unlockAudio, { once: true });
 // ---- Falas (client-side) ----
 const SPEECH = {
   flavio: {
-    punch: ["Mentiroso!", "Responde aí!", "Fala a verdade!", "Agora aguenta!"],
-    kick: ["O sistema tá contra mim!", "Mentiroso!", "Segura essa!", "Agora aguenta!"],
-    uppercut: ["Agora você inventa!", "Essa é pra valer!", "Cuidado com a verdade!"],
-    hit: ["Opa!", "Essa foi baixa!", "Tá difícil!", "Calma aí!", "Ainda tô de pé!"],
-    lowHp: ["Tá apertando!", "Ainda tô de pé!", "Preciso reagir!"],
-    shield: ["Agora tô protegido!", "Blindado!", "Não entra!"],
-    victory: ["Fui melhor no debate!", "Levei essa!", "Ganhei no argumento!", "O povo tá comigo!"],
-    leadChange: ["Tô na frente!", "Agora é meu jogo!", "Vem que tem!"],
+    punch: ["/duelo/Flavio/falas/mentiroso.png", "/duelo/Flavio/falas/responde-ai.png", "/duelo/Flavio/falas/fala-a-verdade.png", "/duelo/Flavio/falas/agora-aguenta.png"],
+    kick: ["/duelo/Flavio/falas/o-sistema-ta-contra-mim.png", "/duelo/Flavio/falas/mentiroso.png", "/duelo/Flavio/falas/segura-essa.png", "/duelo/Flavio/falas/agora-aguenta.png"],
+    uppercut: ["/duelo/Flavio/falas/agora-voce-inventa.png", "/duelo/Flavio/falas/essa-e-pra-valer.png", "/duelo/Flavio/falas/cuidado-com-a-verdade.png"],
+    hit: ["/duelo/Flavio/falas/opa.png", "/duelo/Flavio/falas/essa-foi-baixa.png", "/duelo/Flavio/falas/ta-dificil.png", "/duelo/Flavio/falas/calma-ai.png", "/duelo/Flavio/falas/ainda-to-de-pe.png"],
+    lowHp: ["/duelo/Flavio/falas/ta-apertando.png", "/duelo/Flavio/falas/ainda-to-de-pe.png", "/duelo/Flavio/falas/preciso-reagir.png"],
+    shield: ["/duelo/Flavio/falas/agora-to-protegido.png", "/duelo/Flavio/falas/blindado.png", "/duelo/Flavio/falas/nao-entra.png"],
+    victory: ["/duelo/Flavio/falas/fui-melhor-no-debate.png", "/duelo/Flavio/falas/levei-essa.png", "/duelo/Flavio/falas/ganhei-no-argumento.png", "/duelo/Flavio/falas/o-poo-ta-comigo.png"],
+    leadChange: ["/duelo/Flavio/falas/to-na-frente.png", "/duelo/Flavio/falas/agora-e-meu-jogo.png"],
   },
   lula: {
-    punch: ["Mentiroso é você!", "Responde essa!", "Agora fala!", "Se comporte!"],
-    kick: ["Tá descompensado!", "Se comporte como presidente!", "Segura essa!", "Agora fala!"],
-    uppercut: ["Samba de uma nota só!", "Agora complicou!", "Essa subiu!", "Você mente todo dia!"],
-    hit: ["Rapaz!", "Calma aí!", "Essa pegou!", "Tá nervoso?", "Não acabou!"],
-    lowHp: ["Tá apertando!", "Não acabou!", "Preciso reagir!"],
-    shield: ["Agora tô protegido!", "Boa!", "Reforço chegou!"],
-    victory: ["Fui melhor no debate!", "Levei essa!", "Ganhei no argumento!", "O povo tá comigo!"],
-    leadChange: ["Agora virei!", "O povo tá comigo!", "Vem que tem!"],
+    punch: ["/duelo/lula/falas/mentiroso-e-voce.png", "/duelo/lula/falas/responde-essa.png", "/duelo/lula/falas/agora-fala.png", "/duelo/lula/falas/se-comporte.png"],
+    kick: ["/duelo/lula/falas/ta-descompensado.png", "/duelo/lula/falas/se-comporte-como-presidente.png", "/duelo/lula/falas/segura-essa.png", "/duelo/lula/falas/agora-fala.png"],
+    uppercut: ["/duelo/lula/falas/samba-de-uma-nota-so.png", "/duelo/lula/falas/agora-complicou.png", "/duelo/lula/falas/essa-subiu.png", "/duelo/lula/falas/voce-mente-todo-dia.png"],
+    hit: ["/duelo/lula/falas/rapaz.png", "/duelo/lula/falas/calma-ai.png", "/duelo/lula/falas/essa-pegou.png", "/duelo/lula/falas/ta-nervoso.png", "/duelo/lula/falas/nao-acabou.png"],
+    lowHp: ["/duelo/lula/falas/ta-apertando.png", "/duelo/lula/falas/nao-acabou.png", "/duelo/lula/falas/preciso-reagir.png"],
+    shield: ["/duelo/lula/falas/agora-to-protegido.png", "/duelo/lula/falas/boa.png", "/duelo/lula/falas/reforco-chegou.png"],
+    victory: ["/duelo/lula/falas/levei-essa.png", "/duelo/lula/falas/ganhei-no-argumento.png", "/duelo/lula/falas/o-povo-ta-comigo.png"],
+    leadChange: ["/duelo/lula/falas/agora-virei.png", "/duelo/lula/falas/o-povo-ta-comigo.png", "/duelo/lula/falas/vem-que-tem.png"],
   },
 };
 const speechTimer = {};
@@ -741,7 +742,7 @@ function say(fighter, bucket) {
   speechCd[fighter] = now + 4000;
   const el = $("speech-" + fighter);
   if (!el) return;
-  el.textContent = phrase;
+  el.innerHTML = '<img class="speech-img" src="' + phrase + '" alt="">';
   el.classList.remove("show");
   void el.offsetWidth;
   el.classList.add("show");
