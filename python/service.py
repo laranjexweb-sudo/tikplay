@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import threading
+import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -407,6 +408,9 @@ class GameSession:
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         self._duelo_reset_task = None
         self._duelo_match_task = None
+        self._duelo_timer_task = None
+        self._duelo_round_result_task = None
+        self._duelo_round_ends_at = 0
         # Passe Livre: usuários que enviaram o gift ingresso podem palpitar no 3 Pontinhos
         self._tres_allowed = set()
         HandlerCls = TikTokLiveHandler if self.engine == "tiktoklive" else TikToolsHandler
@@ -745,6 +749,60 @@ class GameSession:
             raise
         finally:
             self._duelo_match_task = None
+
+    # ---- Modo 2 (timed): cronômetro autoritativo ----
+    def _cancel_duelo_timed_tasks(self):
+        if self._duelo_timer_task:
+            self._duelo_timer_task.cancel()
+            self._duelo_timer_task = None
+        if self._duelo_round_result_task:
+            self._duelo_round_result_task.cancel()
+            self._duelo_round_result_task = None
+
+    def _start_duelo_timer(self):
+        self._cancel_duelo_timed_tasks()
+        self._duelo_round_ends_at = time.time() + max(1, self.duelo.time_remaining or int(self.duelo.settings.get("round_time_s", 180) or 180))
+        self._duelo_timer_task = asyncio.ensure_future(self._duelo_timer_loop())
+
+    async def _duelo_timer_loop(self):
+        try:
+            while self.duelo.active and self.duelo._is_timed() and self.duelo.roundActive:
+                now = time.time()
+                rem = self._duelo_round_ends_at - now
+                secs = max(0, int(rem) + (1 if rem > 0 and (rem % 1) > 0 else 0))
+                if secs != self.duelo.time_remaining:
+                    self.duelo.time_remaining = secs
+                    emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                if rem <= 0:
+                    break
+                await asyncio.sleep(0.25)
+            if self.duelo.active and self.duelo._is_timed() and self.duelo.roundActive and self.duelo.time_remaining <= 0:
+                self.duelo.end_timed_round()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", "[Duelo] Tempo da rodada esgotado — resultado")
+                self._duelo_round_ends_at = 0
+                self._schedule_duelo_timed_next_round(int(self.duelo.settings.get("round_result_delay_s", 8) or 8))
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._duelo_timer_task = None
+
+    def _schedule_duelo_timed_next_round(self, delay):
+        self._cancel_duelo_timed_tasks()
+        self._duelo_round_result_task = asyncio.ensure_future(self._duelo_timed_next_round(delay))
+
+    async def _duelo_timed_next_round(self, delay):
+        try:
+            await asyncio.sleep(delay)
+            if self.duelo.active and self.duelo._is_timed() and not self.duelo.roundActive:
+                self.duelo.reset_timed_round()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", "[Duelo] Nova rodada iniciada")
+                self._start_duelo_timer()
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._duelo_round_result_task = None
 
     async def _narrate_tres_dica(self, stage, dica_text):
         """Gera o áudio TTS da dica revelada e envia a URL para o botão de play."""
@@ -1538,11 +1596,15 @@ class GameSession:
                     self._emit_caca_found(w)
             elif c == "duelo_start":
                 self._cancel_duelo_match_restart()
+                self._cancel_duelo_timed_tasks()
                 self.duelo.start(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
-                emit(self.tenant_id, "log", f"[Duelo] Área ativa (modo {self.duelo.mode}, presentes {len(self.duelo.gifts)}, hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
+                if self.duelo._is_timed():
+                    self._start_duelo_timer()
+                emit(self.tenant_id, "log", f"[Duelo] Área ativa (modo {self.duelo.mode}{'/' + str(self.duelo.settings.get('game_mode')) if self.duelo._is_timed() else ''}, presentes {len(self.duelo.gifts)})")
             elif c == "duelo_stop":
                 self._cancel_duelo_match_restart()
+                self._cancel_duelo_timed_tasks()
                 self.duelo.stop()
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
@@ -1564,12 +1626,15 @@ class GameSession:
                 emit(self.tenant_id, "log", f"[Duelo] Rodada reiniciada (hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "duelo_new_match":
                 self._cancel_duelo_match_restart()
+                self._cancel_duelo_timed_tasks()
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
                     self._duelo_reset_task = None
                 self.duelo.reset_match()
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
-                emit(self.tenant_id, "log", f"[Duelo] Nova disputa iniciada (votos 0x0, hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
+                if self.duelo._is_timed():
+                    self._start_duelo_timer()
+                emit(self.tenant_id, "log", "[Duelo] Nova disputa iniciada (votos/debates zerados)")
             elif c == "tres_start":
                 palavra = str(cmd.get("palavra") or "").strip()
                 dicas = cmd.get("dicas") or []
