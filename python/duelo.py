@@ -11,7 +11,8 @@ except ImportError:
     pass
 
 DEFAULT_SETTINGS = {
-    "mode": "hp",                 # 'hp' | 'votes'
+    "mode": "hp",                 # 'hp' | 'votes' (compat: modo legado; game_mode define HP/TEMPO)
+    "game_mode": "hp",            # 'hp' (Debate por HP) | 'timed' (Debate por Tempo)
     "hp_start": 100,              # valor inicial de HP da rodada
     "hp_max": 100,                # escala da barra de HP
     "shield_start": 100,
@@ -24,6 +25,13 @@ DEFAULT_SETTINGS = {
     "vote_target": 0,             # meta de VOTOS (0 = ilimitado) → VENCEDOR FINAL
     "supporters": {},             # apoios especiais: {nikolas: {...}, ...}
     "shield_gift_amount": 15,     # pontos padrão do presente de escudo
+    # ---- Modo 2: Debate por Tempo ----
+    "round_time_s": 180,          # duração da rodada (segundos)
+    "round_result_delay_s": 8,    # tempo de exibição do resultado antes da próxima rodada
+    "kick_combo_min": 5,          # combo mínimo para CHUTE (soco abaixo)
+    "uppercut_combo_min": 20,     # combo mínimo para LEVANTADA (chute abaixo)
+    "main_gifts": {},             # presente principal por lado: {flavio:{gift_id,gift_name}, lula:{...}}
+    "extra_gifts": {},            # {flavio:[{gift_id,gift_name,enabled,action}], lula:[...]}
 }
 
 DEFAULT_ACTION_AUDIO = {
@@ -53,6 +61,10 @@ class DueloEngine:
         self.roundActive = True
         self.winner = None
         self.final = False
+        # Modo 2 (timed)
+        self.time_remaining = 0
+        self.round_time = 0
+        self.final_result = None
 
     def _emit(self, type_, payload):
         self.emit_cb(type_, payload)
@@ -85,12 +97,17 @@ class DueloEngine:
         self.winner = None
         self.roundActive = True
         self._reset_hp_shield()
+        if self._is_timed():
+            # Ativar Área no timed = partida nova (votos/debates zeram, cronômetro reinicia).
+            self.votes = {"flavio": 0, "lula": 0}
+            self.debate_wins = {"flavio": 0, "lula": 0}
+            self._reset_timed_clock()
 
     def stop(self):
         self.active = False
 
     def reset_round(self):
-        """Reseta HP/escudo e volta a rodada. NÃO mexe nos votos."""
+        """Reseta HP/escudo e volta a rodada. NÃO mexe nos votos. (Modo HP)"""
         self.roundActive = True
         self.winner = None
         self.final = False
@@ -101,11 +118,52 @@ class DueloEngine:
         self.final = False
         self.votes = {"flavio": 0, "lula": 0}
         self.debate_wins = {"flavio": 0, "lula": 0}
-        self.reset_round()
+        if self._is_timed():
+            self.final_result = None
+            self._reset_timed_clock()
+            self.roundActive = True
+            self.winner = None
+        else:
+            self.reset_round()
+
+    def _is_timed(self):
+        return str(self.settings.get("game_mode") or "hp").strip().lower() == "timed"
+
+    def _reset_timed_clock(self):
+        self.round_time = int(self.settings.get("round_time_s", 180) or 180)
+        self.time_remaining = self.round_time
+
+    def reset_timed_round(self):
+        """Nova rodada no timed: zera votos, reinicia relógio, mantém debate_wins."""
+        if not self._is_timed():
+            return self.reset_round()
+        self.votes = {"flavio": 0, "lula": 0}
+        self.final_result = None
+        self.winner = None
+        self.final = False
+        self.roundActive = True
+        self._reset_timed_clock()
+
+    def end_timed_round(self):
+        """Chamado quando o tempo zera. Congela votos, calcula % e vencedor. Retorna final_result."""
+        total = (self.votes.get("flavio", 0) or 0) + (self.votes.get("lula", 0) or 0)
+        self.roundActive = False
+        self.final_result = {"winner": None, "flavio_pct": 0, "lula_pct": 0}
+        if total > 0:
+            self.final_result["flavio_pct"] = round((self.votes.get("flavio", 0) or 0) / total * 100)
+            self.final_result["lula_pct"] = round((self.votes.get("lula", 0) or 0) / total * 100)
+            if (self.votes.get("flavio", 0) or 0) > (self.votes.get("lula", 0) or 0):
+                self.final_result["winner"] = "flavio"
+                self.debate_wins["flavio"] = (self.debate_wins.get("flavio", 0) or 0) + 1
+            elif (self.votes.get("lula", 0) or 0) > (self.votes.get("flavio", 0) or 0):
+                self.final_result["winner"] = "lula"
+                self.debate_wins["lula"] = (self.debate_wins.get("lula", 0) or 0) + 1
+        return dict(self.final_result)
 
     def state(self):
         return {
             "mode": self.mode,
+            "game_mode": str(self.settings.get("game_mode") or "hp"),
             "hp": dict(self.hp),
             "shield": dict(self.shield),
             "votes": dict(self.votes),
@@ -113,6 +171,9 @@ class DueloEngine:
             "hp_max": int(self.settings.get("hp_max", 100) or 100),
             "shield_max": int(self.settings.get("shield_max", 200) or 200),
             "vote_target": int(self.settings.get("vote_target", 0) or 0),
+            "time_remaining": self.time_remaining,
+            "round_time": self.round_time,
+            "final_result": self.final_result,
             "winner": self.winner,
             "roundActive": self.roundActive,
             "final": self.final,
@@ -207,10 +268,146 @@ class DueloEngine:
                 return (key, s)
         return None
 
+    # ---- Modo 2: Debate por Tempo -----
+    def _emit_vote(self, char, added, coins, combo, user, nickname):
+        if added > 0:
+            self.votes[char] = (self.votes.get(char, 0) or 0) + added
+        self._emit("duelo_vote", {
+            "character": char,
+            "added": added,
+            "combo": combo,
+            "coins": int(coins or 0),
+            "votes": dict(self.votes),
+            "user": user or "",
+            "nickname": nickname or user or "",
+        })
+
+    def _main_gift_side(self, gift_id="", gift_name=""):
+        """Retorna o lado cujo presente principal casa, ou None."""
+        mains = self.settings.get("main_gifts") or {}
+        if not isinstance(mains, dict):
+            return None
+        for side in self.VALID_CHARACTERS:
+            m = mains.get(side)
+            if not isinstance(m, dict):
+                continue
+            sid = str(m.get("gift_id") or "").strip()
+            sname = str(m.get("gift_name") or "").strip()
+            hit = bool(sid and gift_id and self._norm(sid) == self._norm(gift_id))
+            if not hit and sname:
+                hit = self._norm(sname) == self._norm(gift_name)
+            if hit:
+                return side
+        return None
+
+    def _extra_gift_side(self, gift_id="", gift_name=""):
+        """Retorna (side, item) do presente extra que casa, ou None."""
+        extras = self.settings.get("extra_gifts") or {}
+        if not isinstance(extras, dict):
+            return None
+        for side in self.VALID_CHARACTERS:
+            items = extras.get(side)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or item.get("enabled") is False:
+                    continue
+                sid = str(item.get("gift_id") or "").strip()
+                sname = str(item.get("gift_name") or "").strip()
+                hit = bool(sid and gift_id and self._norm(sid) == self._norm(gift_id))
+                if not hit and sname:
+                    hit = self._norm(sname) == self._norm(gift_name)
+                if hit:
+                    return (side, item)
+        return None
+
+    def _combo_action(self, combo):
+        combo = max(1, int(combo or 1))
+        kick_min = int(self.settings.get("kick_combo_min", 5) or 5)
+        upp_min = int(self.settings.get("uppercut_combo_min", 20) or 20)
+        if combo >= upp_min:
+            return "uppercut"
+        if combo >= kick_min:
+            return "kick"
+        return "punch"
+
+    def _on_gift_timed(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
+        if not self.active or not self.roundActive or self.winner:
+            return None
+        if self.time_remaining <= 0:
+            return None
+        combo = max(1, int(combo or 1))
+
+        # 1) Apoiador especial: votos + animação, SEM dano.
+        sup = self._resolve_supporter(gift_id, gift_name)
+        if sup:
+            key, cfg = sup
+            char = self._norm(cfg.get("side") or "")
+            added = int(coins or 0) * combo
+            self._emit_vote(char, added, int(coins or 0), combo, user, nickname)
+            own = str(cfg.get("audio") or "").strip()
+            self._emit("duelo_support_attack", {
+                "supporter": key,
+                "side": char,
+                "gift_id": str(gift_id or ""),
+                "gift_name": str(cfg.get("gift_name") or gift_name or ""),
+                "damage": 0,
+                "combo": combo,
+                "final_damage": 0,
+                "absorbed": 0,
+                "hp_damage": 0,
+                "added_votes": added,
+                "target": "lula" if char == "flavio" else "flavio",
+                "audio_url": f"/duelo-audio/{self.tenant_id}/{own}" if own else "",
+                "user": user or "",
+                "nickname": nickname or user or "",
+            })
+            self._emit("duelo_state", self.state())
+            return "support_attack"
+
+        # 2) Presente principal: votos + golpe visual por combo, SEM dano.
+        side = self._main_gift_side(gift_id, gift_name)
+        if side:
+            added = int(coins or 0) * combo
+            self._emit_vote(side, added, int(coins or 0), combo, user, nickname)
+            action = self._combo_action(combo)
+            self._emit("duelo_attack", {
+                "attacker": side,
+                "defender": "lula" if side == "flavio" else "flavio",
+                "action": action,
+                "combo": combo,
+                "base_damage": 0,
+                "damage": 0,
+                "absorbed": 0,
+                "hp_damage": 0,
+                "added_votes": added,
+                "mode": "timed",
+                "audio_url": "",
+                "gift": str(gift_name or ""),
+                "user": user or "",
+                "nickname": nickname or user or "",
+            })
+            self._emit("duelo_state", self.state())
+            return "attack"
+
+        # 3) Presente extra: só votos (vote_only).
+        ex = self._extra_gift_side(gift_id, gift_name)
+        if ex:
+            side, _item = ex
+            added = int(coins or 0) * combo
+            self._emit_vote(side, added, int(coins or 0), combo, user, nickname)
+            self._emit("duelo_state", self.state())
+            return "vote_only"
+
+        return None
+
     def on_gift(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
         # Durante banner de vitória / rodada pausada / disputa final, ignora todos os gifts.
         if not self.active or not self.roundActive or self.winner:
             return None
+
+        if self._is_timed():
+            return self._on_gift_timed(gift_id, gift_name, combo, user, nickname, coins)
 
         # ----- APOIO ESPECIAL (prioridade de match; soma votos + causa dano) -----
         sup = self._resolve_supporter(gift_id, gift_name)
