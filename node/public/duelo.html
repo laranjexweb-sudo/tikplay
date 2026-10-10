@@ -176,6 +176,22 @@
   .win-banner .big { display: none; }
   .win-banner .sub { display: none; }
 
+  .round-result {
+    position: absolute;
+    top: 38%;
+    left: 0;
+    right: 0;
+    display: none;
+    text-align: center;
+    z-index: 71;
+    color: #fff;
+    font: 900 clamp(2.2rem, 5.5vw, 4.5rem)/1.1 "Roboto Condensed", Arial, sans-serif;
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, .6);
+    pointer-events: none;
+  }
+  .round-result.show { display: block; animation: bannerPop .45s ease; }
+
   .shield-fx { position: absolute; bottom: calc(var(--fire-y) * 1%); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
   .shield-fx.left  { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
@@ -340,6 +356,7 @@
     <div class="big" id="winBig"></div>
     <div class="sub" id="winSub"></div>
   </div>
+  <div class="round-result" id="roundResultTxt"></div>
 
   <div class="debug" id="debug" style="display:none"></div>
   <audio id="bgMusic" preload="auto" style="display:none"></audio>
@@ -365,7 +382,7 @@ const FIGHTERS = {
 const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 } };
 const MAX_ATTACK_QUEUE = 20;
 
-let state = { mode: "hp", hp: { flavio: 0, lula: 0 }, shield: { flavio: 0, lula: 0 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false };
+let state = { mode: "hp", game_mode: "hp", hp: { flavio: 0, lula: 0 }, shield: { flavio: 0, lula: 0 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false, time_remaining: 0, round_time: 0, final_result: null };
 let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
@@ -660,6 +677,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const opponent = (f) => (f === "flavio" ? "lula" : "flavio");
 
 function getDefensePose(target, msg) {
+  if (isTimedMode()) return (Math.random() < 0.5 ? "defesaEscudo" : "defense");
   const absorbed = Number(msg && msg.absorbed) > 0;
   const currentShield = Number(state.shield && state.shield[target]) > 0;
   return (absorbed || currentShield) ? "defesaEscudo" : "defense";
@@ -689,20 +707,36 @@ function resetPose(fighter) {
 
 function pctBar(v, max) { return Math.max(0, Math.min(100, (v / (max || 1)) * 100)); }
 
+function isTimedMode() { return state.game_mode === "timed"; }
+
+function fmtClock(s) {
+  s = Math.max(0, Math.floor(Number(s) || 0));
+  const m = Math.floor(s / 60), r = s % 60;
+  return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r;
+}
+
 function renderHud() {
   const hpMax = state.hp_max || 100;
   const shMax = state.shield_max || 200;
+  const timed = isTimedMode();
   for (const f of ["flavio", "lula"]) {
     const hpEl = $("hpbar-" + f);
-    if (hpEl) hpEl.style.width = pctBar(state.hp[f], hpMax) + "%";
     const shEl = $("shbar-" + f);
-    if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
     const hpL = $("hpval-" + f);
-    if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
     const shL = $("shval-" + f);
-    if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
     const dw = $("dwval-" + f);
     if (dw) dw.textContent = (state.debate_wins && state.debate_wins[f]) || 0;
+    if (timed) {
+      if (hpEl) hpEl.style.width = "0%";
+      if (shEl) shEl.style.width = "0%";
+      if (hpL) hpL.textContent = "";
+      if (shL) shL.textContent = "";
+    } else {
+      if (hpEl) hpEl.style.width = pctBar(state.hp[f], hpMax) + "%";
+      if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
+      if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
+      if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
+    }
     const vr = $("votes-" + f);
     if (vr) {
       if (state.mode === "votes") vr.textContent = state.votes[f] + (state.votes[f] === 1 ? " VOTO" : " VOTOS");
@@ -719,6 +753,27 @@ function renderHud() {
   const nL = $("sbNumL");
   const vt = state.vote_target || 0;
   const fv = state.votes.flavio || 0, lv = state.votes.lula || 0;
+  if (timed) {
+    const res = state.final_result;
+    if (res) {
+      if (vsF) vsF.textContent = res.flavio_pct + "%";
+      if (vsL) vsL.textContent = res.lula_pct + "%";
+      if (meta) meta.textContent = "FIM";
+      if (barBox) barBox.style.display = "";
+      if (barF) barF.style.width = (res.flavio_pct || 0) + "%";
+      if (barL) barL.style.width = (res.lula_pct || 0) + "%";
+    } else {
+      const tot = fv + lv;
+      const fp = tot > 0 ? (fv / tot) * 100 : 50;
+      if (vsF) vsF.textContent = fmtNum(fv);
+      if (vsL) vsL.textContent = fmtNum(lv);
+      if (meta) meta.textContent = fmtClock(state.time_remaining);
+      if (barBox) barBox.style.display = "";
+      if (barF) barF.style.width = fp + "%";
+      if (barL) barL.style.width = (100 - fp) + "%";
+    }
+    return;
+  }
   if (vt > 0) {
     const majority = Math.floor(vt / 2) + 1;
     const fp = Math.max(0, Math.min(100, (fv / vt) * 100));
@@ -799,10 +854,21 @@ function applyState(s) {
   if (idleOk) scheduleIdleEnter();
   else exitIdleState();
   renderHud();
-  if (state.winner) {
+  if (isTimedMode()) {
+    const hasRes = !!state.final_result;
+    const roundEnded = state.roundActive === false;
+    if (roundEnded && hasRes) {
+      if (!roundResultShown) pendingRoundResult = true;
+      if (!busy) flushPending();
+    } else if (state.roundActive && !hasRes) {
+      pendingRoundResult = false;
+      roundResultShown = false;
+      hideRoundResult();
+    }
+  } else if (state.winner) {
     pendingWinnerVisual = { winner: state.winner, final: state.final };
     attackQueue = [];
-    if (!busy) flushWinnerVisual();
+    if (!busy) flushPending();
   } else {
     renderWinner();
   }
@@ -831,6 +897,44 @@ function flushWinnerVisual() {
   if (pendingWinnerVisual && state.winner) {
     pendingWinnerVisual = null;
     renderWinner();
+  }
+}
+
+let pendingRoundResult = false;
+let roundResultShown = false;
+
+function hideRoundResult() {
+  const txt = $("roundResultTxt");
+  if (txt) txt.classList.remove("show");
+  const banner = $("winBanner");
+  if (banner) banner.classList.remove("show");
+}
+
+function renderRoundResult() {
+  const res = state.final_result;
+  if (!res) return;
+  roundResultShown = true;
+  const txt = $("roundResultTxt");
+  if (txt) {
+    txt.textContent = res.winner === "flavio" ? "FLÁVIO GANHOU" : res.winner === "lula" ? "LULA GANHOU" : "EMPATOU";
+    txt.classList.remove("show");
+    void txt.offsetWidth;
+    txt.classList.add("show");
+  }
+  const banner = $("winBanner");
+  if (banner) {
+    const base = res.winner ? res.winner + "-ganhou" : "empate";
+    const fb = res.winner ? "/duelo/banners/" + res.winner + "-ganhou.png?v=3" : "/duelo/banners/empate.png?v=3";
+    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png?v=3" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
+    banner.classList.add("show");
+  }
+}
+
+function flushPending() {
+  if (pendingWinnerVisual && state.winner) { pendingWinnerVisual = null; renderWinner(); return; }
+  if (pendingRoundResult && isTimedMode() && !roundResultShown && state.roundActive === false && state.final_result) {
+    pendingRoundResult = false;
+    renderRoundResult();
   }
 }
 
@@ -1119,7 +1223,7 @@ function pump() {
   if (supportQueue.length) {
     const item = supportQueue.shift();
     busy = true;
-    runSupport(item).catch(() => {}).finally(() => { supportActive = false; busy = false; flushWinnerVisual(); pump(); });
+    runSupport(item).catch(() => {}).finally(() => { supportActive = false; busy = false; flushPending(); pump(); });
   } else {
     processQueue();
   }
@@ -1187,7 +1291,7 @@ async function processQueue() {
     resetPose("lula");
   }
   if (!att.isTest) updateCombo();
-  setTimeout(() => { busy = false; flushWinnerVisual(); pump(); }, 150);
+  setTimeout(() => { busy = false; flushPending(); pump(); }, 150);
 }
 
 async function runAttack(att) {
@@ -1247,11 +1351,11 @@ function connectWS() {
     else if (msg.type === "duelo_attack") {
       markInteraction();
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
-      damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
+      if (!isTimedMode()) damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
-    else if (msg.type === "duelo_shield") { markInteraction(); shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); }
+    else if (msg.type === "duelo_shield") { markInteraction(); if (!isTimedMode()) { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); } }
     else if (msg.type === "duelo_vote") {
       markInteraction();
       if (msg.added > 0) {
@@ -1262,7 +1366,7 @@ function connectWS() {
       trackLeadChange(msg.votes || {});
     }
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
-    else if (msg.type === "duelo_support_attack") { markInteraction(); damageFloat(msg.target, msg.hp_damage || 0, msg.absorbed || 0); enqueueSupport(msg); }
+    else if (msg.type === "duelo_support_attack") { markInteraction(); if (!isTimedMode()) damageFloat(msg.target, msg.hp_damage || 0, msg.absorbed || 0); enqueueSupport(msg); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
     else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); }
   };
@@ -1277,6 +1381,9 @@ async function loadInitialState() {
       state.active = !!data.active;
       if (s.layout) { dueloLayout = normalizeLayout(s.layout); applyLayout(); }
       state.mode = s.mode === "votes" ? "votes" : "hp";
+      state.game_mode = s.game_mode === "timed" ? "timed" : "hp";
+      state.time_remaining = s.round_time_s || 0;
+      state.round_time = s.round_time_s || 0;
       const hpStart = !isNaN(Number(s.hp_start)) ? Number(s.hp_start) : 100;
       const shStart = !isNaN(Number(s.shield_start)) ? Number(s.shield_start) : 0;
       state.hp_max = !isNaN(Number(s.hp_max)) ? Number(s.hp_max) : 100;
