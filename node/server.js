@@ -1926,6 +1926,7 @@ function normalizeDueloSettings(raw) {
     dmg_uppercut: 20,
     reset_delay_s: 6,
     vote_target: 0,
+    layout: {},
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
@@ -1945,6 +1946,23 @@ function normalizeDueloSettings(raw) {
     const vtRaw = raw.vote_target != null ? raw.vote_target : raw.max_votes;
     const vt = n(vtRaw);
     out.vote_target = (vt !== null && vt > 0) ? Math.max(1, Math.min(100000000, vt)) : 0;
+    if (raw.layout && typeof raw.layout === "object") {
+      const c = (o, name, def) => {
+        const src = (o && o[name] && typeof o[name] === "object") ? o[name] : {};
+        const num = (v, lo, hi, fb) => { const x = Number(v); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : fb; };
+        return {
+          x: num(src.x, 0, 100, def.x),
+          y: num(src.y, 0, 100, def.y),
+          scale: num(src.scale, 0.2, 2, def.scale),
+        };
+      };
+      const d = { score: { x: 50, y: 5, scale: 1 }, flavioHud: { x: 2, y: 14, scale: 1 }, lulaHud: { x: 98, y: 14, scale: 1 }, flavioGifts: { x: 2, y: 32, scale: 1 }, lulaGifts: { x: 98, y: 32, scale: 1 } };
+      out.layout = {};
+      for (const k of Object.keys(d)) out.layout[k] = c(raw.layout, k, d[k]);
+      const f = (raw.layout.fighters && typeof raw.layout.fighters === "object") ? raw.layout.fighters : {};
+      const fn = (v, lo, hi, fb) => { const x = Number(v); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : fb; };
+      out.layout.fighters = { y: fn(f.y, 0, 100, 20), scale: fn(f.scale, 0.2, 2, 0.9), gap: fn(f.gap, 0, 30, 9) };
+    }
   }
   return out;
 }

@@ -14,9 +14,15 @@
     overflow: hidden;
     background: #101014 url('/duelo/brasilia.png') no-repeat center bottom;
     background-size: cover;
+    --score-x: 50; --score-y: 5; --score-scale: 1;
+    --fh-x: 2; --fh-y: 14; --fh-scale: 1;
+    --lh-x: 98; --lh-y: 14; --lh-scale: 1;
+    --fg-x: 2; --fg-y: 32; --fg-scale: 1;
+    --lg-x: 98; --lg-y: 32; --lg-scale: 1;
+    --fire-y: 20; --fire-scale: 0.9; --fire-gap: 9vh;
   }
 
-  .fighter-wrap { position: absolute; bottom: clamp(60px, 8vh, 150px); width: auto; }
+  .fighter-wrap { position: absolute; left: 50%; bottom: calc(var(--fire-y) * 1%); transform: scale(var(--fire-scale)); transform-origin: bottom center; width: auto; }
   .fighter { position: relative; width: auto; will-change: transform; z-index: 1; }
   .fighter.attacking { z-index: 12; }
   .fighter.winner { z-index: 14; filter: drop-shadow(0 0 22px rgba(255, 210, 0, 0.9)); }
@@ -30,47 +36,69 @@
     100% { transform: rotate(-92deg) translateX(-6%) translateY(26%); opacity: 0.3; filter: grayscale(0.85); }
   }
   .fighter img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
-  #wrap-flavio { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
-  #wrap-lula  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
+  #wrap-flavio { margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
+  #wrap-lula  { margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
 
-  .scoreboard {
+  .lb-score {
     position: absolute;
-    top: clamp(120px, 13vh, 240px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(92vw, 900px);
+    left: calc(var(--score-x) * 1%);
+    top: calc(var(--score-y) * 1%);
+    transform: translateX(-50%) scale(var(--score-scale));
+    transform-origin: top center;
     z-index: 31;
     pointer-events: none;
-    background: rgba(10, 10, 16, 0.8);
-    border: 2px solid rgba(255, 255, 255, 0.22);
-    border-radius: 18px;
-    padding: 12px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
   }
   .sb-votes {
-    text-align: center;
     font-weight: 900;
-    font-size: clamp(1.6rem, 4.4vh, 3rem);
+    font-size: clamp(1.7rem, 4.6vh, 3.1rem);
     letter-spacing: 4px;
     color: #ffd200;
     text-shadow: 0 0 14px rgba(255, 150, 0, 0.9), 0 0 3px #000;
     white-space: nowrap;
+    background: rgba(10, 10, 16, 0.55);
+    border: 2px solid rgba(255, 210, 0, 0.4);
+    border-radius: 999px;
+    padding: 4px 22px;
   }
   .sb-meta {
     text-align: center;
     font-size: clamp(0.72rem, 1.9vh, 1.05rem);
     color: #cfe0ff;
     text-shadow: 0 0 6px #000;
-    margin-top: 2px;
     font-weight: 700;
     letter-spacing: 1px;
   }
-  .sb-bar-host { text-align: center; margin: 6px 0 10px; }
-  .sb-bar { display: inline-block; width: min(58vw, 420px); height: 9px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .sb-bar { width: min(40vw, 300px); height: 8px; background: rgba(255,255,255,0.16); border-radius: 999px; overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
   .sb-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #ffd200, #ff8800); transition: width .4s ease; }
-  .sb-sides { display: flex; justify-content: space-between; gap: clamp(12px, 3vw, 44px); }
-  .sb-side { flex: 1; min-width: 0; pointer-events: none; }
-  .sb-side.left  { text-align: left; }
-  .sb-side.right { text-align: right; }
+
+  .hud-flavio, .hud-lula {
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(8, 8, 14, 0.62);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+  }
+  .hud-flavio { left: calc(var(--fh-x) * 1%); top: calc(var(--fh-y) * 1%); transform: scale(var(--fh-scale)); transform-origin: top left; }
+  .hud-lula { left: calc(var(--lh-x) * 1%); top: calc(var(--lh-y) * 1%); transform: translateX(-100%) scale(var(--lh-scale)); transform-origin: top right; }
+
+  .gift-panel {
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+    padding: 8px 9px;
+    border-radius: 14px;
+    background: rgba(8, 8, 14, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.16);
+  }
+  .gift-panel-flavio { left: calc(var(--fg-x) * 1%); top: calc(var(--fg-y) * 1%); transform: scale(var(--fg-scale)); transform-origin: top left; }
+  .gift-panel-lula { left: calc(var(--lg-x) * 1%); top: calc(var(--lg-y) * 1%); transform: translateX(-100%) scale(var(--lg-scale)); transform-origin: top right; }
+  .gift-panel .gift-tags { margin-top: 0; }
   .hud-name { font-weight: 900; font-size: clamp(1.2rem, 3.2vh, 2.2rem); letter-spacing: 3px; color: #fff; text-shadow: 0 0 8px #000, 0 0 16px rgba(0,0,0,0.6); margin-bottom: 4px; }
   .hud-votes { font-weight: 900; font-size: clamp(1.05rem, 2.8vh, 1.8rem); color: #ffd200; text-shadow: 0 0 12px rgba(255,150,0,0.8), 0 0 3px #000; margin-bottom: 10px; }
 
@@ -96,7 +124,7 @@
   .gift-tag img { width: clamp(26px, 3.6vh, 40px); height: clamp(26px, 3.6vh, 40px); object-fit: contain; border-radius: 50%; background: rgba(0,0,0,0.45); }
   .gift-tag .gift-icon { font-size: 1.25em; line-height: 1; }
   .gift-tag.sup { background: rgba(233, 30, 99, 0.22); border: 2px solid #e91e63; color: #ffc0d5; }
-  .sb-side.right .gift-tag { align-self: flex-end; }
+  .gift-panel-lula .gift-tag { align-self: flex-end; }
   .gift-tag.atk { background: rgba(255, 210, 0, 0.28); border: 2px solid #ffd200; color: #ffe58a; }
   .gift-tag.esc { background: rgba(91, 192, 255, 0.28); border: 2px solid #5bc0ff; color: #cfe9ff; }
 
@@ -123,10 +151,10 @@
   .win-banner .big { font-size: clamp(1.4rem, 5vw, 3rem); }
   .win-banner .sub { font-size: clamp(0.9rem, 2.4vw, 1.4rem); color: #ffd200; margin-top: 6px; }
 
-  .shield-fx { position: absolute; bottom: clamp(60px, 8vh, 150px); width: 0; height: 0; pointer-events: none; opacity: 0; }
+  .shield-fx { position: absolute; bottom: calc(var(--fire-y) * 1%); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
-  .shield-fx.left  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - clamp(40px, 9vh, 200px)); }
-  .shield-fx.right { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + clamp(40px, 9vh, 200px)); }
+  .shield-fx.left  { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
+  .shield-fx.right { left: 50%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
   @keyframes shieldBurst { 0% { box-shadow: 0 0 0 0 rgba(91,192,255,0.8); } 100% { box-shadow: 0 0 0 18vmax rgba(91,192,255,0); } }
   .float-text {
     position: absolute;
@@ -234,27 +262,26 @@
 <div id="stage">
   <div class="status" id="statusText">conectando…</div>
 
-  <div class="scoreboard">
+  <div class="lb-score">
     <div class="sb-votes" id="htVs">0 VS 0</div>
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
-    <div class="sb-bar-host"><div class="sb-bar"><i id="sbBar" style="width:0%"></i></div></div>
-    <div class="sb-sides">
-      <div class="sb-side left">
-        <div class="hud-name">FLÁVIO</div>
-        <div class="hud-votes" id="votes-flavio"></div>
-        <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
-        <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
-        <div class="gift-tags" id="gifts-flavio"></div>
-      </div>
-      <div class="sb-side right">
-        <div class="hud-name">LULA</div>
-        <div class="hud-votes" id="votes-lula"></div>
-        <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
-        <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
-        <div class="gift-tags" id="gifts-lula"></div>
-      </div>
-    </div>
+    <div class="sb-bar"><i id="sbBar" style="width:0%"></i></div>
   </div>
+
+  <div class="hud-flavio">
+    <div class="hud-name">FLÁVIO</div>
+    <div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i><span class="label-in" id="hpval-flavio">HP</span></div>
+    <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i><span class="label-in" id="shval-flavio">ESCUDO</span></div>
+  </div>
+
+  <div class="hud-lula">
+    <div class="hud-name">LULA</div>
+    <div class="bar hp"><i id="hpbar-lula" style="width:100%"></i><span class="label-in" id="hpval-lula">HP</span></div>
+    <div class="bar sh"><i id="shbar-lula" style="width:100%"></i><span class="label-in" id="shval-lula">ESCUDO</span></div>
+  </div>
+
+  <div class="gift-panel gift-panel-flavio"><div class="gift-tags" id="gifts-flavio"></div></div>
+  <div class="gift-panel gift-panel-lula"><div class="gift-tags" id="gifts-lula"></div></div>
 
   <div class="lead-flash" id="leadFlash"></div>
 
@@ -306,6 +333,54 @@ let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
 let dueloGifts = [];
+
+const DUELO_LAYOUT_DEFAULT = {
+  score: { x: 50, y: 5, scale: 1 },
+  flavioHud: { x: 2, y: 14, scale: 1 },
+  lulaHud: { x: 98, y: 14, scale: 1 },
+  flavioGifts: { x: 2, y: 32, scale: 1 },
+  lulaGifts: { x: 98, y: 32, scale: 1 },
+  fighters: { y: 20, scale: 0.9, gap: 9 },
+};
+let dueloLayout = {};
+
+function clampN(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
+
+function normalizeLayout(raw) {
+  const d = JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT));
+  if (raw && typeof raw === "object") {
+    for (const k of Object.keys(d)) {
+      if (raw[k] && typeof raw[k] === "object") d[k] = Object.assign({}, d[k], raw[k]);
+    }
+  }
+  return d;
+}
+
+function applyLayout() {
+  const L = dueloLayout || {};
+  const e = (k) => (L[k] && typeof L[k] === "object") ? L[k] : {};
+  const st = $("stage");
+  if (!st) return;
+  const score = e("score"), fh = e("flavioHud"), lh = e("lulaHud"), fg = e("flavioGifts"), lg = e("lulaGifts"), fi = e("fighters");
+  st.style.setProperty("--score-x", clampN(score.x, 0, 100, 50));
+  st.style.setProperty("--score-y", clampN(score.y, 0, 100, 5));
+  st.style.setProperty("--score-scale", clampN(score.scale, 0.2, 2, 1));
+  st.style.setProperty("--fh-x", clampN(fh.x, 0, 100, 2));
+  st.style.setProperty("--fh-y", clampN(fh.y, 0, 100, 14));
+  st.style.setProperty("--fh-scale", clampN(fh.scale, 0.2, 2, 1));
+  st.style.setProperty("--lh-x", clampN(lh.x, 0, 100, 98));
+  st.style.setProperty("--lh-y", clampN(lh.y, 0, 100, 14));
+  st.style.setProperty("--lh-scale", clampN(lh.scale, 0.2, 2, 1));
+  st.style.setProperty("--fg-x", clampN(fg.x, 0, 100, 2));
+  st.style.setProperty("--fg-y", clampN(fg.y, 0, 100, 32));
+  st.style.setProperty("--fg-scale", clampN(fg.scale, 0.2, 2, 1));
+  st.style.setProperty("--lg-x", clampN(lg.x, 0, 100, 98));
+  st.style.setProperty("--lg-y", clampN(lg.y, 0, 100, 32));
+  st.style.setProperty("--lg-scale", clampN(lg.scale, 0.2, 2, 1));
+  st.style.setProperty("--fire-y", clampN(fi.y, 0, 100, 20));
+  st.style.setProperty("--fire-scale", clampN(fi.scale, 0.2, 2, 0.9));
+  st.style.setProperty("--fire-gap", clampN(fi.gap, 0, 30, 9) + "vh");
+}
 
 const GIFT_ACTION_LABEL = { punch: "Soco", kick: "Chute", uppercut: "Levantada" };
 const GIFT_SUPPORT_TYPES = ["apoio", "support", "vote"];
@@ -763,6 +838,7 @@ async function loadInitialState() {
     const data = await res.json();
     if (data && data.success && data.settings) {
       const s = data.settings;
+      if (s.layout) { dueloLayout = normalizeLayout(s.layout); applyLayout(); }
       state.mode = s.mode === "votes" ? "votes" : "hp";
       const hpStart = !isNaN(Number(s.hp_start)) ? Number(s.hp_start) : 100;
       const shStart = !isNaN(Number(s.shield_start)) ? Number(s.shield_start) : 0;
@@ -779,6 +855,7 @@ async function loadInitialState() {
 // ---- Bootstrap ----
 resetPose("flavio");
 resetPose("lula");
+applyLayout();
 renderHud();
 renderGiftTags();
 loadInitialState();

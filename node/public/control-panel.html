@@ -841,6 +841,31 @@
           </div>
 
           <div class="nb-card mb-3">
+            <h2>Layout da Arena (9:16 TikTok)</h2>
+            <style>
+              .dl-preview { position: relative; width: 100%; max-width: 220px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; margin: 0 auto; user-select: none; }
+              .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 6px 8px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 10px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+              .dl-block:active { cursor: grabbing; }
+              .dl-chat { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: rgba(255,0,0,.16); border-top: 2px dashed #f33; color: #fcc; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; z-index: 1; }
+              .dl-item { border: 2px solid #dee2e6; border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+              .dl-item .dl-title { font-weight: 800; font-size: 0.8rem; margin-bottom: 6px; }
+            </style>
+            <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
+              Arraste os blocos na prévia ou use os controles (X/Y/Escala em %). A área vermelha é o CHAT do TikTok — posicione o jogo acima dela. Salvar configuração aplica na arena.
+            </div>
+            <div class="row g-3">
+              <div class="col-lg-4">
+                <div class="dl-preview" id="dlPreview">
+                  <div class="dl-chat">ÁREA DO CHAT TIKTOK</div>
+                </div>
+              </div>
+              <div class="col-lg-8">
+                <div id="dlControls"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
             <h2>Testar ataques</h2>
             <div class="row g-2">
               <div class="col-6">
@@ -3203,10 +3228,16 @@ async function loadDueloState() {
     const data = await apiFetch("/api/duelo/config");
     if (!data.success) return;
     dueloActive = !!data.active;
-    if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
+    if (data.settings && typeof data.settings === "object") {
+      dueloSettings = Object.assign({}, dueloSettings, data.settings);
+      if (data.settings.layout && typeof data.settings.layout === "object") {
+        dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), data.settings.layout);
+      }
+    }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
     renderDueloSettings();
+    renderLayoutEditor();
     setDueloStatusButtons(dueloActive);
   } catch (e) {}
 }
@@ -3240,6 +3271,7 @@ function readDueloSettings() {
     dmg_uppercut: num("dueloDmgUppercut", 20),
     reset_delay_s: num("dueloResetDelay", 6),
     vote_target: num("dueloMaxVotes", 0),
+    layout: cleanLayout(),
   };
 }
 
@@ -3429,6 +3461,166 @@ function dueloConfiguredGifts() {
     audio: typeof g.audio === "string" ? g.audio : "",
     active: true,
   }));
+}
+
+// ---- Layout da Arena ----
+const DUELO_LAYOUT_DEFAULT = {
+  score: { x: 50, y: 5, scale: 1 },
+  flavioHud: { x: 2, y: 14, scale: 1 },
+  lulaHud: { x: 98, y: 14, scale: 1 },
+  flavioGifts: { x: 2, y: 32, scale: 1 },
+  lulaGifts: { x: 98, y: 32, scale: 1 },
+  fighters: { y: 20, scale: 0.9, gap: 9 },
+};
+const DUELO_LAYOUT_ITEMS = [
+  { key: "score", label: "PLACAR" },
+  { key: "flavioHud", label: "HUD FLÁVIO" },
+  { key: "lulaHud", label: "HUD LULA" },
+  { key: "flavioGifts", label: "PRESENTES FLÁVIO" },
+  { key: "lulaGifts", label: "PRESENTES LULA" },
+];
+let dueloLayout = JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT));
+
+function layoutNum(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
+
+function cleanLayout() {
+  const o = (obj, d) => ({
+    x: layoutNum(obj && obj.x, 0, 100, d.x),
+    y: layoutNum(obj && obj.y, 0, 100, d.y),
+    scale: layoutNum(obj && obj.scale, 0.2, 2, d.scale),
+  });
+  const f = dueloLayout.fighters || {};
+  return {
+    score: o(dueloLayout.score, DUELO_LAYOUT_DEFAULT.score),
+    flavioHud: o(dueloLayout.flavioHud, DUELO_LAYOUT_DEFAULT.flavioHud),
+    lulaHud: o(dueloLayout.lulaHud, DUELO_LAYOUT_DEFAULT.lulaHud),
+    flavioGifts: o(dueloLayout.flavioGifts, DUELO_LAYOUT_DEFAULT.flavioGifts),
+    lulaGifts: o(dueloLayout.lulaGifts, DUELO_LAYOUT_DEFAULT.lulaGifts),
+    fighters: {
+      y: layoutNum(f.y, 0, 100, 20),
+      scale: layoutNum(f.scale, 0.2, 2, 0.9),
+      gap: layoutNum(f.gap, 0, 30, 9),
+    },
+  };
+}
+
+function syncBlock(key) {
+  const b = document.querySelector('.dl-block[data-key="' + key + '"]');
+  const el = dueloLayout[key] || {};
+  if (b) { b.style.left = (el.x || 0) + "%"; b.style.top = (el.y || 0) + "%"; }
+  const ix = document.getElementById("dl-" + key + "-x");
+  const iy = document.getElementById("dl-" + key + "-y");
+  const is = document.getElementById("dl-" + key + "-s");
+  if (ix) ix.value = Math.round(el.x || 0);
+  if (iy) iy.value = Math.round(el.y || 0);
+  if (is) is.value = (el.scale || 1).toFixed(2);
+  const fy = document.getElementById("dl-fighters-y");
+  const fs = document.getElementById("dl-fighters-s");
+  const fg = document.getElementById("dl-fighters-g");
+  if (fy) fy.value = Math.round((dueloLayout.fighters && dueloLayout.fighters.y) || 20);
+  if (fs) fs.value = ((dueloLayout.fighters && dueloLayout.fighters.scale) || 0.9).toFixed(2);
+  if (fg) fg.value = ((dueloLayout.fighters && dueloLayout.fighters.gap) || 9);
+}
+
+function syncAll() { DUELO_LAYOUT_ITEMS.forEach((i) => syncBlock(i.key)); }
+
+function renderLayoutEditor() {
+  const preview = document.getElementById("dlPreview");
+  const ctrl = document.getElementById("dlControls");
+  if (!preview || !ctrl) return;
+  preview.querySelectorAll(".dl-block").forEach((b) => b.remove());
+  DUELO_LAYOUT_ITEMS.forEach((it) => {
+    const b = document.createElement("div");
+    b.className = "dl-block";
+    b.dataset.key = it.key;
+    b.textContent = it.label;
+    preview.appendChild(b);
+  });
+  syncAll();
+
+  let html = "";
+  DUELO_LAYOUT_ITEMS.forEach((it) => {
+    html += `<div class="dl-item">
+      <div class="dl-title">${it.label}</div>
+      <div class="row g-1 align-items-center">
+        <div class="col-4"><label style="font-size:0.68rem">X %</label><input type="number" class="form-control form-control-sm" id="dl-${it.key}-x" min="0" max="100"></div>
+        <div class="col-4"><label style="font-size:0.68rem">Y %</label><input type="number" class="form-control form-control-sm" id="dl-${it.key}-y" min="0" max="100"></div>
+        <div class="col-4"><label style="font-size:0.68rem">Escala</label><input type="number" step="0.05" class="form-control form-control-sm" id="dl-${it.key}-s" min="0.2" max="2"></div>
+      </div>
+      <div class="d-flex gap-1 mt-1">
+        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="left">←</button>
+        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="up">↑</button>
+        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="down">↓</button>
+        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="right">→</button>
+        <button class="btn btn-nb btn-warning btn-sm flex-fill" data-reset="${it.key}">Resetar</button>
+      </div>
+    </div>`;
+  });
+  html += `<div class="dl-item">
+      <div class="dl-title">PERSONAGENS</div>
+      <div class="row g-1 align-items-center">
+        <div class="col-4"><label style="font-size:0.68rem">Altura Y %</label><input type="number" class="form-control form-control-sm" id="dl-fighters-y" min="0" max="100"></div>
+        <div class="col-4"><label style="font-size:0.68rem">Escala</label><input type="number" step="0.05" class="form-control form-control-sm" id="dl-fighters-s" min="0.2" max="2"></div>
+        <div class="col-4"><label style="font-size:0.68rem">Gap</label><input type="number" class="form-control form-control-sm" id="dl-fighters-g" min="0" max="30"></div>
+      </div>
+      <div class="mt-1"><button class="btn btn-nb btn-warning btn-sm" data-reset="fighters">Resetar personagens</button></div>
+    </div>`;
+  ctrl.innerHTML = html;
+
+  ctrl.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("change", () => {
+      const id = inp.id;
+      const m = id.match(/^dl-(.+)-([xy])$/);
+      if (m && dueloLayout[m[1]]) { dueloLayout[m[1]][m[2]] = layoutNum(inp.value, 0, 100, dueloLayout[m[1]][m[2]]); }
+      const ms = id.match(/^dl-(.+)-s$/);
+      if (ms && dueloLayout[ms[1]]) { dueloLayout[ms[1]].scale = layoutNum(inp.value, 0.2, 2, dueloLayout[ms[1]].scale); }
+      if (id === "dl-fighters-y") dueloLayout.fighters.y = layoutNum(inp.value, 0, 100, 20);
+      if (id === "dl-fighters-s") dueloLayout.fighters.scale = layoutNum(inp.value, 0.2, 2, 0.9);
+      if (id === "dl-fighters-g") dueloLayout.fighters.gap = layoutNum(inp.value, 0, 30, 9);
+      syncAll();
+    });
+  });
+  ctrl.querySelectorAll("[data-nudge]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-nudge");
+      const dir = btn.getAttribute("data-dir");
+      const el = dueloLayout[key] || {};
+      if (dir === "left") el.x = layoutNum((el.x || 0) - 1, 0, 100, 0);
+      if (dir === "right") el.x = layoutNum((el.x || 0) + 1, 0, 100, 0);
+      if (dir === "up") el.y = layoutNum((el.y || 0) - 1, 0, 100, 0);
+      if (dir === "down") el.y = layoutNum((el.y || 0) + 1, 0, 100, 0);
+      syncBlock(key);
+    });
+  });
+  ctrl.querySelectorAll("[data-reset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-reset");
+      dueloLayout[key] = JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT[key]));
+      syncAll();
+    });
+  });
+
+  // Arrastar blocos na prévia
+  preview.querySelectorAll(".dl-block").forEach((b) => {
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const key = b.getAttribute("data-key");
+      const rect = preview.getBoundingClientRect();
+      const startX = e.clientX, startY = e.clientY;
+      const el = dueloLayout[key] || {};
+      const ox = el.x || 0, oy = el.y || 0;
+      function move(ev) {
+        const dx = ((ev.clientX - startX) / rect.width) * 100;
+        const dy = ((ev.clientY - startY) / rect.height) * 100;
+        el.x = layoutNum(ox + dx, 0, 100, 0);
+        el.y = layoutNum(oy + dy, 0, 100, 0);
+        syncBlock(key);
+      }
+      function up() { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+  });
 }
 
 async function dueloSaveConfig() {
