@@ -51,6 +51,16 @@
   .bar.hp > i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
   .bar.sh > i { background: linear-gradient(90deg, #2471a3, #5bc0ff); }
   .bar-label { font-size: clamp(0.6rem, 1.6vw, 0.85rem); color: #cfe0ff; text-shadow: 0 0 6px #000; font-weight: 700; }
+  .gift-tags { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .gift-tag {
+    display: inline-block; width: fit-content; max-width: 100%;
+    font-size: clamp(0.62rem, 1.5vw, 0.85rem); font-weight: 800;
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 0.3px;
+    text-shadow: 0 0 6px #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .hud-side.right .gift-tag { align-self: flex-end; }
+  .gift-tag.atk { background: rgba(255, 210, 0, 0.22); border: 2px solid #ffd200; color: #ffe58a; }
+  .gift-tag.esc { background: rgba(91, 192, 255, 0.2); border: 2px solid #5bc0ff; color: #9fd8ff; }
 
   .win-banner {
     position: absolute;
@@ -126,6 +136,7 @@
     <div class="hud-votes" id="votes-flavio"></div>
     <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-flavio" style="width:100%"></i></div>
     <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
+    <div class="gift-tags" id="gifts-flavio"></div>
   </div>
 
   <div class="hud-side right">
@@ -133,6 +144,7 @@
     <div class="hud-votes" id="votes-lula"></div>
     <div class="bar-label">HP</div><div class="bar hp"><i id="hpbar-lula" style="width:100%"></i></div>
     <div class="bar-label">ESCUDO</div><div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
+    <div class="gift-tags" id="gifts-lula"></div>
   </div>
 
   <div class="shield-fx left" id="shield-flavio"></div>
@@ -174,6 +186,25 @@ let state = { mode: "hp", hp: { flavio: 100, lula: 100 }, shield: { flavio: 100,
 let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
+let dueloGifts = [];
+
+const GIFT_ACTION_LABEL = { punch: "Soco", kick: "Chute", uppercut: "Levantada" };
+
+function renderGiftTags() {
+  for (const f of ["flavio", "lula"]) {
+    const el = $("gifts-" + f);
+    if (!el) continue;
+    const list = dueloGifts.filter((g) => g && g.active !== false && (g.character || f) === f);
+    const tags = list.map((g) => {
+      const span = document.createElement("span");
+      const isEsc = String(g.type || "").toLowerCase() === "escudo";
+      span.className = "gift-tag " + (isEsc ? "esc" : "atk");
+      span.textContent = (isEsc ? "🛡 " : "") + (g.name || "?") + " · " + (isEsc ? "Escudo" : (GIFT_ACTION_LABEL[g.action] || "Soco"));
+      return span;
+    });
+    el.replaceChildren(...tags);
+  }
+}
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -371,6 +402,7 @@ function connectWS() {
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
     else if (msg.type === "duelo_shield") { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); }
+    else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
   };
 }
 
@@ -378,6 +410,7 @@ function connectWS() {
 resetPose("flavio");
 resetPose("lula");
 renderHud();
+renderGiftTags();
 
 if (DEBUG) {
   const dbg = $("debug");

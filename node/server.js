@@ -1921,6 +1921,7 @@ app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, r
   const active = !!(req.body && req.body.active);
   const cfg = db.saveDueloConfig(req.user.id, { gifts, active, settings });
   daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts, settings });
+  broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts });
   res.json({ success: true, ...cfg });
 });
 
@@ -2086,6 +2087,10 @@ wss.on("connection", (ws, req) => {
     }
     if (tenant.dueloState) {
       ws.send(JSON.stringify({ type: "duelo_state", ...tenant.dueloState }));
+    }
+    const dueloCfg = db.getDueloConfig(user.id);
+    if (dueloCfg) {
+      ws.send(JSON.stringify({ type: "duelo_gifts", gifts: dueloCfg.gifts || [] }));
     }
     return;
   }
