@@ -1927,10 +1927,14 @@ function normalizeDueloSettings(raw) {
   };
   if (raw && typeof raw === "object") {
     const n = (v) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : null; };
-    const hn = n(raw.hp_start); if (hn !== null) out.hp_start = Math.max(20, Math.min(10000, hn));
-    const hx = n(raw.hp_max); if (hx !== null) out.hp_max = Math.max(1, Math.min(10000, hx));
-    const ss = n(raw.shield_start); if (ss !== null) out.shield_start = Math.max(0, Math.min(10000, ss));
-    const sm = n(raw.shield_max); if (sm !== null) out.shield_max = Math.max(out.shield_start, Math.min(100000, sm));
+    const hn = n(raw.hp_start);
+    const hx = n(raw.hp_max);
+    out.hp_max = hx !== null ? Math.max(1, Math.min(10000, hx)) : 100;
+    out.hp_start = hn !== null ? Math.max(1, Math.min(out.hp_max, hn)) : Math.min(out.hp_max, 100);
+    const ss = n(raw.shield_start);
+    const sm = n(raw.shield_max);
+    out.shield_max = sm !== null ? Math.max(0, Math.min(100000, sm)) : 200;
+    out.shield_start = ss !== null ? Math.max(0, Math.min(out.shield_max, ss)) : Math.min(out.shield_max, 100);
     for (const k of ["dmg_punch", "dmg_kick", "dmg_uppercut"]) {
       const d = n(raw[k]);
       if (d !== null) out[k] = Math.max(1, Math.min(10000, d));

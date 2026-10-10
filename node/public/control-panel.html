@@ -801,8 +801,7 @@
                     <option value="votes">Votos</option>
                   </select>
                 </div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">HP inicial</label><input type="number" class="form-control form-control-sm" id="dueloHpStart" value="100" min="20"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">HP máximo (escala da barra)</label><input type="number" class="form-control form-control-sm" id="dueloHpMax" value="100" min="1"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Vida da rodada (HP inicial = máximo)</label><input type="number" class="form-control form-control-sm" id="dueloHpRound" value="100" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo inicial</label><input type="number" class="form-control form-control-sm" id="dueloShieldStart" value="100" min="0"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Escudo máximo</label><input type="number" class="form-control form-control-sm" id="dueloShieldMax" value="200" min="1"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Dano Soco</label><input type="number" class="form-control form-control-sm" id="dueloDmgPunch" value="10" min="1"></div>
@@ -3222,8 +3221,7 @@ async function loadDueloState() {
 function renderDueloSettings() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   set("dueloMode", dueloSettings.mode === "votes" ? "votes" : "hp");
-  set("dueloHpStart", dueloSettings.hp_start);
-  set("dueloHpMax", dueloSettings.hp_max || 100);
+  set("dueloHpRound", dueloSettings.hp_max || dueloSettings.hp_start || 100);
   set("dueloShieldStart", dueloSettings.shield_start);
   set("dueloShieldMax", dueloSettings.shield_max);
   set("dueloDmgPunch", dueloSettings.dmg_punch);
@@ -3236,12 +3234,15 @@ function renderDueloSettings() {
 function readDueloSettings() {
   const n = (id) => parseInt(document.getElementById(id) ? document.getElementById(id).value : "0", 10);
   const num = (id, fb) => { const x = n(id); return Number.isFinite(x) ? x : fb; };
+  const vida = Math.max(1, num("dueloHpRound", 100));
+  const shMax = Math.max(0, num("dueloShieldMax", 200));
+  const shStart = Math.min(Math.max(0, num("dueloShieldStart", 100)), shMax);
   return {
     mode: document.getElementById("dueloMode") ? document.getElementById("dueloMode").value : "hp",
-    hp_start: num("dueloHpStart", 100),
-    hp_max: num("dueloHpMax", 100),
-    shield_start: num("dueloShieldStart", 100),
-    shield_max: num("dueloShieldMax", 200),
+    hp_start: vida,
+    hp_max: vida,
+    shield_start: shStart,
+    shield_max: shMax,
     dmg_punch: num("dueloDmgPunch", 10),
     dmg_kick: num("dueloDmgKick", 15),
     dmg_uppercut: num("dueloDmgUppercut", 20),

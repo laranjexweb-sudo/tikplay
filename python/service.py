@@ -1509,7 +1509,7 @@ class GameSession:
             elif c == "duelo_start":
                 self.duelo.start(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
-                emit(self.tenant_id, "log", f"[Duelo] Área ativa ({len(self.duelo.gifts)} presentes cadastrados, modo {self.duelo.mode})")
+                emit(self.tenant_id, "log", f"[Duelo] Área ativa (modo {self.duelo.mode}, presentes {len(self.duelo.gifts)}, hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "duelo_stop":
                 self.duelo.stop()
                 if self._duelo_reset_task:
@@ -1528,14 +1528,14 @@ class GameSession:
                     self._duelo_reset_task = None
                 self.duelo.reset_round()
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
-                emit(self.tenant_id, "log", "[Duelo] Rodada reiniciada (HP/escudo resetados)")
+                emit(self.tenant_id, "log", f"[Duelo] Rodada reiniciada (hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "duelo_new_match":
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
                     self._duelo_reset_task = None
                 self.duelo.reset_match()
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
-                emit(self.tenant_id, "log", "[Duelo] Nova disputa iniciada (votos zerados)")
+                emit(self.tenant_id, "log", f"[Duelo] Nova disputa iniciada (votos 0x0, hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "tres_start":
                 palavra = str(cmd.get("palavra") or "").strip()
                 dicas = cmd.get("dicas") or []
