@@ -59,10 +59,12 @@ class DueloEngine:
             self.mode = s["mode"] if s["mode"] in ("hp", "votes") else "hp"
 
     def _reset_hp_shield(self):
-        self.hp = {"flavio": int(self.settings.get("hp_start", 100) or 100),
-                   "lula": int(self.settings.get("hp_start", 100) or 100)}
-        self.shield = {"flavio": int(self.settings.get("shield_start", 100) or 100),
-                       "lula": int(self.settings.get("shield_start", 100) or 100)}
+        hp = self.settings.get("hp_start")
+        self.hp = {"flavio": int(hp) if hp is not None else 100,
+                   "lula": int(hp) if hp is not None else 100}
+        sh = self.settings.get("shield_start")
+        self.shield = {"flavio": int(sh) if sh is not None else 100,
+                       "lula": int(sh) if sh is not None else 100}
 
     def start(self, gifts=None, settings=None):
         if gifts is not None or settings is not None:
