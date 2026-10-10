@@ -1883,6 +1883,18 @@ function normalizeDueloGifts(raw) {
   }).filter((g) => g.gift_id || g.name);
 }
 
+function dueloGiftsPayload(gifts) {
+  let map = {};
+  try {
+    map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {};
+  } catch {}
+  return (Array.isArray(gifts) ? gifts : []).map((g) => {
+    const out = Object.assign({}, g);
+    out.image = (g && g.name && map[g.name]) ? `/gift-images/${map[g.name]}` : "";
+    return out;
+  });
+}
+
 function normalizeDueloSettings(raw) {
   const out = {
     mode: (raw && raw.mode === "votes") ? "votes" : "hp",
@@ -1921,7 +1933,7 @@ app.post("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, r
   const active = !!(req.body && req.body.active);
   const cfg = db.saveDueloConfig(req.user.id, { gifts, active, settings });
   daemonSend({ cmd: "duelo_config", tenant_id: req.user.id, gifts, settings });
-  broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts });
+  broadcastToClients(getTenant(req.user.id).browserClients, { type: "duelo_gifts", gifts: dueloGiftsPayload(gifts) });
   res.json({ success: true, ...cfg });
 });
 
@@ -2090,7 +2102,7 @@ wss.on("connection", (ws, req) => {
     }
     const dueloCfg = db.getDueloConfig(user.id);
     if (dueloCfg) {
-      ws.send(JSON.stringify({ type: "duelo_gifts", gifts: dueloCfg.gifts || [] }));
+      ws.send(JSON.stringify({ type: "duelo_gifts", gifts: dueloGiftsPayload(dueloCfg.gifts) }));
     }
     return;
   }
