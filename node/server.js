@@ -1934,6 +1934,7 @@ function normalizeDueloSettings(raw) {
     dmg_kick: 15,
     dmg_uppercut: 20,
     reset_delay_s: 6,
+    match_restart_delay_s: 8,
     vote_target: 0,
     layout: {},
     sfx_volume: 92,
@@ -1956,6 +1957,7 @@ function normalizeDueloSettings(raw) {
       if (d !== null) out[k] = Math.max(1, Math.min(10000, d));
     }
     const rd = n(raw.reset_delay_s); if (rd !== null) out.reset_delay_s = Math.max(1, Math.min(300, rd));
+    const mrd = n(raw.match_restart_delay_s); if (mrd !== null) out.match_restart_delay_s = Math.max(2, Math.min(120, mrd));
     const vtRaw = raw.vote_target != null ? raw.vote_target : raw.max_votes;
     const vt = n(vtRaw);
     out.vote_target = (vt !== null && vt > 0) ? Math.max(1, Math.min(100000000, vt)) : 0;

@@ -781,8 +781,7 @@
                 <button class="btn btn-nb btn-danger flex-fill" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
               </div>
               <div class="d-flex gap-2 mt-2">
-                <button class="btn btn-nb btn-dark flex-fill" onclick="dueloResetRound()">Resetar rodada</button>
-                <button class="btn btn-nb btn-warning flex-fill" onclick="dueloNewMatch()">Nova disputa (zerar votos)</button>
+                <button class="btn btn-nb btn-warning flex-fill" onclick="dueloNewMatch()">REINICIAR PARTIDA</button>
               </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
                 Flávio luta pela ESQUERDA. Lula luta pela DIREITA. A defesa do oponente é automática. O escudo absorve o dano antes do HP.
@@ -816,6 +815,7 @@
                   <div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label class="form-check-label" for="dueloIdleOn">Ativo</label></div>
                 </div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para entrar (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
+                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para nova partida (s)</label><input type="number" class="form-control form-control-sm" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
               </div>
               <div class="text-secondary mt-2" style="font-size:0.75rem">
@@ -3279,6 +3279,7 @@ async function loadDueloState() {
       dueloIdleOn = idl.enabled !== false;
       dueloIdleEnter = idl.enter_after != null ? idl.enter_after : 10;
       dueloIdleInterval = idl.interval != null ? idl.interval : 7;
+      dueloMatchRestart = data.settings.match_restart_delay_s != null ? data.settings.match_restart_delay_s : 8;
     }
     dueloGifts = Array.isArray(data.gifts) ? data.gifts.map((g) => Object.assign({}, g)) : [];
     renderDueloGifts();
@@ -3316,6 +3317,8 @@ function renderDueloSettings() {
   if (idEnt) idEnt.value = dueloIdleEnter;
   const idInt = document.getElementById("dueloIdleInterval");
   if (idInt) idInt.value = dueloIdleInterval;
+  const mr = document.getElementById("dueloMatchRestart");
+  if (mr) mr.value = dueloMatchRestart;
   renderMusicList();
 }
 
@@ -3390,6 +3393,7 @@ function readDueloSettings() {
       enter_after: num("dueloIdleEnter", 10),
       interval: num("dueloIdleInterval", 7),
     },
+    match_restart_delay_s: num("dueloMatchRestart", 8),
   };
 }
 
@@ -3606,6 +3610,7 @@ let dueloMusicFiles = [];
 let dueloIdleOn = true;
 let dueloIdleEnter = 10;
 let dueloIdleInterval = 7;
+let dueloMatchRestart = 8;
 
 function layoutNum(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fb; }
 
@@ -3813,9 +3818,10 @@ async function dueloResetRound() {
 }
 
 async function dueloNewMatch() {
+  if (!confirm("Reiniciar a partida atual? Votos e debates voltam a zero.")) return;
   try {
     const data = await apiFetch("/api/duelo/new-match", { method: "POST" });
-    dueloMsg(data.success ? "Nova disputa iniciada (votos zerados)." : (data.error || "Erro"));
+    dueloMsg(data.success ? "Partida reiniciada (votos e debates zerados)." : (data.error || "Erro"));
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 

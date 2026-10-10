@@ -406,6 +406,7 @@ class GameSession:
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         self._duelo_reset_task = None
+        self._duelo_match_task = None
         # Passe Livre: usuários que enviaram o gift ingresso podem palpitar no 3 Pontinhos
         self._tres_allowed = set()
         HandlerCls = TikTokLiveHandler if self.engine == "tiktoklive" else TikToolsHandler
@@ -722,6 +723,28 @@ class GameSession:
             raise
         finally:
             self._duelo_reset_task = None
+
+    def _cancel_duelo_match_restart(self):
+        if self._duelo_match_task:
+            self._duelo_match_task.cancel()
+            self._duelo_match_task = None
+
+    def _schedule_duelo_match_restart(self):
+        self._cancel_duelo_match_restart()
+        delay = int(self.duelo.settings.get("match_restart_delay_s", 8) or 8)
+        self._duelo_match_task = asyncio.ensure_future(self._duelo_auto_match_restart(delay))
+
+    async def _duelo_auto_match_restart(self, delay):
+        try:
+            await asyncio.sleep(delay)
+            if self.duelo.active and self.duelo.final:
+                self.duelo.reset_match()
+                emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
+                emit(self.tenant_id, "log", "[Duelo] Nova partida iniciada (automática)")
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._duelo_match_task = None
 
     async def _narrate_tres_dica(self, stage, dica_text):
         """Gera o áudio TTS da dica revelada e envia a URL para o botão de play."""
@@ -1099,7 +1122,8 @@ class GameSession:
                     if self._duelo_reset_task:
                         self._duelo_reset_task.cancel()
                         self._duelo_reset_task = None
-                    emit(self.tenant_id, "log", "[Duelo] Meta de votos atingida — VENCEDOR FINAL (aguardando Nova disputa)")
+                    emit(self.tenant_id, "log", "[Duelo] Meta de votos atingida — VENCEDOR FINAL (nova partida automática em breve)")
+                    self._schedule_duelo_match_restart()
                 if res:
                     added = int(diamond_count or 0) * max(1, repeat_count)
                     emit(self.tenant_id, "log", f"[Duelo] @{user} presente '{gift_name}' x{max(1, repeat_count)} aplicado ({res}) +{added} votos")
@@ -1513,10 +1537,12 @@ class GameSession:
                 if w:
                     self._emit_caca_found(w)
             elif c == "duelo_start":
+                self._cancel_duelo_match_restart()
                 self.duelo.start(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
                 emit(self.tenant_id, "log", f"[Duelo] Área ativa (modo {self.duelo.mode}, presentes {len(self.duelo.gifts)}, hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "duelo_stop":
+                self._cancel_duelo_match_restart()
                 self.duelo.stop()
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
@@ -1529,6 +1555,7 @@ class GameSession:
                 if self.duelo.active:
                     emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
             elif c == "duelo_reset_round":
+                self._cancel_duelo_match_restart()
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
                     self._duelo_reset_task = None
@@ -1536,6 +1563,7 @@ class GameSession:
                 emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
                 emit(self.tenant_id, "log", f"[Duelo] Rodada reiniciada (hp {self.duelo.hp['flavio']}/{self.duelo.settings.get('hp_max')}, escudo {self.duelo.shield['flavio']}/{self.duelo.settings.get('shield_max')})")
             elif c == "duelo_new_match":
+                self._cancel_duelo_match_restart()
                 if self._duelo_reset_task:
                     self._duelo_reset_task.cancel()
                     self._duelo_reset_task = None

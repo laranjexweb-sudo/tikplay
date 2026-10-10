@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = {
     "dmg_kick": 15,
     "dmg_uppercut": 20,
     "reset_delay_s": 6,
+    "match_restart_delay_s": 8,   # tempo após o VENCEDOR FINAL para nova partida automática
     "vote_target": 0,             # meta de VOTOS (0 = ilimitado) → VENCEDOR FINAL
     "shield_gift_amount": 15,     # pontos padrão do presente de escudo
 }
