@@ -241,10 +241,11 @@ function renderWinner() {
 
 function applyState(s) {
   if (!s) return;
+  const prevInactive = !state.roundActive || !!state.winner;
   state = Object.assign({}, state, s);
   renderHud();
   renderWinner();
-  const roundReset = !s.winner && s.roundActive;
+  const roundReset = !s.winner && s.roundActive && prevInactive;
   if (roundReset) {
     attackQueue = [];
     busy = false;
