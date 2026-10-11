@@ -331,6 +331,7 @@
   .team-join-card--flavio { --tc: #0D47FF; --tcl: #27A8FF; }
   .team-join-card--lula { --tc: #E61919; --tcl: #FF3A2F; }
   .team-join-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; aspect-ratio: 1 / 1; border: 2px solid var(--tc); background: #0a1120; flex: 0 0 auto; }
+  .team-join-fallback { width: 42px; height: 42px; border-radius: 50%; background: var(--tc); border: 2px solid var(--tc); opacity: .85; flex: 0 0 auto; box-shadow: 0 0 10px rgba(0,0,0,.4); }
   .team-join-user { display: block; font-weight: 800; font-size: 13px; color: #fff; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
   .team-join-name { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--tcl); }
   @keyframes teamJoinUp {
@@ -1501,11 +1502,22 @@ const tapFaceCache = new Map();
 
   const teamJoinCount = { left: 0, right: 0 };
   const TEAM_JOIN_MAX = 6;
+  function teamJoinLayer(isLula) {
+    let l = $("#teamJoin" + (isLula ? "Right" : "Left"));
+    if (!l) {
+      l = document.createElement("div");
+      l.className = "team-join-layer";
+      l.id = "teamJoin" + (isLula ? "Right" : "Left");
+      const st = $("stage");
+      if (st) st.appendChild(l);
+    }
+    return l;
+  }
   function spawnTeamJoinCard(o) {
     if (!o || !o.username) return;
     const side = o.side === "lula" ? "lula" : "flavio";
     const isLula = side === "lula";
-    const host = $("#teamJoin" + (isLula ? "Right" : "Left"));
+    const host = teamJoinLayer(isLula);
     if (!host) return;
     const key = isLula ? "right" : "left";
     if (teamJoinCount[key] >= TEAM_JOIN_MAX) return;
@@ -1522,7 +1534,13 @@ const tapFaceCache = new Map();
     av.className = "team-join-avatar";
     av.alt = "";
     const done = () => { if (c.parentNode) { c.remove(); teamJoinCount[key] = Math.max(0, teamJoinCount[key] - 1); } };
-    av.onerror = function () { done(); };
+    av.onerror = function () {
+      if (av.parentNode) {
+        const fb = document.createElement("span");
+        fb.className = "team-join-fallback";
+        av.replaceWith(fb);
+      }
+    };
     av.src = o.avatarUrl || "";
     const body = document.createElement("div");
     body.style.minWidth = "0";
