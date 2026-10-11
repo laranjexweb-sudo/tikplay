@@ -7,12 +7,17 @@
 <link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
 <style>
   body { background: #fdfaf3; margin: 0; min-height: 100vh; overflow-y: auto; font-family: var(--bs-body-font-family); }
-  #tab-duelo[data-game-mode="hp"] .mode-timed-only { display: none !important; }
-  #tab-duelo[data-game-mode="timed"] .mode-hp-only { display: none !important; }
-  #tab-duelo[data-game-mode="hp"] .mode-gift-only { display: none !important; }
+  #tab-duelo .mode-hp-only,
+  #tab-duelo .mode-timed-only,
+  #tab-duelo .mode-hpnew-only,
+  #tab-duelo .mode-gift-only { display: none !important; }
+  #tab-duelo[data-game-mode="hp"] .mode-hp-only { display: grid !important; }
+  #tab-duelo[data-game-mode="timed"] .mode-timed-only { display: grid !important; }
+  #tab-duelo[data-game-mode="hp_new"] .mode-hpnew-only { display: grid !important; }
+  #tab-duelo[data-game-mode="timed"] .mode-gift-only,
+  #tab-duelo[data-game-mode="hp_new"] .mode-gift-only { display: block !important; }
   #tab-duelo[data-game-mode="timed"] .mode-dano { display: none !important; }
   #tab-duelo .mode-hpnew-only { display: none; }
-  #tab-duelo[data-game-mode="hp_new"] .mode-hpnew-only { display: grid; }
   #tab-duelo .nb-card { padding: 10px 14px; margin-bottom: 8px; }
   #tab-duelo .duelo-sec summary { cursor: pointer; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; padding: 5px 2px 9px; user-select: none; }
   #tab-duelo .duelo-sec summary::-webkit-details-marker { display: none; }

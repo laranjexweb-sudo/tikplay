@@ -950,6 +950,10 @@ const hpMax = state.hp_max || 100;
     const shM = document.querySelector(".hud-" + f + " .hud-metric.sh");
     if (hpM) hpM.style.display = (timed || hpNew) ? "none" : "";
     if (shM) shM.style.display = hpNew ? "none" : "";
+    const barHp = document.querySelector(".hud-" + f + " .bar.hp");
+    const barSh = document.querySelector(".hud-" + f + " .bar.sh");
+    if (barHp) barHp.style.display = (timed || hpNew) ? "none" : "";
+    if (barSh) barSh.style.display = (timed || hpNew) ? "none" : "";
     const tapEl = $("tapval-" + f);
     if (tapEl && tapEl.parentElement) tapEl.parentElement.style.display = "none";
   }
