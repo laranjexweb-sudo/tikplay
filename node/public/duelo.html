@@ -2040,8 +2040,8 @@ async function runChuvaDePicanha(item) {
     if (lulaF) { lulaF.style.transition = "transform 160ms ease"; lulaF.style.transform = "translateY(0) scale(1)"; }
     await until(300);
 
-    // 300ms — nuvem sobre o defensor (centro X, tamanho controlado)
-    if (cloud) { cloud.style.left = defPct + "%"; cloud.style.top = "2%"; cloud.classList.add("show"); }
+    // 300ms — nuvem centralizada na tela (um pouco mais abaixo)
+    if (cloud) { cloud.style.left = "50%"; cloud.style.top = "8%"; cloud.classList.add("show"); }
     await until(600);
 
     // 600ms+ — chuva: fundo (3-4) + frente (4-6), só no território do defensor
