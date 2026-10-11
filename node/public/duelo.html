@@ -1956,7 +1956,7 @@ async function runJacareSpecial(item) {
 }
 
 const CHUVA_FX = {
-  cloud: "/duelo/lula/chuva-picanha/nuvem-tempestade.png",
+  cloud: "/duelo/lula/chuva-picanha/nuvem-tempestade2.png",
   impact: "/duelo/lula/chuva-picanha/impacto.png",
   logo: "/duelo/lula/chuva-picanha/logo.png",
   dust: "/duelo/lula/chuva-picanha/poeira-base-pe.png",
@@ -2017,6 +2017,7 @@ async function runChuvaDePicanha(item) {
     const r0 = -35 + Math.random() * 70;
     const r1 = r0 + 90 + Math.random() * 190;
     el.style.left = x + "px";
+    el.style.top = (sr.height * 0.2) + "px";
     el.style.height = h + "vh";
     el.style.transform = "rotate(" + r0 + "deg)";
     el.style.transition = "none";
