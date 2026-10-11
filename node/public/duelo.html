@@ -382,9 +382,15 @@
   #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
   .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; }
   .jacare.show { display: block; }
-  .jacare img { display: block; max-height: 30vh; width: auto; transform-origin: bottom center; }
-  .jacare-fx { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%); pointer-events: none; opacity: 0; transition: opacity .15s ease; z-index: 2; }
-  .jacare-fx img { max-width: 80vw; max-height: 40vh; }
+  .jacare img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
+  .jacare-smoke { position: absolute; left: 50%; bottom: -4%; transform: translateX(-50%); width: 34vh; pointer-events: none; opacity: 0; z-index: 1; transition: opacity .18s ease; }
+  .jacare-smoke img { width: 100%; max-height: none; opacity: .75; }
+  .jacare-fx { position: absolute; top: 42%; width: 20vh; pointer-events: none; opacity: 0; transform: translate(-50%, -50%); z-index: 2; transition: opacity .12s ease; }
+  .jacare-fx img { width: 100%; max-height: none; }
+  .jacare-logo { position: absolute; top: 12%; left: 50%; transform: translateX(-50%) scale(.8); opacity: 0; pointer-events: none; z-index: 3; }
+  .jacare-logo.show img { animation: logoPop .3s ease forwards; }
+  .jacare-logo img { max-height: 15vh; width: auto; }
+  @keyframes logoPop { 0% { transform: scale(.8); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -523,7 +529,7 @@
   </div>
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
-  <div id="jacareWrap" class="jacare"><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div></div>
+  <div id="jacareWrap" class="jacare"><div class="jacare-smoke" id="jacareSmoke"></div><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div><div class="jacare-logo" id="jacareLogo"></div></div>
   <div class="float-text" id="floatText"></div>
   <div class="tap-faces left" id="tapFacesL"></div>
   <div class="tap-faces right" id="tapFacesR"></div>
@@ -1784,54 +1790,93 @@ function enqueueSpecial(item) {
 function hideJacare() {
   specialQueue = [];
   const w = $("jacareWrap");
-  if (w) { w.className = "jacare"; w.style.opacity = 1; }
+  if (w) { w.className = "jacare"; w.style.opacity = 1; w.style.left = ""; }
   const f = $("jacareFx");
   if (f) { f.innerHTML = ""; f.style.opacity = 0; }
+  const sm = $("jacareSmoke");
+  if (sm) { sm.style.opacity = 0; }
+  const lg = $("jacareLogo");
+  if (lg) { lg.classList.remove("show"); }
 }
 async function runJacareSpecial(item) {
   const side = item.side === "lula" ? "lula" : "flavio";
   const dir = side === "flavio" ? 1 : -1;
   if (!state.active && !item.isTest) return;
   if (item.isTest && state.winner) { const ban = $("winBanner"); if (ban) ban.classList.remove("show"); }
-  const wrap = $("jacareWrap"), img = $("jacareImg"), fx = $("jacareFx");
+  const wrap = $("jacareWrap"), img = $("jacareImg"), smoke = $("jacareSmoke"), fx = $("jacareFx"), logo = $("jacareLogo");
   if (!wrap || !img) return;
   const tgt = item.defender || opponent(side);
   const stage = $("stage");
-  const shakeT = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
-  const png = (n) => { img.src = "/duelo/bolsonaro/" + n; };
-  const fxPng = (n, o) => { if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/' + n + '" alt="">'; fx.style.opacity = o != null ? o : 1; } };
+  const shake = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
+  const setPose = (n, sc) => { img.src = "/duelo/bolsonaro/" + n; img.style.transform = "scale(" + sc + ")"; };
+  const fxImg = (n, o, px) => { if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/' + n + '" alt="">'; fx.style.opacity = o || 0; fx.style.left = (px != null ? px : 50) + "%"; } };
+  const logoOn = () => { if (logo) { logo.innerHTML = '<img src="/duelo/bolsonaro/virou-jacare.png" alt="">'; logo.classList.remove("show"); void logo.offsetWidth; logo.classList.add("show"); } };
+  const beginX = side === "flavio" ? "-8%" : "92%";
+  const setX = (x) => { wrap.style.transition = "left 240ms ease-out"; wrap.style.left = x; };
+
+  // Recua o principal do lado e o apoiador exibido (segundo plano)
+  const mEl = $("fighter-" + side);
+  if (mEl && !state.winner) { mEl.style.transition = "transform .3s ease"; mEl.style.transform = "translateX(" + (-dir * 36) + "px)"; }
+  const sup = $("supporterWrap");
+  if (sup) { sup.style.transition = "transform .3s ease"; sup.style.transform = "translateX(" + (-dir * 40) + "px)"; }
+
   wrap.className = "jacare show";
-  wrap.style.left = (side === "flavio" ? 24 : 76) + "%";
-  wrap.style.transition = "none";
-  wrap.style.transform = "translateX(0) scale(1)";
   wrap.style.opacity = 1;
-  png("parado.png");
-  await sleep(280);
-  shakeT();
-  png("transformando.png");
-  fxPng("fumaca-branca.png", 0.9);
-  flashText("VIROU JACARÉ!", 1200);
-  await sleep(480);
-  png("jacare.png");
-  fxPng("explosao.png", 1);
-  shakeT();
-  wrap.style.transition = "transform 320ms cubic-bezier(.2,.8,.2,1)";
-  wrap.style.transform = "translateX(" + (dir * 34) + "px) scale(1.04)";
-  await sleep(180);
-  spawnHit("uppercut", dir, { pos: tgt === "lula" ? 84 : 16 });
+  wrap.style.transition = "none";
+  wrap.style.left = beginX;
+  setPose("parado.png", 1.0);
+  shake();
+  await sleep(200); // preparação
+
+  fxImg("fumaca-branca.png", 0, 50);
+  smoke.style.opacity = 0.55;
+  await sleep(200); // carga (aura/poeira na base)
+
+  setPose("transformando.png", 1.03);
+  smoke.style.opacity = 1;
+  fxImg("fumaca-branca.png", 0.9, 50);
+  shake();
+  await sleep(300); // transformação
+
+  setPose("jacare.png", 1.10);
+  setX(side === "flavio" ? "34%" : "62%");
+  await sleep(260);
+  smoke.style.opacity = 0.5;
+  fxImg("fumaca-branca.png", 0.5, 50);
+  await sleep(120);
+  smoke.style.opacity = 0;
+  fxImg("fumaca-branca.png", 0, 50);
+  await sleep(120);
+
+  // Mordida: avanço real até o oponente
+  wrap.style.transition = "left 150ms ease-out";
+  wrap.style.left = side === "flavio" ? "46%" : "52%";
+  setPose("jacare.png", 1.12);
+  await sleep(130);
+  spawnHit("kick", dir, { pos: tgt === "lula" ? 84 : 16, scale: 0.5 });
+  fxImg("fx-explosion.png", 1, (tgt === "lula" ? 84 : 16));
+  logoOn();
   const te = $("fighter-" + tgt);
-  if (te && !state.winner) { te.style.transition = "transform 160ms ease-out"; te.style.transform = "translateX(" + (-dir * 24) + "px)"; }
+  if (te && !state.winner) { te.style.transition = "transform 160ms ease-out"; te.style.transform = "translateX(" + (-dir * 22) + "px)"; }
   if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
   if (isHpNewMode() && Number(item.damage) > 0) voteFloat(side, "+" + Number(item.damage) + " ATAQUE", "atk");
-  await sleep(420);
-  if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/fx-explosion.png" alt="">'; fx.style.opacity = 0; }
-  wrap.style.transition = "opacity .2s ease";
+  await sleep(220);
+
+  fxImg("fx-explosion.png", 0, 50);
+  if (logo) logo.classList.remove("show");
+  await sleep(150);
+  wrap.style.transition = "opacity .25s ease";
   wrap.style.opacity = 0;
-  await sleep(200);
+  await sleep(250);
+
   wrap.className = "jacare";
   wrap.style.opacity = 1;
-  if (fx) fx.style.opacity = 0;
-  if (te && !state.winner) { te.style.transition = "transform 260ms ease-in"; te.style.transform = "translateX(0)"; }
+  wrap.style.transition = "none";
+  wrap.style.left = beginX;
+  img.style.transform = "scale(1)";
+  if (mEl && !state.winner) { mEl.style.transition = "transform .3s ease"; mEl.style.transform = "translateX(0)"; }
+  if (sup) { sup.style.transition = "transform .3s ease"; sup.style.transform = "translateX(0)"; }
+  if (te && !state.winner) { te.style.transition = "transform .3s ease"; te.style.transform = "translateX(0)"; }
 }
 
 function leadOf(votes) {
