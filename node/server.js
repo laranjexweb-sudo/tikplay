@@ -2171,6 +2171,9 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const SUPPORT_KEYS = { nikolas: "flavio", "lucas-pavanato": "flavio", "ana-elisa": "lula", "erika-hilton": "lula" };
   if (supporter && SUPPORT_KEYS[supporter]) {
     const side = SUPPORT_KEYS[supporter];
+    const tCfg = db.getDueloConfig(req.user.id);
+    const supCfg = (tCfg.settings && tCfg.settings.supporters && tCfg.settings.supporters[supporter]) || {};
+    const supAudio = String(supCfg.audio || "").trim().replace(/[^a-zA-Z0-9._-]/g, "");
     broadcastToClients(tenant.browserClients, {
       type: "duelo_support_attack",
       isTest: true,
@@ -2183,7 +2186,7 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
       absorbed: 0,
       hp_damage: 0,
       added_votes: 0,
-      audio_url: "",
+      audio_url: supAudio ? `/duelo-audio/${req.user.id}/${supAudio}` : "",
       gift_id: "",
       gift_name: "",
       user: "streamer",
