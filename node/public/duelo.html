@@ -150,6 +150,10 @@
   .hud-debates .hdn.flavio { color: #5bc0ff; }
   .hud-debates .hdn.lula { color: #ff6b6b; }
   .hud-lula .hud-debates { justify-content: flex-end; }
+  .hud-tap { display: none; align-items: baseline; gap: 6px; margin-top: 4px; font-size: clamp(0.68rem, 1.7vh, 0.95rem); font-weight: 700; }
+  .hud-tap .htl { letter-spacing: 1px; color: #9aa; font-size: 0.85em; }
+  .hud-tap .htn.flavio { color: #5bc0ff; }
+  .hud-tap .htn.lula { color: #ff6b6b; }
   .bar > span.label-in {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
     z-index: 2; font-size: clamp(0.68rem, 1.6vh, 1rem); font-weight: 800;
@@ -344,6 +348,7 @@
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-flavio">0/200</span></div>
     <div class="bar sh"><i id="shbar-flavio" style="width:100%"></i></div>
     <div class="hud-debates"><span class="hdl">DEBATES</span><span class="hdn flavio" id="dwval-flavio">0</span></div>
+    <div class="hud-tap"><span class="htl">TAP</span><b class="htn flavio" id="tapval-flavio">0/0</b></div>
   </div>
 
   <div class="hud-lula">
@@ -352,6 +357,7 @@
     <div class="hud-metric sh"><span class="hm-label">ESCUDO</span><span class="hm-val" id="shval-lula">0/200</span></div>
     <div class="bar sh"><i id="shbar-lula" style="width:100%"></i></div>
     <div class="hud-debates"><span class="hdl">DEBATES</span><span class="hdn lula" id="dwval-lula">0</span></div>
+    <div class="hud-tap"><span class="htl">TAP</span><b class="htn lula" id="tapval-lula">0/0</b></div>
   </div>
 
   <div class="gift-panel gift-panel-flavio"><div class="gift-tags" id="gifts-flavio"></div></div>
@@ -842,6 +848,8 @@ function pctBar(v, max) { return Math.max(0, Math.min(100, (v / (max || 1)) * 10
 
 function isTimedMode() { return state.game_mode === "timed"; }
 
+function isHpNewMode() { return state.game_mode === "hp_new"; }
+
 function fmtClock(s) {
   s = Math.max(0, Math.floor(Number(s) || 0));
   const m = Math.floor(s / 60), r = s % 60;
@@ -849,22 +857,41 @@ function fmtClock(s) {
 }
 
 function renderHud() {
-  const hpMax = state.hp_max || 100;
+const hpMax = state.hp_max || 100;
   const shMax = state.shield_max || 200;
   const timed = isTimedMode();
-const hudF = document.querySelector(".hud-flavio");
+  const hpNew = isHpNewMode();
+  const hudF = document.querySelector(".hud-flavio");
   const hudL = document.querySelector(".hud-lula");
   if (hudF) hudF.style.display = timed ? "none" : "";
   if (hudL) hudL.style.display = timed ? "none" : "";
   const sbd = $("sbDebates");
   if (sbd) {
-    sbd.style.display = timed ? "flex" : "none";
+    sbd.style.display = timed ? "flex" : hpNew ? "none" : "none";
     if (timed) {
       const df = $("sbDebF");
       if (df) df.textContent = (state.debate_wins && state.debate_wins.flavio) || 0;
       const dl = $("sbDebL");
       if (dl) dl.textContent = (state.debate_wins && state.debate_wins.lula) || 0;
     }
+  }
+  const lb = $("lbScore");
+  if (lb) lb.style.display = hpNew ? "none" : "";
+  for (const f of ["flavio", "lula"]) {
+    const hdl = document.querySelector(".hud-" + f + " .hdl");
+    if (hdl) hdl.textContent = hpNew ? "VITÓRIAS" : "DEBATES";
+    const tapEl = $("tapval-" + f);
+    if (tapEl) {
+      if (hpNew) {
+        tapEl.style.display = "";
+        tapEl.textContent = ((state.taps && state.taps[f]) || 0) + "/" + (state.tap_target || 0);
+        tapEl.parentElement.style.display = "flex";
+      } else {
+        tapEl.parentElement.style.display = "none";
+      }
+    }
+    const shm = document.querySelector(".hud-" + f + " .hud-metric.sh");
+    if (shm) shm.style.display = hpNew ? "none" : "";
   }
   for (const f of ["flavio", "lula"]) {
     const hpEl = $("hpbar-" + f);
@@ -880,9 +907,14 @@ const hudF = document.querySelector(".hud-flavio");
       if (shL) shL.textContent = "";
     } else {
       if (hpEl) hpEl.style.width = pctBar(state.hp[f], hpMax) + "%";
-      if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
       if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
-      if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
+      if (hpNew) {
+        if (shEl) shEl.style.width = "0%";
+        if (shL) shL.textContent = "";
+      } else {
+        if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
+        if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
+      }
     }
     const vr = $("votes-" + f);
     if (vr) {
@@ -1386,6 +1418,24 @@ function showFlash(name) {
   setTimeout(() => el.classList.remove("show"), 2400);
 }
 
+function flashText(txt, ms) {
+  const el = $("floatText");
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), ms || 1400);
+}
+
+function showTapMeta(side) {
+  flashText("META DE TAP! · " + (side === "flavio" ? "FLÁVIO" : "LULA"), 1600);
+}
+
+function showSpecialFlash(key, side) {
+  flashText(String(key || "ESPECIAL").toUpperCase() + " · " + (side === "lula" ? "LULA" : "FLÁVIO"), 1600);
+}
+
 function leadOf(votes) {
   const f = (votes && votes.flavio) || 0;
   const l = (votes && votes.lula) || 0;
@@ -1539,10 +1589,13 @@ function connectWS() {
     else if (msg.type === "duelo_attack") {
       markInteraction();
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", intensity: msg.added_votes || 0, isTest: !!msg.isTest });
+      if (isHpNewMode() && Number(msg.damage) > 0) voteFloat(msg.attacker || opponent(msg.defender), "+" + Number(msg.damage) + " ATAQUE");
       if (!isTimedMode()) damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
+    else if (msg.type === "duelo_tap_meta") { markInteraction(); showTapMeta(msg.side); }
+    else if (msg.type === "duelo_special") { markInteraction(); showSpecialFlash(msg.key || "especial", msg.side || ""); }
     else if (msg.type === "duelo_shield") { markInteraction(); if (!isTimedMode()) { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); } }
     else if (msg.type === "duelo_vote") {
       markInteraction();
