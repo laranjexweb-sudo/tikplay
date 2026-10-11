@@ -619,7 +619,7 @@ class GameSession:
         except Exception as e:
             emit(self.tenant_id, "log", f"[Duelo] Erro ao processar TAP: {e}")
 
-    def _duelo_comment_team(self, user, raw, user_meta=None):
+    def _duelo_comment_team(self, user, raw, user_meta=None, avatar="", nickname=""):
         if not (self.duelo.active and self.duelo._is_hp_new()):
             return
         try:
@@ -635,6 +635,15 @@ class GameSession:
             old = self.duelo.get_team(uid)
             if self.duelo.register_team(uid, side):
                 emit(self.tenant_id, "log", f"[Duelo] @{user} escolheu equipe {side.upper()}" + (" (troca)" if old and old != side else ""))
+                if old != side:
+                    emit(self.tenant_id, "game", {
+                        "type": "duelo_team_join",
+                        "side": side,
+                        "user_id": uid,
+                        "unique_id": user or "",
+                        "nickname": nickname or user or "",
+                        "avatar_url": str(avatar or ""),
+                    })
         except Exception as e:
             emit(self.tenant_id, "log", f"[Duelo] Erro ao registrar equipe: {e}")
 
@@ -1038,7 +1047,7 @@ class GameSession:
         })
         if raw:
             self._queue_narration(raw)
-        self._duelo_comment_team(user, raw, user_meta)
+        self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
 
         # ---------------------------------------------------------
         # 3 PONTINHOS: palpite de texto livre (captura exclusiva quando ativo)

@@ -310,6 +310,35 @@
   .tap-float.f { left: calc(var(--score-x) * 1% - min(24vw, 220px)); color: #5bc0ff; text-align: right; }
   .tap-float.l { right: calc((100% - var(--score-x) * 1%) - min(24vw, 220px)); color: #ff6b6b; text-align: left; }
   @keyframes tapFloatUp { 0% { opacity: 0; transform: translateY(10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px); } }
+  .team-join-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+  .team-join-card {
+    --tc: #0D47FF; --tcl: #27A8FF;
+    --jx: 0px; --jx2: 0px; --tj: 2.8s;
+    position: absolute;
+    bottom: 12%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 200px;
+    padding: 6px 10px;
+    background: linear-gradient(180deg, #0D1728, #07101F);
+    border: 2px solid var(--tc);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 12px rgba(0,0,0,.35);
+    animation: teamJoinUp var(--tj) ease-out forwards;
+    will-change: transform, opacity;
+  }
+  .team-join-card--flavio { --tc: #0D47FF; --tcl: #27A8FF; }
+  .team-join-card--lula { --tc: #E61919; --tcl: #FF3A2F; }
+  .team-join-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; aspect-ratio: 1 / 1; border: 2px solid var(--tc); background: #0a1120; flex: 0 0 auto; }
+  .team-join-user { display: block; font-weight: 800; font-size: 13px; color: #fff; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+  .team-join-name { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--tcl); }
+  @keyframes teamJoinUp {
+    0% { opacity: 0; transform: translate(var(--jx), 30px) scale(.85); }
+    15% { opacity: 1; transform: translate(var(--jx), 10px) scale(1); }
+    75% { opacity: 1; transform: translate(var(--jx2), -250px); }
+    100% { opacity: 0; transform: translate(calc(var(--jx2) + 10px), -340px) scale(.94); }
+  }
   @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 
   .combat-shake { animation: shk .25s linear; }
@@ -493,6 +522,8 @@
   <div class="tap-faces right" id="tapFacesR"></div>
   <div class="tap-float-layer" id="tapFloatL"></div>
   <div class="tap-float-layer" id="tapFloatR"></div>
+  <div class="team-join-layer" id="teamJoinLeft"></div>
+  <div class="team-join-layer" id="teamJoinRight"></div>
   <img id="waitingImg" class="waiting-img" src="/duelo/duelo-1x1-aguarde.png" alt="">
   <div class="win-banner" id="winBanner">
     <div class="big" id="winBig"></div>
@@ -1468,6 +1499,48 @@ const tapFaceCache = new Map();
     setTimeout(() => s.remove(), 1100);
   }
 
+  const teamJoinCount = { left: 0, right: 0 };
+  const TEAM_JOIN_MAX = 6;
+  function spawnTeamJoinCard(o) {
+    if (!o || !o.username) return;
+    const side = o.side === "lula" ? "lula" : "flavio";
+    const isLula = side === "lula";
+    const host = $("#teamJoin" + (isLula ? "Right" : "Left"));
+    if (!host) return;
+    const key = isLula ? "right" : "left";
+    if (teamJoinCount[key] >= TEAM_JOIN_MAX) return;
+    teamJoinCount[key]++;
+    const c = document.createElement("div");
+    c.className = "team-join-card team-join-card--" + side;
+    const slot = teamJoinCount[key] - 1;
+    c.style.left = isLula ? "" : (1 + slot * 4) + "%";
+    if (isLula) c.style.right = (1 + slot * 4) + "%";
+    c.style.setProperty("--jx", ((isLula ? 1 : -1) * (3 + Math.random() * 5)) + "px");
+    c.style.setProperty("--jx2", ((isLula ? 1 : -1) * (10 + Math.random() * 8)) + "px");
+    c.style.setProperty("--tj", (2.5 + Math.random() * 0.5).toFixed(2) + "s");
+    const av = document.createElement("img");
+    av.className = "team-join-avatar";
+    av.alt = "";
+    const done = () => { if (c.parentNode) { c.remove(); teamJoinCount[key] = Math.max(0, teamJoinCount[key] - 1); } };
+    av.onerror = function () { done(); };
+    av.src = o.avatarUrl || "";
+    const body = document.createElement("div");
+    body.style.minWidth = "0";
+    const u = document.createElement("span");
+    u.className = "team-join-user";
+    u.textContent = "@" + o.username;
+    const n = document.createElement("span");
+    n.className = "team-join-name";
+    n.textContent = side === "flavio" ? "TIME FLÁVIO" : "TIME LULA";
+    body.appendChild(u);
+    body.appendChild(n);
+    c.appendChild(av);
+    c.appendChild(body);
+    host.appendChild(c);
+    c.addEventListener("animationend", done);
+    setTimeout(done, 3400);
+  }
+
   function damageFloat(fighter, hpDmg, absorbed) {
   const host = $("vote-" + fighter);
   if (!host) return;
@@ -1833,6 +1906,11 @@ function connectWS() {
       if (isHpNewMode() && state.active && state.roundActive && !state.winner) {
         burstTapFaces(msg.side, msg.user_id, msg.avatar_url, Number(msg.delta) || 0);
         floatTap(msg.side, Number(msg.delta) || 0);
+      }
+    }
+    else if (msg.type === "duelo_team_join") {
+      if (state.active && !state.winner) {
+        spawnTeamJoinCard({ side: msg.side, avatarUrl: msg.avatar_url, username: msg.nickname || msg.unique_id || msg.user_id });
       }
     }
     else if (msg.type === "duelo_special") { markInteraction(); showSpecialFlash(msg.key || "especial", msg.side || ""); }
