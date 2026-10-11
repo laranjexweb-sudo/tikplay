@@ -3435,7 +3435,7 @@ async function loadDueloState() {
       dueloIdleInterval = idl.interval != null ? idl.interval : 7;
       dueloMatchRestart = data.settings.match_restart_delay_s != null ? data.settings.match_restart_delay_s : 8;
       dueloSupporters = Object.assign(dueloSupportersDefault(), data.settings.supporters || {});
-      dueloGameMode = data.settings.game_mode === "timed" ? "timed" : "hp";
+      dueloGameMode = (data.settings.game_mode === "timed" || data.settings.game_mode === "hp_new") ? data.settings.game_mode : "hp";
       dueloRoundTime = data.settings.round_time_s != null ? data.settings.round_time_s : 180;
       dueloResultDelay = data.settings.round_result_delay_s != null ? data.settings.round_result_delay_s : 8;
       dueloHpNew = data.settings.hp_start != null ? data.settings.hp_start : 10000;
