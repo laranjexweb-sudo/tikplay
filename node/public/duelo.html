@@ -380,9 +380,9 @@
   #supporterBubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 45; }
   #supporterBubble.support-speech img { display: block; width: clamp(170px, 24vw, 230px); max-width: 26vw; height: auto; object-fit: contain; margin: 0 auto; }
   #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
-  .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; transform: scale(var(--fire-scale)); transform-origin: bottom center; }
+  .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; transform: scale(var(--fire-scale)); transform-origin: bottom center; max-width: 58vw; }
   .jacare.show { display: block; }
-  .jacare img { display: block; max-height: 28vh; width: auto; transform-origin: bottom center; }
+  .jacare img { display: block; max-height: 28vh; max-width: 58vw; width: auto; transform-origin: bottom center; }
   .jacare-smoke { position: absolute; left: 50%; bottom: -4%; transform: translateX(-50%); width: 34vh; pointer-events: none; opacity: 0; z-index: 1; transition: opacity .18s ease; }
   .jacare-smoke img { width: 100%; max-height: none; opacity: .75; }
   .jacare-fx { position: absolute; top: 42%; width: 20vh; pointer-events: none; opacity: 0; transform: translate(-50%, -50%); z-index: 2; transition: opacity .12s ease; }
@@ -1849,10 +1849,10 @@ async function runJacareSpecial(item) {
   fxImg("fumaca-branca.png", 0, 50);
   await sleep(120);
 
-  // Mordida: avanço real até o oponente
+  // Mordida: avanço real até o oponente (para na frente dele, sem atravessar)
   wrap.style.transition = "left 150ms ease-out";
-  wrap.style.left = side === "flavio" ? "46%" : "52%";
-  setPose("jacare.png", 1.08);
+  wrap.style.left = side === "flavio" ? "40%" : "58%";
+  setPose("jacare.png", 0.98);
   await sleep(130);
   spawnHit("kick", dir, { pos: tgt === "lula" ? 84 : 16, scale: 0.5 });
   fxImg("fx-explosion.png", 1, (tgt === "lula" ? 84 : 16));

@@ -88,6 +88,14 @@
   #tab-duelo .sup-line input[type="file"] { font-size: 0; padding: 6px 4px; cursor: pointer; }
   #tab-duelo .sup-line input[type="file"]::file-selector-button { font-size: 11px; font-weight: 700; padding: 2px 8px; border: 2px solid #000; border-radius: 6px; background: #e8e2d5; cursor: pointer; }
   #tab-duelo .sup-line .duelo-check { justify-content: center; }
+  #tab-duelo { min-width: 0; }
+  #tab-duelo .nb-card { max-width: 100%; }
+  #tab-duelo .sup-audio .duelo-help { word-break: break-all; font-size: 10px; line-height: 1.15; }
+  @media (min-width: 992px) {
+    .container-fluid > .row { flex-wrap: nowrap; }
+    .container-fluid > .row > .col-lg-8,
+    .container-fluid > .row > .col-lg-4 { min-width: 0; }
+  }
   @container (max-width: 660px) {
     #tab-duelo .duelo-gift-head { display: none; }
     #tab-duelo .duelo-gift-line { grid-template-columns: 1.2fr 84px 96px; row-gap: 6px; }
@@ -3872,9 +3880,9 @@ function renderDueloSpecials() {
         <input type="text" class="form-control duelo-spec-gift" data-spec="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
         <div class="duelo-ac gift-ac" data-specac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
-      <div style="flex:0 0 84px"><input type="number" class="form-control" data-specf="damage" data-spec="${k}" value="${s.damage != null ? s.damage : 900}" min="1" title="Dano"></div>
-      <div style="flex:0 0 130px"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-specaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
-      <label class="duelo-check mb-0" style="justify-content:center"><input type="checkbox" data-specf="enabled" data-spec="${k}" ${s.enabled !== false ? 'checked' : ''}></label>
+      <div class="mode-dano"><input type="number" class="form-control" data-specf="damage" data-spec="${k}" value="${s.damage != null ? s.damage : 900}" min="1" title="Dano (HP)"></div>
+      <div class="sup-audio"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-specaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
+      <label class="duelo-check mb-0"><input type="checkbox" class="form-check-input" data-specf="enabled" data-spec="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
     </div>`;
   }).join("");
   box.querySelectorAll(".duelo-spec-gift").forEach((inp) => {
