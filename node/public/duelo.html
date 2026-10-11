@@ -1836,6 +1836,7 @@ async function runJacareSpecial(item) {
   smoke.style.opacity = 1;
   fxImg("fumaca-branca.png", 0.9, 50);
   shake();
+  if (item.audio_url) playAudio(item.audio_url);
   await sleep(300); // transformação
 
   setPose("jacare.png", 1.06);

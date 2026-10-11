@@ -3873,6 +3873,7 @@ function renderDueloSpecials() {
         <div class="duelo-ac gift-ac" data-specac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
       <div style="flex:0 0 84px"><input type="number" class="form-control" data-specf="damage" data-spec="${k}" value="${s.damage != null ? s.damage : 900}" min="1" title="Dano"></div>
+      <div style="flex:0 0 130px"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-specaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
       <label class="duelo-check mb-0" style="justify-content:center"><input type="checkbox" data-specf="enabled" data-spec="${k}" ${s.enabled !== false ? 'checked' : ''}></label>
     </div>`;
   }).join("");
@@ -3890,6 +3891,31 @@ function renderDueloSpecials() {
       dueloQuickSave();
     });
   });
+  box.querySelectorAll("[data-specaudio]").forEach((el) => {
+    el.addEventListener("change", () => uploadDueloSpecialAudio(el.getAttribute("data-specaudio"), el));
+  });
+}
+
+async function uploadDueloSpecialAudio(k, input) {
+  if (!input.files || !input.files[0]) return;
+  const fd = new FormData();
+  fd.append("file", input.files[0]);
+  fd.append("gift_id", "special-" + k);
+  try {
+    const res = await fetch("/api/duelo/audio", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd });
+    const data = await res.json();
+    if (data.success) {
+      dueloSpecials[k] = dueloSpecials[k] || {};
+      dueloSpecials[k].audio = data.filename;
+      dueloQuickSave();
+      renderDueloSpecials();
+      dueloMsg("Áudio do especial enviado: " + data.filename);
+    } else {
+      dueloMsg(data.error || "Erro no upload do áudio");
+    }
+  } catch (e) {
+    dueloMsg("Erro de rede no upload: " + e.message);
+  }
 }
 
 function hexInt(id, fb) { const el = document.getElementById(id); const x = el ? parseInt(el.value, 10) : NaN; return Number.isFinite(x) ? x : fb; }
@@ -3960,7 +3986,7 @@ function readDueloSettings() {
         gift_id: "",
         damage: Math.max(0, parseInt((document.querySelector('[data-specf="damage"][data-spec="virou_jacare"]') || {}).value || "900", 10) || 0),
         enabled: !!(document.querySelector('[data-specf="enabled"][data-spec="virou_jacare"]') || {}).checked,
-        audio: "",
+        audio: typeof dueloSpecials.virou_jacare === "object" && dueloSpecials.virou_jacare !== null ? String((dueloSpecials.virou_jacare.audio) || "") : "",
       },
     },
   };

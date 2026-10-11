@@ -561,7 +561,7 @@ class DueloEngine:
                     "key": sp, "side": char, "defender": defender,
                     "damage": dmg, "absorbed": 0, "hp_damage": dmg,
                     "sequence": str((cfg or {}).get("sequence") or ""),
-                    "audio_url": str((cfg or {}).get("audio") or ""),
+                    "audio_url": f"/duelo-audio/{self.tenant_id}/{cfg.get('audio')}" if (cfg or {}).get("audio") else "",
                     "user": user or "", "nickname": nickname or user or "",
                 })
                 self._emit("duelo_state", self.state())
