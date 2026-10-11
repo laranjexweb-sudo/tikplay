@@ -1934,6 +1934,30 @@ function dueloClientSettings(userId, settings) {
     }
     s.supporters = out;
   }
+  if (s.main_gifts && typeof s.main_gifts === "object") {
+    let map = {};
+    try { map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {}; } catch {}
+    const out = {};
+    for (const side of Object.keys(s.main_gifts)) {
+      const v = s.main_gifts[side];
+      out[side] = (v && typeof v === "object") ? Object.assign({}, v, {
+        image: (v.gift_name && map[v.gift_name]) ? `/gift-images/${map[v.gift_name]}` : "",
+      }) : v;
+    }
+    s.main_gifts = out;
+  }
+  if (s.extra_gifts && typeof s.extra_gifts === "object") {
+    let map = {};
+    try { map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {}; } catch {}
+    const out = {};
+    for (const side of Object.keys(s.extra_gifts)) {
+      const arr = Array.isArray(s.extra_gifts[side]) ? s.extra_gifts[side] : [];
+      out[side] = arr.map((v) => (v && typeof v === "object") ? Object.assign({}, v, {
+        image: (v.gift_name && map[v.gift_name]) ? `/gift-images/${map[v.gift_name]}` : "",
+      }) : v);
+    }
+    s.extra_gifts = out;
+  }
   return s;
 }
 

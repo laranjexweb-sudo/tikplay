@@ -387,6 +387,8 @@ let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
 let dueloGifts = [];
+let dueloMainGifts = {};
+let dueloExtraGifts = {};
 
 const DUELO_LAYOUT_DEFAULT = {
   score: { x: 50, y: 5, scale: 1 },
@@ -668,6 +670,36 @@ function renderGiftTags() {
       ts.appendChild(e2);
       tags.push(ts);
     }
+    if (isTimedMode()) {
+      const tagFor = (label, imgUrl) => {
+        const t = document.createElement("span");
+        t.className = "gift-tag";
+        if (imgUrl) {
+          const im = document.createElement("img");
+          im.src = imgUrl;
+          im.alt = "";
+          im.onerror = function () { this.style.display = "none"; };
+          t.appendChild(im);
+        } else {
+          const ic = document.createElement("span");
+          ic.className = "gift-icon";
+          ic.textContent = "🎁";
+          t.appendChild(ic);
+        }
+        const ef = document.createElement("span");
+        ef.className = "gift-effect";
+        ef.textContent = label;
+        t.appendChild(ef);
+        return t;
+      };
+      const m = dueloMainGifts && dueloMainGifts[f];
+      if (m && m.gift_name) tags.push(tagFor("PRINCIPAL", m.image));
+      const ex = (dueloExtraGifts && dueloExtraGifts[f]) || [];
+      for (const x of ex) {
+        if (!x || x.enabled === false || !x.gift_name) continue;
+        tags.push(tagFor("+ VOTOS", x.image));
+      }
+    }
     el.replaceChildren(...tags);
   }
 }
@@ -719,6 +751,10 @@ function renderHud() {
   const hpMax = state.hp_max || 100;
   const shMax = state.shield_max || 200;
   const timed = isTimedMode();
+  const hudF = document.querySelector(".hud-flavio");
+  const hudL = document.querySelector(".hud-lula");
+  if (hudF) hudF.style.display = timed ? "none" : "";
+  if (hudL) hudL.style.display = timed ? "none" : "";
   for (const f of ["flavio", "lula"]) {
     const hpEl = $("hpbar-" + f);
     const shEl = $("shbar-" + f);
@@ -1368,7 +1404,7 @@ function connectWS() {
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
     else if (msg.type === "duelo_support_attack") { markInteraction(); if (!isTimedMode()) damageFloat(msg.target, msg.hp_damage || 0, msg.absorbed || 0); enqueueSupport(msg); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
-    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); }
+    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); dueloMainGifts = (msg.settings && msg.settings.main_gifts) || {}; dueloExtraGifts = (msg.settings && msg.settings.extra_gifts) || {}; renderGiftTags(); renderHud(); }
   };
 }
 
@@ -1394,6 +1430,8 @@ async function loadInitialState() {
       applyIdleConfig(s.idle);
       applyScene(s.scene);
       if (s.supporters) applySupporterConfig(s.supporters);
+      dueloMainGifts = s.main_gifts || {};
+      dueloExtraGifts = s.extra_gifts || {};
       renderHud();
     }
     if (data && Array.isArray(data.gifts)) { dueloGifts = data.gifts; renderGiftTags(); }
