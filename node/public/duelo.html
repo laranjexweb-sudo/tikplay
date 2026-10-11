@@ -219,9 +219,27 @@
 
   .hit { position: absolute; bottom: 22vh; left: 50%; z-index: 20; width: 0; height: 0; opacity: 0; pointer-events: none; }
 
+  .combo-counter {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--score-y) * 1% + 9vh);
+    transform: translateX(-50%);
+    z-index: 60;
+    display: none;
+    font: 900 clamp(2.2rem, 6vh, 3.4rem)/1 "Roboto Condensed", Arial, sans-serif;
+    color: #ffd200;
+    text-shadow: 3px 3px 0 #000, 0 0 24px rgba(255, 210, 0, .45);
+    letter-spacing: 2px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .combo-counter.show { display: block; }
+  .combo-counter.pop { animation: comboPop .18s ease; }
+  @keyframes comboPop { 0% { transform: translateX(-50%) scale(1); } 60% { transform: translateX(-50%) scale(1.22); } 100% { transform: translateX(-50%) scale(1); } }
+
   #supporterWrap { position: absolute; z-index: 13; bottom: calc(var(--fire-y) * 1%); display: none; }
-  #supporterWrap.side-flavio { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
-  #supporterWrap.side-lula { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap)); }
+  #supporterWrap.side-flavio { left: 70%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap) * .4); }
+  #supporterWrap.side-lula { left: 30%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 + var(--fire-gap) * .4); }
   #supporterImg { display: block; max-height: calc(32vh * var(--fire-scale)); max-width: 38vw; width: auto; transform-origin: bottom center; }
   #supporterWrap.enter { display: block; animation: supEnter .35s ease; }
   #supporterWrap.exit { animation: supExit .3s ease forwards; }
@@ -231,15 +249,18 @@
   #supporterWrap.side-lula.exit { animation-name: supExitR; }
   @keyframes supEnterR { 0% { opacity: 0; transform: translateX(46px) scale(.92); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
   @keyframes supExitR { 0% { opacity: 1; transform: translateX(0) scale(1); } 100% { opacity: 0; transform: translateX(-46px) scale(.9); } }
-  #supporterBubble { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 45; }
-  #supporterBubble img { max-height: clamp(34px, 6.5vh, 60px); }
+  #supporterBubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 45; }
+  #supporterBubble.support-speech img { display: block; width: clamp(170px, 24vw, 230px); max-width: 26vw; height: auto; object-fit: contain; margin: 0 auto; }
+  #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
   .hit.uppercut { width: 6px; height: 140px; background: linear-gradient(#fff, #ff8800); border-radius: 4px; box-shadow: 0 0 26px #ff8800; animation: hitUppercut .34s ease-out forwards; }
-  @keyframes hitPunch { 0% { transform: translate(-50%,0) scale(.4); opacity: 1; } 100% { transform: translate(-50%,-6vh) scale(1.15); opacity: 0; } }
-  @keyframes hitKick { 0% { transform: translate(-50%,0) scale(.5); opacity: 1; } 100% { transform: translate(-50%,-8vh) scale(1.5); opacity: 0; } }
-  @keyframes hitUppercut { 0% { transform: translate(-50%,0); opacity: 1; } 100% { transform: translate(-50%,-14vh); opacity: 0; } }
+  .hit.lowKick { width: 84px; height: 48px; border-radius: 50%; bottom: 13vh; background: radial-gradient(circle, #fff 0%, #ff9a3c 45%, rgba(255,100,0,0) 72%); animation: hitLow .24s ease-out forwards; }
+  @keyframes hitPunch { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .45)); opacity: 1; } 100% { transform: translate(-50%,-6vh) scale(calc(var(--hit-scale,1) * 1.2)); opacity: 0; } }
+  @keyframes hitKick { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .5)); opacity: 1; } 100% { transform: translate(-50%,-8vh) scale(calc(var(--hit-scale,1) * 1.5)); opacity: 0; } }
+  @keyframes hitUppercut { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .9)); opacity: 1; } 100% { transform: translate(-50%,-14vh) scale(calc(var(--hit-scale,1) * 1.1)); opacity: 0; } }
+  @keyframes hitLow { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .5)); opacity: 1; } 100% { transform: translate(-50%,2vh) scale(calc(var(--hit-scale,1) * 1.25)); opacity: 0; } }
 
   .status { position: absolute; top: clamp(22px, 2vh, 44px); right: 4vw; z-index: 30; font-size: 0.8rem; color: #9aa; text-shadow: 0 0 8px #000; }
 
@@ -315,6 +336,7 @@
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
     <div class="sb-debates" id="sbDebates"><span class="sb-debates-label">VITÓRIAS</span><b class="sb-debates-val flavio" id="sbDebF">0</b><b class="sb-debates-val lula" id="sbDebL">0</b></div>
   </div>
+  <div class="combo-counter" id="combo"></div>
 
   <div class="hud-flavio">
     <div class="hud-metric"><span class="hm-label">HP</span><span class="hm-val" id="hpval-flavio">100/100</span></div>
@@ -371,15 +393,71 @@ if (!token && !DEBUG) location.href = "/login";
 const FIGHTERS = {
   flavio: {
     name: "FLÁVIO", dir: 1,
-    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", defesaEscudo: "/duelo/Flavio/defesa-escudo.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", victory: "/duelo/Flavio/vitoria.png", esperando: "/duelo/Flavio/esperando.png" },
+    sprites: { idle: "/duelo/Flavio/neutro.png", defense: "/duelo/Flavio/defesa.png", defesaEscudo: "/duelo/Flavio/defesa-escudo.png", punch: "/duelo/Flavio/soco.png", kick: "/duelo/Flavio/chute.png", uppercut: "/duelo/Flavio/levantada.png", lowKick: "/duelo/Flavio/chute-baixo.png", jump: "/duelo/Flavio/pulo.png", victory: "/duelo/Flavio/vitoria.png", esperando: "/duelo/Flavio/esperando.png" },
   },
   lula: {
     name: "LULA", dir: -1,
-    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", defesaEscudo: "/duelo/lula/defesa-escudo.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", victory: "/duelo/lula/vitoria.png", esperando: "/duelo/lula/esperando.png" },
+    sprites: { idle: "/duelo/lula/neutro.png", defense: "/duelo/lula/defesa.png", defesaEscudo: "/duelo/lula/defesa-escudo.png", punch: "/duelo/lula/soco.png", kick: "/duelo/lula/chute.png", uppercut: "/duelo/lula/levantada.png", lowKick: "/duelo/lula/chute-baixo.png", jump: "/duelo/lula/pulo.png", victory: "/duelo/lula/vitoria.png", esperando: "/duelo/lula/esperando.png" },
   },
 };
 
-const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 } };
+const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 }, lowKick: { fwd: 260, hold: 120, back: 180 }, jump: { fwd: 220, hold: 100, back: 180 } };
+const POSE_MOVE = { punch: 34, lowKick: 30, kick: 46, uppercut: 30 };
+const HIT_POS = { punch: { bottom: "22vh" }, kick: { bottom: "26vh" }, uppercut: { bottom: "22vh" }, lowKick: { bottom: "13vh" } };
+const COMBO_SEQUENCES = [
+  { level: "SIMPLES", min: 1, max: 3, pool: [["punch"], ["lowKick"], ["kick"]] },
+  { level: "CURTO", min: 4, max: 6, pool: [["punch", "lowKick"], ["lowKick", "punch"], ["punch", "kick"]] },
+  { level: "MÉDIO", min: 7, max: 9, pool: [["punch", "kick", "lowKick"], ["lowKick", "punch", "kick"], ["punch", "lowKick", "punch"]] },
+  { level: "SUPER", min: 10, max: 19, pool: [["punch", "lowKick", "kick", "punch"], ["kick", "punch", "lowKick", "uppercut"], ["lowKick", "punch", "kick", "punch"]] },
+  { level: "MASTER", min: 20, max: 49, pool: [["punch", "lowKick", "jump", "kick", "punch", "uppercut"], ["lowKick", "punch", "jump", "kick", "uppercut"], ["punch", "kick", "punch", "lowKick", "jump", "uppercut"]] },
+  { level: "ULTRA", min: 50, max: Infinity, pool: [["lowKick", "punch", "kick", "jump", "punch", "kick", "uppercut"], ["punch", "lowKick", "jump", "kick", "punch", "uppercut", "kick"], ["kick", "punch", "lowKick", "jump", "kick", "punch", "uppercut"]] },
+];
+function pickSequence(combo) {
+  const lvl = COMBO_SEQUENCES.find((l) => combo >= l.min && combo <= l.max) || COMBO_SEQUENCES[COMBO_SEQUENCES.length - 1];
+  const pool = lvl.pool;
+  return { level: lvl.level, steps: pool[Math.floor(Math.random() * pool.length)].slice() };
+}
+function buildSteps(att) {
+  if (att.isTest && att.combo <= 1 && att.action && typeof att.action === "string") return { level: "TESTE", steps: [att.action] };
+  return pickSequence(Math.max(1, Number(att.combo) || 1));
+}
+function comboPoints(target) {
+  if (target <= 12) { const p = []; for (let i = 1; i <= target; i++) p.push(i); return p; }
+  const base = [1, 2, 5, 10, 20, 35, 50].filter((x) => x < target);
+  return [...base, target];
+}
+let comboAnimTimer = null;
+function stopComboAnim() { if (comboAnimTimer) { clearTimeout(comboAnimTimer); comboAnimTimer = null; } }
+function animateCombo(target, level) {
+  stopComboAnim();
+  const el = $("combo");
+  if (!el || target < 2) { if (el) el.classList.remove("show"); return; }
+  const points = comboPoints(target);
+  el.classList.add("show");
+  let i = 0;
+  const step = () => {
+    if (!state.winner) {
+      const v = points[i] || target;
+      el.textContent = "x" + v;
+      el.classList.remove("pop");
+      void el.offsetWidth;
+      el.classList.add("pop");
+    }
+    i++;
+    if (i < points.length) { comboAnimTimer = setTimeout(step, Math.max(60, Math.floor(620 / points.length))); }
+    else {
+      if (target >= 10 && level && level !== "TESTE") {
+        const finalLbl = "COMBO x" + target + "!";
+        el.textContent = finalLbl;
+        el.classList.remove("pop");
+        void el.offsetWidth;
+        el.classList.add("pop");
+        comboAnimTimer = setTimeout(() => { if (!state.winner) { el.textContent = "x" + target; } }, 900);
+      }
+    }
+  };
+  step();
+}
 const MAX_ATTACK_QUEUE = 20;
 
 let state = { mode: "hp", game_mode: "hp", hp: { flavio: 0, lula: 0 }, shield: { flavio: 0, lula: 0 }, votes: { flavio: 0, lula: 0 }, hp_max: 100, shield_max: 200, winner: null, roundActive: true, final: false, active: false, time_remaining: 0, round_time: 0, final_result: null };
@@ -724,6 +802,8 @@ function setFighter(fighter, stateName) {
     img.onerror = function () {
       if (this.src.indexOf("vitoria") !== -1) this.src = FIGHTERS[fighter].sprites.idle;
       else if (this.src.indexOf("defesa-escudo") !== -1) this.src = FIGHTERS[fighter].sprites.defense;
+      else if (this.src.indexOf("chute-baixo") !== -1) this.src = FIGHTERS[fighter].sprites.kick;
+      else if (this.src.indexOf("pulo") !== -1) this.src = FIGHTERS[fighter].sprites.idle;
     };
     img.src = url;
   }
@@ -977,21 +1057,17 @@ function flushPending() {
   }
 }
 
-function updateCombo() {
-  if (state.winner) return;
-  const c = $("combo");
-  if (!c) return;
-  if (currentCombo > 1) { c.textContent = "x" + currentCombo; c.classList.add("show"); }
-  else { c.textContent = ""; c.classList.remove("show"); }
-}
-function clearCombo() { const c = $("combo"); if (c) { c.textContent = ""; c.classList.remove("show"); } }
+function clearCombo() { stopComboAnim(); const c = $("combo"); if (c) { c.textContent = ""; c.classList.remove("show"); } }
 
-function spawnHit(type, dir) {
+function spawnHit(type, dir, opts) {
   const hit = $("hit");
   if (!hit) return;
-  hit.style.left = (dir > 0 ? 56 : 44) + "%";
-  hit.className = "hit " + (type === "uppercut" ? "uppercut" : type) + " show";
-  setTimeout(() => { hit.className = "hit"; hit.style.left = "50%"; }, 380);
+  opts = opts || {};
+  hit.style.left = (opts.pos != null ? opts.pos : (dir > 0 ? 56 : 44)) + "%";
+  hit.style.setProperty("--hit-scale", opts.scale != null ? opts.scale : 1);
+  const cls = type === "lowKick" ? "lowKick" : (type === "uppercut" ? "uppercut" : (type === "jump" ? "punch" : type));
+  hit.className = "hit " + cls + " show";
+  setTimeout(() => { hit.className = "hit"; hit.style.left = "50%"; }, 400);
 }
 
 let audioUnlocked = false;
@@ -1235,11 +1311,15 @@ async function runSupport(item) {
   if (tEl) void tEl.offsetWidth;
   try { console.debug("[SUPPORT] defesa target=" + tgt + " pose=" + tpose); } catch (e) {}
   const fala = pickSupFala(sup);
-  if (fala && bubble) bubble.innerHTML = '<img src="' + fala + '" alt="">';
+  if (bubble) {
+    bubble.classList.add("support-speech");
+    bubble.classList.toggle("ana-scale", item.supporter === "ana-elisa");
+    bubble.innerHTML = fala ? '<img src="' + fala + '" alt="">' : "";
+  }
   if (item.audio_url) playAudio(item.audio_url);
   await sleep(400);
   await sleep(520);
-  spawnHit(action, side === "flavio" ? 1 : -1);
+  spawnHit(action, side === "flavio" ? 1 : -1, { pos: tgt === "lula" ? 84 : 16 });
   if (item.added_votes > 0) {
     voteFloat(side, "+" + item.added_votes + " VOTOS");
     const ap = $("lbScore");
@@ -1329,16 +1409,15 @@ async function processQueue() {
     resetPose("flavio");
     resetPose("lula");
   }
-  if (!att.isTest) updateCombo();
   setTimeout(() => { busy = false; flushPending(); pump(); }, 150);
 }
 
 async function runAttack(att) {
   const a = FIGHTERS[att.attacker];
   const def = opponent(att.attacker);
-  const dur = ACTION_DUR[att.action] || ACTION_DUR.punch;
   const dir = a.dir;
-  const move = att.action === "uppercut" ? 30 : (att.action === "kick" ? 46 : 34);
+  const intensity = Math.max(0, Math.min(2.4, Math.log10(1 + (Number(att.intensity) || 0)) * 0.5));
+  const scale = 1 + intensity;
 
   // Teste visual durante banner de vitória: esconde o banner apenas localmente.
   if (att.isTest && state.winner) {
@@ -1346,7 +1425,37 @@ async function runAttack(att) {
     if (banner) banner.classList.remove("show");
   }
 
-  setFighter(att.attacker, att.action);
+  const { level, steps } = buildSteps(att);
+  animateCombo(Math.max(1, Number(att.combo) || 1), level);
+  for (let i = 0; i < steps.length; i++) {
+    const pose = steps[i];
+    if (pose === "jump") { await doJump(att.attacker, dir); continue; }
+    await doHit(att, pose, def, dir, scale, i);
+  }
+  if (!state.winner) { resetPose(att.attacker); resetPose(def); }
+}
+
+async function doJump(char, dir) {
+  const el = $("fighter-" + char);
+  const wrap = $("wrap-" + char);
+  const d = ACTION_DUR.jump;
+  setFighter(char, "jump");
+  if (wrap) wrap.classList.add("attacking");
+  if (el) {
+    el.classList.add("attacking");
+    el.style.transition = `transform ${d.fwd}ms ease-out`;
+    el.style.transform = `translateX(${dir * 22}px) translateY(-30px) scale(1)`;
+  }
+  await sleep(d.fwd);
+  if (el) { el.style.transition = `transform ${d.back}ms ease-in`; el.style.transform = `translateX(${dir * 10}px) translateY(0) scale(1)`; }
+  await sleep(d.back);
+}
+
+async function doHit(att, pose, def, dir, scale, idx) {
+  const dur = ACTION_DUR[pose] || ACTION_DUR.punch;
+  const move = POSE_MOVE[pose] || 34;
+  if (idx === 0) say(att.attacker, pose === "uppercut" ? "uppercut" : "punch");
+  setFighter(att.attacker, pose);
   setFighter(def, getDefensePose(def, att));
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
@@ -1355,21 +1464,16 @@ async function runAttack(att) {
   if (atEl) {
     atEl.classList.add("attacking");
     atEl.style.transition = `transform ${dur.fwd}ms ease-out`;
-    const up = att.action === "uppercut" ? " translateY(-18px)" : " translateY(0)";
-    const sc = att.action === "kick" ? " scale(1.05)" : " scale(1)";
-    atEl.style.transform = `translateX(${dir * move}px)${up}${sc}`;
+    const up = pose === "uppercut" ? " translateY(-18px)" : (pose === "lowKick" ? " translateY(-4px)" : " translateY(0)");
+    const sc2 = pose === "kick" ? " scale(1.05)" : " scale(1)";
+    atEl.style.transform = `translateX(${dir * move}px)${up}${sc2}`;
   }
   if (deEl) { deEl.style.transition = `transform ${dur.fwd}ms ease-in`; deEl.style.transform = `translateX(${-dir * 14}px)`; }
   await sleep(dur.fwd);
   if (deEl) deEl.style.transform = `translateX(${-dir * 30}px)`;
-  spawnHit(att.action, dir);
-  if (att.combo > 0) { currentCombo = att.combo; updateCombo(); }
-  spawnCombo(att.attacker, att.combo || 1);
-  playAudio(att.audio_url);
+  spawnHit(pose, dir, { scale });
+  if (idx === 0 && att.audio_url) playAudio(att.audio_url);
   await sleep(dur.hold);
-  if (!state.winner) resetPose(att.attacker);
-  if (!state.winner) resetPose(def);
-  await sleep(dur.back);
 }
 
 // ---- WebSocket ----
@@ -1389,7 +1493,7 @@ function connectWS() {
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") {
       markInteraction();
-      enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", isTest: !!msg.isTest });
+      enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", intensity: msg.added_votes || 0, isTest: !!msg.isTest });
       if (!isTimedMode()) damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);

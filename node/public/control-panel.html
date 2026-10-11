@@ -984,6 +984,13 @@
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick')">Chute</button>
                   <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','uppercut')">Levantada</button>
                 </div>
+                <div class="duelo-row" style="margin-top:4px">
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','lowKick')">Chute baixo</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','pulo')">Pulo</button>
+                </div>
+                <div class="duelo-row" style="margin-top:4px">
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','kick',5)">Combo x5</button>
+                </div>
               </div>
               <div>
                 <div class="duelo-sub" style="margin-top:0">Lula</div>
@@ -991,6 +998,13 @@
                   <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','punch')">Soco</button>
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick')">Chute</button>
                   <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','uppercut')">Levantada</button>
+                </div>
+                <div class="duelo-row" style="margin-top:4px">
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','lowKick')">Chute baixo</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','pulo')">Pulo</button>
+                </div>
+                <div class="duelo-row" style="margin-top:4px">
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','kick',5)">Combo x5</button>
                 </div>
               </div>
               <div class="mode-timed-only">
@@ -1002,6 +1016,17 @@
                   <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
                 </div>
               </div>
+            </div>
+            <div class="duelo-row duelo-actions">
+              <span class="duelo-sub" style="margin:0">Combos: </span>
+              <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','kick',5)">x5</button>
+              <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','kick',5)">x5</button>
+              <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick',9)">x9</button>
+              <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick',9)">x9</button>
+              <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','kick',20)">x20</button>
+              <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','kick',20)">x20</button>
+              <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','kick',50)">x50</button>
+              <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','kick',50)">x50</button>
             </div>
             <div class="duelo-help">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
           </div>
@@ -4210,12 +4235,12 @@ async function dueloNewMatch() {
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 
-async function dueloTest(attacker, action) {
+async function dueloTest(attacker, action, combo) {
   try {
     await apiFetch("/api/duelo/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attacker, action }),
+      body: JSON.stringify({ attacker, action, combo: combo || 1 }),
     });
   } catch (e) { dueloMsg("Erro no teste: " + e.message); }
 }
