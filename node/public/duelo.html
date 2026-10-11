@@ -920,6 +920,20 @@ const hpMax = state.hp_max || 100;
   const hpNew = isHpNewMode();
   const hudF = document.querySelector(".hud-flavio");
   const hudL = document.querySelector(".hud-lula");
+  if (!state.active) {
+    if (hudF) hudF.style.display = "none";
+    if (hudL) hudL.style.display = "none";
+    const lbX = $("lbScore");
+    if (lbX) lbX.style.display = "none";
+    const hpX = $("hpScore");
+    if (hpX) hpX.classList.remove("show");
+    stopComboAnim();
+    const cb = $("combo");
+    if (cb) { cb.textContent = ""; cb.classList.remove("show"); }
+    const sbdX = $("sbDebates");
+    if (sbdX) sbdX.style.display = "none";
+    return;
+  }
   if (hudF) hudF.style.display = (timed || hpNew) ? "none" : "";
   if (hudL) hudL.style.display = (timed || hpNew) ? "none" : "";
   const sbd = $("sbDebates");
