@@ -53,26 +53,34 @@
   #tab-duelo .duelo-team--blue .duelo-team-title { color: #0D47FF; }
   #tab-duelo .duelo-team--red .duelo-team-title { color: #E61919; }
   #tab-duelo .duelo-extra-gift { height: var(--duelo-field-h); font-size: 13px; }
-  #tab-duelo .sup-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px dashed #ddd; font-size: 13px; }
-  #tab-duelo .sup-line:last-child { border-bottom: none; }
-  #tab-duelo .sup-lbl { font-weight: 800; min-width: 118px; font-size: 12px; }
-  #tab-duelo .sup-line .form-control { height: var(--duelo-field-h); font-size: 13px; }
-  #tab-duelo .duelo-gift-head, #tab-duelo .duelo-gift-line { display: grid; grid-template-columns: 1.3fr 88px 1.1fr 106px 28px 32px; gap: 8px; align-items: center; }
+  #tab-duelo .duelo-gift-head, #tab-duelo .duelo-gift-line { display: grid; grid-template-columns: minmax(150px, 1.6fr) 100px 120px 90px 130px 60px 42px; gap: 8px; align-items: center; }
   #tab-duelo .duelo-gift-head { padding: 2px 0; font-size: 11px; font-weight: 800; color: #666; letter-spacing: .03em; text-transform: uppercase; border-bottom: 2px solid #000; }
   #tab-duelo .duelo-gift-head span:last-child { visibility: hidden; }
-  #tab-duelo .duelo-gift-line { padding: 4px 0; border-bottom: 1px dashed #ddd; }
+  #tab-duelo .duelo-gift-line { padding: 5px 0; border-bottom: 1px dashed #ddd; }
   #tab-duelo .duelo-gift-line:last-child { border-bottom: none; }
   #tab-duelo .duelo-gift-line > * { min-width: 0; }
   #tab-duelo .duelo-gift-line .form-control, #tab-duelo .duelo-gift-line .form-select { height: 30px; font-size: 12px; }
-  #tab-duelo .duelo-gift-line .duelo-ac { max-height: 160px; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields .form-select { flex: 1; min-width: 0; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields input[type="number"] { width: 72px; flex: 0 0 72px; }
-  #tab-duelo .duelo-apoio-field { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: .03em; }
+  #tab-duelo .duelo-gift-line .duelo-act-cell, #tab-duelo .duelo-gift-line .duelo-val-cell { display: flex; align-items: center; min-width: 0; }
+  #tab-duelo .duelo-gift-line .duelo-act-cell .form-select { width: 100%; }
+  #tab-duelo .duelo-gift-line .duelo-val-cell input[type="number"] { width: 100%; min-width: 0; }
+  #tab-duelo .duelo-gift-line .duelo-val-cell .duelo-apoio-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .03em; }
+  #tab-duelo .duelo-audio-box input[type="file"] { width: 100%; font-size: 11px; padding: 4px; }
   #tab-duelo .duelo-gift-check { display: flex; justify-content: center; align-items: center; }
-  #tab-duelo .duelo-gift-x { height: 30px; width: 32px; padding: 0; font-size: 15px; line-height: 1; }
-  #tab-duelo .duelo-audio-box input[type="file"] { font-size: 11px; padding: 4px; }
-  @media (max-width: 1200px) { #tab-duelo .duelo-gift-head { display: none; } #tab-duelo .duelo-gift-line { grid-template-columns: 1fr 88px; row-gap: 6px; } }
+  #tab-duelo .duelo-gift-x { height: 30px; width: 38px; padding: 0; font-size: 15px; line-height: 1; }
+  #tab-duelo .duelo-apoio-field { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .03em; }
+  #tab-duelo .sup-line { display: grid; grid-template-columns: 118px minmax(120px, 1fr) 84px 124px 64px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px dashed #ddd; font-size: 12px; }
+  #tab-duelo .sup-line:last-child { border-bottom: none; }
+  #tab-duelo .sup-lbl { font-weight: 800; font-size: 12px; letter-spacing: .02em; text-transform: uppercase; }
+  #tab-duelo .sup-line .position-relative { min-width: 0; }
+  #tab-duelo .sup-line .form-control { height: 30px; font-size: 12px; }
+  #tab-duelo .sup-line .sup-audio { min-width: 0; }
+  #tab-duelo .sup-line input[type="file"] { width: 100%; font-size: 11px; padding: 4px; }
+  #tab-duelo .sup-line .duelo-check { justify-content: center; }
+  @media (max-width: 1400px) {
+    #tab-duelo .duelo-gift-head { display: none; }
+    #tab-duelo .duelo-gift-line { grid-template-columns: 1fr 100px 120px 90px; row-gap: 6px; }
+    #tab-duelo .duelo-gift-line .duelo-audio-box, #tab-duelo .duelo-gift-line .duelo-gift-check, #tab-duelo .duelo-gift-line .duelo-gift-x { grid-column: span 1; }
+  }
   #tab-duelo .dl-preview { position: relative; width: 100%; max-width: 200px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; user-select: none; }
   #tab-duelo .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 5px 7px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 8px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
   #tab-duelo .dl-block:active { cursor: grabbing; }
@@ -998,59 +1006,56 @@
           <!-- TESTES RÁPIDOS -->
           <div class="nb-card">
             <h2 class="duelo-section-title">Testes Rápidos</h2>
-            <div class="duelo-grid duelo-grid-3">
+            <div class="duelo-grid duelo-grid-2">
               <div>
-                <div class="duelo-sub" style="margin-top:0">Flávio</div>
+                <div class="duelo-sub" style="margin-top:0">Golpes — Flávio</div>
                 <div class="duelo-row">
                   <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','punch')">Soco</button>
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick')">Chute</button>
-                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','uppercut')">Levantada</button>
-                </div>
-                <div class="duelo-row" style="margin-top:4px">
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','lowKick')">Chute baixo</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','uppercut')">Levantada</button>
                   <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','pulo')">Pulo</button>
                 </div>
-                <div class="duelo-row" style="margin-top:4px">
-                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','kick',5)">Combo x5</button>
+                <div class="duelo-sub">Combos — Flávio</div>
+                <div class="duelo-row">
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','kick',1)">x1</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','kick',3)">x3</button>
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','kick',5)">x5</button>
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick',9)">x9</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','kick',20)">x20</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','kick',50)">x50</button>
                 </div>
               </div>
               <div>
-                <div class="duelo-sub" style="margin-top:0">Lula</div>
+                <div class="duelo-sub" style="margin-top:0">Golpes — Lula</div>
                 <div class="duelo-row">
                   <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','punch')">Soco</button>
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick')">Chute</button>
-                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','uppercut')">Levantada</button>
-                </div>
-                <div class="duelo-row" style="margin-top:4px">
                   <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','lowKick')">Chute baixo</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','uppercut')">Levantada</button>
                   <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','pulo')">Pulo</button>
                 </div>
-                <div class="duelo-row" style="margin-top:4px">
-                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','kick',5)">Combo x5</button>
-                </div>
-              </div>
-              <div class="mode-timed-only">
-                <div class="duelo-sub" style="margin-top:0">Apoios</div>
+                <div class="duelo-sub">Combos — Lula</div>
                 <div class="duelo-row">
-                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('nikolas')">Nikolas</button>
-                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('lucas-pavanato')">Pavanato</button>
-                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('ana-elisa')">Ana Elisa</button>
-                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','kick',1)">x1</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','kick',3)">x3</button>
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','kick',5)">x5</button>
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick',9)">x9</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','kick',20)">x20</button>
+                  <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','kick',50)">x50</button>
                 </div>
               </div>
             </div>
-            <div class="duelo-row duelo-actions">
-              <span class="duelo-sub" style="margin:0">Combos: </span>
-              <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','kick',5)">x5</button>
-              <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','kick',5)">x5</button>
-              <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick',9)">x9</button>
-              <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick',9)">x9</button>
-              <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','kick',20)">x20</button>
-              <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','kick',20)">x20</button>
-              <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('flavio','kick',50)">x50</button>
-              <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="dueloTest('lula','kick',50)">x50</button>
+            <div class="mode-timed-only duelo-actions" style="margin-top:4px">
+              <div class="duelo-sub" style="margin-top:0">Apoios (visual)</div>
+              <div class="duelo-row">
+                <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('nikolas')">Nikolas</button>
+                <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('lucas-pavanato')">Pavanato</button>
+                <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('ana-elisa')">Ana Elisa</button>
+                <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
+              </div>
             </div>
-            <div class="duelo-help">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
+            <div class="duelo-help" style="margin-top:6px">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
           </div>
 
           <!-- RODAPÉ -->
@@ -3545,13 +3550,13 @@ function supBlock(k) {
   const s = dueloSupporters[k] || {};
   return `<div class="sup-line">
       <label class="sup-lbl">${m.label}</label>
-      <div class="position-relative" style="flex:1;min-width:140px">
+      <div class="position-relative">
         <input type="text" class="form-control sup-name" data-sup="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
-        <div class="duelo-ac gift-ac" data-supac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:170px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+        <div class="duelo-ac gift-ac" data-supac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
-      <div class="mode-hp-only" style="flex:0 0 96px"><input type="number" class="form-control" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano (HP)"></div>
-      <div style="flex:0 0 130px"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
-      <label class="duelo-check mb-0" style="font-size:0.72rem"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
+      <div class="mode-hp-only"><input type="number" class="form-control" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano (HP)"></div>
+      <div class="sup-audio"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
+      <label class="duelo-check mb-0"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
     </div>`;
 }
 
@@ -3932,42 +3937,44 @@ function buildDueloRow(g_, i) {
   const row = document.createElement("div");
   row.className = "duelo-gift-line";
   row.innerHTML = `
-      <div class="position-relative duelo-name-box">
+      <div class="position-relative">
         <input type="text" class="form-control duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
-        <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+        <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
       <select class="form-select" data-f="type" data-i="${i}">
         <option value="golpe" ${type === 'golpe' ? 'selected' : ''}>Golpe</option>
         <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
         <option value="apoio" ${type === 'apoio' ? 'selected' : ''}>Apoio</option>
       </select>
-      <div class="duelo-value-fields">
-        <div class="duelo-golpe-fields" ${type === 'golpe' ? '' : 'style="display:none"'}>
-          <select class="form-select" data-f="action" data-i="${i}">
-            <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
-            <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
-            <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
-          </select>
-          <input type="number" class="form-control" value="${esc(g_.damage || '')}" placeholder="dano" data-f="damage" data-i="${i}">
-        </div>
-        <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
-          <input type="number" class="form-control" value="${esc(g_.shield || '')}" placeholder="+15" data-f="shield" data-i="${i}">
-        </div>
-        <div class="duelo-apoio-field text-secondary" style="display:${type === 'apoio' ? 'block' : 'none'}">Apoio</div>
+      <div class="duelo-act-cell">
+        <select class="form-select duelo-golpe-fields" data-f="action" data-i="${i}" ${type === 'golpe' ? '' : 'style="display:none"'}>
+          <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
+          <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
+          <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
+        </select>
+        <span class="duelo-act-empty" style="display:${type === 'golpe' ? 'none' : ''}">—</span>
+      </div>
+      <div class="duelo-val-cell">
+        <input type="number" class="form-control duelo-golpe-dano" value="${esc(g_.damage || '')}" placeholder="dano" data-f="damage" data-i="${i}" ${type === 'golpe' ? '' : 'style="display:none"'}>
+        <input type="number" class="form-control duelo-escudo-field" value="${esc(g_.shield || '')}" placeholder="+15" data-f="shield" data-i="${i}" ${type === 'escudo' ? '' : 'style="display:none"'}>
+        <div class="duelo-apoio-field" style="display:${type === 'apoio' ? '' : 'none'}">Apoio</div>
       </div>
       <div class="duelo-audio-box">
         <input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}" title="Áudio">
         <span class="duelo-help" style="display:block">${g_.audio ? esc(g_.audio) : ''}</span>
       </div>
-      <label class="duelo-check mb-0 duelo-gift-check"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}></label>
+      <label class="duelo-gift-check duelo-check mb-0"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}></label>
       <button class="duelo-btn duelo-btn--danger duelo-btn--small duelo-gift-x" onclick="removeDueloGift(${i})" title="Remover">×</button>`;
 
   row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
     const t = e.target.value;
     row.querySelector(".duelo-golpe-fields").style.display = t === "golpe" ? "" : "none";
+    row.querySelector(".duelo-golpe-dano").style.display = t === "golpe" ? "" : "none";
     row.querySelector(".duelo-escudo-field").style.display = t === "escudo" ? "" : "none";
-    const apEl = row.querySelector(".duelo-apoio-field");
-    if (apEl) apEl.style.display = t === "apoio" ? "block" : "none";
+    const ap = row.querySelector(".duelo-apoio-field");
+    if (ap) ap.style.display = t === "apoio" ? "" : "none";
+    const ae = row.querySelector(".duelo-act-empty");
+    if (ae) ae.style.display = t === "golpe" ? "none" : "";
   });
   const nameInput = row.querySelector('.duelo-name[data-name="' + i + '"]');
   const acEl = row.querySelector('.duelo-ac[data-ac="' + i + '"]');

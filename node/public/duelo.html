@@ -404,22 +404,26 @@ const FIGHTERS = {
 const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 }, lowKick: { fwd: 260, hold: 120, back: 180 }, jump: { fwd: 220, hold: 100, back: 180 } };
 const POSE_MOVE = { punch: 34, lowKick: 30, kick: 46, uppercut: 30 };
 const HIT_POS = { punch: { bottom: "22vh" }, kick: { bottom: "26vh" }, uppercut: { bottom: "22vh" }, lowKick: { bottom: "13vh" } };
-const COMBO_SEQUENCES = [
-  { level: "SIMPLES", min: 1, max: 3, pool: [["punch"], ["lowKick"], ["kick"]] },
-  { level: "CURTO", min: 4, max: 6, pool: [["punch", "lowKick"], ["lowKick", "punch"], ["punch", "kick"]] },
-  { level: "MÉDIO", min: 7, max: 9, pool: [["punch", "kick", "lowKick"], ["lowKick", "punch", "kick"], ["punch", "lowKick", "punch"]] },
-  { level: "SUPER", min: 10, max: 19, pool: [["punch", "lowKick", "kick", "punch"], ["kick", "punch", "lowKick", "uppercut"], ["lowKick", "punch", "kick", "punch"]] },
-  { level: "MASTER", min: 20, max: 49, pool: [["punch", "lowKick", "jump", "kick", "punch", "uppercut"], ["lowKick", "punch", "jump", "kick", "uppercut"], ["punch", "kick", "punch", "lowKick", "jump", "uppercut"]] },
-  { level: "ULTRA", min: 50, max: Infinity, pool: [["lowKick", "punch", "kick", "jump", "punch", "kick", "uppercut"], ["punch", "lowKick", "jump", "kick", "punch", "uppercut", "kick"], ["kick", "punch", "lowKick", "jump", "kick", "punch", "uppercut"]] },
-];
-function pickSequence(combo) {
-  const lvl = COMBO_SEQUENCES.find((l) => combo >= l.min && combo <= l.max) || COMBO_SEQUENCES[COMBO_SEQUENCES.length - 1];
-  const pool = lvl.pool;
-  return { level: lvl.level, steps: pool[Math.floor(Math.random() * pool.length)].slice() };
+function makeComboPool() {
+  return [
+    { level: "SIMPLES", min: 1, max: 3, pool: [["punch"], ["lowKick"], ["kick"]] },
+    { level: "CURTO", min: 4, max: 6, pool: [["punch", "lowKick"], ["lowKick", "punch"], ["punch", "kick"]] },
+    { level: "MÉDIO", min: 7, max: 9, pool: [["punch", "kick", "lowKick"], ["lowKick", "punch", "kick"], ["punch", "lowKick", "punch"]] },
+    { level: "SUPER", min: 10, max: 19, pool: [["punch", "lowKick", "kick", "punch"], ["kick", "punch", "lowKick", "uppercut"], ["lowKick", "punch", "kick", "punch"]] },
+    { level: "MASTER", min: 20, max: 49, pool: [["punch", "lowKick", "jump", "kick", "punch", "uppercut"], ["lowKick", "punch", "jump", "kick", "uppercut"], ["punch", "kick", "punch", "lowKick", "jump", "uppercut"]] },
+    { level: "ULTRA", min: 50, max: Infinity, pool: [["lowKick", "punch", "kick", "jump", "punch", "kick", "uppercut"], ["punch", "lowKick", "jump", "kick", "punch", "uppercut", "kick"], ["kick", "punch", "lowKick", "jump", "kick", "punch", "uppercut"]] },
+  ];
+}
+const COMBOS_FLAVIO = makeComboPool();
+const COMBOS_LULA = makeComboPool();
+function pickSequence(combo, char) {
+  const levels = (char === "lula" ? COMBOS_LULA : COMBOS_FLAVIO);
+  const lvl = levels.find((l) => combo >= l.min && combo <= l.max) || levels[levels.length - 1];
+  return { level: lvl.level, steps: lvl.pool[Math.floor(Math.random() * lvl.pool.length)].slice() };
 }
 function buildSteps(att) {
   if (att.isTest && att.combo <= 1 && att.action && typeof att.action === "string") return { level: "TESTE", steps: [att.action] };
-  return pickSequence(Math.max(1, Number(att.combo) || 1));
+  return pickSequence(Math.max(1, Number(att.combo) || 1), att.attacker);
 }
 function comboPoints(target) {
   if (target <= 12) { const p = []; for (let i = 1; i <= target; i++) p.push(i); return p; }
@@ -1456,7 +1460,6 @@ async function doHit(att, pose, def, dir, scale, idx) {
   const move = POSE_MOVE[pose] || 34;
   if (idx === 0) say(att.attacker, pose === "uppercut" ? "uppercut" : "punch");
   setFighter(att.attacker, pose);
-  setFighter(def, getDefensePose(def, att));
   const atEl = $("fighter-" + att.attacker);
   const deEl = $("fighter-" + def);
   const atWrap = $("wrap-" + att.attacker);
@@ -1468,10 +1471,22 @@ async function doHit(att, pose, def, dir, scale, idx) {
     const sc2 = pose === "kick" ? " scale(1.05)" : " scale(1)";
     atEl.style.transform = `translateX(${dir * move}px)${up}${sc2}`;
   }
-  if (deEl) { deEl.style.transition = `transform ${dur.fwd}ms ease-in`; deEl.style.transform = `translateX(${-dir * 14}px)`; }
+  if (deEl) { deEl.style.transition = `transform ${dur.fwd}ms ease-in`; deEl.style.transform = `translateX(${-dir * 12}px)`; }
   await sleep(dur.fwd);
-  if (deEl) deEl.style.transform = `translateX(${-dir * 30}px)`;
-  spawnHit(pose, dir, { scale });
+
+  const shouldDodge = pose === "lowKick" && !att.isTest && Math.random() < 0.3;
+  if (shouldDodge) {
+    // Esquiva: defensor pula por cima do chute baixo (sem impacto).
+    setFighter(def, "jump");
+    if (deEl) { deEl.style.transition = "transform 220ms ease-out"; deEl.style.transform = `translateX(${-dir * 10}px) translateY(-32px) scale(1)`; }
+    await sleep(230);
+    if (deEl) { deEl.style.transition = "transform 180ms ease-in"; deEl.style.transform = "translateX(0) translateY(0) scale(1)"; }
+    await sleep(190);
+  } else {
+    setFighter(def, getDefensePose(def, att));
+    if (deEl) { deEl.style.transition = "transform 140ms ease-out"; deEl.style.transform = `translateX(${-dir * 22}px)`; }
+    spawnHit(pose, dir, { scale });
+  }
   if (idx === 0 && att.audio_url) playAudio(att.audio_url);
   await sleep(dur.hold);
 }
