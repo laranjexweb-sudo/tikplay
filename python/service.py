@@ -609,6 +609,10 @@ class GameSession:
             metas = self.duelo.add_tap(uid, like_count)
             if metas:
                 emit(self.tenant_id, "log", f"[Duelo] META DE TAP! {metas} ataque(s) automático(s) disparado(s)")
+            if self.duelo.winner and not self.duelo.roundActive and not self.duelo.final:
+                delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
+                self._schedule_duelo_reset(delay)
+                emit(self.tenant_id, "log", f"[Duelo] KO por meta — nova batalha em {delay}s")
         except Exception as e:
             emit(self.tenant_id, "log", f"[Duelo] Erro ao processar TAP: {e}")
 
@@ -618,9 +622,9 @@ class GameSession:
         try:
             norm = strip_accents(raw or "").lower()
             words = set(re.findall(r"[a-z0-9]+", norm))
-            if "flavio" in words or "bolsonaro" in words or "22" in words:
+            if "flavio" in words or "bolsonaro" in words or "22" in words or "azul" in words:
                 side = "flavio"
-            elif "lula" in words or "13" in words:
+            elif "lula" in words or "13" in words or "vermelho" in words:
                 side = "lula"
             else:
                 return
@@ -1679,6 +1683,9 @@ class GameSession:
                         if self.duelo.time_remaining <= 0 and not self.duelo.winner and not self.duelo.final:
                             self.duelo._reset_timed_clock()
                         self._start_duelo_timer()
+                    if self._duelo_reset_task is not None and self.duelo.winner and not self.duelo.roundActive and not self.duelo.final:
+                        # Delay alterado durante o resultado: reagenda a próxima batalha com o novo tempo.
+                        self._schedule_duelo_reset(max(2, int(self.duelo.settings.get("reset_delay_s", 6) or 6)))
                     emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
             elif c == "duelo_reset_round":
                 self._cancel_duelo_match_restart()
