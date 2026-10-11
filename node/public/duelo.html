@@ -84,6 +84,22 @@
     letter-spacing: 1px;
     white-space: nowrap;
   }
+  .sb-debates {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 2px;
+    font-size: clamp(0.65rem, 1.6vh, 0.95rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .sb-debates-label { opacity: 0.85; }
+  .sb-debates-val.flavio { color: #5bc0ff; }
+  .sb-debates-val.lula { color: #ff6b6b; }
   .sb-bar { position: relative; flex: 1; height: clamp(14px, 2.1vh, 24px); background: rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; border: 2px solid #000; box-shadow: inset 0 2px 0 rgba(0,0,0,.4); }
   .sb-bar .seg { position: absolute; top: 0; bottom: 0; display: block; transition: width .4s ease; }
   .sb-bar .seg.flavio { left: 0; background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
@@ -313,6 +329,7 @@
       <span class="sb-val lula" id="htVsL">0%</span>
     </div>
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
+    <div class="sb-debates" id="sbDebates"><span class="sb-debates-label">VITÓRIAS</span><b class="sb-debates-val flavio" id="sbDebF">0</b><b class="sb-debates-val lula" id="sbDebL">0</b></div>
   </div>
 
   <div class="hud-flavio">
@@ -753,10 +770,20 @@ function renderHud() {
   const hpMax = state.hp_max || 100;
   const shMax = state.shield_max || 200;
   const timed = isTimedMode();
-  const hudF = document.querySelector(".hud-flavio");
+const hudF = document.querySelector(".hud-flavio");
   const hudL = document.querySelector(".hud-lula");
   if (hudF) hudF.style.display = timed ? "none" : "";
   if (hudL) hudL.style.display = timed ? "none" : "";
+  const sbd = $("sbDebates");
+  if (sbd) {
+    sbd.style.display = timed ? "flex" : "none";
+    if (timed) {
+      const df = $("sbDebF");
+      if (df) df.textContent = (state.debate_wins && state.debate_wins.flavio) || 0;
+      const dl = $("sbDebL");
+      if (dl) dl.textContent = (state.debate_wins && state.debate_wins.lula) || 0;
+    }
+  }
   for (const f of ["flavio", "lula"]) {
     const hpEl = $("hpbar-" + f);
     const shEl = $("shbar-" + f);
