@@ -1413,7 +1413,16 @@ const tapFaceCache = new Map();
 
   function burstTapFaces(side, userId, avatarUrl, delta) {
     if (!avatarUrl) { console.error("[FACE-RETURN] sem avatarURL"); return; }
-    const layer = $("#tapFaces" + (side === "lula" ? "R" : "L"));
+    let layer = $("#tapFaces" + (side === "lula" ? "R" : "L"));
+    if (!layer) {
+      try {
+        layer = document.createElement("div");
+        layer.className = "tap-faces " + (side === "lula" ? "right" : "left");
+        layer.id = side === "lula" ? "tapFacesR" : "tapFacesL";
+        const stage = $("stage");
+        if (stage) stage.appendChild(layer);
+      } catch (e) { console.error("[FACE-ERR] criar layer: " + e); }
+    }
     try { console.log("[FACE-LAYER]", side, !!layer, layer && layer.id, layer && JSON.stringify({ w: layer.clientWidth, h: layer.clientHeight, d: getComputedStyle(layer).display })); } catch (e) {}
     if (!layer) { console.error("[FACE-RETURN] layer null"); return; }
     if (tapFaceCount[side] >= TAP_FACE_MAX) { console.error("[FACE-RETURN] cap " + tapFaceCount[side] + "/" + TAP_FACE_MAX); return; }
