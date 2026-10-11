@@ -414,6 +414,9 @@
   .cpc-impact img { display: block; max-height: 11vh; width: auto; }
   .cpc-impact.show img { animation: cpcImpact .2s ease-out forwards; }
   @keyframes cpcImpact { 0% { transform: scale(.5); opacity: 0; } 30% { opacity: 1; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(.82); opacity: 0; } }
+  .cpc-burst { position: absolute; z-index: 25; pointer-events: none; opacity: 0; will-change: transform, opacity; }
+  .cpc-burst { animation: cpcBurst .2s ease-out forwards; }
+  @keyframes cpcBurst { 0% { transform: translate(-50%, -50%) scale(.5); opacity: 0; } 30% { opacity: 1; } 70% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(.8); opacity: 0; } }
   .cpc-logo { position: absolute; left: 0; top: 0; display: none; z-index: 24; pointer-events: none; }
   .cpc-logo.show { display: block; }
   .cpc-logo img { display: block; max-height: 15vh; max-width: 34vw; width: auto; transform-origin: center; }
@@ -1994,7 +1997,6 @@ async function runChuvaDePicanha(item) {
   const defX = defR ? defR.cx : sr.width * 0.3;
   const defPct = Math.max(6, Math.min(94, (defX / sr.width) * 100));
   const defTop = defR ? defR.top : sr.height * 0.5;
-  const zone = defX < casX ? { min: 0, max: Math.max(0, casX - 140) } : { min: Math.min(sr.width, casX + 140), max: sr.width };
   const shakeS = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
   const cloud = $("chuvaCloudWrap"), cloudImg = $("chuvaCloudImg");
   const rainBg = $("chuvaRainBg"), rainFg = $("chuvaRainFg");
@@ -2009,31 +2011,51 @@ async function runChuvaDePicanha(item) {
     if (!c) return;
     const el = document.createElement("img");
     el.src = CHUVA_FX.smalls[Math.floor(Math.random() * CHUVA_FX.smalls.length)];
-    let x = zone.min + Math.random() * Math.max(1, zone.max - zone.min);
-    if (Math.abs(x - casX) < 120) x = x < casX ? Math.max(0, casX - 130 - Math.random() * 70) : Math.min(sr.width, casX + 130 + Math.random() * 70);
-    x = Math.max(0, Math.min(x, sr.width - 30));
-    const h = fg ? (4.5 + Math.random() * 2.5) : (3.2 + Math.random() * 1.6);
-    const dur = (fg ? 520 : 440) + Math.random() * 300;
+    const sX = sr.width * (0.5 + (Math.random() * 0.26 - 0.13)); // centro da nuvem
+    const eX = defX + (Math.random() * 70 - 25);                 // em direção ao Bolsonaro (Flávio)
+    const sY = sr.height * (0.20 + Math.random() * 0.12);
+    const h = fg ? (5 + Math.random() * 2.6) : (3.4 + Math.random() * 1.6);
+    const dur = fg ? (330 + Math.random() * 200) : (400 + Math.random() * 160); // chuva forte e rápida
     const r0 = -35 + Math.random() * 70;
-    const r1 = r0 + 90 + Math.random() * 190;
-    el.style.left = x + "px";
-    el.style.top = (sr.height * 0.2) + "px";
+    const r1 = r0 + 120 + Math.random() * 200;
+    el.style.left = sX + "px";
+    el.style.top = sY + "px";
     el.style.height = h + "vh";
     el.style.transform = "rotate(" + r0 + "deg)";
     el.style.transition = "none";
     c.appendChild(el);
     void el.offsetWidth;
-    el.style.transition = "top " + dur + "ms linear, transform " + dur + "ms linear";
-    el.style.top = groundY + 10 + "px";
+    el.style.transition = "left " + dur + "ms ease-in, top " + dur + "ms linear, transform " + dur + "ms linear";
+    el.style.left = eX + "px";
+    el.style.top = groundY + 8 + "px";
     el.style.transform = "rotate(" + r1 + "deg)";
     setTimeout(() => { try { el.remove(); } catch (e) {} }, dur + 450);
   };
 
+  const chuvaBurst = (px, py, sc) => {
+    const b = document.createElement("img");
+    b.className = "cpc-burst";
+    b.src = CHUVA_FX.impact;
+    b.style.left = px + "px";
+    b.style.top = py + "px";
+    b.style.height = ((8 + Math.random() * 3) * (sc || 1)) + "vh";
+    stage.appendChild(b);
+    setTimeout(() => { try { b.remove(); } catch (e) {} }, 300);
+  };
+
   try {
-    // 0ms — pose de invocação + áudio UMA vez na ativação
+    // 0ms — pose de invocação + áudio UMA vez na ativação + logo ACIMA do Lula
     const imgL = $("img-lula");
     if (imgL) imgL.src = CHUVA_FX.pose;
     if (item.audio_url) playAudio(item.audio_url);
+    if (logo && logoImg) {
+      logoImg.src = CHUVA_FX.logo;
+      const lulaTop = casR ? casR.top : sr.height * 0.35;
+      logo.style.left = casX + "px";
+      logo.style.top = Math.max(4, lulaTop - 42) + "px";
+      logo.style.transform = "translateX(-50%)";
+      logo.classList.add("show");
+    }
     const lulaF = $("fighter-lula");
     if (lulaF) { lulaF.style.transition = "transform 140ms ease"; lulaF.style.transform = "translateY(-8px) scale(1.05)"; }
     await until(150);
@@ -2044,14 +2066,14 @@ async function runChuvaDePicanha(item) {
     if (cloud) { cloud.style.left = "50%"; cloud.style.top = "16%"; cloud.classList.add("show"); }
     await until(600);
 
-    // 600ms+ — chuva: fundo (3-4) + frente (4-6), só no território do defensor
-    const bgN = 2 + Math.floor(Math.random() * 2);
-    const fgN = 4 + Math.floor(Math.random() * 3);
+    // 560ms+ — chuva FORTE: muitas picanhas caindo do centro da nuvem em direção ao Bolsonaro
+    const bgN = 3 + Math.floor(Math.random() * 2);   // 3-4
+    const fgN = 7 + Math.floor(Math.random() * 4);   // 7-10
     const plan = [];
-    let tt = 600;
-    for (let i = 0; i < bgN + fgN; i++) { plan.push(tt); tt += 45 + Math.random() * 65; }
+    let tt = 560;
+    for (let i = 0; i < bgN + fgN; i++) { plan.push(tt); tt += 40 + Math.random() * 55; }
     for (let i = 0; i < plan.length; i++) {
-      if (plan[i] > 1240) break;
+      if (plan[i] > 1380) break;
       await until(plan[i]);
       spawnPi(i >= bgN);
     }
@@ -2083,21 +2105,19 @@ async function runChuvaDePicanha(item) {
     say(tgt, "hit");
     if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
     if (isHpNewMode() && Number(item.damage) > 0) voteFloat("lula", "+" + Number(item.damage) + " ATAQUE", "atk");
+    // impacto.png em PELO MENOS 3 locais diferentes no Flávio (cabeça/tronco/perna)
+    const defFull = cr("fighter-" + tgt);
+    if (defFull) {
+      const dh = defFull.bottom - defFull.top;
+      chuvaBurst(defX + 8, defFull.top + dh * 0.12, 0.9);
+      await sleep(90);
+      chuvaBurst(defX - 10, defFull.top + dh * 0.44, 1.05);
+      await sleep(90);
+      chuvaBurst(defX + 4, defFull.top + dh * 0.82, 0.9);
+    }
     await sleep(70);
     main.style.transition = "opacity .18s ease";
     main.style.opacity = 0;
-
-    // 1700ms — logo.png real, abaixo do HUD, entre o topo do lutador e o fim do placar
-    if (logoImg) {
-      logoImg.src = CHUVA_FX.logo;
-      const hud = document.querySelector(".lb-score, .hp-score");
-      const hudBottom = hud ? Math.max(hud.getBoundingClientRect().bottom - sr.top + 6, 6) : 40;
-      const logoTop = Math.max(6, hudBottom + Math.max(8, (defTop - hudBottom) * 0.35));
-      logo.style.left = ((casX + defX) / 2) + "px";
-      logo.style.top = Math.min(logoTop, sr.height * 0.5) + "px";
-      logo.style.transform = "translateX(-50%)";
-      logo.classList.add("show");
-    }
 
     // 2300ms nuvem some; 2450ms limpeza total
     await until(2300);
