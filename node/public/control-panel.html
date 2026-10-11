@@ -9,6 +9,10 @@
   body { background: #fdfaf3; margin: 0; min-height: 100vh; overflow-y: auto; font-family: var(--bs-body-font-family); }
   #tab-duelo[data-game-mode="hp"] .mode-timed-only { display: none !important; }
   #tab-duelo[data-game-mode="timed"] .mode-hp-only { display: none !important; }
+  #tab-duelo[data-game-mode="hp"] .mode-gift-only { display: none !important; }
+  #tab-duelo[data-game-mode="timed"] .mode-dano { display: none !important; }
+  #tab-duelo .mode-hpnew-only { display: none; }
+  #tab-duelo[data-game-mode="hp_new"] .mode-hpnew-only { display: grid; }
   #tab-duelo .nb-card { padding: 10px 14px; margin-bottom: 8px; }
   #tab-duelo .duelo-sec summary { cursor: pointer; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; padding: 5px 2px 9px; user-select: none; }
   #tab-duelo .duelo-sec summary::-webkit-details-marker { display: none; }
@@ -885,6 +889,7 @@
                 <select id="dueloModeGame" onchange="dueloModeChanged()">
                   <option value="hp">Debate por HP</option>
                   <option value="timed">Debate por Tempo</option>
+                  <option value="hp_new">Batalha (HP Novo)</option>
                 </select>
               </div>
             </div>
@@ -898,6 +903,12 @@
               <div class="duelo-field"><label class="duelo-field-label">Dano Soco</label><input type="number" id="dueloDmgPunch" value="10" min="1"></div>
               <div class="duelo-field"><label class="duelo-field-label">Dano Chute</label><input type="number" id="dueloDmgKick" value="15" min="1"></div>
               <div class="duelo-field"><label class="duelo-field-label">Dano Levantada</label><input type="number" id="dueloDmgUppercut" value="20" min="1"></div>
+            </div>
+            <div class="duelo-grid duelo-grid-3 mode-hpnew-only">
+              <div class="duelo-field"><label class="duelo-field-label">Vida da batalha</label><input type="number" id="dueloHpNew" value="10000" min="1"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Multiplicador de dano</label><input type="number" id="dueloDmgMult" value="1" step="0.1" min="0.1" max="100"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Meta de TAP</label><input type="number" id="dueloTapTarget" value="500" min="10" max="10000" onchange="dueloQuickSave()"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Dano da meta</label><input type="number" id="dueloTapDamage" value="100" min="1" max="10000" onchange="dueloQuickSave()"></div>
             </div>
             <div class="duelo-grid duelo-grid-3 mode-timed-only" id="dueloTimedFields">
               <div class="duelo-field"><label class="duelo-field-label">Tempo da rodada (s)</label><input type="number" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
@@ -951,7 +962,7 @@
             <div class="duelo-teams-grid">
               <div class="duelo-team duelo-team--blue">
                 <div class="duelo-team-title">Flávio</div>
-                <div class="mode-timed-only">
+                <div class="mode-gift-only">
                   <div class="duelo-sub">Principal</div>
                   <div style="position:relative"><input type="text" class="form-control duelo-main" id="dueloMainFName" data-main="f" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
                   <div class="duelo-ac gift-ac" data-mainac="f" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
@@ -973,7 +984,7 @@
               </div>
               <div class="duelo-team duelo-team--red">
                 <div class="duelo-team-title">Lula</div>
-                <div class="mode-timed-only">
+                <div class="mode-gift-only">
                   <div class="duelo-sub">Principal</div>
                   <div style="position:relative"><input type="text" class="form-control duelo-main" id="dueloMainLName" data-main="l" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
                   <div class="duelo-ac gift-ac" data-mainac="l" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
@@ -3421,6 +3432,10 @@ async function loadDueloState() {
       dueloGameMode = data.settings.game_mode === "timed" ? "timed" : "hp";
       dueloRoundTime = data.settings.round_time_s != null ? data.settings.round_time_s : 180;
       dueloResultDelay = data.settings.round_result_delay_s != null ? data.settings.round_result_delay_s : 8;
+      dueloHpNew = data.settings.hp_start != null ? data.settings.hp_start : 10000;
+      dueloDmgMult = data.settings.damage_multiplier != null ? data.settings.damage_multiplier : 1;
+      dueloTapTarget = data.settings.tap_target != null ? data.settings.tap_target : 500;
+      dueloTapDamage = data.settings.tap_damage != null ? data.settings.tap_damage : 100;
       const mg = data.settings.main_gifts || {};
       dueloMainFlavio = { gift_name: String(mg.flavio && mg.flavio.gift_name || "").trim() };
       dueloMainLula = { gift_name: String(mg.lula && mg.lula.gift_name || "").trim() };
@@ -3473,6 +3488,10 @@ function renderDueloSettings() {
   if (mg) mg.value = dueloGameMode;
   set("dueloRoundTime", dueloRoundTime);
   set("dueloResultDelay", dueloResultDelay);
+  set("dueloHpNew", dueloHpNew);
+  set("dueloDmgMult", dueloDmgMult);
+  set("dueloTapTarget", dueloTapTarget);
+  set("dueloTapDamage", dueloTapDamage);
   const mfn = document.getElementById("dueloMainFName");
   if (mfn) mfn.value = dueloMainFlavio.gift_name;
   const mln = document.getElementById("dueloMainLName");
@@ -3559,7 +3578,7 @@ function supBlock(k) {
         <input type="text" class="form-control sup-name" data-sup="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
         <div class="duelo-ac gift-ac" data-supac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
-      <div class="mode-hp-only"><input type="number" class="form-control" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano (HP)"></div>
+      <div class="mode-dano"><input type="number" class="form-control" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano (HP)"></div>
       <div class="sup-audio"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
       <label class="duelo-check mb-0"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
     </div>`;
@@ -3642,7 +3661,8 @@ async function uploadDueloSupportAudio(k, input) {
 }
 
 function dueloModeChanged() {
-  dueloGameMode = (document.getElementById("dueloModeGame") || {}).value === "timed" ? "timed" : "hp";
+  const v = (document.getElementById("dueloModeGame") || {}).value;
+  dueloGameMode = (v === "timed" || v === "hp_new") ? v : "hp";
   updateModeVisibility();
   renderSupporterFields();
   dueloQuickSave();
@@ -3658,7 +3678,7 @@ function updateModeVisibility() {
       : "Presente que invoca um apoio, aplica o dano configurado e soma votos. Lado definido por apoio: Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.";
   }
   const ml = document.getElementById("dueloModeLbl");
-  if (ml) ml.textContent = dueloGameMode === "timed" ? "Debate por Tempo" : "Debate por HP";
+  if (ml) ml.textContent = { hp: "Debate por HP", timed: "Debate por Tempo", hp_new: "Batalha (HP Novo)" }[dueloGameMode] || "Debate por HP";
   const sl = document.getElementById("dueloSceneLbl");
   if (sl) {
     const scLbls = { brasilia: "Brasília", "sao-paulo": "São Paulo", "rio-de-janeiro": "Rio de Janeiro", salvador: "Salvador", tribunal: "STF" };
@@ -3793,7 +3813,7 @@ function dueloSupportersClean() {
 function readDueloSettings() {
   const n = (id) => parseInt(document.getElementById(id) ? document.getElementById(id).value : "0", 10);
   const num = (id, fb) => { const x = n(id); return Number.isFinite(x) ? x : fb; };
-  const vida = Math.max(1, num("dueloHpRound", 100));
+  const vida = dueloGameMode === "hp_new" ? Math.max(1, num("dueloHpNew", 10000)) : Math.max(1, num("dueloHpRound", 100));
   const shMax = Math.max(0, num("dueloShieldMax", 200));
   const shStart = Math.min(Math.max(0, num("dueloShieldStart", 100)), shMax);
   return {
@@ -3825,6 +3845,9 @@ function readDueloSettings() {
     game_mode: document.getElementById("dueloModeGame") ? document.getElementById("dueloModeGame").value : dueloGameMode,
     round_time_s: num("dueloRoundTime", 180),
     round_result_delay_s: num("dueloResultDelay", 8),
+    damage_multiplier: Math.max(0.1, Math.min(100, parseFloat((document.getElementById("dueloDmgMult") || {}).value || "1") || 1)),
+    tap_target: num("dueloTapTarget", 500),
+    tap_damage: num("dueloTapDamage", 100),
     main_gifts: {
       flavio: { gift_name: (document.getElementById("dueloMainFName") || {}).value || "" },
       lula: { gift_name: (document.getElementById("dueloMainLName") || {}).value || "" },
@@ -4055,6 +4078,10 @@ let dueloMatchRestart = 8;
 let dueloGameMode = "hp";
 let dueloRoundTime = 180;
 let dueloResultDelay = 8;
+let dueloHpNew = 10000;
+let dueloDmgMult = 1;
+let dueloTapTarget = 500;
+let dueloTapDamage = 100;
 let dueloMainFlavio = { gift_name: "" };
 let dueloMainLula = { gift_name: "" };
 let dueloExtras = { flavio: [], lula: [] };
