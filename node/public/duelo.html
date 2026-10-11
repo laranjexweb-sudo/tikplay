@@ -390,8 +390,8 @@
   .jacare-bubble { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 26; }
   .jacare-bubble.show { display: block; }
   .jacare-bubble img { display: block; max-height: 16vh; max-width: 34vw; width: auto; transform-origin: bottom center; }
-  .jacare-bubble.show img { animation: bubbleRise .7s cubic-bezier(.2,.8,.3,1) forwards; }
-  @keyframes bubbleRise { 0% { transform: translate(-50%, 14px) scale(.4); opacity: 0; } 20% { transform: translate(-50%, 0) scale(1.12); opacity: 1; } 45% { transform: translate(-50%, -20px) scale(1); opacity: 1; } 100% { transform: translate(-50%, -52px) scale(1); opacity: 0; } }
+  .jacare-bubble.show img { animation: bubbleHold .8s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes bubbleHold { 0% { transform: translate(-50%, 18px) scale(.45); opacity: 0; } 14% { transform: translate(-50%, 0) scale(1.14); opacity: 1; } 30% { transform: translate(-50%, 10px) scale(1); opacity: 1; } 100% { transform: translate(-50%, 10px) scale(1); opacity: 1; } }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -1872,6 +1872,7 @@ async function runJacareSpecial(item) {
   smoke.style.opacity = 1;
   fxImg("fumaca-branca.png", 0.9, 50);
   shake();
+  logoOn(); // balão "VIROU JACARÉ" sobe acima do personagem e fica até a saída
   if (item.audio_url) playAudio(item.audio_url);
   await sleep(300); // transformação
 
@@ -1892,7 +1893,6 @@ async function runJacareSpecial(item) {
   await sleep(130);
   spawnHit("kick", dir, { pos: tgt === "lula" ? 84 : 16, scale: 0.5 });
   fxImg("fx-explosion.png", 1, (tgt === "lula" ? 84 : 16));
-  logoOn();
   const te = $("fighter-" + tgt);
   if (te && !state.winner) { te.style.transition = "transform 160ms ease-out"; te.style.transform = "translateX(" + (-dir * 22) + "px)"; }
   if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
@@ -1900,11 +1900,13 @@ async function runJacareSpecial(item) {
   await sleep(220);
 
   fxImg("fx-explosion.png", 0, 50);
-  if (logo) logo.classList.remove("show");
   await sleep(150);
+  // balão sobe junto com a saída do jacaré da cena
+  if (logo) { logo.style.transition = "opacity .3s ease"; logo.style.opacity = 0; }
   wrap.style.transition = "opacity .25s ease";
   wrap.style.opacity = 0;
   await sleep(250);
+  if (logo) { logo.classList.remove("show"); logo.style.opacity = ""; logo.style.transition = ""; logo.innerHTML = ""; }
 
   wrap.className = "jacare";
   wrap.style.opacity = 1;
