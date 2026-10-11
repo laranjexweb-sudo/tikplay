@@ -344,15 +344,32 @@ class DueloEngine:
             return None
         combo = max(1, int(combo or 1))
 
-        # 0) Presente extra (vote_only): prioridade sobre apoio/principal.
+        # 0) Presente extra: soma votos + golpe visual do personagem (SEM apoio/defesa/dano).
         #    Um gift explicitamente cadastrado como extra NÃO pode invocar apoiador.
         ex = self._extra_gift_side(gift_id, gift_name)
         if ex:
             side, _item = ex
             added = int(coins or 0) * combo
             self._emit_vote(side, added, int(coins or 0), combo, user, nickname)
+            action = self._combo_action(combo)
+            self._emit("duelo_attack", {
+                "attacker": side,
+                "defender": "lula" if side == "flavio" else "flavio",
+                "action": action,
+                "combo": combo,
+                "base_damage": 0,
+                "damage": 0,
+                "absorbed": 0,
+                "hp_damage": 0,
+                "added_votes": added,
+                "mode": "timed",
+                "audio_url": "",
+                "gift": str(gift_name or ""),
+                "user": user or "",
+                "nickname": nickname or user or "",
+            })
             self._emit("duelo_state", self.state())
-            return "vote_only"
+            return "attack"
 
         # 1) Apoiador especial: votos + animação, SEM dano.
         sup = self._resolve_supporter(gift_id, gift_name)
