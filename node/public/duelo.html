@@ -2065,11 +2065,13 @@ async function runChuvaDePicanha(item) {
       const lulaT = casR ? casR.top : sr.height * 0.35;
       const defT = defR ? defR.top : lulaT;
       const headTop = Math.min(lulaT, defT);
-      logo.style.left = ((casX + defX) / 2) + "px"; // centro da ação
-      logo.style.top = Math.max(6, Math.min(headTop - 70, sr.height * 0.5)) + "px"; // acima das cabeças, longe do rosto
+      const logoX = ((casX + defX) / 2) + (casX - defX) * 0.28; // mais à direita, em direção ao Lula
+      logo.style.left = logoX + "px";
+      logo.style.top = Math.max(6, Math.min(headTop - 112, sr.height * 0.46)) + "px"; // mais acima do Lula
       logo.style.transform = "translateX(-50%)";
       logo.classList.add("show");
     }
+    setFighter(tgt, "defense"); // Flávio segura a defesa (sem escudo) durante a chuva
     const lulaF = $("fighter-lula");
     if (lulaF) { lulaF.style.transition = "transform 140ms ease"; lulaF.style.transform = "translateY(-8px) scale(1.05)"; }
     await until(150);
@@ -2143,6 +2145,7 @@ async function runChuvaDePicanha(item) {
     await until(2450);
   } finally {
     if (deEl && !state.winner) { deEl.style.transition = "transform .3s ease"; deEl.style.transform = "translateX(0)"; }
+    resetPose(tgt);
     resetPose("lula");
     hideChuva();
   }
