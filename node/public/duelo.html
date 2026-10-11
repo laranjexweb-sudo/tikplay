@@ -340,6 +340,7 @@
   .vote-float.lula { color: #ff6b6b; }
   .vote-float.sh { color: #7fd7ff; text-shadow: 0 0 10px rgba(91,192,255,0.9), 0 0 3px #000; }
   .vote-float.combo { color: #fff; background: rgba(0,0,0,0.6); border: 2px solid #ffd200; border-radius: 12px; padding: 2px 12px; }
+  .vote-float.atk { color: #ffd200; background: rgba(0,0,0,0.6); border: 2px solid #ffd200; border-radius: 12px; padding: 2px 10px; text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,210,0,.5); }
   .vote-float.dmg { color: #ff4d4d; text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,60,60,0.45); }
   @keyframes voteUp { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-72px) scale(1.08); } }
 
@@ -1660,7 +1661,7 @@ function connectWS() {
     else if (msg.type === "duelo_attack") {
       markInteraction();
       enqueueAttack({ attacker: msg.attacker, action: msg.action, combo: msg.combo || 1, audio_url: msg.audio_url || "", intensity: msg.added_votes || 0, isTest: !!msg.isTest });
-      if (isHpNewMode() && Number(msg.damage) > 0) voteFloat(msg.attacker || opponent(msg.defender), "+" + Number(msg.damage) + " ATAQUE");
+      if (isHpNewMode() && Number(msg.combo) > 1 && Number(msg.damage) > 0) voteFloat(msg.attacker || opponent(msg.defender), "+" + Number(msg.damage) + " ATAQUE", "atk");
       if (!isTimedMode()) damageFloat(msg.defender || opponent(msg.attacker), msg.hp_damage || 0, msg.absorbed || 0);
       say(msg.attacker, msg.action || "punch");
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
