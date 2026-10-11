@@ -84,18 +84,24 @@
     gap: 14px;
   }
   .hp-score.show { display: flex; }
-  .hp-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .hp-col.lula { align-items: flex-end; text-align: right; }
-  .hp-lbl { font: 800 clamp(0.6rem, 1.5vh, 0.85rem)/1 "Roboto Condensed", Arial, sans-serif; letter-spacing: 2px; color: #c9d7f0; }
-  .hp-col.lula .hp-lbl { color: #ff9a8a; }
-  .hp-bar { position: relative; height: clamp(10px, 1.9vh, 18px); width: 100%; background: rgba(255,255,255,0.1); border: 2px solid #000; border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 0 rgba(0,0,0,0.4); }
-  .hp-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; transition: width .4s ease; }
-  .hp-col.flavio .hp-bar i { background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
-  .hp-col.lula .hp-bar i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
-  .hp-val { font: 900 clamp(0.85rem, 2.2vh, 1.25rem)/1 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
-  .hp-tap { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 3px; font: 800 clamp(0.62rem, 1.6vh, 0.9rem)/1.15 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
-  .hp-tap .f { color: #5bc0ff; }
-  .hp-tap .l { color: #ff6b6b; }
+  .hp-score { flex-direction: row; }
+  .hp-win { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: clamp(24px, 4vh, 40px); padding: 2px 6px; font: 900 clamp(0.85rem, 2.4vh, 1.3rem)/1 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; border: 2px solid #000; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+  .hp-win.f { background: #1f6feb; }
+  .hp-win.l { background: #c0392b; }
+  .hp-side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+  .hp-side.l { order: 4; }
+  .hp-x { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; font: 900 clamp(1rem, 3vh, 1.6rem)/1 "Roboto Condensed", Arial, sans-serif; color: #f0c84a; text-shadow: 2px 2px 0 #000; padding: 0 6px; order: 3; }
+  .hp-win.f { order: 1; align-self: center; }
+  .hp-side.f { order: 2; }
+  .hp-win.l { order: 5; align-self: center; }
+  .hp-bar { position: relative; height: clamp(16px, 3vh, 26px); width: 100%; background: rgba(255,255,255,0.1); border: 2px solid #000; border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 0 rgba(0,0,0,0.4); }
+  .hp-bar i { position: absolute; top: 0; bottom: 0; display: block; transition: width .4s ease; }
+  #hpScoreBarF { right: 0; background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
+  #hpScoreBarL { left: 0; background: linear-gradient(90deg, #c0392b, #ff6b6b); }
+  .hp-val-in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 900 clamp(0.7rem, 1.8vh, 1.05rem)/1 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000, 0 0 6px rgba(0,0,0,.8); }
+  .hp-tap { font: 800 clamp(0.6rem, 1.6vh, 0.9rem)/1 "Roboto Condensed", Arial, sans-serif; text-shadow: 1px 1px 0 #000; letter-spacing: 1px; }
+  .hp-tap.f { color: #9fd7ff; text-align: left; padding-left: 2px; }
+  .hp-tap.l { color: #ffb3a8; text-align: right; padding-right: 2px; }
   .sb-row { display: flex; align-items: center; gap: 12px; }
   .sb-val {
     font-weight: 900;
@@ -375,20 +381,17 @@
     <div class="sb-debates" id="sbDebates"><span class="sb-debates-label">VITÓRIAS</span><b class="sb-debates-val flavio" id="sbDebF">0</b><b class="sb-debates-val lula" id="sbDebL">0</b></div>
   </div>
   <div class="hp-score" id="hpScore">
-    <div class="hp-col flavio">
-      <div class="hp-lbl">FLÁVIO</div>
-      <div class="hp-bar"><i id="hpScoreBarF" style="width:100%"></i></div>
-      <div class="hp-val" id="hpScoreValF">0/100</div>
+    <span class="hp-win f" id="hpWinF">0</span>
+    <div class="hp-side f">
+      <div class="hp-bar"><i id="hpScoreBarF" style="width:100%"></i><span class="hp-val-in" id="hpScoreValF">0</span></div>
+      <div class="hp-tap f" id="hpTapF">TAP: 0/0</div>
     </div>
-    <div class="hp-tap">
-      <span class="f" id="hpTapF">TAP 0/0</span>
-      <span class="l" id="hpTapL">TAP 0/0</span>
+    <span class="hp-x">x</span>
+    <div class="hp-side l">
+      <div class="hp-bar"><i id="hpScoreBarL" style="width:100%"></i><span class="hp-val-in" id="hpScoreValL">0</span></div>
+      <div class="hp-tap l" id="hpTapL">TAP: 0/0</div>
     </div>
-    <div class="hp-col lula">
-      <div class="hp-lbl">LULA</div>
-      <div class="hp-bar"><i id="hpScoreBarL" style="width:100%"></i></div>
-      <div class="hp-val" id="hpScoreValL">0/100</div>
-    </div>
+    <span class="hp-win l" id="hpWinL">0</span>
   </div>
   <div class="combo-counter" id="combo"></div>
 
@@ -934,18 +937,24 @@ const hpMax = state.hp_max || 100;
       const tapT = state.tap_target || 1;
       const bf = $("hpScoreBarF"), bl = $("hpScoreBarL");
       const vf = $("hpScoreValF"), vl = $("hpScoreValL");
+      const wf = $("hpWinF"), wl = $("hpWinL");
       const tf = $("hpTapF"), tl = $("hpTapL");
-      if (bf) bf.style.width = pctBar(state.hp && state.hp.flavio, hpMax) + "%";
-      if (bl) bl.style.width = pctBar(state.hp && state.hp.lula, hpMax) + "%";
-      if (vf) vf.textContent = ((state.hp && state.hp.flavio) || 0) + "/" + hpMax;
-      if (vl) vl.textContent = ((state.hp && state.hp.lula) || 0) + "/" + hpMax;
-      if (tf) tf.textContent = "TAP " + ((state.taps && state.taps.flavio) || 0) + "/" + tapT;
-      if (tl) tl.textContent = "TAP " + ((state.taps && state.taps.lula) || 0) + "/" + tapT;
+      const hpf = (state.hp && state.hp.flavio) || 0, hpl = (state.hp && state.hp.lula) || 0;
+      if (bf) bf.style.width = pctBar(hpf, hpMax) + "%";
+      if (bl) bl.style.width = pctBar(hpl, hpMax) + "%";
+      if (vf) vf.textContent = hpf;
+      if (vl) vl.textContent = hpl;
+      if (wf) wf.textContent = (state.debate_wins && state.debate_wins.flavio) || 0;
+      if (wl) wl.textContent = (state.debate_wins && state.debate_wins.lula) || 0;
+      if (tf) tf.textContent = "TAP: " + ((state.taps && state.taps.flavio) || 0) + "/" + tapT;
+      if (tl) tl.textContent = "TAP: " + ((state.taps && state.taps.lula) || 0) + "/" + tapT;
     }
   }
   for (const f of ["flavio", "lula"]) {
     const hdl = document.querySelector(".hud-" + f + " .hdl");
     if (hdl) hdl.textContent = hpNew ? "VITÓRIAS" : "DEBATES";
+    const debRow = document.querySelector(".hud-" + f + " .hud-debates");
+    if (debRow) debRow.style.display = hpNew ? "none" : "";
     const hpM = document.querySelector(".hud-" + f + " .hud-metric:not(.sh)");
     const shM = document.querySelector(".hud-" + f + " .hud-metric.sh");
     if (hpM) hpM.style.display = (timed || hpNew) ? "none" : "";
