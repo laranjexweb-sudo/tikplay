@@ -392,6 +392,33 @@
   .jacare-bubble img { display: block; max-height: 16vh; max-width: 34vw; width: auto; transform-origin: bottom center; }
   .jacare-bubble.show img { animation: bubbleHold .8s cubic-bezier(.2,.8,.3,1) forwards; }
   @keyframes bubbleHold { 0% { transform: translate(-50%, 18px) scale(.45); opacity: 0; } 14% { transform: translate(-50%, 0) scale(1.14); opacity: 1; } 30% { transform: translate(-50%, 10px) scale(1); opacity: 1; } 100% { transform: translate(-50%, 10px) scale(1); opacity: 1; } }
+
+  /* ---- Chuva de Picanha (Lula) ---- */
+  .cpc-cloud { position: absolute; left: 0; top: 2%; transform: translateX(-50%); z-index: 6; display: none; pointer-events: none; }
+  .cpc-cloud.show { display: block; }
+  .cpc-cloud img { display: block; max-height: 24vh; max-width: 26vw; width: auto; }
+  .cpc-cloud.show img { animation: cpcCloudIn .28s ease-out forwards; }
+  @keyframes cpcCloudIn { 0% { transform: translateY(-20px) scale(.75); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+  .cpc-rain { position: absolute; inset: 0; pointer-events: none; z-index: 8; overflow: hidden; }
+  .cpc-rain.fg { z-index: 20; }
+  .cpc-rain img { position: absolute; top: -80px; width: auto; will-change: transform, top, opacity; }
+  .cpc-main { position: absolute; top: -90px; left: 0; display: none; z-index: 22; pointer-events: none; width: auto; max-height: 12vh; will-change: transform, top, opacity; }
+  .cpc-main.show { display: block; }
+  .cpc-dust { position: absolute; left: 0; bottom: 0; transform: translateX(-50%); z-index: 23; display: none; pointer-events: none; }
+  .cpc-dust.show { display: block; }
+  .cpc-dust img { display: block; max-height: 12vh; max-width: 24vw; width: auto; }
+  .cpc-dust.show img { animation: cpcDust .32s ease-out forwards; }
+  @keyframes cpcDust { 0% { transform: scaleX(.7) scaleY(.8); opacity: 0; } 18% { opacity: 1; } 45% { transform: scaleX(1.06) scaleY(.92); opacity: .9; } 100% { transform: scaleX(1.1) scaleY(1); opacity: 0; } }
+  .cpc-impact { position: absolute; left: 0; bottom: 0; transform: translate(-50%, -50%); z-index: 25; display: none; pointer-events: none; }
+  .cpc-impact.show { display: block; }
+  .cpc-impact img { display: block; max-height: 11vh; width: auto; }
+  .cpc-impact.show img { animation: cpcImpact .2s ease-out forwards; }
+  @keyframes cpcImpact { 0% { transform: scale(.5); opacity: 0; } 30% { opacity: 1; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(.82); opacity: 0; } }
+  .cpc-logo { position: absolute; left: 0; top: 0; display: none; z-index: 24; pointer-events: none; }
+  .cpc-logo.show { display: block; }
+  .cpc-logo img { display: block; max-height: 15vh; max-width: 34vw; width: auto; transform-origin: center; }
+  .cpc-logo.show img { animation: cpcLogo .7s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes cpcLogo { 0% { transform: scale(.65) rotate(-3deg); opacity: 0; } 20% { transform: scale(1.1) rotate(0deg); opacity: 1; } 32% { transform: scale(1) rotate(0deg); opacity: 1; } 78% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(.9) rotate(0deg); opacity: 0; } }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -531,6 +558,13 @@
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
   <div id="jacareWrap" class="jacare"><div class="jacare-smoke" id="jacareSmoke"></div><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div></div><div class="jacare-bubble" id="jacareLogo"></div>
+  <div class="cpc-cloud" id="chuvaCloudWrap"><img id="chuvaCloudImg" alt=""></div>
+  <div class="cpc-rain" id="chuvaRainBg"></div>
+  <div class="cpc-rain" id="chuvaRainFg"></div>
+  <img class="cpc-main" id="chuvaMain" alt="">
+  <div class="cpc-dust" id="chuvaDust"><img alt=""></div>
+  <div class="cpc-impact" id="chuvaImpact"><img alt=""></div>
+  <div class="cpc-logo" id="chuvaLogo"><img alt=""></div>
   <div class="float-text" id="floatText"></div>
   <div class="tap-faces left" id="tapFacesL"></div>
   <div class="tap-faces right" id="tapFacesR"></div>
@@ -1031,6 +1065,7 @@ const hpMax = state.hp_max || 100;
   if (!state.active) {
     clearTapFaces();
     hideJacare();
+    hideChuva();
     if (hudF) hudF.style.display = "none";
     if (hudL) hudL.style.display = "none";
     const lbX = $("lbScore");
@@ -1247,6 +1282,7 @@ function applyState(s) {
     attackQueue = [];
     clearTapFaces();
     hideJacare();
+    hideChuva();
     if (!busy) flushPending();
   } else {
     renderWinner();
@@ -1742,7 +1778,8 @@ function pump() {
   if (specialQueue.length) {
     const item = specialQueue.shift();
     busy = true;
-    runJacareSpecial(item).catch(() => {}).finally(() => { busy = false; flushPending(); pump(); });
+    const runner = { bolsonaro_jacare: runJacareSpecial, chuva_picanha: runChuvaDePicanha }[item.sequence] || runJacareSpecial;
+    runner(item).catch(() => {}).finally(() => { busy = false; flushPending(); pump(); });
     return;
   }
   if (supportQueue.length) {
@@ -1918,6 +1955,160 @@ async function runJacareSpecial(item) {
   if (te && !state.winner) { te.style.transition = "transform .3s ease"; te.style.transform = "translateX(0)"; }
 }
 
+const CHUVA_FX = {
+  cloud: "/duelo/lula/chuva-picanha/nuvem-tempestade.png",
+  impact: "/duelo/lula/chuva-picanha/impacto.png",
+  logo: "/duelo/lula/chuva-picanha/logo.png",
+  dust: "/duelo/lula/chuva-picanha/poeira-base-pe.png",
+  pose: "/duelo/lula/chuva-picanha/lula-pose-chamar-tempestade.png",
+  main: "/duelo/lula/chuva-picanha/picanha1.png",
+  smalls: ["picanha1", "picanha2", "picanha3", "picanha4"].map((n) => "/duelo/lula/chuva-picanha/" + n + ".png"),
+};
+
+function hideChuva() {
+  const bg = $("chuvaRainBg"), fg = $("chuvaRainFg");
+  if (bg) bg.innerHTML = "";
+  if (fg) fg.innerHTML = "";
+  const els = [$("chuvaCloudWrap"), $("chuvaImpact"), $("chuvaDust"), $("chuvaLogo"), $("chuvaMain")];
+  els.forEach((el) => { if (el) { el.classList.remove("show"); el.style.display = ""; el.style.opacity = ""; el.style.transform = ""; el.style.left = ""; el.style.top = ""; el.style.bottom = ""; el.style.removeProperty("width"); el.style.removeProperty("height"); el.style.removeProperty("transition"); } });
+  const m = $("chuvaMain");
+  if (m) m.src = "";
+  [$("chuvaImpact"), $("chuvaDust"), $("chuvaLogo")].forEach((el) => { if (el && el.firstElementChild) el.firstElementChild.src = ""; });
+}
+
+async function runChuvaDePicanha(item) {
+  const tgt = "flavio";
+  if (!state.active && !item.isTest) return;
+  if (item.isTest && state.winner) { const b = $("winBanner"); if (b) b.classList.remove("show"); }
+  const stage = $("stage");
+  if (!stage) return;
+  const startTs = Date.now();
+  const until = async (ms) => { const d = ms - (Date.now() - startTs); if (d > 0) await sleep(d); };
+  const sr = stage.getBoundingClientRect();
+  const fireY = parseFloat(getComputedStyle(stage).getPropertyValue("--fire-y")) || 20;
+  const groundY = Math.max(0, sr.height * (1 - fireY / 100));
+  const cr = (sel) => { const e = $(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { cx: r.left + r.width / 2 - sr.left, top: r.top - sr.top, bottom: r.bottom - sr.top }; };
+  const dir = FIGHTERS.lula.dir;
+  const casR = cr("fighter-lula"), defR = cr("fighter-" + tgt);
+  const casX = casR ? casR.cx : sr.width * 0.68;
+  const defX = defR ? defR.cx : sr.width * 0.3;
+  const defPct = Math.max(6, Math.min(94, (defX / sr.width) * 100));
+  const defTop = defR ? defR.top : sr.height * 0.5;
+  const zone = defX < casX ? { min: 0, max: Math.max(0, casX - 140) } : { min: Math.min(sr.width, casX + 140), max: sr.width };
+  const shakeS = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
+  const cloud = $("chuvaCloudWrap"), cloudImg = $("chuvaCloudImg");
+  const rainBg = $("chuvaRainBg"), rainFg = $("chuvaRainFg");
+  const imp = $("chuvaImpact"), dust = $("chuvaDust"), logo = $("chuvaLogo"), main = $("chuvaMain");
+  const firstImg = imp ? imp.firstElementChild : null, dustImg = dust ? dust.firstElementChild : null, logoImg = logo ? logo.firstElementChild : null;
+  let deEl = null;
+  if (cloudImg) cloudImg.src = CHUVA_FX.cloud;
+  if (!imp || !dust || !logo || !main) { hideChuva(); return; }
+
+  const spawnPi = (fg) => {
+    const c = fg ? rainFg : rainBg;
+    if (!c) return;
+    const el = document.createElement("img");
+    el.src = CHUVA_FX.smalls[Math.floor(Math.random() * CHUVA_FX.smalls.length)];
+    let x = zone.min + Math.random() * Math.max(1, zone.max - zone.min);
+    if (Math.abs(x - casX) < 120) x = x < casX ? Math.max(0, casX - 130 - Math.random() * 70) : Math.min(sr.width, casX + 130 + Math.random() * 70);
+    x = Math.max(0, Math.min(x, sr.width - 30));
+    const h = fg ? (4.5 + Math.random() * 2.5) : (3.2 + Math.random() * 1.6);
+    const dur = (fg ? 520 : 440) + Math.random() * 300;
+    const r0 = -35 + Math.random() * 70;
+    const r1 = r0 + 90 + Math.random() * 190;
+    el.style.left = x + "px";
+    el.style.height = h + "vh";
+    el.style.transform = "rotate(" + r0 + "deg)";
+    el.style.transition = "none";
+    c.appendChild(el);
+    void el.offsetWidth;
+    el.style.transition = "top " + dur + "ms linear, transform " + dur + "ms linear";
+    el.style.top = groundY + 10 + "px";
+    el.style.transform = "rotate(" + r1 + "deg)";
+    setTimeout(() => { try { el.remove(); } catch (e) {} }, dur + 450);
+  };
+
+  try {
+    // 0ms — pose de invocação + áudio UMA vez na ativação
+    const imgL = $("img-lula");
+    if (imgL) imgL.src = CHUVA_FX.pose;
+    if (item.audio_url) playAudio(item.audio_url);
+    const lulaF = $("fighter-lula");
+    if (lulaF) { lulaF.style.transition = "transform 140ms ease"; lulaF.style.transform = "translateY(-8px) scale(1.05)"; }
+    await until(150);
+    if (lulaF) { lulaF.style.transition = "transform 160ms ease"; lulaF.style.transform = "translateY(0) scale(1)"; }
+    await until(300);
+
+    // 300ms — nuvem sobre o defensor (centro X, tamanho controlado)
+    if (cloud) { cloud.style.left = defPct + "%"; cloud.style.top = "2%"; cloud.classList.add("show"); }
+    await until(600);
+
+    // 600ms+ — chuva: fundo (3-4) + frente (4-6), só no território do defensor
+    const bgN = 2 + Math.floor(Math.random() * 2);
+    const fgN = 4 + Math.floor(Math.random() * 3);
+    const plan = [];
+    let tt = 600;
+    for (let i = 0; i < bgN + fgN; i++) { plan.push(tt); tt += 45 + Math.random() * 65; }
+    for (let i = 0; i < plan.length; i++) {
+      if (plan[i] > 1240) break;
+      await until(plan[i]);
+      spawnPi(i >= bgN);
+    }
+
+    // 1300ms — picanha principal (alvo capturado, sem recálculo)
+    await until(1280);
+    main.src = CHUVA_FX.main;
+    main.style.left = defX + "px";
+    main.style.top = "-90px";
+    main.style.height = "8vh";
+    main.style.transform = "rotate(-25deg)";
+    main.style.transition = "none";
+    main.classList.add("show");
+    void main.offsetWidth;
+    main.style.transition = "top 370ms cubic-bezier(.3,.7,.4,1), transform 370ms ease-in";
+    main.style.top = groundY + "px";
+    main.style.transform = "rotate(20deg)";
+
+    // 1650ms — impacto: squash da picanha, impacto pequeno, poeira, shake, hit reaction
+    await until(1650);
+    main.style.transition = "transform 70ms ease-out";
+    main.style.transform = "scale(1.08, .82) rotate(22deg)";
+    if (firstImg) { firstImg.src = CHUVA_FX.impact; imp.style.left = defX + "px"; imp.style.bottom = (sr.height - groundY) + "px"; imp.classList.add("show"); }
+    if (dustImg) { dustImg.src = CHUVA_FX.dust; dust.style.left = defX + "px"; dust.style.bottom = (sr.height - groundY + 12) + "px"; dust.classList.add("show"); }
+    shakeS();
+    spawnHit("punch", dir, { pos: defPct, scale: 0.65 });
+    deEl = $("fighter-" + tgt);
+    if (deEl && !state.winner) { deEl.style.transition = "transform 160ms ease-out"; deEl.style.transform = "translateX(" + (-dir * 28) + "px)"; }
+    say(tgt, "hit");
+    if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
+    if (isHpNewMode() && Number(item.damage) > 0) voteFloat("lula", "+" + Number(item.damage) + " ATAQUE", "atk");
+    await sleep(70);
+    main.style.transition = "opacity .18s ease";
+    main.style.opacity = 0;
+
+    // 1700ms — logo.png real, abaixo do HUD, entre o topo do lutador e o fim do placar
+    if (logoImg) {
+      logoImg.src = CHUVA_FX.logo;
+      const hud = document.querySelector(".lb-score, .hp-score");
+      const hudBottom = hud ? Math.max(hud.getBoundingClientRect().bottom - sr.top + 6, 6) : 40;
+      const logoTop = Math.max(6, hudBottom + Math.max(8, (defTop - hudBottom) * 0.35));
+      logo.style.left = ((casX + defX) / 2) + "px";
+      logo.style.top = Math.min(logoTop, sr.height * 0.5) + "px";
+      logo.style.transform = "translateX(-50%)";
+      logo.classList.add("show");
+    }
+
+    // 2300ms nuvem some; 2450ms limpeza total
+    await until(2300);
+    if (cloud) cloud.classList.remove("show");
+    await until(2450);
+  } finally {
+    if (deEl && !state.winner) { deEl.style.transition = "transform .3s ease"; deEl.style.transform = "translateX(0)"; }
+    resetPose("lula");
+    hideChuva();
+  }
+}
+
 function leadOf(votes) {
   const f = (votes && votes.flavio) || 0;
   const l = (votes && votes.lula) || 0;
@@ -2090,7 +2281,7 @@ function connectWS() {
     }
     else if (msg.type === "duelo_special") {
       markInteraction();
-      if (isHpNewMode() && msg.sequence === "bolsonaro_jacare") {
+      if (isHpNewMode() && (msg.sequence === "bolsonaro_jacare" || msg.sequence === "chuva_picanha")) {
         enqueueSpecial(Object.assign({}, msg));
       } else {
         showSpecialFlash(msg.key || "especial", msg.side || "");

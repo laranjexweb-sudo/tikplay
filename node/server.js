@@ -2192,6 +2192,23 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
     });
     return res.json({ success: true });
   }
+  if (special === "chuva_picanha") {
+    broadcastToClients(tenant.browserClients, {
+      type: "duelo_special",
+      isTest: true,
+      key: "chuva_picanha",
+      side: "lula",
+      defender: "flavio",
+      damage: 0,
+      absorbed: 0,
+      hp_damage: 0,
+      sequence: "chuva_picanha",
+      audio_url: "",
+      user: "streamer",
+      nickname: "Streamer",
+    });
+    return res.json({ success: true });
+  }
   if (supporter && SUPPORT_KEYS[supporter]) {
     const side = SUPPORT_KEYS[supporter];
     const tCfg = db.getDueloConfig(req.user.id);

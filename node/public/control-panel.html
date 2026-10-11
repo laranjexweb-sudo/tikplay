@@ -1030,7 +1030,7 @@
           <!-- ESPECIAIS (hp_new) -->
           <div class="nb-card mode-hpnew-only" style="margin-bottom:10px">
             <h2 class="duelo-section-title">Especiais</h2>
-            <div class="duelo-help">Presente que dispara um especial visual (ex.: Virou Jacaré). Sem áudio por enquanto (upload vem depois).</div>
+            <div class="duelo-help">Presente que dispara um especial visual (ex.: Virou Jacaré, Chuva de Picanha). Com upload de áudio por especial.</div>
             <div id="dueloSpecialsBox"></div>
           </div>
 
@@ -1097,6 +1097,7 @@
               </div>
               <div class="duelo-row" style="margin-top:4px">
                 <button class="duelo-btn duelo-btn--success duelo-btn--small" onclick="dueloTestSpecial('virou_jacare')">Virou Jacaré</button>
+                <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTestSpecial('chuva_picanha')">Chuva de Picanha</button>
               </div>
             </div>
             <div class="duelo-help" style="margin-top:6px">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
@@ -3467,9 +3468,11 @@ async function loadDueloState() {
       dueloTapDamage = data.settings.tap_damage != null ? data.settings.tap_damage : 100;
       dueloHpNewDelay = data.settings.reset_delay_s != null ? data.settings.reset_delay_s : 6;
       const spk = data.settings.special_attacks || {};
-      dueloSpecials = {
-        virou_jacare: Object.assign({}, dueloSpecials.virou_jacare, spk.virou_jacare || {}),
-      };
+      dueloSpecials = {};
+      Object.keys(DUELO_SPECIALS_META).forEach((k) => {
+        const m = DUELO_SPECIALS_META[k];
+        dueloSpecials[k] = Object.assign({}, { gift_name: "", gift_id: "", damage: m.damage || 900, enabled: false, side: m.side, sequence: m.sequence }, spk[k] || {});
+      });
       const mg = data.settings.main_gifts || {};
       dueloMainFlavio = { gift_name: String(mg.flavio && mg.flavio.gift_name || "").trim() };
       dueloMainLula = { gift_name: String(mg.lula && mg.lula.gift_name || "").trim() };
@@ -3521,7 +3524,11 @@ function dueloSyncFlat(s) {
   };
   if (s.supporters && typeof s.supporters === "object") dueloSupporters = Object.assign(dueloSupportersDefault(), s.supporters);
   const spks = s.special_attacks || {};
-  dueloSpecials = { virou_jacare: Object.assign({}, { gift_name: "", gift_id: "", damage: 900, enabled: false, side: "flavio", sequence: "bolsonaro_jacare" }, spks.virou_jacare || {}) };
+  dueloSpecials = {};
+  Object.keys(DUELO_SPECIALS_META).forEach((k) => {
+    const m = DUELO_SPECIALS_META[k];
+    dueloSpecials[k] = Object.assign({}, { gift_name: "", gift_id: "", damage: m.damage || 900, enabled: false, side: m.side, sequence: m.sequence }, spks[k] || {});
+  });
 }
 
 function renderDueloSettings() {
@@ -3871,11 +3878,11 @@ function bindMainAutocompletes() {
 function renderDueloSpecials() {
   const box = document.getElementById("dueloSpecialsBox");
   if (!box) return;
-  const KEY = { virou_jacare: "VIROU JACARÉ" };
+  const KEY = DUELO_SPECIALS_META;
   box.innerHTML = Object.keys(KEY).map((k) => {
     const s = dueloSpecials[k] || {};
     return `<div class="sup-line">
-      <label class="sup-lbl">${KEY[k]}</label>
+      <label class="sup-lbl">${KEY[k].label}</label>
       <div class="position-relative">
         <input type="text" class="form-control duelo-spec-gift" data-spec="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
         <div class="duelo-ac gift-ac" data-specac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
@@ -3986,17 +3993,22 @@ function readDueloSettings() {
       lula: { gift_name: (document.getElementById("dueloMainLName") || {}).value || "" },
     },
     extra_gifts: dueloExtrasClean(),
-    special_attacks: {
-      virou_jacare: {
-        side: "flavio",
-        sequence: "bolsonaro_jacare",
-        gift_name: (document.querySelector('.duelo-spec-gift[data-spec="virou_jacare"]') || {}).value || "",
-        gift_id: "",
-        damage: Math.max(0, parseInt((document.querySelector('[data-specf="damage"][data-spec="virou_jacare"]') || {}).value || "900", 10) || 0),
-        enabled: !!(document.querySelector('[data-specf="enabled"][data-spec="virou_jacare"]') || {}).checked,
-        audio: typeof dueloSpecials.virou_jacare === "object" && dueloSpecials.virou_jacare !== null ? String((dueloSpecials.virou_jacare.audio) || "") : "",
-      },
-    },
+    special_attacks: (function () {
+      const o = {};
+      Object.keys(DUELO_SPECIALS_META).forEach((k) => {
+        const m = DUELO_SPECIALS_META[k];
+        o[k] = {
+          side: m.side,
+          sequence: m.sequence,
+          gift_name: (document.querySelector('.duelo-spec-gift[data-spec="' + k + '"]') || {}).value || "",
+          gift_id: "",
+          damage: Math.max(0, parseInt((document.querySelector('[data-specf="damage"][data-spec="' + k + '"]') || {}).value || String(m.damage || 900), 10) || 0),
+          enabled: !!(document.querySelector('[data-specf="enabled"][data-spec="' + k + '"]') || {}).checked,
+          audio: dueloSpecials[k] && typeof dueloSpecials[k] === "object" ? String((dueloSpecials[k].audio) || "") : "",
+        };
+      });
+      return o;
+    })(),
   };
 }
 
@@ -4227,7 +4239,15 @@ let dueloDmgMult = 1;
 let dueloTapTarget = 500;
 let dueloTapDamage = 100;
 let dueloHpNewDelay = 6;
-let dueloSpecials = { virou_jacare: { gift_name: "", gift_id: "", damage: 900, enabled: false, side: "flavio", sequence: "bolsonaro_jacare" } };
+const DUELO_SPECIALS_META = {
+  virou_jacare: { label: "VIROU JACARÉ", side: "flavio", sequence: "bolsonaro_jacare", damage: 900 },
+  chuva_picanha: { label: "CHUVA DE PICANHA", side: "lula", sequence: "chuva_picanha", damage: 900 },
+};
+let dueloSpecials = {};
+Object.keys(DUELO_SPECIALS_META).forEach((k) => {
+  const m = DUELO_SPECIALS_META[k];
+  dueloSpecials[k] = { gift_name: "", gift_id: "", damage: m.damage || 900, enabled: false, side: m.side, sequence: m.sequence };
+});
 let dueloMainFlavio = { gift_name: "" };
 let dueloMainLula = { gift_name: "" };
 let dueloExtras = { flavio: [], lula: [] };
