@@ -25,6 +25,7 @@
   #tab-duelo .duelo-field { display: flex; flex-direction: column; gap: 4px; }
   #tab-duelo .duelo-field-label, #tab-duelo .duelo-sub { font-size: 12px; font-weight: 800; margin: 0; letter-spacing: .02em; }
   #tab-duelo .duelo-sub { text-transform: uppercase; margin: 8px 0 4px; }
+  #tab-duelo .duelo-hr { border: none; border-top: 2px solid #000; margin: 12px 0 10px; }
   #tab-duelo .duelo-field input[type="number"], #tab-duelo .duelo-field input[type="text"], #tab-duelo .duelo-field input[type="file"], #tab-duelo .duelo-field select, #tab-duelo input[type="file"], #tab-duelo .form-control, #tab-duelo .form-select { height: var(--duelo-field-h); border: 2px solid #000; border-radius: 8px; font-size: 13px; box-shadow: none; }
   #tab-duelo textarea.form-control, #tab-duelo input[type="range"].form-range { height: auto; }
   #tab-duelo .duelo-check { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
@@ -56,6 +57,18 @@
   #tab-duelo .sup-line:last-child { border-bottom: none; }
   #tab-duelo .sup-lbl { font-weight: 800; min-width: 118px; font-size: 12px; }
   #tab-duelo .sup-line .form-control { height: var(--duelo-field-h); font-size: 13px; }
+  #tab-duelo .duelo-gift-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; padding: 4px 0; border-bottom: 1px dashed #ddd; }
+  #tab-duelo .duelo-gift-line:last-child { border-bottom: none; }
+  #tab-duelo .duelo-gift-line .form-control, #tab-duelo .duelo-gift-line .form-select { height: 30px; font-size: 12px; }
+  #tab-duelo .duelo-gift-line .duelo-name-box { flex: 1 1 130px; min-width: 130px; }
+  #tab-duelo .duelo-gift-line > select { flex: 0 0 92px; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields { flex: 1 1 150px; display: flex; align-items: center; gap: 6px; min-width: 140px; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields .form-select { flex: 1; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields input.form-control { width: 68px; }
+  #tab-duelo .duelo-gift-line .duelo-audio-box { flex: 0 0 110px; }
+  #tab-duelo .duelo-gift-line .duelo-gift-check { flex: 0 0 34px; justify-content: center; }
+  #tab-duelo .duelo-gift-x { flex: 0 0 28px; }
+  #tab-duelo .duelo-apoio-field { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: .03em; }
   #tab-duelo .dl-preview { position: relative; width: 100%; max-width: 200px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; user-select: none; }
   #tab-duelo .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 5px 7px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 8px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
   #tab-duelo .dl-block:active { cursor: grabbing; }
@@ -874,6 +887,45 @@
               <div class="duelo-field"><label class="duelo-field-label">Tempo de resultado (s)</label><input type="number" id="dueloResultDelay" min="2" max="120" onchange="dueloQuickSave()"></div>
             </div>
             <div class="duelo-help" style="margin-top:6px">Golpe por combo (Soco/Chute/Levantada). Sem dano no modo Tempo.</div>
+            <hr class="duelo-hr">
+            <div class="duelo-sub" style="margin-top:0">Ambiente</div>
+            <div class="duelo-grid duelo-grid-3">
+              <div class="duelo-field">
+                <label class="duelo-field-label">Cenário</label>
+                <select id="dueloScene" onchange="dueloQuickSave(); updateModeVisibility()">
+                  <option value="brasilia">Brasília</option>
+                  <option value="sao-paulo">São Paulo</option>
+                  <option value="rio-de-janeiro">Rio de Janeiro</option>
+                  <option value="salvador">Salvador</option>
+                  <option value="tribunal">STF</option>
+                </select>
+              </div>
+              <div>
+                <label class="duelo-field-label">Sem interação (idle)</label>
+                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label for="dueloIdleOn">Ativo</label></div>
+                <div class="duelo-row" style="margin-top:4px">
+                  <div class="duelo-field" style="flex:1;min-width:70px"><label class="duelo-field-label">Entrar (s)</label><input type="number" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
+                  <div class="duelo-field" style="flex:1;min-width:70px"><label class="duelo-field-label">Falas (s)</label><input type="number" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
+                </div>
+              </div>
+              <div>
+                <label class="duelo-field-label">Efeitos (golpes/escudo): <b id="dueloSfxLbl">92%</b></label>
+                <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'; dueloQuickSave()">
+              </div>
+            </div>
+            <hr class="duelo-hr">
+            <div class="duelo-sub" style="margin-top:0">Áudio & Música</div>
+            <div class="duelo-grid duelo-grid-3">
+              <div>
+                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloMusicOn" onchange="dueloQuickSave()"><label for="dueloMusicOn">Tocar música</label> <b id="dueloMusicLbl">50%</b></div>
+                <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'; dueloQuickSave()">
+              </div>
+              <div class="duelo-field">
+                <label class="duelo-field-label">Adicionar música</label>
+                <input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" id="dueloMusicFile" onchange="uploadDueloMusic(this)">
+              </div>
+            </div>
+            <div style="margin-top:4px"><div id="dueloMusicList"></div></div>
           </div>
 
           <!-- PRESENTES & APOIOS -->
@@ -927,41 +979,6 @@
               Presente que invoca um apoio (entra, fala, golpeia e sai) aplicando o DANO configurado + votos. Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.
             </div>
             <div id="dueloSupportersBox"></div>
-          </div>
-
-          <!-- AMBIENTE -->
-          <div class="nb-card">
-            <h2 class="duelo-section-title">Ambiente</h2>
-            <div class="duelo-grid duelo-grid-3">
-              <div class="duelo-field">
-                <label class="duelo-field-label">Cenário</label>
-                <select id="dueloScene" onchange="dueloQuickSave(); updateModeVisibility()">
-                  <option value="brasilia">Brasília</option>
-                  <option value="sao-paulo">São Paulo</option>
-                  <option value="rio-de-janeiro">Rio de Janeiro</option>
-                  <option value="salvador">Salvador</option>
-                  <option value="tribunal">STF</option>
-                </select>
-              </div>
-              <div>
-                <label class="duelo-field-label">Sem interação (idle)</label>
-                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label for="dueloIdleOn">Ativo</label></div>
-                <div class="duelo-grid duelo-grid-2" style="margin-top:6px">
-                  <div class="duelo-field"><label class="duelo-field-label">Entrar (s)</label><input type="number" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
-                  <div class="duelo-field"><label class="duelo-field-label">Falas (s)</label><input type="number" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
-                </div>
-              </div>
-              <div>
-                <label class="duelo-field-label">Efeitos: <b id="dueloSfxLbl">92%</b></label>
-                <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'; dueloQuickSave()">
-                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloMusicOn" onchange="dueloQuickSave()"><label for="dueloMusicOn">Música</label> <b id="dueloMusicLbl">50%</b></div>
-                <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'; dueloQuickSave()">
-              </div>
-            </div>
-            <div class="duelo-row duelo-actions">
-              <input type="file" class="form-control" style="max-width:280px" accept="audio/*,.mp3,.wav,.ogg" id="dueloMusicFile" onchange="uploadDueloMusic(this)">
-            </div>
-            <div style="margin-top:4px"><div id="dueloMusicList"></div></div>
           </div>
 
           <!-- LAYOUT DA ARENA -->
@@ -3900,43 +3917,43 @@ function renderGiftSection(char) {
     box.appendChild(none);
     return;
   }
-  items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
-}
+items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
+  }
 
 function buildDueloRow(g_, i) {
   const type = ["escudo", "apoio"].includes(String(g_.type || "").toLowerCase()) ? String(g_.type).toLowerCase() : "golpe";
   const row = document.createElement("div");
-  row.className = "row g-2 mb-2 align-items-end p-2 bg-white border border-dark rounded";
+  row.className = "duelo-gift-line";
   row.innerHTML = `
-      <div class="col-12 col-md-5"><label class="form-label mb-0" style="font-size:0.7rem">Nome</label>
-        <div class="position-relative">
-          <input type="text" class="form-control form-control-sm duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
-          <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
-        </div></div>
-      <div class="col-6 col-md-3"><label class="form-label mb-0" style="font-size:0.7rem">Tipo</label>
-        <select class="form-select form-select-sm" data-f="type" data-i="${i}">
-          <option value="golpe" ${type === 'golpe' ? 'selected' : ''}>Golpe</option>
-          <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
-          <option value="apoio" ${type === 'apoio' ? 'selected' : ''}>Apoio</option>
-        </select></div>
-      <div class="col-6 col-md-4"><label class="form-label mb-0" style="font-size:0.7rem">${type === 'golpe' ? 'Golpe e dano' : (type === 'escudo' ? 'Pontos de escudo' : 'Apoio')}</label>
+      <div class="position-relative duelo-name-box">
+        <input type="text" class="form-control duelo-name" data-name="${i}" value="${esc(g_.name || '')}" placeholder="Buscar gift..." autocomplete="off">
+        <div class="duelo-ac gift-ac" data-ac="${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+      </div>
+      <select class="form-select" data-f="type" data-i="${i}">
+        <option value="golpe" ${type === 'golpe' ? 'selected' : ''}>Golpe</option>
+        <option value="escudo" ${type === 'escudo' ? 'selected' : ''}>Escudo</option>
+        <option value="apoio" ${type === 'apoio' ? 'selected' : ''}>Apoio</option>
+      </select>
+      <div class="duelo-value-fields">
         <div class="duelo-golpe-fields" ${type === 'golpe' ? '' : 'style="display:none"'}>
-          <select class="form-select form-select-sm mb-1" data-f="action" data-i="${i}">
+          <select class="form-select" data-f="action" data-i="${i}">
             <option value="punch" ${g_.action === 'kick' || g_.action === 'uppercut' ? '' : 'selected'}>Soco</option>
             <option value="kick" ${g_.action === 'kick' ? 'selected' : ''}>Chute</option>
             <option value="uppercut" ${g_.action === 'uppercut' ? 'selected' : ''}>Levantada</option>
           </select>
-          <input type="number" class="form-control form-control-sm" value="${esc(g_.damage || '')}" placeholder="dano (0 = padrão)" data-f="damage" data-i="${i}">
+          <input type="number" class="form-control" value="${esc(g_.damage || '')}" placeholder="dano" data-f="damage" data-i="${i}">
         </div>
         <div class="duelo-escudo-field" ${type === 'escudo' ? '' : 'style="display:none"'}>
-          <input type="number" class="form-control form-control-sm" value="${esc(g_.shield || '')}" placeholder="pontos de escudo (0 = 15)" data-f="shield" data-i="${i}">
+          <input type="number" class="form-control" value="${esc(g_.shield || '')}" placeholder="+15" data-f="shield" data-i="${i}">
         </div>
-        <div class="duelo-apoio-field text-secondary" style="font-size:0.78rem;display:${type === 'apoio' ? 'block' : 'none'}">Só soma votos (moedas × combo). Não afeta o debate.</div></div>
-      <div class="col-12 col-md-6"><label class="form-label mb-0" style="font-size:0.7rem">Áudio</label>
-        <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}">
-        <div class="text-secondary" style="font-size:0.68rem">${g_.audio ? esc(g_.audio) : (type === 'apoio' ? 'sem áudio' : 'padrão do sistema')}</div></div>
-      <div class="col-6 col-md-3"><label class="form-check mb-0" style="font-size:0.75rem"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}> Ativo</label></div>
-      <div class="col-6 col-md-3 d-flex align-items-end"><button class="btn btn-nb btn-danger btn-sm w-100" onclick="removeDueloGift(${i})">Remover</button></div>`;
+        <div class="duelo-apoio-field text-secondary" style="display:${type === 'apoio' ? 'block' : 'none'}">Apoio</div>
+      </div>
+      <div class="duelo-audio-box">
+        <input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-upload="${i}" title="Áudio">
+        <span class="duelo-help" style="display:block">${g_.audio ? esc(g_.audio) : ''}</span>
+      </div>
+      <label class="duelo-check mb-0 duelo-gift-check"><input type="checkbox" class="form-check-input" data-f="active" data-i="${i}" ${g_.active !== false ? 'checked' : ''}></label>
+      <button class="duelo-btn duelo-btn--danger duelo-btn--small duelo-gift-x" onclick="removeDueloGift(${i})" title="Remover">×</button>`;
 
   row.querySelector('[data-f="type"]').addEventListener("change", (e) => {
     const t = e.target.value;
