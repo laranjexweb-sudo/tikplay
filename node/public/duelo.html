@@ -1824,15 +1824,33 @@ async function runJacareSpecial(item) {
   wrap.style.opacity = 1;
   wrap.style.transition = "none";
   wrap.style.left = beginX;
-  setPose("parado.png", 1.0);
-  shake();
-  await sleep(200); // preparação
+  img.style.transition = "none";
+  setPose("parado.png", 0.92);
+  await sleep(40);
 
+  // ENTRADA COM EFEITO: surge de fora, desliza com poeira nos pés e cresce até a pose de guarda
+  smoke.innerHTML = '<img src="/duelo/bolsonaro/poeira-andando.png" alt="">';
+  smoke.style.opacity = 0.85;
+  wrap.style.transition = "left 360ms cubic-bezier(.18,.8,.3,1)";
+  wrap.style.left = side === "flavio" ? "18%" : "78%";
+  img.style.transition = "transform 360ms ease-out";
+  img.style.transform = "scale(1.0)";
+  await sleep(360);
+  smoke.style.transition = "opacity .2s ease";
+  smoke.style.opacity = 0;
+  await sleep(60);
+  img.style.transition = "";
+  smoke.style.transition = "";
+  shake();
+  await sleep(200); // preparação (pose de guarda)
+
+  smoke.innerHTML = '<img src="/duelo/bolsonaro/fumaca-branca.png" alt="">';
   fxImg("fumaca-branca.png", 0, 50);
   smoke.style.opacity = 0.55;
   await sleep(200); // carga (aura/poeira na base)
 
-  setPose("transformando.png", 1.02);
+  img.style.transition = "transform 180ms ease";
+  setPose("transformando.png", 0.98); // mesma escala do impacto
   smoke.style.opacity = 1;
   fxImg("fumaca-branca.png", 0.9, 50);
   shake();
