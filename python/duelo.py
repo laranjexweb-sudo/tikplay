@@ -10,6 +10,8 @@ try:
 except ImportError:
     pass
 
+import random
+
 DEFAULT_SETTINGS = {
     "mode": "hp",                 # 'hp' | 'votes' (compat: modo legado; game_mode define HP/TEMPO)
     "game_mode": "hp",            # 'hp' (Debate por HP) | 'timed' (Debate por Tempo)
@@ -64,6 +66,8 @@ class DueloEngine:
         self.votes = {"flavio": 0, "lula": 0}
         self.debate_wins = {"flavio": 0, "lula": 0}
         self.taps = {"flavio": 0, "lula": 0}
+        self.user_teams = {}
+        self.taps_ignored = 0
         self.roundActive = True
         self.winner = None
         self.final = False
@@ -478,6 +482,58 @@ class DueloEngine:
         self.debate_wins[attacker] = (self.debate_wins.get(attacker, 0) or 0) + 1
         self._emit("duelo_round_end", {"winner": attacker, "votes": dict(self.votes), "final": False})
         return True
+
+    # ---- Equipes / TAP (hp_new) ----
+    TAP_ACTIONS = ("punch", "kick", "lowKick", "uppercut")
+
+    def register_team(self, user_id, side):
+        side = self._norm(side)
+        if side in ("flavio", "lula"):
+            self.user_teams[str(user_id)] = side
+            return side
+        return None
+
+    def get_team(self, user_id):
+        return self.user_teams.get(str(user_id))
+
+    def reset_teams(self):
+        self.user_teams = {}
+        self.taps_ignored = 0
+
+    def add_tap(self, user_id, delta):
+        """Soma TAP à equipe do usuário e dispara metas na fila (excesso reaproveitado)."""
+        side = self.user_teams.get(str(user_id))
+        if side not in ("flavio", "lula"):
+            self.taps_ignored += max(0, int(delta or 0))
+            return 0
+        if not self.active or self.winner or not self.roundActive:
+            return 0
+        target = max(1, int(self.settings.get("tap_target", 500) or 500))
+        dmg = max(0, int(self.settings.get("tap_damage", 100) or 100))
+        self.taps[side] = (self.taps.get(side, 0) or 0) + max(0, int(delta or 0))
+        metas = 0
+        while self.taps[side] >= target and self.active and self.roundActive and not self.winner:
+            self.taps[side] -= target
+            metas += 1
+            defender = "lula" if side == "flavio" else "flavio"
+            self.hp[defender] = max(0, self.hp.get(defender, 0) - dmg)
+            action = random.choice(self.TAP_ACTIONS)
+            self._emit("duelo_tap_meta", {
+                "side": side, "damage": dmg, "action": action, "taps": dict(self.taps),
+            })
+            self._emit("duelo_attack", {
+                "attacker": side, "defender": defender, "action": action, "combo": 1,
+                "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
+                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "gift": "", "user": "", "nickname": "",
+            })
+            self._hp_new_ko(side, defender)
+            self._emit("duelo_state", self.state())
+            if not self.roundActive:
+                break
+        if running_ok := (self.active and not self.winner):
+            self._emit("duelo_state", self.state())
+        return metas
 
     def _on_gift_hp_new(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
         if not self.active or not self.roundActive or self.winner:

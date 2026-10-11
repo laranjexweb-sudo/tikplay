@@ -575,6 +575,48 @@ class GameSession:
             if audio_url:
                 emit(self.tenant_id, "narrate", {"url": audio_url})
 
+    def _stable_uid(self, user, user_meta=None):
+        try:
+            if user_meta:
+                if hasattr(user_meta, "userId") and getattr(user_meta, "userId", None):
+                    return str(getattr(user_meta, "userId"))
+                if hasattr(user_meta, "uniqueId") and getattr(user_meta, "uniqueId", None):
+                    return str(getattr(user_meta, "uniqueId"))
+                if hasattr(user_meta, "secUid") and getattr(user_meta, "secUid", None):
+                    return str(getattr(user_meta, "secUid"))
+                if isinstance(user_meta, dict):
+                    for k in ("userId", "user_id", "uniqueId", "unique_id", "secUid", "sec_uid", "id"):
+                        v = user_meta.get(k)
+                        if v:
+                            return str(v)
+        except Exception:
+            pass
+        return str(user or "")
+
+    def _duelo_handle_tap(self, user, like_count, user_meta=None):
+        if not (self.duelo.active and self.duelo._is_hp_new() and self.duelo.roundActive):
+            return
+        uid = self._stable_uid(user, user_meta)
+        metas = self.duelo.add_tap(uid, like_count)
+        if metas:
+            emit(self.tenant_id, "log", f"[Duelo] META DE TAP! {metas} ataque(s) automático(s) disparado(s)")
+
+    def _duelo_comment_team(self, user, raw, user_meta=None):
+        if not (self.duelo.active and self.duelo._is_hp_new()):
+            return
+        norm = strip_accents(raw or "").lower()
+        words = set(re.findall(r"[a-z0-9]+", norm))
+        if "flavio" in words or "bolsonaro" in words:
+            side = "flavio"
+        elif "lula" in words:
+            side = "lula"
+        else:
+            return
+        uid = self._stable_uid(user, user_meta)
+        old = self.duelo.get_team(uid)
+        if self.duelo.register_team(uid, side):
+            emit(self.tenant_id, "log", f"[Duelo] @{user} escolheu equipe {side.upper()}" + (" (troca)" if old and old != side else ""))
+
     async def on_like(self, user, nickname, avatar, like_count, user_meta=None):
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
         if self.vpet.active:
@@ -594,6 +636,7 @@ class GameSession:
             entry["avatar"] = avatar
         self._likes_dirty = True
         self.battle.add_taps(user, nickname, avatar, like_count)
+        self._duelo_handle_tap(user, like_count, user_meta)
         # Meta de tap da Palavra Secreta (independente do ranking da BATALHA)
         if not self.game.finished:
             self.tap_meta_current += int(like_count or 0)
@@ -974,6 +1017,7 @@ class GameSession:
         })
         if raw:
             self._queue_narration(raw)
+        self._duelo_comment_team(user, raw, user_meta)
 
         # ---------------------------------------------------------
         # 3 PONTINHOS: palpite de texto livre (captura exclusiva quando ativo)
@@ -1773,6 +1817,9 @@ async def process_commands(queue):
 
         elif c == "stop":
             await stop_session_task(tid)
+            s = sessions.get(tid)
+            if s and getattr(s, "duelo", None):
+                s.duelo.reset_teams()
 
         elif c == "battle_start":
             s = sessions.get(tid)
