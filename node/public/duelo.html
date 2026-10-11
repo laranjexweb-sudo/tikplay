@@ -1389,8 +1389,9 @@ function voteFloat(char, txt, cls) {
 
 const tapFaceCache = new Map();
   const tapFaceUserLast = new Map();
-  const tapFaceCount = { left: 0, right: 0 };
+  const tapFaceCount = { left: 0, right: 0, flavio: 0, lula: 0 };
   const TAP_FACE_MAX = 24;
+  const TAP_FACE_DEBUG = true;
 
   function tapFaceCountFor(delta) {
     if (delta <= 2) return 1;
@@ -1411,39 +1412,43 @@ const tapFaceCache = new Map();
   }
 
   function burstTapFaces(side, userId, avatarUrl, delta) {
-    if (!avatarUrl) return;
+    if (!avatarUrl) { console.error("[FACE-RETURN] sem avatarURL"); return; }
     const layer = $("#tapFaces" + (side === "lula" ? "R" : "L"));
-    if (!layer) return;
-    if (tapFaceCount[side] >= TAP_FACE_MAX) return;
+    try { console.log("[FACE-LAYER]", side, !!layer, layer && layer.id, layer && JSON.stringify({ w: layer.clientWidth, h: layer.clientHeight, d: getComputedStyle(layer).display })); } catch (e) {}
+    if (!layer) { console.error("[FACE-RETURN] layer null"); return; }
+    if (tapFaceCount[side] >= TAP_FACE_MAX) { console.error("[FACE-RETURN] cap " + tapFaceCount[side] + "/" + TAP_FACE_MAX); return; }
     const now = Date.now();
     const last = tapFaceUserLast.get(userId) || 0;
-    if (now - last < 120) return;
+    if (now - last < 120) { console.error("[FACE-RETURN] rate"); return; }
     tapFaceUserLast.set(userId, now);
     const spawn = Math.min(tapFaceCountFor(delta), TAP_FACE_MAX - tapFaceCount[side]);
-    if (spawn <= 0) return;
+    if (spawn <= 0) { console.error("[FACE-RETURN] spawn0 delta=" + delta); return; }
     tapFaceCount[side] += spawn;
-    const dec = () => { tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
     for (let i = 0; i < spawn; i++) {
-      const b = document.createElement("div");
-      b.className = "face-bubble";
-      const size = 28 + Math.floor(Math.random() * 14);
-      b.style.width = b.style.height = size + "px";
-      b.style.left = (side === "lula" ? 66 + Math.random() * 28 : 6 + Math.random() * 26) + "%";
-      b.style.setProperty("--rise", (20 + Math.random() * 15) + "vh");
-      b.style.setProperty("--sx", (Math.random() * 12 - 6) + "px");
-      b.style.setProperty("--mx", ((side === "lula" ? 1 : -1) * (3 + Math.random() * 6)) + "px");
-      b.style.setProperty("--ex", ((side === "lula" ? 1 : -1) * (5 + Math.random() * 8)) + "px");
-      b.style.setProperty("--d", (1.3 + Math.random() * 0.7).toFixed(2) + "s");
-      const im = document.createElement("img");
-      im.alt = "";
-      const done = () => { if (b.parentNode) { b.remove(); dec(); } };
-      im.onerror = function () { done(); };
-      b.appendChild(im);
-      layer.appendChild(b);
-      console.warn("[FACE-SPAWN]", side, size + "px", "count=" + tapFaceCount[side], "layer=" + layer.id);
-      im.src = avatarUrl;
-      b.addEventListener("animationend", done);
-      setTimeout(done, 2600);
+      try {
+        const b = document.createElement("div");
+        b.className = "face-bubble";
+        const size = 28 + Math.floor(Math.random() * 14);
+        b.style.width = b.style.height = size + "px";
+        b.style.left = (side === "lula" ? 66 + Math.random() * 28 : 6 + Math.random() * 26) + "%";
+        b.style.setProperty("--rise", (20 + Math.random() * 15) + "vh");
+        b.style.setProperty("--sx", (Math.random() * 12 - 6) + "px");
+        b.style.setProperty("--mx", ((side === "lula" ? 1 : -1) * (3 + Math.random() * 6)) + "px");
+        b.style.setProperty("--ex", ((side === "lula" ? 1 : -1) * (5 + Math.random() * 8)) + "px");
+        b.style.setProperty("--d", (1.3 + Math.random() * 0.7).toFixed(2) + "s");
+        const im = document.createElement("img");
+        im.alt = "";
+        const done = () => { if (b.parentNode) { b.remove(); dec(); } };
+        const dec = () => { tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
+        im.onload = () => console.log("[FACE-IMG] load", side, i);
+        im.onerror = function () { console.log("[FACE-IMG] error", side, i); if (!TAP_FACE_DEBUG) done(); };
+        b.appendChild(im);
+        layer.appendChild(b);
+        console.warn("[FACE-SPAWN]", side, size + "px", "i=" + i, "count=" + tapFaceCount[side], "layer=" + layer.id);
+        im.src = avatarUrl;
+        b.addEventListener("animationend", done);
+        setTimeout(done, 2600);
+      } catch (e) { console.error("[FACE-ERR]", e); }
     }
   }
 
