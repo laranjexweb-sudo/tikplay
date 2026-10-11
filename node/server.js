@@ -539,9 +539,6 @@ function handleDaemonMessage(msg) {
       if (gameMsg.type === "duelo_state") {
         tenant.dueloState = gameMsg;
       }
-      if (gameMsg.type === "duelo_tap_avatar_burst") {
-        console.log("[TapFace] node recebeu clients=" + tenant.browserClients.length + " type=" + gameMsg.type);
-      }
       updateGameState(tenant, gameMsg);
       broadcastToClients(tenant.browserClients, gameMsg);
       broadcastToClients(tenant.logClients, gameMsg);

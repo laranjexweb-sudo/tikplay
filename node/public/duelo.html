@@ -1391,7 +1391,6 @@ const tapFaceCache = new Map();
   const tapFaceUserLast = new Map();
   const tapFaceCount = { left: 0, right: 0, flavio: 0, lula: 0 };
   const TAP_FACE_MAX = 24;
-  const TAP_FACE_DEBUG = true;
 
   function tapFaceCountFor(delta) {
     if (delta <= 2) return 1;
@@ -1412,7 +1411,7 @@ const tapFaceCache = new Map();
   }
 
   function burstTapFaces(side, userId, avatarUrl, delta) {
-    if (!avatarUrl) { console.error("[FACE-RETURN] sem avatarURL"); return; }
+    if (!avatarUrl) return;
     let layer = $("#tapFaces" + (side === "lula" ? "R" : "L"));
     if (!layer) {
       try {
@@ -1421,18 +1420,18 @@ const tapFaceCache = new Map();
         layer.id = side === "lula" ? "tapFacesR" : "tapFacesL";
         const stage = $("stage");
         if (stage) stage.appendChild(layer);
-      } catch (e) { console.error("[FACE-ERR] criar layer: " + e); }
+      } catch (e) { return; }
     }
-    try { console.log("[FACE-LAYER]", side, !!layer, layer && layer.id, layer && JSON.stringify({ w: layer.clientWidth, h: layer.clientHeight, d: getComputedStyle(layer).display })); } catch (e) {}
-    if (!layer) { console.error("[FACE-RETURN] layer null"); return; }
-    if (tapFaceCount[side] >= TAP_FACE_MAX) { console.error("[FACE-RETURN] cap " + tapFaceCount[side] + "/" + TAP_FACE_MAX); return; }
+    if (!layer) return;
+    if (tapFaceCount[side] >= TAP_FACE_MAX) return;
     const now = Date.now();
     const last = tapFaceUserLast.get(userId) || 0;
-    if (now - last < 120) { console.error("[FACE-RETURN] rate"); return; }
+    if (now - last < 120) return;
     tapFaceUserLast.set(userId, now);
     const spawn = Math.min(tapFaceCountFor(delta), TAP_FACE_MAX - tapFaceCount[side]);
-    if (spawn <= 0) { console.error("[FACE-RETURN] spawn0 delta=" + delta); return; }
+    if (spawn <= 0) return;
     tapFaceCount[side] += spawn;
+    const dec = () => { tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
     for (let i = 0; i < spawn; i++) {
       try {
         const b = document.createElement("div");
@@ -1448,16 +1447,13 @@ const tapFaceCache = new Map();
         const im = document.createElement("img");
         im.alt = "";
         const done = () => { if (b.parentNode) { b.remove(); dec(); } };
-        const dec = () => { tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
-        im.onload = () => console.log("[FACE-IMG] load", side, i);
-        im.onerror = function () { console.log("[FACE-IMG] error", side, i); if (!TAP_FACE_DEBUG) done(); };
+        im.onerror = function () { done(); };
         b.appendChild(im);
         layer.appendChild(b);
-        console.warn("[FACE-SPAWN]", side, size + "px", "i=" + i, "count=" + tapFaceCount[side], "layer=" + layer.id);
         im.src = avatarUrl;
         b.addEventListener("animationend", done);
         setTimeout(done, 2600);
-      } catch (e) { console.error("[FACE-ERR]", e); }
+      } catch (e) { /* ignore single bubble */ }
     }
   }
 
@@ -1823,7 +1819,6 @@ function connectWS() {
   ws.onmessage = (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
-    try { console.log("WS>", msg && msg.type); } catch (err) {}
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") {
       markInteraction();
@@ -1835,7 +1830,6 @@ function connectWS() {
     }
     else if (msg.type === "duelo_tap_meta") { markInteraction(); showTapMeta(msg.side); }
     else if (msg.type === "duelo_tap_avatar_burst") {
-      console.log("[TAPFACE]", msg.side, (msg.avatar_url || "").slice(0, 60), msg.delta, "roundActive=" + state.roundActive, "winner=" + (state.winner || "-"));
       if (isHpNewMode() && state.active && state.roundActive && !state.winner) {
         burstTapFaces(msg.side, msg.user_id, msg.avatar_url, Number(msg.delta) || 0);
         floatTap(msg.side, Number(msg.delta) || 0);

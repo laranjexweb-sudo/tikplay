@@ -406,8 +406,6 @@ class GameSession:
         self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
-        self._duelo_uid_dbg = 5  # logs temporarios para validar a chave de usuario (hp_new)
-        self._duelo_tapface_dbg = 200  # logs temporarios p/ diagnostico do rostinho
         self._duelo_reset_task = None
         self._duelo_match_task = None
         self._duelo_timer_task = None
@@ -595,17 +593,10 @@ class GameSession:
             pass
         return str(user or "")
 
-    def _duelo_uid_dump(self, user, user_meta, kind):
-        if self._duelo_uid_dbg <= 0 or not (self.duelo.active and self.duelo._is_hp_new()):
-            return
-        self._duelo_uid_dbg -= 1
-        emit(self.tenant_id, "log", f"[Duelo][debug-uid] {kind}: user={user} meta={user_meta} => uid={self._stable_uid(user, user_meta)}")
-
     def _duelo_handle_tap(self, user, like_count, user_meta=None, avatar=""):
         if not (self.duelo.active and self.duelo._is_hp_new() and self.duelo.roundActive):
             return
         try:
-            self._duelo_uid_dump(user, user_meta, "like")
             uid = self._stable_uid(user, user_meta)
             metas = self.duelo.add_tap(uid, like_count)
             if metas:
@@ -613,9 +604,6 @@ class GameSession:
             if self.duelo.active and self.duelo.roundActive and not self.duelo.winner:
                 side = self.duelo.get_team(uid)
                 if side and avatar:
-                    if self._duelo_tapface_dbg > 0:
-                        self._duelo_tapface_dbg -= 1
-                        emit(self.tenant_id, "log", f"[Duelo][tapface] EMIT side={side} user={user} avatar_len={len(str(avatar or ''))}")
                     emit(self.tenant_id, "game", {
                         "type": "duelo_tap_avatar_burst",
                         "side": side,
@@ -624,9 +612,6 @@ class GameSession:
                         "avatar_url": str(avatar or ""),
                         "delta": int(like_count or 0),
                     })
-                elif side and self._duelo_tapface_dbg > 0:
-                    self._duelo_tapface_dbg -= 1
-                    emit(self.tenant_id, "log", f"[Duelo][tapface] SEM avatar (não emite) side={side} user={user}")
             if self.duelo.winner and not self.duelo.roundActive and not self.duelo.final:
                 delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
                 self._schedule_duelo_reset(delay)
@@ -646,7 +631,6 @@ class GameSession:
                 side = "lula"
             else:
                 return
-            self._duelo_uid_dump(user, user_meta, "comment")
             uid = self._stable_uid(user, user_meta)
             old = self.duelo.get_team(uid)
             if self.duelo.register_team(uid, side):
