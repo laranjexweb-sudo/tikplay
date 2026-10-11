@@ -1511,7 +1511,7 @@ function connectWS() {
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
     else if (msg.type === "duelo_support_attack") { markInteraction(); if (!isTimedMode()) damageFloat(msg.target, msg.hp_damage || 0, msg.absorbed || 0); enqueueSupport(msg); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
-    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); dueloMainGifts = (msg.settings && msg.settings.main_gifts) || {}; dueloExtraGifts = (msg.settings && msg.settings.extra_gifts) || {}; renderGiftTags(); renderHud(); }
+    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); dueloMainGifts = (msg.settings && msg.settings.main_gifts) || {}; dueloExtraGifts = (msg.settings && msg.settings.extra_gifts) || {}; if (msg.settings && (msg.settings.game_mode === "timed" || msg.settings.game_mode === "hp")) state.game_mode = msg.settings.game_mode; renderGiftTags(); renderHud(); }
   };
 }
 
