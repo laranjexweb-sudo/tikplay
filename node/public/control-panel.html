@@ -15,13 +15,15 @@
   #tab-duelo .duelo-sec summary::before { content: "▸ "; display: inline-block; transition: transform .15s ease; }
   #tab-duelo .duelo-sec[open] summary::before { transform: rotate(90deg); }
   #tab-duelo { --duelo-gap: 10px; --duelo-radius: 10px; --duelo-border: 2px; --duelo-field-h: 34px; --duelo-section-pad: 12px; }
+  #tab-duelo, #tab-duelo *, #tab-duelo *::before, #tab-duelo *::after { box-sizing: border-box; }
   #tab-duelo .nb-card { padding: var(--duelo-section-pad); margin-bottom: 10px; }
   #tab-duelo .duelo-section-title { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; padding-bottom: 8px; border-bottom: var(--duelo-border) solid #000; }
   #tab-duelo .duelo-grid { display: grid; gap: var(--duelo-gap); }
   #tab-duelo .duelo-grid-2 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   #tab-duelo .duelo-grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-  #tab-duelo .duelo-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--duelo-gap); }
-  @media (max-width: 767px) { #tab-duelo .duelo-grid-2col { grid-template-columns: 1fr; } }
+  #tab-duelo .duelo-teams-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; width: 100%; }
+  #tab-duelo .duelo-team { width: 100%; min-width: 0; overflow: hidden; box-sizing: border-box; container-type: inline-size; }
+  @media (max-width: 1100px) { #tab-duelo .duelo-teams-grid { grid-template-columns: 1fr; } }
   #tab-duelo .duelo-field { display: flex; flex-direction: column; gap: 4px; }
   #tab-duelo .duelo-field-label, #tab-duelo .duelo-sub { font-size: 12px; font-weight: 800; margin: 0; letter-spacing: .02em; }
   #tab-duelo .duelo-sub { text-transform: uppercase; margin: 8px 0 4px; }
@@ -53,33 +55,36 @@
   #tab-duelo .duelo-team--blue .duelo-team-title { color: #0D47FF; }
   #tab-duelo .duelo-team--red .duelo-team-title { color: #E61919; }
   #tab-duelo .duelo-extra-gift { height: var(--duelo-field-h); font-size: 13px; }
-  #tab-duelo .duelo-gift-head, #tab-duelo .duelo-gift-line { display: grid; grid-template-columns: minmax(150px, 1.6fr) 100px 120px 90px 130px 60px 42px; gap: 8px; align-items: center; }
+  #tab-duelo .duelo-gift-head, #tab-duelo .duelo-gift-line { display: grid; grid-template-columns: minmax(84px, 1.5fr) minmax(62px, .8fr) minmax(86px, 1fr) minmax(54px, .65fr) minmax(58px, 1fr) 26px 32px; gap: 6px; align-items: center; width: 100%; min-width: 0; box-sizing: border-box; }
   #tab-duelo .duelo-gift-head { padding: 2px 0; font-size: 11px; font-weight: 800; color: #666; letter-spacing: .03em; text-transform: uppercase; border-bottom: 2px solid #000; }
   #tab-duelo .duelo-gift-head span:last-child { visibility: hidden; }
   #tab-duelo .duelo-gift-line { padding: 5px 0; border-bottom: 1px dashed #ddd; }
   #tab-duelo .duelo-gift-line:last-child { border-bottom: none; }
-  #tab-duelo .duelo-gift-line > * { min-width: 0; }
+  #tab-duelo .duelo-gift-line > *, #tab-duelo .duelo-gift-line .form-control, #tab-duelo .duelo-gift-line .form-select { min-width: 0; width: 100%; box-sizing: border-box; }
   #tab-duelo .duelo-gift-line .form-control, #tab-duelo .duelo-gift-line .form-select { height: 30px; font-size: 12px; }
   #tab-duelo .duelo-gift-line .duelo-act-cell, #tab-duelo .duelo-gift-line .duelo-val-cell { display: flex; align-items: center; min-width: 0; }
-  #tab-duelo .duelo-gift-line .duelo-act-cell .form-select { width: 100%; }
-  #tab-duelo .duelo-gift-line .duelo-val-cell input[type="number"] { width: 100%; min-width: 0; }
-  #tab-duelo .duelo-gift-line .duelo-val-cell .duelo-apoio-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .03em; }
-  #tab-duelo .duelo-audio-box input[type="file"] { width: 100%; font-size: 11px; padding: 4px; }
+  #tab-duelo .duelo-gift-line .duelo-act-cell .form-select, #tab-duelo .duelo-gift-line .duelo-val-cell input { width: 100%; }
+  #tab-duelo .duelo-gift-line .duelo-val-cell .duelo-apoio-label, #tab-duelo .duelo-apoio-field { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tab-duelo .duelo-audio-box input[type="file"] { width: 100%; min-width: 0; font-size: 0; padding: 6px 4px; cursor: pointer; box-sizing: border-box; }
+  #tab-duelo .duelo-audio-box input[type="file"]::file-selector-button { font-size: 11px; font-weight: 700; padding: 2px 8px; border: 2px solid #000; border-radius: 6px; background: #e8e2d5; cursor: pointer; }
   #tab-duelo .duelo-gift-check { display: flex; justify-content: center; align-items: center; }
-  #tab-duelo .duelo-gift-x { height: 30px; width: 38px; padding: 0; font-size: 15px; line-height: 1; }
-  #tab-duelo .duelo-apoio-field { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .03em; }
-  #tab-duelo .sup-line { display: grid; grid-template-columns: 118px minmax(120px, 1fr) 84px 124px 64px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px dashed #ddd; font-size: 12px; }
+  #tab-duelo .duelo-gift-x { height: 30px; width: 32px; padding: 0; font-size: 15px; line-height: 1; }
+  #tab-duelo .sup-line { display: grid; grid-template-columns: minmax(100px, .9fr) minmax(140px, 1.6fr) 70px minmax(90px, 1fr) 52px; gap: 6px; align-items: center; padding: 5px 0; border-bottom: 1px dashed #ddd; font-size: 12px; width: 100%; min-width: 0; box-sizing: border-box; }
+  #tab-duelo[data-game-mode="timed"] .sup-line { grid-template-columns: minmax(100px, .9fr) minmax(150px, 1.7fr) minmax(90px, 1fr) 52px; }
   #tab-duelo .sup-line:last-child { border-bottom: none; }
-  #tab-duelo .sup-lbl { font-weight: 800; font-size: 12px; letter-spacing: .02em; text-transform: uppercase; }
+  #tab-duelo .sup-lbl { font-weight: 800; font-size: 12px; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tab-duelo .sup-line > *, #tab-duelo .sup-line .form-control { min-width: 0; width: 100%; box-sizing: border-box; }
   #tab-duelo .sup-line .position-relative { min-width: 0; }
   #tab-duelo .sup-line .form-control { height: 30px; font-size: 12px; }
-  #tab-duelo .sup-line .sup-audio { min-width: 0; }
-  #tab-duelo .sup-line input[type="file"] { width: 100%; font-size: 11px; padding: 4px; }
+  #tab-duelo .sup-line input[type="file"] { font-size: 0; padding: 6px 4px; cursor: pointer; }
+  #tab-duelo .sup-line input[type="file"]::file-selector-button { font-size: 11px; font-weight: 700; padding: 2px 8px; border: 2px solid #000; border-radius: 6px; background: #e8e2d5; cursor: pointer; }
   #tab-duelo .sup-line .duelo-check { justify-content: center; }
-  @media (max-width: 1400px) {
+  @container (max-width: 660px) {
     #tab-duelo .duelo-gift-head { display: none; }
-    #tab-duelo .duelo-gift-line { grid-template-columns: 1fr 100px 120px 90px; row-gap: 6px; }
-    #tab-duelo .duelo-gift-line .duelo-audio-box, #tab-duelo .duelo-gift-line .duelo-gift-check, #tab-duelo .duelo-gift-line .duelo-gift-x { grid-column: span 1; }
+    #tab-duelo .duelo-gift-line { grid-template-columns: 1.2fr 84px 96px; row-gap: 6px; }
+    #tab-duelo .duelo-gift-line .duelo-val-cell { grid-column: 2 / 4; min-width: 0; }
+    #tab-duelo .duelo-gift-line .duelo-audio-box { grid-column: 1 / 3; min-width: 0; }
+    #tab-duelo .duelo-gift-line .duelo-gift-check, #tab-duelo .duelo-gift-line .duelo-gift-x { grid-column: span 1; }
   }
   #tab-duelo .dl-preview { position: relative; width: 100%; max-width: 200px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; user-select: none; }
   #tab-duelo .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 5px 7px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 8px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
@@ -943,7 +948,7 @@
           <!-- PRESENTES & APOIOS -->
           <div class="nb-card">
             <h2 class="duelo-section-title">Presentes & Apoios</h2>
-            <div class="duelo-grid-2col">
+            <div class="duelo-teams-grid">
               <div class="duelo-team duelo-team--blue">
                 <div class="duelo-team-title">Flávio</div>
                 <div class="mode-timed-only">
