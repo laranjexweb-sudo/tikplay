@@ -91,14 +91,14 @@
   #tab-duelo { min-width: 0; }
   #tab-duelo .nb-card { max-width: 100%; }
   #tab-duelo .sup-audio .duelo-help { word-break: break-all; font-size: 10px; line-height: 1.15; }
-  @media (min-width: 992px) {
-    .container-fluid > .row { flex-wrap: nowrap; }
-    .container-fluid > .row > .col-lg-8,
-    .container-fluid > .row > .col-lg-4 { min-width: 0; }
+  .duelo-panel-split { display: flex; flex-wrap: nowrap; align-items: stretch; flex: 1 1 auto; min-height: 0; }
+  .duelo-panel-col { min-width: 0; min-height: 0; display: flex; }
+  .duelo-panel-main { flex: 1 1 0; flex-direction: column; }
+  .duelo-panel-side { flex: 0 0 360px; width: 360px; }
+  @media (max-width: 820px) {
+    .duelo-panel-split { flex-wrap: wrap; }
+    .duelo-panel-main, .duelo-panel-side { flex-basis: 100%; width: 100%; }
   }
-  .container-fluid > .row { display: flex; flex-wrap: nowrap; align-items: stretch; }
-  .container-fluid > .row > .col-lg-8 { flex: 1 1 0 !important; width: auto !important; max-width: none !important; min-width: 0 !important; }
-  .container-fluid > .row > .col-lg-4 { flex: 0 0 360px !important; width: 360px !important; min-width: 0 !important; }
   @container (max-width: 660px) {
     #tab-duelo .duelo-gift-head { display: none; }
     #tab-duelo .duelo-gift-line { grid-template-columns: 1.2fr 84px 96px; row-gap: 6px; }
@@ -248,8 +248,8 @@
     <div class="text-secondary mt-2" style="font-size:0.75rem" id="billingMsg"></div>
   </div>
 
-  <div class="row flex-grow-1" style="min-height:0">
-    <div class="col-lg-8 d-flex flex-column" style="min-height:0">
+  <div class="duelo-panel-split">
+    <div class="duelo-panel-col duelo-panel-main">
 
       <!-- ===================== Conectar Live ===================== -->
       <div class="tab-page" id="tab-connect">
@@ -1114,7 +1114,7 @@
         </div>
       </div>
 
-    <div class="col-lg-4 d-flex" style="min-height:0">
+    <div class="duelo-panel-col duelo-panel-side">
       <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h2 class="m-0">Logs</h2>
