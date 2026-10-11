@@ -812,25 +812,7 @@
                 <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Soco</label><input type="number" class="form-control form-control-sm" id="dueloDmgPunch" value="10" min="1"></div>
                 <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Chute</label><input type="number" class="form-control form-control-sm" id="dueloDmgKick" value="15" min="1"></div>
                 <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Levantada</label><input type="number" class="form-control form-control-sm" id="dueloDmgUppercut" value="20" min="1"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
                 <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Meta de votos (0 = ilimitado)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
-                <div class="col-md-4">
-                  <label class="form-label mb-0" style="font-size:0.8rem">Cenário</label>
-                  <select class="form-select form-select-sm" id="dueloScene" onchange="dueloQuickSave()">
-                    <option value="brasilia">Brasília</option>
-                    <option value="sao-paulo">São Paulo</option>
-                    <option value="rio-de-janeiro">Rio de Janeiro</option>
-                    <option value="salvador">Salvador</option>
-                    <option value="tribunal">STF</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label mb-0" style="font-size:0.8rem">Sem interação (idle)</label>
-                  <div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label class="form-check-label" for="dueloIdleOn">Ativo</label></div>
-                </div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para entrar (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para nova partida (s)</label><input type="number" class="form-control form-control-sm" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
               </div>
               <div class="row g-2 mode-timed-only" id="dueloTimedFields">
                 <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
@@ -840,6 +822,34 @@
               <div class="text-secondary mt-2" style="font-size:0.75rem">
                 Todo presente válido soma votos (moedas × combo). Modo HP: golpes/escudos influenciam o debate; KO não zera votos; quem atingir 50%+1 da Meta: VENCEDOR FINAL. Modo Tempo: rodada cronometrada, vence quem tiver mais votos. Nova disputa zera votos e debates.
               </div>
+              <div class="d-flex gap-2 align-items-center mt-2">
+                <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração do Duelo</button>
+                <span class="text-secondary duelo-msg" style="font-size:0.75rem" id="dueloMsg0"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-3">
+            <h2>Cenário & Geral</h2>
+            <div class="row g-2">
+              <div class="col-md-3">
+                <label class="form-label mb-0" style="font-size:0.8rem">Cenário</label>
+                <select class="form-select form-select-sm" id="dueloScene" onchange="dueloQuickSave()">
+                  <option value="brasilia">Brasília</option>
+                  <option value="sao-paulo">São Paulo</option>
+                  <option value="rio-de-janeiro">Rio de Janeiro</option>
+                  <option value="salvador">Salvador</option>
+                  <option value="tribunal">STF</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label mb-0" style="font-size:0.8rem">Sem interação (idle)</label>
+                <div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label class="form-check-label" for="dueloIdleOn">Ativo</label></div>
+              </div>
+              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para entrar (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
+              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para nova partida (s)</label><input type="number" class="form-control form-control-sm" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
+              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
+              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Reset da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1"></div>
             </div>
           </div>
 
@@ -899,7 +909,7 @@
             </div>
             <div class="d-flex gap-2 align-items-center">
               <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração</button>
-              <span class="text-secondary" style="font-size:0.75rem" id="dueloMsg"></span>
+              <span class="text-secondary duelo-msg" style="font-size:0.75rem" id="dueloMsg"></span>
             </div>
           </div>
 
@@ -929,6 +939,10 @@
             </div>
             <div class="text-secondary mt-2" style="font-size:0.75rem">
               No modo Tempo todo presente somará votos (moedas × combo). O principal dispara o golpe visual pelo combo; os extras apenas pontuam.
+            </div>
+            <div class="d-flex gap-2 align-items-center mt-2">
+              <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar presentes</button>
+              <span class="text-secondary duelo-msg" style="font-size:0.75rem"></span>
             </div>
           </div>
 
@@ -3776,8 +3790,7 @@ function setDueloStatusButtons(active) {
 }
 
 function dueloMsg(text) {
-  const el = document.getElementById("dueloMsg");
-  if (el) el.textContent = text;
+  document.querySelectorAll(".duelo-msg").forEach((el) => { el.textContent = text; });
 }
 
 function selectDueloGiftName(i, name) {
@@ -4157,7 +4170,11 @@ async function dueloSaveConfig() {
       if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
       renderDueloGifts();
       renderDueloSettings();
-      dueloMsg(`Configuração salva! HP ${data.settings && data.settings.hp_start} · Escudo ${data.settings && data.settings.shield_start} · Modo ${(data.settings && data.settings.mode || "hp").toUpperCase()}`);
+      const st = data.settings || {};
+      const timed = st.game_mode === "timed";
+      dueloMsg(timed
+        ? `Configuração salva! Modo TEMPO · rodada ${st.round_time_s || 180}s · resultado ${st.round_result_delay_s || 8}s · presentes ${(st.main_gifts || {}).flavio ? 'OK' : '—'}`
+        : `Configuração salva! HP ${st.hp_start || 100} · Escudo ${st.shield_start || 100} · Meta ${st.vote_target || 0}`);
     } else {
       dueloMsg(data.error || "Erro ao salvar");
     }
