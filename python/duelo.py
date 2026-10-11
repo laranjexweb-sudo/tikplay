@@ -49,6 +49,13 @@ DEFAULT_ACTION_AUDIO = {
 
 DEFAULT_SHIELD_AUDIO = "/duelo-audio/_system/escudo-padrao.mp3"
 
+DEFAULT_ACTION_AUDIO = {
+    "punch": "/duelo-audio/_system/soco-novo.mp3",
+    "kick": "/duelo-audio/_system/chute-novo.mp3",
+    "uppercut": "/duelo-audio/_system/levantada-novo.mp3",
+    "lowKick": "/duelo-audio/_system/chute-novo.mp3",
+}
+
 
 class DueloEngine:
     VALID_CHARACTERS = ("flavio", "lula")
@@ -524,7 +531,7 @@ class DueloEngine:
             self._emit("duelo_attack", {
                 "attacker": side, "defender": defender, "action": action, "combo": 1,
                 "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
-                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "added_votes": 0, "mode": "hp_new", "audio_url": DEFAULT_ACTION_AUDIO.get(action, ""),
                 "gift": "", "user": "", "nickname": "",
             })
             self._hp_new_ko(side, defender)
@@ -590,7 +597,7 @@ class DueloEngine:
             self._emit("duelo_attack", {
                 "attacker": side, "defender": defender, "action": action, "combo": combo,
                 "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
-                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "added_votes": 0, "mode": "hp_new", "audio_url": DEFAULT_ACTION_AUDIO.get(action, ""),
                 "gift": str(gift_name or ""), "user": user or "", "nickname": nickname or user or "",
             })
             ko = self._hp_new_ko(side, defender)
@@ -607,7 +614,7 @@ class DueloEngine:
             self._emit("duelo_attack", {
                 "attacker": side, "defender": defender, "action": action, "combo": combo,
                 "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
-                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "added_votes": 0, "mode": "hp_new", "audio_url": DEFAULT_ACTION_AUDIO.get(action, ""),
                 "gift": str(gift_name or ""), "user": user or "", "nickname": nickname or user or "",
             })
             ko = self._hp_new_ko(side, defender)
