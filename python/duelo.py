@@ -32,6 +32,11 @@ DEFAULT_SETTINGS = {
     "uppercut_combo_min": 20,     # combo mínimo para LEVANTADA (chute abaixo)
     "main_gifts": {},             # presente principal por lado: {flavio:{gift_id,gift_name}, lula:{...}}
     "extra_gifts": {},            # {flavio:[{gift_id,gift_name,enabled,action}], lula:[...]}
+    # ---- Modo 3: Batalha (HP Novo) ----
+    "damage_multiplier": 1,       # 1 moeda = N HP de dano
+    "tap_target": 500,            # meta de TAP por equipe
+    "tap_damage": 100,            # dano de cada ataque de meta
+    "special_attacks": {},        # scaffold: {virou_jacare:{side,gift_id,gift_name,damage,sequence,audio,enabled}, ...}
 }
 
 DEFAULT_ACTION_AUDIO = {
@@ -58,6 +63,7 @@ class DueloEngine:
         self.shield = {"flavio": 100, "lula": 100}
         self.votes = {"flavio": 0, "lula": 0}
         self.debate_wins = {"flavio": 0, "lula": 0}
+        self.taps = {"flavio": 0, "lula": 0}
         self.roundActive = True
         self.winner = None
         self.final = False
@@ -102,16 +108,26 @@ class DueloEngine:
             self.votes = {"flavio": 0, "lula": 0}
             self.debate_wins = {"flavio": 0, "lula": 0}
             self._reset_timed_clock()
+        elif self._is_hp_new():
+            self.hp = {"flavio": int(self.settings.get("hp_start", 10000) or 10000),
+                       "lula": int(self.settings.get("hp_start", 10000) or 10000)}
+            self.taps = {"flavio": 0, "lula": 0}
+            self.debate_wins = {"flavio": 0, "lula": 0}
 
     def stop(self):
         self.active = False
 
     def reset_round(self):
-        """Reseta HP/escudo e volta a rodada. NÃO mexe nos votos. (Modo HP)"""
+        """Reseta HP/escudo e volta a rodada. NÃO mexe nos votos. (Modo HP / HP Novo)"""
         self.roundActive = True
         self.winner = None
         self.final = False
-        self._reset_hp_shield()
+        if self._is_hp_new():
+            self.hp = {"flavio": int(self.settings.get("hp_start", 10000) or 10000),
+                       "lula": int(self.settings.get("hp_start", 10000) or 10000)}
+            self.taps = {"flavio": 0, "lula": 0}
+        else:
+            self._reset_hp_shield()
 
     def reset_match(self):
         """Nova disputa: zera votos e debate_wins e remove vencedor final."""
@@ -128,6 +144,9 @@ class DueloEngine:
 
     def _is_timed(self):
         return str(self.settings.get("game_mode") or "hp").strip().lower() == "timed"
+
+    def _is_hp_new(self):
+        return str(self.settings.get("game_mode") or "hp").strip().lower() == "hp_new"
 
     def _reset_timed_clock(self):
         self.round_time = int(self.settings.get("round_time_s", 180) or 180)
@@ -174,6 +193,10 @@ class DueloEngine:
             "time_remaining": self.time_remaining,
             "round_time": self.round_time,
             "final_result": self.final_result,
+            "taps": dict(self.taps),
+            "tap_target": int(self.settings.get("tap_target", 500) or 500),
+            "tap_damage": int(self.settings.get("tap_damage", 100) or 100),
+            "damage_multiplier": float(self.settings.get("damage_multiplier", 1) or 1),
             "winner": self.winner,
             "roundActive": self.roundActive,
             "final": self.final,
@@ -425,6 +448,118 @@ class DueloEngine:
 
         return None
 
+    # ---- Modo 3: Batalha (HP Novo) ----
+    def _hp_new_damage(self, coins, combo):
+        combo = max(1, int(combo or 1))
+        mult = float(self.settings.get("damage_multiplier", 1) or 1)
+        return max(0, int((int(coins or 0) * combo) * mult))
+
+    def _special_attack_match(self, gift_id="", gift_name=""):
+        specials = self.settings.get("special_attacks") or {}
+        if not isinstance(specials, dict):
+            return None
+        for key, s in specials.items():
+            if not isinstance(s, dict) or s.get("enabled") is False:
+                continue
+            sid = str(s.get("gift_id") or "").strip()
+            sname = str(s.get("gift_name") or "").strip()
+            hit = bool(sid and gift_id and self._norm(sid) == self._norm(gift_id))
+            if not hit and sname:
+                hit = self._norm(sname) == self._norm(gift_name)
+            if hit:
+                return key
+        return None
+
+    def _hp_new_ko(self, attacker, defender):
+        if self.hp.get(defender, 0) > 0:
+            return False
+        self.roundActive = False
+        self.winner = attacker
+        self.debate_wins[attacker] = (self.debate_wins.get(attacker, 0) or 0) + 1
+        self._emit("duelo_round_end", {"winner": attacker, "votes": dict(self.votes), "final": False})
+        return True
+
+    def _on_gift_hp_new(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
+        if not self.active or not self.roundActive or self.winner:
+            return None
+        combo = max(1, int(combo or 1))
+
+        sp = self._special_attack_match(gift_id, gift_name)
+        if sp:
+            specials = self.settings.get("special_attacks") or {}
+            cfg = specials.get(sp)
+            char = self._norm((cfg or {}).get("side") or "")
+            if char in self.VALID_CHARACTERS:
+                defender = "lula" if char == "flavio" else "flavio"
+                dmg = max(0, int((cfg or {}).get("damage") or 0))
+                self.hp[defender] = max(0, self.hp.get(defender, 0) - dmg)
+                ko = self._hp_new_ko(char, defender)
+                self._emit("duelo_special", {
+                    "key": sp, "side": char, "defender": defender,
+                    "damage": dmg, "absorbed": 0, "hp_damage": dmg,
+                    "sequence": str((cfg or {}).get("sequence") or ""),
+                    "audio_url": str((cfg or {}).get("audio") or ""),
+                    "user": user or "", "nickname": nickname or user or "",
+                })
+                self._emit("duelo_state", self.state())
+                return ("round_end" if ko else "special")
+
+        sup = self._resolve_supporter(gift_id, gift_name)
+        if sup:
+            key, cfg = sup
+            char = self._norm(cfg.get("side") or "")
+            defender = "lula" if char == "flavio" else "flavio"
+            base = max(1, int(cfg.get("damage") or 0))
+            dmg = base * combo
+            self.hp[defender] = max(0, self.hp.get(defender, 0) - dmg)
+            own = str(cfg.get("audio") or "").strip()
+            self._emit("duelo_support_attack", {
+                "supporter": key, "side": char, "gift_id": str(gift_id or ""),
+                "gift_name": str(cfg.get("gift_name") or gift_name or ""),
+                "damage": base, "combo": combo, "final_damage": dmg,
+                "absorbed": 0, "hp_damage": dmg,
+                "target": defender, "audio_url": f"/duelo-audio/{self.tenant_id}/{own}" if own else "",
+                "user": user or "", "nickname": nickname or user or "",
+            })
+            ko = self._hp_new_ko(char, defender)
+            self._emit("duelo_state", self.state())
+            return ("round_end" if ko else "support_attack")
+
+        side = self._main_gift_side(gift_id, gift_name)
+        if side:
+            defender = "lula" if side == "flavio" else "flavio"
+            dmg = self._hp_new_damage(coins, combo)
+            self.hp[defender] = max(0, self.hp.get(defender, 0) - dmg)
+            action = self._combo_action(combo)
+            self._emit("duelo_attack", {
+                "attacker": side, "defender": defender, "action": action, "combo": combo,
+                "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
+                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "gift": str(gift_name or ""), "user": user or "", "nickname": nickname or user or "",
+            })
+            ko = self._hp_new_ko(side, defender)
+            self._emit("duelo_state", self.state())
+            return ("round_end" if ko else "attack")
+
+        ex = self._extra_gift_side(gift_id, gift_name)
+        if ex:
+            side, _item = ex
+            defender = "lula" if side == "flavio" else "flavio"
+            dmg = self._hp_new_damage(coins, combo)
+            self.hp[defender] = max(0, self.hp.get(defender, 0) - dmg)
+            action = self._combo_action(combo)
+            self._emit("duelo_attack", {
+                "attacker": side, "defender": defender, "action": action, "combo": combo,
+                "base_damage": 0, "damage": dmg, "absorbed": 0, "hp_damage": dmg,
+                "added_votes": 0, "mode": "hp_new", "audio_url": "",
+                "gift": str(gift_name or ""), "user": user or "", "nickname": nickname or user or "",
+            })
+            ko = self._hp_new_ko(side, defender)
+            self._emit("duelo_state", self.state())
+            return ("round_end" if ko else "attack")
+
+        return None
+
     def on_gift(self, gift_id="", gift_name="", combo=1, user=None, nickname=None, coins=0):
         # Durante banner de vitória / rodada pausada / disputa final, ignora todos os gifts.
         if not self.active or not self.roundActive or self.winner:
@@ -432,6 +567,9 @@ class DueloEngine:
 
         if self._is_timed():
             return self._on_gift_timed(gift_id, gift_name, combo, user, nickname, coins)
+
+        if self._is_hp_new():
+            return self._on_gift_hp_new(gift_id, gift_name, combo, user, nickname, coins)
 
         # ----- APOIO ESPECIAL (prioridade de match; soma votos + causa dano) -----
         sup = self._resolve_supporter(gift_id, gift_name)
