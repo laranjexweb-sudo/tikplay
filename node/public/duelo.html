@@ -2012,10 +2012,20 @@ async function runChuvaDePicanha(item) {
     if (!c) return;
     const el = document.createElement("img");
     el.src = CHUVA_FX.smalls[Math.floor(Math.random() * CHUVA_FX.smalls.length)];
-    const sX = sr.width * (0.5 + (Math.random() * 0.26 - 0.13)); // centro da nuvem
-    const defW = (defR && defR.width) || sr.width * 0.16;
-    const eX = defX + (Math.random() * (defW * 0.75) - defW * 0.5); // aterrissam NA imagem do Flávio (à esquerda), variando
-    const sY = sr.height * (0.20 + Math.random() * 0.12);
+    const cloudR = cloud ? cloud.getBoundingClientRect() : null;
+    const defR2 = cr("fighter-" + tgt);
+    const defW2 = (defR2 && defR2.width) || sr.width * 0.16;
+    const defLeft = (defR2 && defR2.left) || (defX - defW2 * 0.5);
+    // origem: dentro da largura/da barriga da nuvem (rect real, não a tela)
+    const sX = cloudR ? (cloudR.left + cloudR.width * 0.5 - sr.left) + (Math.random() * 2 - 1) * cloudR.width * 0.22 : sr.width * 0.5;
+    const sY = cloudR ? (cloudR.top - sr.top) + cloudR.height * (0.50 + Math.random() * 0.16) : sr.height * (0.20 + Math.random() * 0.12);
+    // destino: chão espalhado, com peso à esquerda do Flávio (40% antes, 40% pés, 20% um pouco à direita)
+    const rr = Math.random();
+    let eX;
+    if (rr < 0.40) eX = defLeft - defW2 * (0.80 - Math.random() * 0.30);
+    else if (rr < 0.80) eX = defLeft + defW2 * (-0.15 + Math.random() * 0.35);
+    else eX = defLeft + defW2 * (0.20 + Math.random() * 0.22);
+    const endY = groundY + (Math.random() * 10 - 2);
     const h = fg ? (5 + Math.random() * 2.6) : (3.4 + Math.random() * 1.6);
     const dur = fg ? (330 + Math.random() * 200) : (400 + Math.random() * 160); // chuva forte e rápida
     const r0 = -35 + Math.random() * 70;
@@ -2029,7 +2039,7 @@ async function runChuvaDePicanha(item) {
     void el.offsetWidth;
     el.style.transition = "left " + dur + "ms ease-in, top " + dur + "ms linear, transform " + dur + "ms linear";
     el.style.left = eX + "px";
-    el.style.top = groundY + 8 + "px";
+    el.style.top = endY + "px";
     el.style.transform = "rotate(" + r1 + "deg)";
     setTimeout(() => { try { el.remove(); } catch (e) {} }, dur + 450);
   };
@@ -2052,9 +2062,11 @@ async function runChuvaDePicanha(item) {
     if (item.audio_url) playAudio(item.audio_url);
     if (logo && logoImg) {
       logoImg.src = CHUVA_FX.logo;
-      const lulaTop = casR ? casR.top : sr.height * 0.35;
-      logo.style.left = casX + "px";
-      logo.style.top = Math.max(4, lulaTop - 42) + "px";
+      const lulaT = casR ? casR.top : sr.height * 0.35;
+      const defT = defR ? defR.top : lulaT;
+      const headTop = Math.min(lulaT, defT);
+      logo.style.left = ((casX + defX) / 2) + "px"; // centro da ação
+      logo.style.top = Math.max(6, Math.min(headTop - 70, sr.height * 0.5)) + "px"; // acima das cabeças, longe do rosto
       logo.style.transform = "translateX(-50%)";
       logo.classList.add("show");
     }
@@ -2069,8 +2081,8 @@ async function runChuvaDePicanha(item) {
     await until(600);
 
     // 560ms+ — chuva FORTE: muitas picanhas caindo do centro da nuvem em direção ao Bolsonaro
-    const bgN = 3 + Math.floor(Math.random() * 2);   // 3-4
-    const fgN = 7 + Math.floor(Math.random() * 4);   // 7-10
+    const bgN = 2 + Math.floor(Math.random() * 2);   // 2-3
+    const fgN = 6 + Math.floor(Math.random() * 3);   // 6-8
     const plan = [];
     let tt = 560;
     for (let i = 0; i < bgN + fgN; i++) { plan.push(tt); tt += 40 + Math.random() * 55; }
@@ -2082,8 +2094,12 @@ async function runChuvaDePicanha(item) {
 
     // 1300ms — picanha principal (alvo capturado, sem recálculo)
     await until(1280);
+    const mDef = cr("fighter-" + tgt);
+    const mW = (mDef && mDef.width) || sr.width * 0.16;
+    const mLeft = (mDef && mDef.left) || (defX - mW * 0.5);
+    const mainLandX = mLeft + mW * (-0.05 + Math.random() * 0.25); // linha dos pés / frente do defensor
     main.src = CHUVA_FX.main;
-    main.style.left = defX + "px";
+    main.style.left = mainLandX + "px";
     main.style.top = "-90px";
     main.style.height = "8vh";
     main.style.transform = "rotate(-25deg)";
