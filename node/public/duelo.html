@@ -621,7 +621,39 @@ function renderGiftTags() {
     const el = $("gifts-" + f);
     if (!el) continue;
     const list = dueloGifts.filter((g) => g && g.active !== false && (g.character || f) === f);
-    const tags = list.map((g) => {
+    const tags = [];
+    const tagFor = (label, imgUrl) => {
+      const t = document.createElement("span");
+      t.className = "gift-tag";
+      if (imgUrl) {
+        const im = document.createElement("img");
+        im.src = imgUrl;
+        im.alt = "";
+        im.onerror = function () { this.style.display = "none"; };
+        t.appendChild(im);
+      } else {
+        const ic = document.createElement("span");
+        ic.className = "gift-icon";
+        ic.textContent = "🎁";
+        t.appendChild(ic);
+      }
+      const ef = document.createElement("span");
+      ef.className = "gift-effect";
+      ef.textContent = label;
+      t.appendChild(ef);
+      return t;
+    };
+    if (isTimedMode()) {
+      const m = dueloMainGifts && dueloMainGifts[f];
+      if (m && m.gift_name) tags.push(tagFor("+1 VOTO", m.image));
+      const ex = (dueloExtraGifts && dueloExtraGifts[f]) || [];
+      for (const x of ex) {
+        if (!x || x.enabled === false || !x.gift_name) continue;
+        const v = Number(x.value) > 0 ? Number(x.value) : null;
+        tags.push(tagFor(v != null ? "+" + fmtNum(v) + " VOTOS" : "+ VOTOS", x.image));
+      }
+    }
+    list.forEach((g) => {
       const span = document.createElement("span");
       const tg = String(g.type || "").toLowerCase();
       const isSup = GIFT_SUPPORT_TYPES.includes(tg);
@@ -645,7 +677,7 @@ function renderGiftTags() {
       else if (isEsc) eff.textContent = "ESCUDO +" + (Number(g.shield) > 0 ? g.shield : 15);
       else eff.textContent = (GIFT_ACTION_LABEL[g.action] || "GOLPE").toUpperCase();
       span.appendChild(eff);
-      return span;
+      tags.push(span);
     });
     for (const k of Object.keys(SUP_LABELS)) {
       const c = supCfg[k];
@@ -669,36 +701,6 @@ function renderGiftTags() {
       e2.textContent = SUP_LABELS[k];
       ts.appendChild(e2);
       tags.push(ts);
-    }
-    if (isTimedMode()) {
-      const tagFor = (label, imgUrl) => {
-        const t = document.createElement("span");
-        t.className = "gift-tag";
-        if (imgUrl) {
-          const im = document.createElement("img");
-          im.src = imgUrl;
-          im.alt = "";
-          im.onerror = function () { this.style.display = "none"; };
-          t.appendChild(im);
-        } else {
-          const ic = document.createElement("span");
-          ic.className = "gift-icon";
-          ic.textContent = "🎁";
-          t.appendChild(ic);
-        }
-        const ef = document.createElement("span");
-        ef.className = "gift-effect";
-        ef.textContent = label;
-        t.appendChild(ef);
-        return t;
-      };
-      const m = dueloMainGifts && dueloMainGifts[f];
-      if (m && m.gift_name) tags.push(tagFor("PRINCIPAL", m.image));
-      const ex = (dueloExtraGifts && dueloExtraGifts[f]) || [];
-      for (const x of ex) {
-        if (!x || x.enabled === false || !x.gift_name) continue;
-        tags.push(tagFor("+ VOTOS", x.image));
-      }
     }
     el.replaceChildren(...tags);
   }
