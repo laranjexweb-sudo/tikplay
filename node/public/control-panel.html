@@ -932,6 +932,10 @@
                   <option value="rio-de-janeiro">Rio de Janeiro</option>
                   <option value="salvador">Salvador</option>
                   <option value="tribunal">STF</option>
+                  <option value="festa-da-picanha">Festa da Picanha</option>
+                  <option value="pantano">Pântano</option>
+                  <option value="sala-de-controle-global">Sala de Controle Global</option>
+                  <option value="usinas-aeolicas">Usinas Eólicas</option>
                 </select>
               </div>
               <div>
@@ -3423,7 +3427,7 @@ async function loadDueloState() {
       if (data.settings.layout && typeof data.settings.layout === "object") {
         dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), data.settings.layout);
       }
-      dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(data.settings.scene) ? data.settings.scene : "brasilia";
+      dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal", "festa-da-picanha", "pantano", "sala-de-controle-global", "usinas-aeolicas"].includes(data.settings.scene) ? data.settings.scene : "brasilia";
       dueloSfxVol = data.settings.sfx_volume != null ? data.settings.sfx_volume : 92;
       const mu = data.settings.music || {};
       dueloMusicOn = !!mu.enabled;
@@ -3465,7 +3469,7 @@ function dueloSyncFlat(s) {
   if (!s) return;
   dueloSettings = Object.assign({}, dueloSettings, s);
   if (s.layout && typeof s.layout === "object") dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), s.layout);
-  dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(s.scene) ? s.scene : dueloScene;
+  dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal", "festa-da-picanha", "pantano", "sala-de-controle-global", "usinas-aeolicas"].includes(s.scene) ? s.scene : dueloScene;
   dueloSfxVol = s.sfx_volume != null ? s.sfx_volume : dueloSfxVol;
   const mu = s.music || {};
   dueloMusicOn = !!mu.enabled;
@@ -3724,7 +3728,7 @@ function updateModeVisibility() {
   if (ml) ml.textContent = { hp: "Debate por HP", timed: "Debate por Tempo", hp_new: "Batalha (HP Novo)" }[dueloGameMode] || "Debate por HP";
   const sl = document.getElementById("dueloSceneLbl");
   if (sl) {
-    const scLbls = { brasilia: "Brasília", "sao-paulo": "São Paulo", "rio-de-janeiro": "Rio de Janeiro", salvador: "Salvador", tribunal: "STF" };
+    const scLbls = { brasilia: "Brasília", "sao-paulo": "São Paulo", "rio-de-janeiro": "Rio de Janeiro", salvador: "Salvador", tribunal: "STF", "festa-da-picanha": "Festa da Picanha", pantano: "Pântano", "sala-de-controle-global": "Sala de Controle Global", "usinas-aeolicas": "Usinas Eólicas" };
     const sc = (document.getElementById("dueloScene") || {}).value || dueloScene;
     sl.textContent = scLbls[sc] || sc || "Brasília";
   }

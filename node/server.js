@@ -2022,7 +2022,7 @@ function normalizeDueloSettings(raw) {
     const mv = n(raw.music && raw.music.volume);
     out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled), default_file: safeName((raw.music && raw.music.default_file) || "mixkit-karma-1183.mp3") || "mixkit-karma-1183.mp3" };
     const sc = String(raw.scene || "").trim().toLowerCase();
-    out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(sc) ? sc : "brasilia";
+    out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal", "festa-da-picanha", "pantano", "sala-de-controle-global", "usinas-aeolicas"].includes(sc) ? sc : "brasilia";
     const idr = (raw.idle && typeof raw.idle === "object") ? raw.idle : {};
     out.idle = {
       enabled: idr.enabled !== false,
