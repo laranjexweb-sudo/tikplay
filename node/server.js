@@ -47,7 +47,12 @@ const LEGACY_PAGES = {
 
 app.get("/", (req, res) => res.redirect("/login"));
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
-  app.get(route, (req, res) => res.sendFile(path.join(PUBLIC_DIR, file)));
+  app.get(route, (req, res) => {
+    if (route === "/duelo" || route === "/painel") {
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    }
+    res.sendFile(path.join(PUBLIC_DIR, file));
+  });
 }
 for (const [legacy, target] of Object.entries(LEGACY_PAGES)) {
   app.get(legacy, (req, res) => res.redirect(301, target));
@@ -533,6 +538,9 @@ function handleDaemonMessage(msg) {
       const gameMsg = msg.msg || {};
       if (gameMsg.type === "duelo_state") {
         tenant.dueloState = gameMsg;
+      }
+      if (gameMsg.type === "duelo_tap_avatar_burst") {
+        console.log("[TapFace] node recebeu clients=" + tenant.browserClients.length + " type=" + gameMsg.type);
       }
       updateGameState(tenant, gameMsg);
       broadcastToClients(tenant.browserClients, gameMsg);

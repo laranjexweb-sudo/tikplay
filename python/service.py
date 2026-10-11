@@ -407,7 +407,7 @@ class GameSession:
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         self._duelo_uid_dbg = 5  # logs temporarios para validar a chave de usuario (hp_new)
-        self._duelo_tapface_dbg = 8  # logs temporarios p/ diagnostico do rostinho
+        self._duelo_tapface_dbg = 200  # logs temporarios p/ diagnostico do rostinho
         self._duelo_reset_task = None
         self._duelo_match_task = None
         self._duelo_timer_task = None

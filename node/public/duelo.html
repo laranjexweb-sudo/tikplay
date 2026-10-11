@@ -1422,6 +1422,7 @@ const tapFaceCache = new Map();
     const spawn = Math.min(tapFaceCountFor(delta), TAP_FACE_MAX - tapFaceCount[side]);
     if (spawn <= 0) return;
     tapFaceCount[side] += spawn;
+    const dec = () => { tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
     for (let i = 0; i < spawn; i++) {
       const b = document.createElement("div");
       b.className = "face-bubble";
@@ -1433,12 +1434,14 @@ const tapFaceCache = new Map();
       b.style.setProperty("--mx", ((side === "lula" ? 1 : -1) * (3 + Math.random() * 6)) + "px");
       b.style.setProperty("--ex", ((side === "lula" ? 1 : -1) * (5 + Math.random() * 8)) + "px");
       b.style.setProperty("--d", (1.3 + Math.random() * 0.7).toFixed(2) + "s");
-      const im = new Image();
-      const done = () => { if (b.parentNode) { b.remove(); tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); } };
-      im.onload = function () { b.appendChild(im); layer.appendChild(b); b.addEventListener("animationend", done); b.addEventListener("transitionend", done); };
-      im.onerror = function () { if (b.parentNode) b.remove(); tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
+      const im = document.createElement("img");
       im.alt = "";
+      const done = () => { if (b.parentNode) { b.remove(); dec(); } };
+      im.onerror = function () { done(); };
+      b.appendChild(im);
+      layer.appendChild(b);
       im.src = avatarUrl;
+      b.addEventListener("animationend", done);
       setTimeout(done, 2600);
     }
   }
