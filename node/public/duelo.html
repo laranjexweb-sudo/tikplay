@@ -920,8 +920,8 @@ const hpMax = state.hp_max || 100;
   const hpNew = isHpNewMode();
   const hudF = document.querySelector(".hud-flavio");
   const hudL = document.querySelector(".hud-lula");
-  if (hudF) hudF.style.display = timed ? "none" : "";
-  if (hudL) hudL.style.display = timed ? "none" : "";
+  if (hudF) hudF.style.display = (timed || hpNew) ? "none" : "";
+  if (hudL) hudL.style.display = (timed || hpNew) ? "none" : "";
   const sbd = $("sbDebates");
   if (sbd) {
     sbd.style.display = timed ? "flex" : "none";
@@ -1694,7 +1694,7 @@ async function loadInitialState() {
       state.active = !!data.active;
       if (s.layout) { dueloLayout = normalizeLayout(s.layout); applyLayout(); }
       state.mode = s.mode === "votes" ? "votes" : "hp";
-      state.game_mode = s.game_mode === "timed" ? "timed" : "hp";
+      state.game_mode = (s.game_mode === "timed" || s.game_mode === "hp_new") ? s.game_mode : "hp";
       state.time_remaining = s.round_time_s || 0;
       state.round_time = s.round_time_s || 0;
       const hpStart = !isNaN(Number(s.hp_start)) ? Number(s.hp_start) : 100;

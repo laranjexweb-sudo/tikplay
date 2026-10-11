@@ -3707,6 +3707,7 @@ function dueloModeChanged() {
   dueloGameMode = (v === "timed" || v === "hp_new") ? v : "hp";
   updateModeVisibility();
   renderSupporterFields();
+  renderLayoutEditor();
   dueloQuickSave();
 }
 
@@ -4176,8 +4177,9 @@ function renderLayoutEditor() {
   const preview = document.getElementById("dlPreview");
   const ctrl = document.getElementById("dlControls");
   if (!preview || !ctrl) return;
+  const layoutItems = DUELO_LAYOUT_ITEMS.filter((it) => !(dueloGameMode === "hp_new" && (it.key === "flavioHud" || it.key === "lulaHud")));
   preview.querySelectorAll(".dl-block").forEach((b) => b.remove());
-  DUELO_LAYOUT_ITEMS.forEach((it) => {
+  layoutItems.forEach((it) => {
     const b = document.createElement("div");
     b.className = "dl-block";
     b.dataset.key = it.key;
@@ -4200,7 +4202,7 @@ function renderLayoutEditor() {
         <button class="duelo-btn duelo-btn--warning" data-reset="${it.key}">Reset</button>
       </span>
     </div>`;
-  html += DUELO_LAYOUT_ITEMS.map(itemLine).join("");
+  html += layoutItems.map(itemLine).join("");
   html += `<div class="dl-line">
       <label class="dl-lbl">PERSONAGENS</label>
       <input type="number" class="form-control" id="dl-fighters-y" min="0" max="100"> Y
