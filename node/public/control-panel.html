@@ -26,7 +26,7 @@
   #tab-duelo .duelo-grid-2 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   #tab-duelo .duelo-grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
   #tab-duelo .duelo-teams-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; width: 100%; }
-  #tab-duelo .duelo-team { width: 100%; min-width: 0; overflow: hidden; box-sizing: border-box; container-type: inline-size; }
+  #tab-duelo .duelo-team { width: 100%; min-width: 0; box-sizing: border-box; container-type: inline-size; }
   @media (max-width: 1100px) { #tab-duelo .duelo-teams-grid { grid-template-columns: 1fr; } }
   #tab-duelo .duelo-field { display: flex; flex-direction: column; gap: 4px; }
   #tab-duelo .duelo-field-label, #tab-duelo .duelo-sub { font-size: 12px; font-weight: 800; margin: 0; letter-spacing: .02em; }
@@ -909,6 +909,7 @@
               <div class="duelo-field"><label class="duelo-field-label">Multiplicador de dano</label><input type="number" id="dueloDmgMult" value="1" step="0.1" min="0.1" max="100"></div>
               <div class="duelo-field"><label class="duelo-field-label">Meta de TAP</label><input type="number" id="dueloTapTarget" value="500" min="10" max="10000" onchange="dueloQuickSave()"></div>
               <div class="duelo-field"><label class="duelo-field-label">Dano da meta</label><input type="number" id="dueloTapDamage" value="100" min="1" max="10000" onchange="dueloQuickSave()"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Aguardar entre batalhas (s)</label><input type="number" id="dueloHpNewDelay" value="6" min="2" max="30" onchange="dueloQuickSave()"></div>
             </div>
             <div class="duelo-grid duelo-grid-3 mode-timed-only" id="dueloTimedFields">
               <div class="duelo-field"><label class="duelo-field-label">Tempo da rodada (s)</label><input type="number" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
@@ -3436,6 +3437,7 @@ async function loadDueloState() {
       dueloDmgMult = data.settings.damage_multiplier != null ? data.settings.damage_multiplier : 1;
       dueloTapTarget = data.settings.tap_target != null ? data.settings.tap_target : 500;
       dueloTapDamage = data.settings.tap_damage != null ? data.settings.tap_damage : 100;
+      dueloHpNewDelay = data.settings.reset_delay_s != null ? data.settings.reset_delay_s : 6;
       const mg = data.settings.main_gifts || {};
       dueloMainFlavio = { gift_name: String(mg.flavio && mg.flavio.gift_name || "").trim() };
       dueloMainLula = { gift_name: String(mg.lula && mg.lula.gift_name || "").trim() };
@@ -3492,6 +3494,7 @@ function renderDueloSettings() {
   set("dueloDmgMult", dueloDmgMult);
   set("dueloTapTarget", dueloTapTarget);
   set("dueloTapDamage", dueloTapDamage);
+  set("dueloHpNewDelay", dueloHpNewDelay);
   const mfn = document.getElementById("dueloMainFName");
   if (mfn) mfn.value = dueloMainFlavio.gift_name;
   const mln = document.getElementById("dueloMainLName");
@@ -3825,7 +3828,7 @@ function readDueloSettings() {
     dmg_punch: num("dueloDmgPunch", 10),
     dmg_kick: num("dueloDmgKick", 15),
     dmg_uppercut: num("dueloDmgUppercut", 20),
-    reset_delay_s: num("dueloResetDelay", 6),
+    reset_delay_s: dueloGameMode === "hp_new" ? num("dueloHpNewDelay", 6) : num("dueloResetDelay", 6),
     vote_target: num("dueloMaxVotes", 0),
     layout: cleanLayout(),
     scene: document.getElementById("dueloScene") ? document.getElementById("dueloScene").value : dueloScene,
@@ -4082,6 +4085,7 @@ let dueloHpNew = 10000;
 let dueloDmgMult = 1;
 let dueloTapTarget = 500;
 let dueloTapDamage = 100;
+let dueloHpNewDelay = 6;
 let dueloMainFlavio = { gift_name: "" };
 let dueloMainLula = { gift_name: "" };
 let dueloExtras = { flavio: [], lula: [] };

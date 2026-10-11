@@ -62,6 +62,40 @@
     border-radius: 12px;
     box-shadow: inset 0 0 0 1px #000, 4px 4px 0 rgba(0,0,0,0.45);
   }
+
+  .hp-score {
+    position: absolute;
+    left: calc(var(--score-x) * 1%);
+    top: calc(var(--score-y) * 1%);
+    transform: translateX(-50%) scale(var(--score-scale));
+    transform-origin: top center;
+    z-index: 31;
+    pointer-events: none;
+    width: min(92vw, 900px);
+    padding: 8px 16px 7px;
+    background: rgba(8, 13, 26, 0.9);
+    border: 3px solid #c9a227;
+    border-top-color: #f0c84a;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px #000, 4px 4px 0 rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .hp-score.show { display: flex; }
+  .hp-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .hp-col.lula { align-items: flex-end; text-align: right; }
+  .hp-lbl { font: 800 clamp(0.6rem, 1.5vh, 0.85rem)/1 "Roboto Condensed", Arial, sans-serif; letter-spacing: 2px; color: #c9d7f0; }
+  .hp-col.lula .hp-lbl { color: #ff9a8a; }
+  .hp-bar { position: relative; height: clamp(10px, 1.9vh, 18px); width: 100%; background: rgba(255,255,255,0.1); border: 2px solid #000; border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 0 rgba(0,0,0,0.4); }
+  .hp-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; transition: width .4s ease; }
+  .hp-col.flavio .hp-bar i { background: linear-gradient(90deg, #1f6feb, #5bc0ff); }
+  .hp-col.lula .hp-bar i { background: linear-gradient(90deg, #c0392b, #ff6b6b); }
+  .hp-val { font: 900 clamp(0.85rem, 2.2vh, 1.25rem)/1 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
+  .hp-tap { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 3px; font: 800 clamp(0.62rem, 1.6vh, 0.9rem)/1.15 "Roboto Condensed", Arial, sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; }
+  .hp-tap .f { color: #5bc0ff; }
+  .hp-tap .l { color: #ff6b6b; }
   .sb-row { display: flex; align-items: center; gap: 12px; }
   .sb-val {
     font-weight: 900;
@@ -339,6 +373,22 @@
     </div>
     <div class="sb-meta" id="sbMeta">SEM LIMITE</div>
     <div class="sb-debates" id="sbDebates"><span class="sb-debates-label">VITÓRIAS</span><b class="sb-debates-val flavio" id="sbDebF">0</b><b class="sb-debates-val lula" id="sbDebL">0</b></div>
+  </div>
+  <div class="hp-score" id="hpScore">
+    <div class="hp-col flavio">
+      <div class="hp-lbl">FLÁVIO</div>
+      <div class="hp-bar"><i id="hpScoreBarF" style="width:100%"></i></div>
+      <div class="hp-val" id="hpScoreValF">0/100</div>
+    </div>
+    <div class="hp-tap">
+      <span class="f" id="hpTapF">TAP 0/0</span>
+      <span class="l" id="hpTapL">TAP 0/0</span>
+    </div>
+    <div class="hp-col lula">
+      <div class="hp-lbl">LULA</div>
+      <div class="hp-bar"><i id="hpScoreBarL" style="width:100%"></i></div>
+      <div class="hp-val" id="hpScoreValL">0/100</div>
+    </div>
   </div>
   <div class="combo-counter" id="combo"></div>
 
@@ -746,7 +796,7 @@ function renderGiftTags() {
       t.appendChild(ef);
       return t;
     };
-    if (isTimedMode()) {
+if (isTimedMode() || isHpNewMode()) {
       const m = dueloMainGifts && dueloMainGifts[f];
       if (m && m.gift_name) tags.push(tagFor("+1 VOTO", m.image));
       const ex = (dueloExtraGifts && dueloExtraGifts[f]) || [];
@@ -867,7 +917,7 @@ const hpMax = state.hp_max || 100;
   if (hudL) hudL.style.display = timed ? "none" : "";
   const sbd = $("sbDebates");
   if (sbd) {
-    sbd.style.display = timed ? "flex" : hpNew ? "none" : "none";
+    sbd.style.display = timed ? "flex" : "none";
     if (timed) {
       const df = $("sbDebF");
       if (df) df.textContent = (state.debate_wins && state.debate_wins.flavio) || 0;
@@ -877,21 +927,31 @@ const hpMax = state.hp_max || 100;
   }
   const lb = $("lbScore");
   if (lb) lb.style.display = hpNew ? "none" : "";
+  const hpsc = $("hpScore");
+  if (hpsc) {
+    hpsc.classList.toggle("show", !!hpNew);
+    if (hpNew) {
+      const tapT = state.tap_target || 1;
+      const bf = $("hpScoreBarF"), bl = $("hpScoreBarL");
+      const vf = $("hpScoreValF"), vl = $("hpScoreValL");
+      const tf = $("hpTapF"), tl = $("hpTapL");
+      if (bf) bf.style.width = pctBar(state.hp && state.hp.flavio, hpMax) + "%";
+      if (bl) bl.style.width = pctBar(state.hp && state.hp.lula, hpMax) + "%";
+      if (vf) vf.textContent = ((state.hp && state.hp.flavio) || 0) + "/" + hpMax;
+      if (vl) vl.textContent = ((state.hp && state.hp.lula) || 0) + "/" + hpMax;
+      if (tf) tf.textContent = "TAP " + ((state.taps && state.taps.flavio) || 0) + "/" + tapT;
+      if (tl) tl.textContent = "TAP " + ((state.taps && state.taps.lula) || 0) + "/" + tapT;
+    }
+  }
   for (const f of ["flavio", "lula"]) {
     const hdl = document.querySelector(".hud-" + f + " .hdl");
     if (hdl) hdl.textContent = hpNew ? "VITÓRIAS" : "DEBATES";
+    const hpM = document.querySelector(".hud-" + f + " .hud-metric:not(.sh)");
+    const shM = document.querySelector(".hud-" + f + " .hud-metric.sh");
+    if (hpM) hpM.style.display = (timed || hpNew) ? "none" : "";
+    if (shM) shM.style.display = hpNew ? "none" : "";
     const tapEl = $("tapval-" + f);
-    if (tapEl) {
-      if (hpNew) {
-        tapEl.style.display = "";
-        tapEl.textContent = ((state.taps && state.taps[f]) || 0) + "/" + (state.tap_target || 0);
-        tapEl.parentElement.style.display = "flex";
-      } else {
-        tapEl.parentElement.style.display = "none";
-      }
-    }
-    const shm = document.querySelector(".hud-" + f + " .hud-metric.sh");
-    if (shm) shm.style.display = hpNew ? "none" : "";
+    if (tapEl && tapEl.parentElement) tapEl.parentElement.style.display = "none";
   }
   for (const f of ["flavio", "lula"]) {
     const hpEl = $("hpbar-" + f);
@@ -900,7 +960,7 @@ const hpMax = state.hp_max || 100;
     const shL = $("shval-" + f);
     const dw = $("dwval-" + f);
     if (dw) dw.textContent = (state.debate_wins && state.debate_wins[f]) || 0;
-    if (timed) {
+    if (timed || hpNew) {
       if (hpEl) hpEl.style.width = "0%";
       if (shEl) shEl.style.width = "0%";
       if (hpL) hpL.textContent = "";
@@ -908,13 +968,8 @@ const hpMax = state.hp_max || 100;
     } else {
       if (hpEl) hpEl.style.width = pctBar(state.hp[f], hpMax) + "%";
       if (hpL) hpL.textContent = (state.hp[f] || 0) + "/" + hpMax;
-      if (hpNew) {
-        if (shEl) shEl.style.width = "0%";
-        if (shL) shL.textContent = "";
-      } else {
-        if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
-        if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
-      }
+      if (shEl) shEl.style.width = pctBar(state.shield[f], shMax) + "%";
+      if (shL) shL.textContent = (state.shield[f] || 0) + "/" + shMax;
     }
     const vr = $("votes-" + f);
     if (vr) {
