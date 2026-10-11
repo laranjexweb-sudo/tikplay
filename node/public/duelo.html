@@ -674,6 +674,11 @@ let attackQueue = [];
 let busy = false;
 let currentCombo = 0;
 let dueloGifts = [];
+let dueloSpecialCfg = {};
+const SPECIAL_META = {
+  virou_jacare: { side: "flavio", label: "VIROU JACARÉ" },
+  chuva_picanha: { side: "lula", label: "CHUVA DE PICANHA" },
+};
 let dueloMainGifts = {};
 let dueloExtraGifts = {};
 
@@ -1002,6 +1007,25 @@ if (isTimedMode() || isHpNewMode()) {
       ts.appendChild(e2);
       tags.push(ts);
     }
+    if (isHpNewMode()) {
+      for (const k of Object.keys(SPECIAL_META)) {
+        const sm = SPECIAL_META[k];
+        const sc = dueloSpecialCfg[k];
+        if (!sc || sc.enabled === false || !sc.gift_name) continue;
+        if ((sc.side || sm.side) !== f) continue;
+        const ts2 = document.createElement("span");
+        ts2.className = "gift-tag";
+        const ic2 = document.createElement("span");
+        ic2.className = "gift-icon";
+        ic2.textContent = "⭐";
+        ts2.appendChild(ic2);
+        const e3 = document.createElement("span");
+        e3.className = "gift-effect";
+        e3.textContent = "ESPECIAL · " + String(sc.gift_name).toUpperCase();
+        ts2.appendChild(e3);
+        tags.push(ts2);
+      }
+    }
     el.replaceChildren(...tags);
   }
 }
@@ -1012,9 +1036,8 @@ const opponent = (f) => (f === "flavio" ? "lula" : "flavio");
 
 function getDefensePose(target, msg) {
   if (isTimedMode()) return (Math.random() < 0.5 ? "defesaEscudo" : "defense");
-  const absorbed = Number(msg && msg.absorbed) > 0;
-  const currentShield = Number(state.shield && state.shield[target]) > 0;
-  return (absorbed || currentShield) ? "defesaEscudo" : "defense";
+  if (Number(msg && msg.absorbed) > 0) return "defesaEscudo"; // escudo real queimando no hit
+  return Math.random() < 0.4 ? "defesaEscudo" : "defense"; // 60% defesa normal / 40% com escudo
 }
 
 function setFighter(fighter, stateName) {
@@ -1981,7 +2004,8 @@ function hideChuva() {
 }
 
 async function runChuvaDePicanha(item) {
-  const tgt = "flavio";
+  const side = (item.side === "flavio" || item.side === "lula") ? item.side : "lula";
+  const tgt = (item.defender === "flavio" || item.defender === "lula") ? item.defender : opponent(side);
   if (!state.active && !item.isTest) return;
   if (item.isTest && state.winner) { const b = $("winBanner"); if (b) b.classList.remove("show"); }
   const stage = $("stage");
@@ -1992,8 +2016,8 @@ async function runChuvaDePicanha(item) {
   const fireY = parseFloat(getComputedStyle(stage).getPropertyValue("--fire-y")) || 20;
   const groundY = Math.max(0, sr.height * (1 - fireY / 100));
   const cr = (sel) => { const e = $(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { cx: r.left + r.width / 2 - sr.left, top: r.top - sr.top, bottom: r.bottom - sr.top, left: r.left - sr.left, right: r.left + r.width - sr.left, width: r.width }; };
-  const dir = FIGHTERS.lula.dir;
-  const casR = cr("fighter-lula"), defR = cr("fighter-" + tgt);
+  const dir = FIGHTERS[side].dir;
+  const casR = cr("fighter-" + side), defR = cr("fighter-" + tgt);
   const casX = casR ? casR.cx : sr.width * 0.68;
   const defX = defR ? defR.cx : sr.width * 0.3;
   const defPct = Math.max(6, Math.min(94, (defX / sr.width) * 100));
@@ -2056,8 +2080,8 @@ async function runChuvaDePicanha(item) {
   };
 
   try {
-    // 0ms — pose de invocação + áudio UMA vez na ativação + logo ACIMA do Lula
-    const imgL = $("img-lula");
+    // 0ms — pose de invocação + áudio UMA vez na ativação + logo ACIMA do personagem
+    const imgL = $("img-" + side);
     if (imgL) imgL.src = CHUVA_FX.pose;
     if (item.audio_url) playAudio(item.audio_url);
     if (logo && logoImg) {
@@ -2072,7 +2096,7 @@ async function runChuvaDePicanha(item) {
       logo.classList.add("show");
     }
     setFighter(tgt, "defense"); // Flávio segura a defesa (sem escudo) durante a chuva
-    const lulaF = $("fighter-lula");
+    const lulaF = $("fighter-" + side);
     if (lulaF) { lulaF.style.transition = "transform 140ms ease"; lulaF.style.transform = "translateY(-8px) scale(1.05)"; }
     await until(150);
     if (lulaF) { lulaF.style.transition = "transform 160ms ease"; lulaF.style.transform = "translateY(0) scale(1)"; }
@@ -2124,7 +2148,7 @@ async function runChuvaDePicanha(item) {
     if (deEl && !state.winner) { deEl.style.transition = "transform 160ms ease-out"; deEl.style.transform = "translateX(" + (-dir * 28) + "px)"; }
     say(tgt, "hit");
     if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
-    if (isHpNewMode() && Number(item.damage) > 0) voteFloat("lula", "+" + Number(item.damage) + " ATAQUE", "atk");
+    if (isHpNewMode() && Number(item.damage) > 0) voteFloat(side, "+" + Number(item.damage) + " ATAQUE", "atk");
     // impacto.png em PELO MENOS 3 locais diferentes no Flávio (cabeça/tronco/perna)
     const defFull = cr("fighter-" + tgt);
     if (defFull) {
@@ -2146,7 +2170,7 @@ async function runChuvaDePicanha(item) {
   } finally {
     if (deEl && !state.winner) { deEl.style.transition = "transform .3s ease"; deEl.style.transform = "translateX(0)"; }
     resetPose(tgt);
-    resetPose("lula");
+    resetPose(side);
     hideChuva();
   }
 }
@@ -2342,7 +2366,7 @@ function connectWS() {
     else if (msg.type === "duelo_gifts") { dueloGifts = Array.isArray(msg.gifts) ? msg.gifts : []; renderGiftTags(); }
     else if (msg.type === "duelo_support_attack") { markInteraction(); if (!isTimedMode()) damageFloat(msg.target, msg.hp_damage || 0, msg.absorbed || 0); enqueueSupport(msg); }
     else if (msg.type === "duelo_layout") { dueloLayout = normalizeLayout(msg.layout); applyLayout(); }
-    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); dueloMainGifts = (msg.settings && msg.settings.main_gifts) || {}; dueloExtraGifts = (msg.settings && msg.settings.extra_gifts) || {}; if (msg.settings && (msg.settings.game_mode === "timed" || msg.settings.game_mode === "hp")) state.game_mode = msg.settings.game_mode; renderGiftTags(); renderHud(); }
+    else if (msg.type === "duelo_settings") { applyAudioSettings(msg.settings); applyIdleConfig(msg.settings && msg.settings.idle); applyScene(msg.settings && msg.settings.scene); if (msg.settings && msg.settings.supporters) applySupporterConfig(msg.settings.supporters); dueloMainGifts = (msg.settings && msg.settings.main_gifts) || {}; dueloExtraGifts = (msg.settings && msg.settings.extra_gifts) || {}; if (msg.settings && msg.settings.special_attacks) dueloSpecialCfg = msg.settings.special_attacks; if (msg.settings && ["timed", "hp", "hp_new"].includes(msg.settings.game_mode)) state.game_mode = msg.settings.game_mode; renderGiftTags(); renderHud(); }
   };
 }
 
@@ -2363,13 +2387,14 @@ async function loadInitialState() {
       state.hp_max = !isNaN(Number(s.hp_max)) ? Number(s.hp_max) : 100;
       state.shield_max = !isNaN(Number(s.shield_max)) ? Number(s.shield_max) : hpStart;
       state.hp = { flavio: hpStart, lula: hpStart };
-      state.shield = { flavio: shStart, lula: shStart };
+      state.shield = state.game_mode === "hp_new" ? { flavio: 0, lula: 0 } : { flavio: shStart, lula: shStart };
       applyAudioSettings(s);
       applyIdleConfig(s.idle);
       applyScene(s.scene);
       if (s.supporters) applySupporterConfig(s.supporters);
       dueloMainGifts = s.main_gifts || {};
       dueloExtraGifts = s.extra_gifts || {};
+      dueloSpecialCfg = s.special_attacks || {};
       renderHud();
     }
     if (data && Array.isArray(data.gifts)) { dueloGifts = data.gifts; renderGiftTags(); }

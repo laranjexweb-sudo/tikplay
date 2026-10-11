@@ -47,6 +47,12 @@ DEFAULT_ACTION_AUDIO = {
     "uppercut": "/duelo-audio/_system/levantada-novo.mp3",
 }
 
+# Especiais pertencem aos respectivos personagens (side/sequence fixos por key).
+SPECIAL_ATTACK_DEFAULTS = {
+    "virou_jacare": {"side": "flavio", "sequence": "bolsonaro_jacare"},
+    "chuva_picanha": {"side": "lula", "sequence": "chuva_picanha"},
+}
+
 DEFAULT_SHIELD_AUDIO = "/duelo-audio/_system/escudo-padrao.mp3"
 
 DEFAULT_ACTION_AUDIO = {
@@ -549,9 +555,11 @@ class DueloEngine:
 
         sp = self._special_attack_match(gift_id, gift_name)
         if sp:
+            defaults = SPECIAL_ATTACK_DEFAULTS.get(sp) or {}
             specials = self.settings.get("special_attacks") or {}
             cfg = specials.get(sp)
-            char = self._norm((cfg or {}).get("side") or "")
+            char = defaults.get("side") or self._norm((cfg or {}).get("side") or "")
+            seq = defaults.get("sequence") or str((cfg or {}).get("sequence") or "")
             if char in self.VALID_CHARACTERS:
                 defender = "lula" if char == "flavio" else "flavio"
                 dmg = max(0, int((cfg or {}).get("damage") or 0))
@@ -560,7 +568,7 @@ class DueloEngine:
                 self._emit("duelo_special", {
                     "key": sp, "side": char, "defender": defender,
                     "damage": dmg, "absorbed": 0, "hp_damage": dmg,
-                    "sequence": str((cfg or {}).get("sequence") or ""),
+                    "sequence": seq,
                     "audio_url": f"/duelo-audio/{self.tenant_id}/{cfg.get('audio')}" if (cfg or {}).get("audio") else "",
                     "user": user or "", "nickname": nickname or user or "",
                 })
