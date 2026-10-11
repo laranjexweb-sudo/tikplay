@@ -14,6 +14,56 @@
   #tab-duelo .duelo-sec summary::-webkit-details-marker { display: none; }
   #tab-duelo .duelo-sec summary::before { content: "▸ "; display: inline-block; transition: transform .15s ease; }
   #tab-duelo .duelo-sec[open] summary::before { transform: rotate(90deg); }
+  #tab-duelo { --duelo-gap: 10px; --duelo-radius: 10px; --duelo-border: 2px; --duelo-field-h: 34px; --duelo-section-pad: 12px; }
+  #tab-duelo .nb-card { padding: var(--duelo-section-pad); margin-bottom: 10px; }
+  #tab-duelo .duelo-section-title { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; padding-bottom: 8px; border-bottom: var(--duelo-border) solid #000; }
+  #tab-duelo .duelo-grid { display: grid; gap: var(--duelo-gap); }
+  #tab-duelo .duelo-grid-2 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  #tab-duelo .duelo-grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  #tab-duelo .duelo-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--duelo-gap); }
+  @media (max-width: 767px) { #tab-duelo .duelo-grid-2col { grid-template-columns: 1fr; } }
+  #tab-duelo .duelo-field { display: flex; flex-direction: column; gap: 4px; }
+  #tab-duelo .duelo-field-label, #tab-duelo .duelo-sub { font-size: 12px; font-weight: 800; margin: 0; letter-spacing: .02em; }
+  #tab-duelo .duelo-sub { text-transform: uppercase; margin: 8px 0 4px; }
+  #tab-duelo .duelo-field input[type="number"], #tab-duelo .duelo-field input[type="text"], #tab-duelo .duelo-field input[type="file"], #tab-duelo .duelo-field select, #tab-duelo input[type="file"], #tab-duelo .form-control, #tab-duelo .form-select { height: var(--duelo-field-h); border: 2px solid #000; border-radius: 8px; font-size: 13px; box-shadow: none; }
+  #tab-duelo textarea.form-control, #tab-duelo input[type="range"].form-range { height: auto; }
+  #tab-duelo .duelo-check { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  #tab-duelo .duelo-check label { margin: 0; }
+  #tab-duelo .duelo-btn { height: 36px; border: 2px solid #000; border-radius: 8px; font-weight: 800; font-size: 13px; padding: 0 14px; box-shadow: 2px 2px 0 #000; display: inline-flex; align-items: center; justify-content: center; color: #000; text-decoration: none; }
+  #tab-duelo .duelo-btn:hover { filter: brightness(1.06); }
+  #tab-duelo .duelo-btn:disabled { opacity: .5; box-shadow: none; }
+  #tab-duelo .duelo-btn--primary { background: #fec90f; }
+  #tab-duelo .duelo-btn--danger { background: #ff6b6b; }
+  #tab-duelo .duelo-btn--warning { background: #ffd166; }
+  #tab-duelo .duelo-btn--neutral { background: #e8e2d5; }
+  #tab-duelo .duelo-btn--small { height: 30px; font-size: 12px; padding: 0 10px; box-shadow: 1px 1px 0 #000; }
+  #tab-duelo .duelo-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
+  #tab-duelo .duelo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #tab-duelo .duelo-actions { margin-top: 8px; }
+  #tab-duelo .duelo-help { font-size: 12px; color: #555; margin: 0 0 6px; }
+  #tab-duelo .duelo-msg { font-size: 12px; color: #555; }
+  #tab-duelo .duelo-stat { display: inline-flex; align-items: baseline; gap: 6px; border: 2px solid #000; border-radius: 8px; background: #fff; padding: 4px 10px; font-size: 12px; box-shadow: 2px 2px 0 #000; }
+  #tab-duelo .duelo-stat-lbl { font-weight: 700; color: #666; font-size: 11px; }
+  #tab-duelo .duelo-stat b { font-size: 13px; }
+  #tab-duelo .duelo-team { border: var(--duelo-border) solid #000; border-radius: var(--duelo-radius); background: #fff; padding: 10px; }
+  #tab-duelo .duelo-team--blue { border-left: 5px solid #0D47FF; }
+  #tab-duelo .duelo-team--red { border-left: 5px solid #E61919; }
+  #tab-duelo .duelo-team-title { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px; }
+  #tab-duelo .duelo-team--blue .duelo-team-title { color: #0D47FF; }
+  #tab-duelo .duelo-team--red .duelo-team-title { color: #E61919; }
+  #tab-duelo .duelo-extra-gift { height: var(--duelo-field-h); font-size: 13px; }
+  #tab-duelo .sup-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px dashed #ddd; font-size: 13px; }
+  #tab-duelo .sup-line:last-child { border-bottom: none; }
+  #tab-duelo .sup-lbl { font-weight: 800; min-width: 118px; font-size: 12px; }
+  #tab-duelo .sup-line .form-control { height: var(--duelo-field-h); font-size: 13px; }
+  #tab-duelo .dl-preview { position: relative; width: 100%; max-width: 200px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; user-select: none; }
+  #tab-duelo .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 5px 7px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 8px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+  #tab-duelo .dl-block:active { cursor: grabbing; }
+  #tab-duelo .dl-chat { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: rgba(255,0,0,.16); border-top: 2px dashed #f33; color: #fcc; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  #tab-duelo .dl-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px dashed #ddd; font-size: 12px; font-weight: 700; }
+  #tab-duelo .dl-line .form-control { width: 64px; height: 30px; font-size: 12px; display: inline-block; }
+  #tab-duelo .dl-lbl { min-width: 120px; text-transform: uppercase; font-weight: 800; font-size: 12px; }
+  #tab-duelo .dl-nudge .duelo-btn { height: 28px; padding: 0 8px; font-size: 12px; }
   .dl-summary { cursor: pointer; font-weight: 800; font-size: 0.8rem; padding: 6px 10px; border: 2px solid #dee2e6; border-radius: 10px; background: #fff; margin-bottom: 6px; user-select: none; }
   .dl-summary::-webkit-details-marker { display: none; }
   .dl-summary::before { content: "▸ "; display: inline-block; transition: transform .15s ease; }
@@ -782,67 +832,110 @@
 
         <!-- ===================== DUELO 1x1 ===================== -->
         <div class="tab-page" id="tab-duelo" style="display:none" data-game-mode="hp">
-          <div class="nb-card mb-3">
-            <h2>Duelo 1x1</h2>
-            <div class="mb-3 p-2 bg-light border border-dark rounded">
-              <div class="kv"><strong>Status:</strong> <span id="dueloStatus">Parado</span></div>
-              <div class="kv"><strong>Presentes cadastrados:</strong> <span id="dueloCount">0</span></div>
-              <div class="d-flex gap-2 mt-2">
-                <button class="btn btn-nb btn-success flex-fill" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
-                <button class="btn btn-nb btn-danger flex-fill" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
-              </div>
-              <div class="d-flex gap-2 mt-2">
-                <button class="btn btn-nb btn-warning flex-fill" onclick="dueloNewMatch()">REINICIAR PARTIDA</button>
-              </div>
-              <div class="d-flex gap-2 flex-wrap mt-1" style="font-size:0.78rem">
-                <span class="badge bg-dark">Modo: <b id="dueloModeLbl">Debate por HP</b></span>
-                <span class="badge bg-secondary">Cenário: <b id="dueloSceneLbl">Brasília</b></span>
+
+          <!-- CONTROLE DA PARTIDA -->
+          <div class="nb-card">
+            <h2 class="duelo-section-title">Controle da Partida</h2>
+            <div class="duelo-row">
+              <span class="duelo-stat"><span class="duelo-stat-lbl">STATUS</span><b id="dueloStatus">Parado</b></span>
+              <span class="duelo-stat"><span class="duelo-stat-lbl">MODO</span><b id="dueloModeLbl">Debate por HP</b></span>
+              <span class="duelo-stat"><span class="duelo-stat-lbl">CENÁRIO</span><b id="dueloSceneLbl">Brasília</b></span>
+              <span class="duelo-stat"><span class="duelo-stat-lbl">PRESENTES</span><b id="dueloCount">0</b></span>
+            </div>
+            <div class="duelo-row duelo-actions">
+              <button class="duelo-btn duelo-btn--primary" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
+              <button class="duelo-btn duelo-btn--danger" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
+              <button class="duelo-btn duelo-btn--warning" onclick="dueloNewMatch()">Reiniciar Partida</button>
+              <button class="duelo-btn duelo-btn--neutral" onclick="dueloSaveConfig()">Salvar Configurações</button>
+              <span class="text-secondary duelo-msg" id="dueloMsg0"></span>
+            </div>
+            <div class="duelo-grid duelo-grid-3" style="margin-top:12px">
+              <div class="duelo-field">
+                <label class="duelo-field-label">MODO DE JOGO</label>
+                <select id="dueloModeGame" onchange="dueloModeChanged()">
+                  <option value="hp">Debate por HP</option>
+                  <option value="timed">Debate por Tempo</option>
+                </select>
               </div>
             </div>
+            <div class="duelo-grid duelo-grid-3 mode-hp-only" id="dueloHpFields">
+              <div class="duelo-field"><label class="duelo-field-label">Vida da rodada</label><input type="number" id="dueloHpRound" value="100" min="1"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Escudo inicial</label><input type="number" id="dueloShieldStart" value="100" min="0"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Escudo máximo</label><input type="number" id="dueloShieldMax" value="200" min="1"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Meta de votos (0 = ilimitado)</label><input type="number" id="dueloMaxVotes" value="0" min="0"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Reset do debate (s)</label><input type="number" id="dueloResetDelay" value="6" min="1" onchange="dueloQuickSave()"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Nova partida (s)</label><input type="number" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Dano Soco</label><input type="number" id="dueloDmgPunch" value="10" min="1"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Dano Chute</label><input type="number" id="dueloDmgKick" value="15" min="1"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Dano Levantada</label><input type="number" id="dueloDmgUppercut" value="20" min="1"></div>
+            </div>
+            <div class="duelo-grid duelo-grid-3 mode-timed-only" id="dueloTimedFields">
+              <div class="duelo-field"><label class="duelo-field-label">Tempo da rodada (s)</label><input type="number" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
+              <div class="duelo-field"><label class="duelo-field-label">Tempo de resultado (s)</label><input type="number" id="dueloResultDelay" min="2" max="120" onchange="dueloQuickSave()"></div>
+            </div>
+            <div class="duelo-help" style="margin-top:6px">Golpe por combo (Soco/Chute/Levantada). Sem dano no modo Tempo.</div>
           </div>
 
-          <div class="nb-card mb-2">
-            <details class="duelo-sec" open>
-            <summary>Regras do modo</summary>
-            <div class="mb-1 p-2 bg-light border border-dark rounded">
-              <div class="row g-2 mb-2">
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem;font-weight:700">MODO DE JOGO</label>
-                  <select class="form-select form-select-sm" id="dueloModeGame" onchange="dueloModeChanged()">
-                    <option value="hp">Debate por HP</option>
-                    <option value="timed">Debate por Tempo</option>
-                  </select></div>
+          <!-- PRESENTES & APOIOS -->
+          <div class="nb-card">
+            <h2 class="duelo-section-title">Presentes & Apoios</h2>
+            <div class="duelo-grid-2col">
+              <div class="duelo-team duelo-team--blue">
+                <div class="duelo-team-title">Flávio</div>
+                <div class="mode-timed-only">
+                  <div class="duelo-sub">Principal</div>
+                  <div style="position:relative"><input type="text" class="form-control duelo-main" id="dueloMainFName" data-main="f" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
+                  <div class="duelo-ac gift-ac" data-mainac="f" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
+                  <div class="duelo-row" style="justify-content:space-between;margin-top:8px">
+                    <span class="duelo-sub" style="margin:0">Extras</span>
+                    <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloAddExtra('flavio')">+ Adicionar</button>
+                  </div>
+                  <div id="dueloExtraFlavio" style="margin-top:4px"></div>
+                </div>
+                <div class="mode-hp-only">
+                  <div class="duelo-row" style="justify-content:space-between">
+                    <span class="duelo-sub" style="margin:0">Presentes</span>
+                    <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="addDueloGiftRow('flavio')">+ Adicionar</button>
+                  </div>
+                  <div id="dueloGiftsList-flavio" style="margin-top:4px"></div>
+                </div>
+                <div class="duelo-sub" style="margin-top:10px">Apoiadores</div>
               </div>
-              <div class="row g-2" id="dueloHpFields">
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Vida da rodada</label><input type="number" class="form-control form-control-sm" id="dueloHpRound" value="100" min="1"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Escudo inicial</label><input type="number" class="form-control form-control-sm" id="dueloShieldStart" value="100" min="0"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Escudo máximo</label><input type="number" class="form-control form-control-sm" id="dueloShieldMax" value="200" min="1"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Meta de votos (0 = ilimitado)</label><input type="number" class="form-control form-control-sm" id="dueloMaxVotes" value="0" min="0"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Reset do debate (s)</label><input type="number" class="form-control form-control-sm" id="dueloResetDelay" value="6" min="1" onchange="dueloQuickSave()"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Nova partida (s)</label><input type="number" class="form-control form-control-sm" id="dueloMatchRestart" min="2" max="120" value="8" onchange="dueloQuickSave()"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Soco</label><input type="number" class="form-control form-control-sm" id="dueloDmgPunch" value="10" min="1"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Chute</label><input type="number" class="form-control form-control-sm" id="dueloDmgKick" value="15" min="1"></div>
-                <div class="col-md-4 mode-hp-only"><label class="form-label mb-0" style="font-size:0.8rem">Dano Levantada</label><input type="number" class="form-control form-control-sm" id="dueloDmgUppercut" value="20" min="1"></div>
-              </div>
-              <div class="row g-2 mode-timed-only" id="dueloTimedFields">
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo da rodada (s)</label><input type="number" class="form-control form-control-sm" id="dueloRoundTime" min="15" max="3600" onchange="dueloQuickSave()"></div>
-                <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Tempo de resultado (s)</label><input type="number" class="form-control form-control-sm" id="dueloResultDelay" min="2" max="120" onchange="dueloQuickSave()"></div>
-              </div>
-              <div class="text-secondary mt-1" style="font-size:0.72rem">Golpe por combo (Soco/Chute/Levantada). Sem dano no modo Tempo.</div>
-              <div class="d-flex gap-2 align-items-center mt-2">
-                <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração do Duelo</button>
-                <span class="text-secondary duelo-msg" style="font-size:0.75rem" id="dueloMsg0"></span>
+              <div class="duelo-team duelo-team--red">
+                <div class="duelo-team-title">Lula</div>
+                <div class="mode-timed-only">
+                  <div class="duelo-sub">Principal</div>
+                  <div style="position:relative"><input type="text" class="form-control duelo-main" id="dueloMainLName" data-main="l" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
+                  <div class="duelo-ac gift-ac" data-mainac="l" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
+                  <div class="duelo-row" style="justify-content:space-between;margin-top:8px">
+                    <span class="duelo-sub" style="margin:0">Extras</span>
+                    <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloAddExtra('lula')">+ Adicionar</button>
+                  </div>
+                  <div id="dueloExtraLula" style="margin-top:4px"></div>
+                </div>
+                <div class="mode-hp-only">
+                  <div class="duelo-row" style="justify-content:space-between">
+                    <span class="duelo-sub" style="margin:0">Presentes</span>
+                    <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="addDueloGiftRow('lula')">+ Adicionar</button>
+                  </div>
+                  <div id="dueloGiftsList-lula" style="margin-top:4px"></div>
+                </div>
+                <div class="duelo-sub" style="margin-top:10px">Apoiadores</div>
               </div>
             </div>
-            </details>
+            <div class="duelo-help" id="dueloSupportersHelp" style="margin-top:8px">
+              Presente que invoca um apoio (entra, fala, golpeia e sai) aplicando o DANO configurado + votos. Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.
+            </div>
+            <div id="dueloSupportersBox"></div>
           </div>
 
-          <div class="nb-card mb-2">
-            <details class="duelo-sec" open>
-            <summary>Cenário & Comportamento</summary>
-            <div class="row g-2">
-              <div class="col-md-3">
-                <label class="form-label mb-0" style="font-size:0.8rem">Cenário</label>
-                <select class="form-select form-select-sm" id="dueloScene" onchange="dueloQuickSave(); updateModeVisibility()">
+          <!-- AMBIENTE -->
+          <div class="nb-card">
+            <h2 class="duelo-section-title">Ambiente</h2>
+            <div class="duelo-grid duelo-grid-3">
+              <div class="duelo-field">
+                <label class="duelo-field-label">Cenário</label>
+                <select id="dueloScene" onchange="dueloQuickSave(); updateModeVisibility()">
                   <option value="brasilia">Brasília</option>
                   <option value="sao-paulo">São Paulo</option>
                   <option value="rio-de-janeiro">Rio de Janeiro</option>
@@ -850,195 +943,75 @@
                   <option value="tribunal">STF</option>
                 </select>
               </div>
-              <div class="col-md-3">
-                <label class="form-label mb-0" style="font-size:0.8rem">Sem interação (idle)</label>
-                <div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label class="form-check-label" for="dueloIdleOn">Ativo</label></div>
+              <div>
+                <label class="duelo-field-label">Sem interação (idle)</label>
+                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloIdleOn" onchange="dueloQuickSave()"><label for="dueloIdleOn">Ativo</label></div>
+                <div class="duelo-grid duelo-grid-2" style="margin-top:6px">
+                  <div class="duelo-field"><label class="duelo-field-label">Entrar (s)</label><input type="number" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
+                  <div class="duelo-field"><label class="duelo-field-label">Falas (s)</label><input type="number" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
+                </div>
               </div>
-              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Tempo para entrar (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleEnter" min="3" max="120" onchange="dueloQuickSave()"></div>
-              <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Intervalo entre falas (s)</label><input type="number" class="form-control form-control-sm" id="dueloIdleInterval" min="3" max="60" onchange="dueloQuickSave()"></div>
-            </div>
-            </details>
-          </div>
-
-          <div class="nb-card mb-2">
-            <details class="duelo-sec">
-            <summary>Áudio & Música</summary>
-            <div class="row g-2 align-items-end">
-              <div class="col-md-3">
-                <label class="form-label mb-0" style="font-size:0.8rem">Efeitos: <b id="dueloSfxLbl">92%</b></label>
+              <div>
+                <label class="duelo-field-label">Efeitos: <b id="dueloSfxLbl">92%</b></label>
                 <input type="range" class="form-range" id="dueloSfxVol" min="0" max="100" value="92" oninput="document.getElementById('dueloSfxLbl').textContent=this.value+'%'; dueloQuickSave()">
-              </div>
-              <div class="col-md-3">
-                <label class="form-check mb-0" style="font-size:0.8rem"><input type="checkbox" class="form-check-input" id="dueloMusicOn" onchange="dueloQuickSave()"> Música <b id="dueloMusicLbl">50%</b></label>
+                <div class="duelo-check"><input type="checkbox" class="form-check-input" id="dueloMusicOn" onchange="dueloQuickSave()"><label for="dueloMusicOn">Música</label> <b id="dueloMusicLbl">50%</b></div>
                 <input type="range" class="form-range" id="dueloMusicVol" min="0" max="100" value="50" oninput="document.getElementById('dueloMusicLbl').textContent=this.value+'%'; dueloQuickSave()">
               </div>
-              <div class="col-md-4">
-                <label class="form-label mb-0" style="font-size:0.8rem">Adicionar música</label>
-                <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" id="dueloMusicFile" onchange="uploadDueloMusic(this)">
-              </div>
             </div>
-            <div class="mt-1"><div id="dueloMusicList"></div></div>
-            </details>
+            <div class="duelo-row duelo-actions">
+              <input type="file" class="form-control" style="max-width:280px" accept="audio/*,.mp3,.wav,.ogg" id="dueloMusicFile" onchange="uploadDueloMusic(this)">
+            </div>
+            <div style="margin-top:4px"><div id="dueloMusicList"></div></div>
           </div>
 
-          <div class="nb-card mb-2">
-              <details class="duelo-sec">
-              <summary>Apoios Especiais</summary>
-              <div class="text-secondary" style="font-size:0.78rem;margin-bottom:6px" id="dueloSupportersHelp">
-                Presente que invoca um apoio (entra, fala, golpeia e sai) aplicando o DANO configurado + votos (moedas × combo). Lado definido por apoio: Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.
-              </div>
-              <div id="dueloSupportersBox"></div>
-              </details>
+          <!-- LAYOUT DA ARENA -->
+          <div class="nb-card">
+            <h2 class="duelo-section-title">Layout da Arena</h2>
+            <div class="duelo-row">
+              <div class="dl-preview" id="dlPreview" style="margin:0"><div class="dl-chat">ÁREA DO CHAT TIKTOK</div></div>
+              <div style="flex:1;min-width:320px"><div id="dlControls"></div></div>
             </div>
-
-          <div class="nb-card mb-2 mode-hp-only">
-            <details class="duelo-sec" open>
-            <summary>Presentes (HP)</summary>
-            <div class="text-secondary" style="font-size:0.75rem;margin-bottom:6px">
-              Presente que dispara cada golpe/escudo. Sons dos golpes são fixos. Dano vem das regras. Escudo absorve antes do HP.
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-lg-6">
-                <div class="border border-2 border-primary rounded p-2" style="background:#eef6ff">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h3 class="mb-0" style="color:#1d4ed8">PRESENTES — FLÁVIO</h3>
-                    <button class="btn btn-nb btn-primary btn-sm" onclick="addDueloGiftRow('flavio')">+ Adicionar presente</button>
-                  </div>
-                  <div id="dueloGiftsList-flavio"></div>
-                </div>
-              </div>
-              <div class="col-lg-6">
-                <div class="border border-2 border-danger rounded p-2" style="background:#fff1f1">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h3 class="mb-0" style="color:#b91c1c">PRESENTES — LULA</h3>
-                    <button class="btn btn-nb btn-danger btn-sm" onclick="addDueloGiftRow('lula')">+ Adicionar presente</button>
-                  </div>
-                  <div id="dueloGiftsList-lula"></div>
-                </div>
-              </div>
-            </div>
-            <div class="d-flex gap-2 align-items-center">
-              <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar configuração</button>
-              <span class="text-secondary duelo-msg" style="font-size:0.75rem" id="dueloMsg"></span>
-            </div>
-            </details>
           </div>
 
-          <div class="nb-card mb-2 mode-timed-only">
-            <details class="duelo-sec" open>
-            <summary>Presentes (Tempo)</summary>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="border border-2 border-primary rounded p-2" style="background:#eef6ff">
-                  <div class="fw-bold mb-2" style="color:#1d4ed8">PRESENTE PRINCIPAL — FLÁVIO</div>
-                  <div style="position:relative"><input type="text" class="form-control form-control-sm duelo-main" id="dueloMainFName" data-main="f" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
-                  <div class="duelo-ac gift-ac" data-mainac="f" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
-                  <div class="d-flex justify-content-between align-items-center mt-3"><div class="fw-bold" style="color:#1d4ed8;font-size:0.85rem">PRESENTES EXTRAS — FLÁVIO</div>
-                    <button class="btn btn-nb btn-primary btn-tiny" onclick="dueloAddExtra('flavio')">+ Adicionar presente</button></div>
-                  <div id="dueloExtraFlavio" class="mt-1"></div>
+          <!-- TESTES RÁPIDOS -->
+          <div class="nb-card">
+            <h2 class="duelo-section-title">Testes Rápidos</h2>
+            <div class="duelo-grid duelo-grid-3">
+              <div>
+                <div class="duelo-sub" style="margin-top:0">Flávio</div>
+                <div class="duelo-row">
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('flavio','punch')">Soco</button>
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('flavio','kick')">Chute</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('flavio','uppercut')">Levantada</button>
                 </div>
               </div>
-              <div class="col-md-6">
-                <div class="border border-2 border-danger rounded p-2" style="background:#fff1f1">
-                  <div class="fw-bold mb-2" style="color:#b91c1c">PRESENTE PRINCIPAL — LULA</div>
-                  <div style="position:relative"><input type="text" class="form-control form-control-sm duelo-main" id="dueloMainLName" data-main="l" placeholder="Buscar gift..." autocomplete="off" onchange="dueloQuickSave()">
-                  <div class="duelo-ac gift-ac" data-mainac="l" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div></div>
-                  <div class="d-flex justify-content-between align-items-center mt-3"><div class="fw-bold" style="color:#b91c1c;font-size:0.85rem">PRESENTES EXTRAS — LULA</div>
-                    <button class="btn btn-nb btn-danger btn-tiny" onclick="dueloAddExtra('lula')">+ Adicionar presente</button></div>
-                  <div id="dueloExtraLula" class="mt-1"></div>
+              <div>
+                <div class="duelo-sub" style="margin-top:0">Lula</div>
+                <div class="duelo-row">
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTest('lula','punch')">Soco</button>
+                  <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="dueloTest('lula','kick')">Chute</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTest('lula','uppercut')">Levantada</button>
+                </div>
+              </div>
+              <div class="mode-timed-only">
+                <div class="duelo-sub" style="margin-top:0">Apoios</div>
+                <div class="duelo-row">
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('nikolas')">Nikolas</button>
+                  <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('lucas-pavanato')">Pavanato</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('ana-elisa')">Ana Elisa</button>
+                  <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
                 </div>
               </div>
             </div>
-            <div class="d-flex gap-2 align-items-center mt-2">
-              <button class="btn btn-nb btn-success btn-sm" onclick="dueloSaveConfig()">Salvar presentes</button>
-              <span class="text-secondary duelo-msg" style="font-size:0.75rem"></span>
-            </div>
-            </details>
+            <div class="duelo-help">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
           </div>
 
-          <div class="nb-card mb-2">
-            <details class="duelo-sec">
-            <summary>Layout da Arena (9:16 TikTok)</summary>
-            <style>
-              .dl-preview { position: relative; width: 100%; max-width: 220px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; margin: 0 auto; user-select: none; }
-              .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 6px 8px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 10px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
-              .dl-block:active { cursor: grabbing; }
-              .dl-chat { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: rgba(255,0,0,.16); border-top: 2px dashed #f33; color: #fcc; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; z-index: 1; }
-              .dl-item { border: 2px solid #dee2e6; border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
-              .dl-item .dl-title { font-weight: 800; font-size: 0.8rem; margin-bottom: 6px; }
-            </style>
-            <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-              Arraste os blocos na prévia ou use os controles (X/Y/Escala em %). A área vermelha é o CHAT do TikTok — posicione o jogo acima dela. Salvar configuração aplica na arena.
-            </div>
-            <div class="row g-3">
-              <div class="col-lg-4">
-                <div class="dl-preview" id="dlPreview">
-                  <div class="dl-chat">ÁREA DO CHAT TIKTOK</div>
-                </div>
-              </div>
-              <div class="col-lg-8">
-                <div id="dlControls"></div>
-              </div>
-            </div>
-            </details>
-          </div>
-
-          <div class="nb-card mb-2">
-            <details class="duelo-sec">
-            <summary>Testes</summary>
-            <div class="row g-2 mb-1">
-              <div class="col-md-6">
-                <div class="mb-1 text-secondary" style="font-size:0.78rem;font-weight:700">FLÁVIO</div>
-                <div class="d-flex gap-1 flex-wrap">
-                  <button class="btn btn-nb btn-primary btn-sm" onclick="dueloTest('flavio','punch')">Soco</button>
-                  <button class="btn btn-nb btn-warning btn-sm" onclick="dueloTest('flavio','kick')">Chute</button>
-                  <button class="btn btn-nb btn-danger btn-sm" onclick="dueloTest('flavio','uppercut')">Levantada</button>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-1 text-secondary" style="font-size:0.78rem;font-weight:700">LULA</div>
-                <div class="d-flex gap-1 flex-wrap">
-                  <button class="btn btn-nb btn-primary btn-sm" onclick="dueloTest('lula','punch')">Soco</button>
-                  <button class="btn btn-nb btn-warning btn-sm" onclick="dueloTest('lula','kick')">Chute</button>
-                  <button class="btn btn-nb btn-danger btn-sm" onclick="dueloTest('lula','uppercut')">Levantada</button>
-                </div>
-              </div>
-            </div>
-            <div class="row g-2 mt-1 mode-timed-only">
-              <div class="col-md-6">
-                <div class="mb-1 text-secondary" style="font-size:0.78rem;font-weight:700">APOIADORES FLÁVIO (visual)</div>
-                <div class="d-flex gap-1 flex-wrap">
-                  <button class="btn btn-nb btn-primary btn-sm" onclick="dueloTestSup('nikolas')">Nikolas</button>
-                  <button class="btn btn-nb btn-primary btn-sm" onclick="dueloTestSup('lucas-pavanato')">Pavanato</button>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-1 text-secondary" style="font-size:0.78rem;font-weight:700">APOIADORES LULA (visual)</div>
-                <div class="d-flex gap-1 flex-wrap">
-                  <button class="btn btn-nb btn-danger btn-sm" onclick="dueloTestSup('ana-elisa')">Ana Elisa</button>
-                  <button class="btn btn-nb btn-danger btn-sm" onclick="dueloTestSup('erika-hilton')">Erika</button>
-                </div>
-              </div>
-            </div>
-            <div class="text-secondary mt-1" style="font-size:0.72rem">
-              Teste é somente visual — não altera HP, escudo, votos nem o vencedor.
-            </div>
-            </details>
-          </div>
-
-          <div class="nb-card mb-2">
-            <details class="duelo-sec">
-            <summary>Onde assistir</summary>
-            <div class="text-secondary" style="font-size:0.85rem">
-              Acompanhe ao vivo na página: <a href="#" id="linkDuelo" target="_blank">Abrir página DUELO 1x1</a>.
-            </div>
-            <div class="d-flex gap-2 mt-2">
-              <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/duelo')">Link público Duelo</button>
-            </div>
-            </details>
+          <!-- RODAPÉ -->
+          <div class="duelo-row duelo-actions">
+            <a class="duelo-btn duelo-btn--primary" href="#" id="linkDuelo" target="_blank" rel="noopener">Abrir Arena</a>
+            <button type="button" class="duelo-btn duelo-btn--neutral" onclick="copyRoomLink('/duelo')">Copiar Link</button>
           </div>
         </div>
-      </div>
 
     <div class="col-lg-4 d-flex" style="min-height:0">
       <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
@@ -3524,20 +3497,16 @@ function renderSupporters() {
 function supBlock(k) {
   const m = DUELO_SUPPORTERS_META[k];
   const s = dueloSupporters[k] || {};
-  return `<div class="bg-white border border-dark rounded px-2 py-1 mb-1">
-    <div class="d-flex gap-2 align-items-center flex-wrap" style="font-size:0.78rem">
-      <label class="fw-bold mb-0" style="min-width:130px">${m.label}</label>
-      <div class="position-relative" style="flex:1;min-width:130px">
-        <input type="text" class="form-control form-control-sm sup-name" data-sup="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
+  return `<div class="sup-line">
+      <label class="sup-lbl">${m.label}</label>
+      <div class="position-relative" style="flex:1;min-width:140px">
+        <input type="text" class="form-control sup-name" data-sup="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
         <div class="duelo-ac gift-ac" data-supac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:170px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
       </div>
-      <div class="mode-hp-only" style="flex:0 0 92px"><input type="number" class="form-control form-control-sm" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano"></div>
-      <div style="flex:0 0 130px">
-        <input type="file" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}" title="Áudio"> <span class="text-secondary" style="font-size:0.68rem">${s.audio ? esc(s.audio) : ''}</span>
-      </div>
-      <label class="form-check mb-0" style="font-size:0.72rem"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
-    </div>
-  </div>`;
+      <div class="mode-hp-only" style="flex:0 0 96px"><input type="number" class="form-control" data-supf="damage" data-sup="${k}" value="${s.damage || 30}" min="1" title="Dano (HP)"></div>
+      <div style="flex:0 0 130px"><input type="file" class="form-control" accept="audio/*,.mp3,.wav,.ogg" data-supaudio="${k}" title="Áudio"><span class="duelo-help" style="display:block">${s.audio ? esc(s.audio) : ''}</span></div>
+      <label class="duelo-check mb-0" style="font-size:0.72rem"><input type="checkbox" class="form-check-input" data-supf="enabled" data-sup="${k}" ${s.enabled !== false ? 'checked' : ''}> Ativo</label>
+    </div>`;
 }
 
 function bindSup(k) {
@@ -4086,33 +4055,27 @@ function renderLayoutEditor() {
   syncAll();
 
   let html = "";
-  DUELO_LAYOUT_ITEMS.forEach((it) => {
-    html += `<details class="dl-group"${it.key === "score" ? " open" : ""}><summary class="dl-summary">${it.label}</summary>
-    <div class="dl-item">
-      <div class="dl-title">${it.label}</div>
-      <div class="row g-1 align-items-center">
-        <div class="col-4"><label style="font-size:0.68rem">X %</label><input type="number" class="form-control form-control-sm" id="dl-${it.key}-x" min="0" max="100"></div>
-        <div class="col-4"><label style="font-size:0.68rem">Y %</label><input type="number" class="form-control form-control-sm" id="dl-${it.key}-y" min="0" max="100"></div>
-        <div class="col-4"><label style="font-size:0.68rem">Escala</label><input type="number" step="0.05" class="form-control form-control-sm" id="dl-${it.key}-s" min="0.2" max="2"></div>
-      </div>
-      <div class="d-flex gap-1 mt-1">
-        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="left">←</button>
-        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="up">↑</button>
-        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="down">↓</button>
-        <button class="btn btn-nb btn-dark btn-sm flex-fill" data-nudge="${it.key}" data-dir="right">→</button>
-        <button class="btn btn-nb btn-warning btn-sm flex-fill" data-reset="${it.key}">Resetar</button>
-      </div>
-    </div></details>`;
-  });
-  html += `<details class="dl-group"><summary class="dl-summary">PERSONAGENS</summary><div class="dl-item">
-      <div class="dl-title">PERSONAGENS</div>
-      <div class="row g-1 align-items-center">
-        <div class="col-4"><label style="font-size:0.68rem">Altura Y %</label><input type="number" class="form-control form-control-sm" id="dl-fighters-y" min="0" max="100"></div>
-        <div class="col-4"><label style="font-size:0.68rem">Escala</label><input type="number" step="0.05" class="form-control form-control-sm" id="dl-fighters-s" min="0.2" max="2"></div>
-        <div class="col-4"><label style="font-size:0.68rem">Gap</label><input type="number" class="form-control form-control-sm" id="dl-fighters-g" min="0" max="30"></div>
-      </div>
-      <div class="mt-1"><button class="btn btn-nb btn-warning btn-sm" data-reset="fighters">Resetar personagens</button></div>
-    </div></details>`;
+  const itemLine = (it) => `<div class="dl-line">
+      <label class="dl-lbl">${it.label}</label>
+      <input type="number" class="form-control" id="dl-${it.key}-x" min="0" max="100"> X
+      <input type="number" class="form-control" id="dl-${it.key}-y" min="0" max="100"> Y
+      <input type="number" step="0.05" class="form-control" id="dl-${it.key}-s" min="0.2" max="2"> Esc
+      <span class="dl-nudge">
+        <button class="duelo-btn duelo-btn--neutral" data-nudge="${it.key}" data-dir="left">←</button>
+        <button class="duelo-btn duelo-btn--neutral" data-nudge="${it.key}" data-dir="up">↑</button>
+        <button class="duelo-btn duelo-btn--neutral" data-nudge="${it.key}" data-dir="down">↓</button>
+        <button class="duelo-btn duelo-btn--neutral" data-nudge="${it.key}" data-dir="right">→</button>
+        <button class="duelo-btn duelo-btn--warning" data-reset="${it.key}">Reset</button>
+      </span>
+    </div>`;
+  html += DUELO_LAYOUT_ITEMS.map(itemLine).join("");
+  html += `<div class="dl-line">
+      <label class="dl-lbl">PERSONAGENS</label>
+      <input type="number" class="form-control" id="dl-fighters-y" min="0" max="100"> Y
+      <input type="number" step="0.05" class="form-control" id="dl-fighters-s" min="0.2" max="2"> Esc
+      <input type="number" class="form-control" id="dl-fighters-g" min="0" max="30"> Gap
+      <span class="dl-nudge"><button class="duelo-btn duelo-btn--warning" data-reset="fighters">Reset</button></span>
+    </div>`;
   ctrl.innerHTML = html;
 
   ctrl.querySelectorAll("input").forEach((inp) => {
