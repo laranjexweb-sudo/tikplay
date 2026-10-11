@@ -2145,6 +2145,31 @@ app.post("/api/duelo/new-match", auth.requireAuth, requireFeature("duelo"), (req
 });
 
 app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  const tenant = getTenant(req.user.id);
+  const supporter = req.body && req.body.supporter;
+  const SUPPORT_KEYS = { nikolas: "flavio", "lucas-pavanato": "flavio", "ana-elisa": "lula", "erika-hilton": "lula" };
+  if (supporter && SUPPORT_KEYS[supporter]) {
+    const side = SUPPORT_KEYS[supporter];
+    broadcastToClients(tenant.browserClients, {
+      type: "duelo_support_attack",
+      isTest: true,
+      supporter,
+      side,
+      target: side === "flavio" ? "lula" : "flavio",
+      damage: 0,
+      combo: 1,
+      final_damage: 0,
+      absorbed: 0,
+      hp_damage: 0,
+      added_votes: 0,
+      audio_url: "",
+      gift_id: "",
+      gift_name: "",
+      user: "streamer",
+      nickname: "Streamer",
+    });
+    return res.json({ success: true });
+  }
   const attacker = ["flavio", "lula"].includes(req.body && req.body.attacker) ? req.body.attacker : "flavio";
   const action = ["punch", "kick", "uppercut"].includes(req.body && req.body.action) ? req.body.action : "punch";
   const combo = Math.max(1, parseInt((req.body && req.body.combo) || 1, 10) || 1);
@@ -2152,7 +2177,6 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const gift = (cfg.gifts || []).find((g) => g.character === attacker && g.action === action);
   let audio = (gift && gift.audio) ? String(gift.audio) : "";
   const DEFAULT_ACTION_AUDIO = { punch: "/duelo-audio/_system/soco-novo.mp3", kick: "/duelo-audio/_system/chute-novo.mp3", uppercut: "/duelo-audio/_system/levantada-novo.mp3" };
-  const tenant = getTenant(req.user.id);
   // Teste é SOMENTE visual: isTest true faz a arena ignorar as travas de winner/roundActive,
   // sem alterar HP, escudo, votos, winner ou roundActive (não passa pelo motor).
   broadcastToClients(tenant.browserClients, {
