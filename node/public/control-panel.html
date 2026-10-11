@@ -3461,6 +3461,40 @@ async function loadDueloState() {
   } catch (e) {}
 }
 
+function dueloSyncFlat(s) {
+  if (!s) return;
+  dueloSettings = Object.assign({}, dueloSettings, s);
+  if (s.layout && typeof s.layout === "object") dueloLayout = Object.assign(JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT)), s.layout);
+  dueloScene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(s.scene) ? s.scene : dueloScene;
+  dueloSfxVol = s.sfx_volume != null ? s.sfx_volume : dueloSfxVol;
+  const mu = s.music || {};
+  dueloMusicOn = !!mu.enabled;
+  dueloMusicVol = mu.volume != null ? mu.volume : dueloMusicVol;
+  dueloMusicFiles = Array.isArray(mu.files) ? mu.files.slice() : dueloMusicFiles;
+  const idl = s.idle || {};
+  dueloIdleOn = idl.enabled !== false;
+  dueloIdleEnter = idl.enter_after != null ? idl.enter_after : dueloIdleEnter;
+  dueloIdleInterval = idl.interval != null ? idl.interval : dueloIdleInterval;
+  dueloMatchRestart = s.match_restart_delay_s != null ? s.match_restart_delay_s : dueloMatchRestart;
+  dueloGameMode = ["hp", "timed", "hp_new"].includes(s.game_mode) ? s.game_mode : dueloGameMode;
+  dueloRoundTime = s.round_time_s != null ? s.round_time_s : dueloRoundTime;
+  dueloResultDelay = s.round_result_delay_s != null ? s.round_result_delay_s : dueloResultDelay;
+  dueloHpNew = s.hp_start != null ? s.hp_start : dueloHpNew;
+  dueloDmgMult = s.damage_multiplier != null ? s.damage_multiplier : dueloDmgMult;
+  dueloTapTarget = s.tap_target != null ? s.tap_target : dueloTapTarget;
+  dueloTapDamage = s.tap_damage != null ? s.tap_damage : dueloTapDamage;
+  dueloHpNewDelay = s.reset_delay_s != null ? s.reset_delay_s : dueloHpNewDelay;
+  const mg = s.main_gifts || {};
+  dueloMainFlavio = { gift_name: String((mg.flavio && mg.flavio.gift_name) || "").trim() };
+  dueloMainLula = { gift_name: String((mg.lula && mg.lula.gift_name) || "").trim() };
+  const eg = s.extra_gifts || {};
+  dueloExtras = {
+    flavio: Array.isArray(eg.flavio) ? eg.flavio.map((x) => ({ gift_name: String(x.gift_name || ""), enabled: x.enabled !== false })) : [],
+    lula: Array.isArray(eg.lula) ? eg.lula.map((x) => ({ gift_name: String(x.gift_name || ""), enabled: x.enabled !== false })) : [],
+  };
+  if (s.supporters && typeof s.supporters === "object") dueloSupporters = Object.assign(dueloSupportersDefault(), s.supporters);
+}
+
 function renderDueloSettings() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   set("dueloHpRound", dueloSettings.hp_max || dueloSettings.hp_start || 100);
@@ -4241,11 +4275,12 @@ function dueloQuickSave() {
   dueloAutoTimer = setTimeout(async () => {
     try {
       const settings = readDueloSettings();
-      await apiFetch("/api/duelo/config", {
+      const data = await apiFetch("/api/duelo/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gifts: dueloConfiguredGifts(), active: dueloActive, settings }),
       });
+      if (data && data.success && data.settings) dueloSyncFlat(data.settings);
       dueloMsg("Áudio/cenário salvos automaticamente.");
     } catch (e) { dueloMsg("Erro ao salvar: " + e.message); }
   }, 300);
@@ -4260,7 +4295,7 @@ async function dueloSaveConfig() {
       body: JSON.stringify({ gifts: dueloConfiguredGifts(), active: dueloActive, settings }),
     });
     if (data.success) {
-      if (data.settings && typeof data.settings === "object") dueloSettings = Object.assign({}, dueloSettings, data.settings);
+      dueloSyncFlat(data.settings);
       renderDueloGifts();
       renderDueloSettings();
       const st = data.settings || {};
