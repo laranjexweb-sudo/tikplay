@@ -96,6 +96,9 @@
     .container-fluid > .row > .col-lg-8,
     .container-fluid > .row > .col-lg-4 { min-width: 0; }
   }
+  .container-fluid > .row { display: flex; flex-wrap: nowrap; align-items: stretch; }
+  .container-fluid > .row > .col-lg-8 { flex: 1 1 0 !important; width: auto !important; max-width: none !important; min-width: 0 !important; }
+  .container-fluid > .row > .col-lg-4 { flex: 0 0 360px !important; width: 360px !important; min-width: 0 !important; }
   @container (max-width: 660px) {
     #tab-duelo .duelo-gift-head { display: none; }
     #tab-duelo .duelo-gift-line { grid-template-columns: 1.2fr 84px 96px; row-gap: 6px; }
