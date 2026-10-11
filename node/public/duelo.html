@@ -1877,7 +1877,7 @@ async function runJacareSpecial(item) {
   await sleep(300); // transformação
 
   setPose("jacare.png", 1.06);
-  setX(side === "flavio" ? "34%" : "62%");
+  setX(side === "flavio" ? "24%" : "72%");
   await sleep(260);
   smoke.style.opacity = 0.5;
   fxImg("fumaca-branca.png", 0.5, 50);
@@ -1886,9 +1886,9 @@ async function runJacareSpecial(item) {
   fxImg("fumaca-branca.png", 0, 50);
   await sleep(120);
 
-  // Mordida: avanço real até o oponente (para um pouco mais à esquerda, sem cobrir o Lula)
+  // Mordida: avanço real até o oponente (para mais à esquerda ainda, sem chegar ao meio da tela)
   wrap.style.transition = "left 150ms ease-out";
-  wrap.style.left = side === "flavio" ? "34%" : "60%";
+  wrap.style.left = side === "flavio" ? "28%" : "64%";
   setPose("jacare.png", 0.98);
   await sleep(130);
   spawnHit("kick", dir, { pos: tgt === "lula" ? 84 : 16, scale: 0.5 });
