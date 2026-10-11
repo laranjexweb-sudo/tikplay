@@ -618,9 +618,9 @@ class GameSession:
         try:
             norm = strip_accents(raw or "").lower()
             words = set(re.findall(r"[a-z0-9]+", norm))
-            if "flavio" in words or "bolsonaro" in words:
+            if "flavio" in words or "bolsonaro" in words or "22" in words:
                 side = "flavio"
-            elif "lula" in words:
+            elif "lula" in words or "13" in words:
                 side = "lula"
             else:
                 return
