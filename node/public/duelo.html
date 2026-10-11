@@ -380,9 +380,9 @@
   #supporterBubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 45; }
   #supporterBubble.support-speech img { display: block; width: clamp(170px, 24vw, 230px); max-width: 26vw; height: auto; object-fit: contain; margin: 0 auto; }
   #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
-  .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; }
+  .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; transform: scale(var(--fire-scale)); transform-origin: bottom center; }
   .jacare.show { display: block; }
-  .jacare img { display: block; max-height: 32vh; width: auto; transform-origin: bottom center; }
+  .jacare img { display: block; max-height: 28vh; width: auto; transform-origin: bottom center; }
   .jacare-smoke { position: absolute; left: 50%; bottom: -4%; transform: translateX(-50%); width: 34vh; pointer-events: none; opacity: 0; z-index: 1; transition: opacity .18s ease; }
   .jacare-smoke img { width: 100%; max-height: none; opacity: .75; }
   .jacare-fx { position: absolute; top: 42%; width: 20vh; pointer-events: none; opacity: 0; transform: translate(-50%, -50%); z-index: 2; transition: opacity .12s ease; }
@@ -1832,13 +1832,13 @@ async function runJacareSpecial(item) {
   smoke.style.opacity = 0.55;
   await sleep(200); // carga (aura/poeira na base)
 
-  setPose("transformando.png", 1.03);
+  setPose("transformando.png", 1.02);
   smoke.style.opacity = 1;
   fxImg("fumaca-branca.png", 0.9, 50);
   shake();
   await sleep(300); // transformação
 
-  setPose("jacare.png", 1.10);
+  setPose("jacare.png", 1.06);
   setX(side === "flavio" ? "34%" : "62%");
   await sleep(260);
   smoke.style.opacity = 0.5;
@@ -1851,7 +1851,7 @@ async function runJacareSpecial(item) {
   // Mordida: avanço real até o oponente
   wrap.style.transition = "left 150ms ease-out";
   wrap.style.left = side === "flavio" ? "46%" : "52%";
-  setPose("jacare.png", 1.12);
+  setPose("jacare.png", 1.08);
   await sleep(130);
   spawnHit("kick", dir, { pos: tgt === "lula" ? 84 : 16, scale: 0.5 });
   fxImg("fx-explosion.png", 1, (tgt === "lula" ? 84 : 16));
