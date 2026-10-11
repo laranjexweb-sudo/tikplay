@@ -422,7 +422,10 @@ function pickSequence(combo, char) {
   return { level: lvl.level, steps: lvl.pool[Math.floor(Math.random() * lvl.pool.length)].slice() };
 }
 function buildSteps(att) {
-  if (att.isTest && att.combo <= 1 && att.action && typeof att.action === "string") return { level: "TESTE", steps: [att.action] };
+  if (att.isTest && att.combo <= 1 && att.action && typeof att.action === "string") {
+    const m = att.action === "pulo" ? "jump" : att.action;
+    return { level: "TESTE", steps: [m] };
+  }
   return pickSequence(Math.max(1, Number(att.combo) || 1), att.attacker);
 }
 function comboPoints(target) {
@@ -1452,16 +1455,22 @@ async function doJump(char, dir) {
   const el = $("fighter-" + char);
   const wrap = $("wrap-" + char);
   const d = ACTION_DUR.jump;
+  const up = Math.round(d.fwd * 1.5);
   setFighter(char, "jump");
   if (wrap) wrap.classList.add("attacking");
+  if (el) el.classList.add("attacking");
   if (el) {
-    el.classList.add("attacking");
-    el.style.transition = `transform ${d.fwd}ms ease-out`;
-    el.style.transform = `translateX(${dir * 22}px) translateY(-30px) scale(1)`;
+    el.style.transition = "none";
+    void el.offsetWidth;
+    el.style.transition = `transform ${up}ms ease-out`;
+    el.style.transform = `translateX(${dir * 30}px) translateY(-72px) scale(1.03)`;
   }
-  await sleep(d.fwd);
-  if (el) { el.style.transition = `transform ${d.back}ms ease-in`; el.style.transform = `translateX(${dir * 10}px) translateY(0) scale(1)`; }
+  if (wrap) wrap.style.zIndex = "18";
+  await sleep(up);
+  if (el) { el.style.transition = `transform ${d.back}ms ease-in`; el.style.transform = `translateX(${dir * 14}px) translateY(0) scale(1)`; }
   await sleep(d.back);
+  if (el) { el.style.transition = ""; el.style.transform = ""; }
+  if (wrap) { wrap.classList.remove("attacking"); wrap.style.zIndex = ""; }
 }
 
 async function doHit(att, pose, def, dir, scale, idx) {
