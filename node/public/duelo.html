@@ -253,10 +253,10 @@
   #supporterBubble.support-speech img { display: block; width: clamp(170px, 24vw, 230px); max-width: 26vw; height: auto; object-fit: contain; margin: 0 auto; }
   #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
   .hit.show { opacity: 1; }
-  .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; animation: hitPunch .28s ease-out forwards; }
-  .hit.kick { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
-  .hit.uppercut { width: 6px; height: 140px; background: linear-gradient(#fff, #ff8800); border-radius: 4px; box-shadow: 0 0 26px #ff8800; animation: hitUppercut .34s ease-out forwards; }
-  .hit.lowKick { width: 84px; height: 48px; border-radius: 50%; bottom: 13vh; background: radial-gradient(circle, #fff 0%, #ff9a3c 45%, rgba(255,100,0,0) 72%); animation: hitLow .24s ease-out forwards; }
+  .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
+  .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
+  .hit.uppercut { width: 6px; height: 140px; bottom: 20vh; background: linear-gradient(#fff, #ff8800); border-radius: 4px; box-shadow: 0 0 26px #ff8800; animation: hitUppercut .34s ease-out forwards; }
+  .hit.lowKick { width: 84px; height: 48px; border-radius: 50%; bottom: 12vh; background: radial-gradient(circle, #fff 0%, #ff9a3c 45%, rgba(255,100,0,0) 72%); animation: hitLow .24s ease-out forwards; }
   @keyframes hitPunch { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .45)); opacity: 1; } 100% { transform: translate(-50%,-6vh) scale(calc(var(--hit-scale,1) * 1.2)); opacity: 0; } }
   @keyframes hitKick { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .5)); opacity: 1; } 100% { transform: translate(-50%,-8vh) scale(calc(var(--hit-scale,1) * 1.5)); opacity: 0; } }
   @keyframes hitUppercut { 0% { transform: translate(-50%,0) scale(calc(var(--hit-scale,1) * .9)); opacity: 1; } 100% { transform: translate(-50%,-14vh) scale(calc(var(--hit-scale,1) * 1.1)); opacity: 0; } }
@@ -402,7 +402,7 @@ const FIGHTERS = {
 };
 
 const ACTION_DUR = { punch: { fwd: 300, hold: 120, back: 130 }, kick: { fwd: 380, hold: 160, back: 160 }, uppercut: { fwd: 420, hold: 200, back: 180 }, lowKick: { fwd: 260, hold: 120, back: 180 }, jump: { fwd: 220, hold: 100, back: 180 } };
-const POSE_MOVE = { punch: 34, lowKick: 30, kick: 46, uppercut: 30 };
+const POSE_MOVE = { punch: 34, lowKick: 40, kick: 46, uppercut: 30, jump: 26 };
 const HIT_POS = { punch: { bottom: "22vh" }, kick: { bottom: "26vh" }, uppercut: { bottom: "22vh" }, lowKick: { bottom: "13vh" } };
 function makeComboPool() {
   return [
@@ -1323,7 +1323,16 @@ async function runSupport(item) {
   if (item.audio_url) playAudio(item.audio_url);
   await sleep(400);
   await sleep(520);
-  spawnHit(action, side === "flavio" ? 1 : -1, { pos: tgt === "lula" ? 84 : 16 });
+  const supDodge = !item.isTest && Math.random() < 0.2;
+  if (supDodge) {
+    setFighter(tgt, "jump");
+    if (tEl) { tEl.style.transition = "transform 220ms ease-out"; tEl.style.transform = `translateX(${(side === "flavio" ? 1 : -1) * 10}px) translateY(-32px) scale(1)`; }
+    await sleep(230);
+    if (tEl) { tEl.style.transition = "transform 180ms ease-in"; tEl.style.transform = "translateX(0) translateY(0) scale(1)"; }
+    await sleep(190);
+  } else {
+    spawnHit(action, side === "flavio" ? 1 : -1, { pos: tgt === "lula" ? 84 : 16 });
+  }
   if (item.added_votes > 0) {
     voteFloat(side, "+" + item.added_votes + " VOTOS");
     const ap = $("lbScore");
