@@ -2173,7 +2173,25 @@ app.post("/api/duelo/new-match", auth.requireAuth, requireFeature("duelo"), (req
 app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const tenant = getTenant(req.user.id);
   const supporter = req.body && req.body.supporter;
+  const special = req.body && req.body.special;
   const SUPPORT_KEYS = { nikolas: "flavio", "lucas-pavanato": "flavio", "ana-elisa": "lula", "erika-hilton": "lula" };
+  if (special === "virou_jacare") {
+    broadcastToClients(tenant.browserClients, {
+      type: "duelo_special",
+      isTest: true,
+      key: "virou_jacare",
+      side: "flavio",
+      defender: "lula",
+      damage: 0,
+      absorbed: 0,
+      hp_damage: 0,
+      sequence: "bolsonaro_jacare",
+      audio_url: "",
+      user: "streamer",
+      nickname: "Streamer",
+    });
+    return res.json({ success: true });
+  }
   if (supporter && SUPPORT_KEYS[supporter]) {
     const side = SUPPORT_KEYS[supporter];
     const tCfg = db.getDueloConfig(req.user.id);

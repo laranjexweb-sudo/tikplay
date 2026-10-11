@@ -1020,6 +1020,13 @@
             </div>
           </div>
 
+          <!-- ESPECIAIS (hp_new) -->
+          <div class="nb-card mode-hpnew-only" style="margin-bottom:10px">
+            <h2 class="duelo-section-title">Especiais</h2>
+            <div class="duelo-help">Presente que dispara um especial visual (ex.: Virou Jacaré). Sem áudio por enquanto (upload vem depois).</div>
+            <div id="dueloSpecialsBox"></div>
+          </div>
+
           <!-- LAYOUT DA ARENA -->
           <div class="nb-card">
             <h2 class="duelo-section-title">Layout da Arena</h2>
@@ -1078,7 +1085,11 @@
                 <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('nikolas')">Nikolas</button>
                 <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="dueloTestSup('lucas-pavanato')">Pavanato</button>
                 <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('ana-elisa')">Ana Elisa</button>
-                <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
+<button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="dueloTestSup('erika-hilton')">Erika</button>
+                </div>
+              </div>
+              <div class="duelo-row" style="margin-top:4px">
+                <button class="duelo-btn duelo-btn--success duelo-btn--small" onclick="dueloTestSpecial('virou_jacare')">Virou Jacaré</button>
               </div>
             </div>
             <div class="duelo-help" style="margin-top:6px">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
@@ -3447,6 +3458,10 @@ async function loadDueloState() {
       dueloTapTarget = data.settings.tap_target != null ? data.settings.tap_target : 500;
       dueloTapDamage = data.settings.tap_damage != null ? data.settings.tap_damage : 100;
       dueloHpNewDelay = data.settings.reset_delay_s != null ? data.settings.reset_delay_s : 6;
+      const spk = data.settings.special_attacks || {};
+      dueloSpecials = {
+        virou_jacare: Object.assign({}, dueloSpecials.virou_jacare, spk.virou_jacare || {}),
+      };
       const mg = data.settings.main_gifts || {};
       dueloMainFlavio = { gift_name: String(mg.flavio && mg.flavio.gift_name || "").trim() };
       dueloMainLula = { gift_name: String(mg.lula && mg.lula.gift_name || "").trim() };
@@ -3497,6 +3512,8 @@ function dueloSyncFlat(s) {
     lula: Array.isArray(eg.lula) ? eg.lula.map((x) => ({ gift_name: String(x.gift_name || ""), enabled: x.enabled !== false })) : [],
   };
   if (s.supporters && typeof s.supporters === "object") dueloSupporters = Object.assign(dueloSupportersDefault(), s.supporters);
+  const spks = s.special_attacks || {};
+  dueloSpecials = { virou_jacare: Object.assign({}, { gift_name: "", gift_id: "", damage: 900, enabled: false, side: "flavio", sequence: "bolsonaro_jacare" }, spks.virou_jacare || {}) };
 }
 
 function renderDueloSettings() {
@@ -3538,6 +3555,7 @@ function renderDueloSettings() {
   set("dueloTapTarget", dueloTapTarget);
   set("dueloTapDamage", dueloTapDamage);
   set("dueloHpNewDelay", dueloHpNewDelay);
+  renderDueloSpecials();
   const mfn = document.getElementById("dueloMainFName");
   if (mfn) mfn.value = dueloMainFlavio.gift_name;
   const mln = document.getElementById("dueloMainLName");
@@ -3842,6 +3860,40 @@ function bindMainAutocompletes() {
   });
 }
 
+function renderDueloSpecials() {
+  const box = document.getElementById("dueloSpecialsBox");
+  if (!box) return;
+  const KEY = { virou_jacare: "VIROU JACARÉ" };
+  box.innerHTML = Object.keys(KEY).map((k) => {
+    const s = dueloSpecials[k] || {};
+    return `<div class="sup-line">
+      <label class="sup-lbl">${KEY[k]}</label>
+      <div class="position-relative">
+        <input type="text" class="form-control duelo-spec-gift" data-spec="${k}" value="${esc(s.gift_name || '')}" placeholder="Buscar gift..." autocomplete="off">
+        <div class="duelo-ac gift-ac" data-specac="${k}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:130;box-shadow:3px 3px 0 #000"></div>
+      </div>
+      <div style="flex:0 0 84px"><input type="number" class="form-control" data-specf="damage" data-spec="${k}" value="${s.damage != null ? s.damage : 900}" min="1" title="Dano"></div>
+      <label class="duelo-check mb-0" style="justify-content:center"><input type="checkbox" data-specf="enabled" data-spec="${k}" ${s.enabled !== false ? 'checked' : ''}></label>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".duelo-spec-gift").forEach((inp) => {
+    const k = inp.getAttribute("data-spec");
+    const ac = document.querySelector('[data-specac="' + k + '"]');
+    bindGiftAutocomplete(inp, ac);
+  });
+  box.querySelectorAll("[data-specf]").forEach((el) => {
+    el.addEventListener("change", () => {
+      const k = el.getAttribute("data-spec");
+      const f = el.getAttribute("data-specf");
+      dueloSpecials[k] = dueloSpecials[k] || {};
+      dueloSpecials[k][f] = f === "enabled" ? el.checked : el.value;
+      dueloQuickSave();
+    });
+  });
+}
+
+function hexInt(id, fb) { const el = document.getElementById(id); const x = el ? parseInt(el.value, 10) : NaN; return Number.isFinite(x) ? x : fb; }
+
 function dueloSupportersClean() {
   const out = {};
   for (const k of Object.keys(DUELO_SUPPORTERS_META)) {
@@ -3900,6 +3952,17 @@ function readDueloSettings() {
       lula: { gift_name: (document.getElementById("dueloMainLName") || {}).value || "" },
     },
     extra_gifts: dueloExtrasClean(),
+    special_attacks: {
+      virou_jacare: {
+        side: "flavio",
+        sequence: "bolsonaro_jacare",
+        gift_name: (document.querySelector('.duelo-spec-gift[data-spec="virou_jacare"]') || {}).value || "",
+        gift_id: "",
+        damage: Math.max(0, parseInt((document.querySelector('[data-specf="damage"][data-spec="virou_jacare"]') || {}).value || "900", 10) || 0),
+        enabled: !!(document.querySelector('[data-specf="enabled"][data-spec="virou_jacare"]') || {}).checked,
+        audio: "",
+      },
+    },
   };
 }
 
@@ -4130,6 +4193,7 @@ let dueloDmgMult = 1;
 let dueloTapTarget = 500;
 let dueloTapDamage = 100;
 let dueloHpNewDelay = 6;
+let dueloSpecials = { virou_jacare: { gift_name: "", gift_id: "", damage: 900, enabled: false, side: "flavio", sequence: "bolsonaro_jacare" } };
 let dueloMainFlavio = { gift_name: "" };
 let dueloMainLula = { gift_name: "" };
 let dueloExtras = { flavio: [], lula: [] };
@@ -4368,6 +4432,16 @@ async function dueloTestSup(supporter) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ supporter }),
+    });
+  } catch (e) { dueloMsg("Erro no teste: " + e.message); }
+}
+
+async function dueloTestSpecial(special) {
+  try {
+    await apiFetch("/api/duelo/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ special }),
     });
   } catch (e) { dueloMsg("Erro no teste: " + e.message); }
 }

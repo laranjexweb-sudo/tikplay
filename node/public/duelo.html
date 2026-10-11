@@ -380,6 +380,11 @@
   #supporterBubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 45; }
   #supporterBubble.support-speech img { display: block; width: clamp(170px, 24vw, 230px); max-width: 26vw; height: auto; object-fit: contain; margin: 0 auto; }
   #supporterBubble.ana-scale img { transform: scale(1.12); transform-origin: bottom center; }
+  .jacare { position: absolute; bottom: calc(var(--fire-y) * 1%); z-index: 16; display: none; will-change: transform, opacity; }
+  .jacare.show { display: block; }
+  .jacare img { display: block; max-height: 30vh; width: auto; transform-origin: bottom center; }
+  .jacare-fx { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%); pointer-events: none; opacity: 0; transition: opacity .15s ease; z-index: 2; }
+  .jacare-fx img { max-width: 80vw; max-height: 40vh; }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -518,6 +523,7 @@
   </div>
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
+  <div id="jacareWrap" class="jacare"><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div></div>
   <div class="float-text" id="floatText"></div>
   <div class="tap-faces left" id="tapFacesL"></div>
   <div class="tap-faces right" id="tapFacesR"></div>
@@ -1017,6 +1023,7 @@ const hpMax = state.hp_max || 100;
   if (wt) wt.style.display = state.active ? "none" : "block";
   if (!state.active) {
     clearTapFaces();
+    hideJacare();
     if (hudF) hudF.style.display = "none";
     if (hudL) hudL.style.display = "none";
     const lbX = $("lbScore");
@@ -1232,6 +1239,7 @@ function applyState(s) {
     pendingWinnerVisual = { winner: state.winner, final: state.final };
     attackQueue = [];
     clearTapFaces();
+    hideJacare();
     if (!busy) flushPending();
   } else {
     renderWinner();
@@ -1724,6 +1732,12 @@ let pendingWinnerVisual = null;
 
 function pump() {
   if (busy) return;
+  if (specialQueue.length) {
+    const item = specialQueue.shift();
+    busy = true;
+    runJacareSpecial(item).catch(() => {}).finally(() => { busy = false; flushPending(); pump(); });
+    return;
+  }
   if (supportQueue.length) {
     const item = supportQueue.shift();
     busy = true;
@@ -1759,6 +1773,65 @@ function showTapMeta(side) {
 
 function showSpecialFlash(key, side) {
   flashText(String(key || "ESPECIAL").toUpperCase() + " · " + (side === "lula" ? "LULA" : "FLÁVIO"), 1600);
+}
+
+let specialQueue = [];
+function enqueueSpecial(item) {
+  if (!item || (state.winner && !item.isTest)) return;
+  specialQueue.push(item);
+  pump();
+}
+function hideJacare() {
+  specialQueue = [];
+  const w = $("jacareWrap");
+  if (w) { w.className = "jacare"; w.style.opacity = 1; }
+  const f = $("jacareFx");
+  if (f) { f.innerHTML = ""; f.style.opacity = 0; }
+}
+async function runJacareSpecial(item) {
+  const side = item.side === "lula" ? "lula" : "flavio";
+  const dir = side === "flavio" ? 1 : -1;
+  if (!state.active && !item.isTest) return;
+  if (item.isTest && state.winner) { const ban = $("winBanner"); if (ban) ban.classList.remove("show"); }
+  const wrap = $("jacareWrap"), img = $("jacareImg"), fx = $("jacareFx");
+  if (!wrap || !img) return;
+  const tgt = item.defender || opponent(side);
+  const stage = $("stage");
+  const shakeT = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
+  const png = (n) => { img.src = "/duelo/bolsonaro/" + n; };
+  const fxPng = (n, o) => { if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/' + n + '" alt="">'; fx.style.opacity = o != null ? o : 1; } };
+  wrap.className = "jacare show";
+  wrap.style.left = (side === "flavio" ? 24 : 76) + "%";
+  wrap.style.transition = "none";
+  wrap.style.transform = "translateX(0) scale(1)";
+  wrap.style.opacity = 1;
+  png("parado.png");
+  await sleep(280);
+  shakeT();
+  png("transformando.png");
+  fxPng("fumaca-branca.png", 0.9);
+  flashText("VIROU JACARÉ!", 1200);
+  await sleep(480);
+  png("jacare.png");
+  fxPng("explosao.png", 1);
+  shakeT();
+  wrap.style.transition = "transform 320ms cubic-bezier(.2,.8,.2,1)";
+  wrap.style.transform = "translateX(" + (dir * 34) + "px) scale(1.04)";
+  await sleep(180);
+  spawnHit("uppercut", dir, { pos: tgt === "lula" ? 84 : 16 });
+  const te = $("fighter-" + tgt);
+  if (te && !state.winner) { te.style.transition = "transform 160ms ease-out"; te.style.transform = "translateX(" + (-dir * 24) + "px)"; }
+  if (!item.isTest && Number(item.hp_damage) > 0) damageFloat(tgt, Number(item.hp_damage), Number(item.absorbed) || 0);
+  if (isHpNewMode() && Number(item.damage) > 0) voteFloat(side, "+" + Number(item.damage) + " ATAQUE", "atk");
+  await sleep(420);
+  if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/fx-explosion.png" alt="">'; fx.style.opacity = 0; }
+  wrap.style.transition = "opacity .2s ease";
+  wrap.style.opacity = 0;
+  await sleep(200);
+  wrap.className = "jacare";
+  wrap.style.opacity = 1;
+  if (fx) fx.style.opacity = 0;
+  if (te && !state.winner) { te.style.transition = "transform 260ms ease-in"; te.style.transform = "translateX(0)"; }
 }
 
 function leadOf(votes) {
@@ -1931,7 +2004,14 @@ function connectWS() {
         spawnTeamJoinCard({ side: msg.side, avatarUrl: msg.avatar_url, username: msg.nickname || msg.unique_id || msg.user_id });
       }
     }
-    else if (msg.type === "duelo_special") { markInteraction(); showSpecialFlash(msg.key || "especial", msg.side || ""); }
+    else if (msg.type === "duelo_special") {
+      markInteraction();
+      if (isHpNewMode() && msg.sequence === "bolsonaro_jacare") {
+        enqueueSpecial(Object.assign({}, msg));
+      } else {
+        showSpecialFlash(msg.key || "especial", msg.side || "");
+      }
+    }
     else if (msg.type === "duelo_shield") { markInteraction(); if (!isTimedMode()) { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); } }
     else if (msg.type === "duelo_vote") {
       markInteraction();
