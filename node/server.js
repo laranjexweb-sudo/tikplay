@@ -58,6 +58,8 @@ app.use(express.static(PUBLIC_DIR));
 express.static.mime.define({ "image/webp": ["webp"] });
 app.use("/gift-images", express.static(path.join(__dirname, "public", "gift-images"), { maxAge: "1d" }));
 app.use("/duelo-audio", express.static(path.join(__dirname, "public", "duelo-audio")));
+fs.mkdirSync(path.join(__dirname, "public", "duelo-audio"), { recursive: true });
+fs.mkdirSync(path.join(__dirname, "public", "duelo-audio", "_system"), { recursive: true });
 app.use("/alert-audio", express.static(path.join(__dirname, "public", "alert-audio"), { maxAge: "1d" }));
 app.use("/vendor", express.static(path.join(__dirname, "vendor")));
 
@@ -2193,9 +2195,17 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   res.json({ success: true });
 });
 
-app.post("/api/duelo/audio", auth.requireAuth, requireFeature("duelo"), dueloUpload.single("file"), (req, res) => {
-  if (!req.file) return res.json({ success: false, error: "Arquivo de audio obrigatorio" });
-  res.json({ success: true, filename: req.file.filename, url: `/duelo-audio/${req.user.id}/${req.file.filename}` });
+app.post("/api/duelo/audio", auth.requireAuth, requireFeature("duelo"), (req, res) => {
+  dueloUpload.single("file")(req, res, (err) => {
+    if (err) {
+      const msg = err && err.code === "LIMIT_FILE_SIZE"
+        ? "Arquivo muito grande (máximo 8MB)"
+        : ("Erro no upload: " + ((err && err.message) || "desconhecido"));
+      return res.status(413).json({ success: false, error: msg });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: "Arquivo de audio obrigatorio (mp3/wav/ogg/m4a)" });
+    res.json({ success: true, filename: req.file.filename, url: `/duelo-audio/${req.user.id}/${req.file.filename}` });
+  });
 });
 
 app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
