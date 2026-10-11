@@ -800,13 +800,14 @@ function renderGiftTags() {
       return t;
     };
 if (isTimedMode() || isHpNewMode()) {
+      const atk = isHpNewMode();
       const m = dueloMainGifts && dueloMainGifts[f];
-      if (m && m.gift_name) tags.push(tagFor("+1 VOTO", m.image));
+      if (m && m.gift_name) tags.push(tagFor(atk ? "+1 ATAQUE" : "+1 VOTO", m.image));
       const ex = (dueloExtraGifts && dueloExtraGifts[f]) || [];
       for (const x of ex) {
         if (!x || x.enabled === false || !x.gift_name) continue;
         const v = Number(x.value) > 0 ? Number(x.value) : null;
-        tags.push(tagFor(v != null ? "+" + fmtNum(v) + " VOTOS" : "+ VOTOS", x.image));
+        tags.push(tagFor(v != null ? (atk ? "+" + fmtNum(v) + " ATAQUE" : "+" + fmtNum(v) + " VOTOS") : (atk ? "+ ATAQUE" : "+ VOTOS"), x.image));
       }
     }
     list.forEach((g) => {
