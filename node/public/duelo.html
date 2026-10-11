@@ -1440,6 +1440,7 @@ const tapFaceCache = new Map();
       im.onerror = function () { done(); };
       b.appendChild(im);
       layer.appendChild(b);
+      console.warn("[FACE-SPAWN]", side, size + "px", "count=" + tapFaceCount[side], "layer=" + layer.id);
       im.src = avatarUrl;
       b.addEventListener("animationend", done);
       setTimeout(done, 2600);
@@ -1808,6 +1809,7 @@ function connectWS() {
   ws.onmessage = (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
+    try { console.log("WS>", msg && msg.type); } catch (err) {}
     if (msg.type === "duelo_state") applyState(msg);
     else if (msg.type === "duelo_attack") {
       markInteraction();
@@ -1819,7 +1821,7 @@ function connectWS() {
     }
     else if (msg.type === "duelo_tap_meta") { markInteraction(); showTapMeta(msg.side); }
     else if (msg.type === "duelo_tap_avatar_burst") {
-      try { console.debug("[TAPFACE]", msg.side, (msg.avatar_url || "").slice(0, 40), msg.delta); } catch (e) {}
+      console.log("[TAPFACE]", msg.side, (msg.avatar_url || "").slice(0, 60), msg.delta, "roundActive=" + state.roundActive, "winner=" + (state.winner || "-"));
       if (isHpNewMode() && state.active && state.roundActive && !state.winner) {
         burstTapFaces(msg.side, msg.user_id, msg.avatar_url, Number(msg.delta) || 0);
         floatTap(msg.side, Number(msg.delta) || 0);
