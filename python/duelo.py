@@ -182,7 +182,13 @@ class DueloEngine:
 
     # ---------------- Gift match ----------------
     def _norm(self, s):
-        return str(s or "").strip().lower()
+        import unicodedata
+        t = str(s or "").strip().lower()
+        try:
+            t = "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
+        except Exception:
+            pass
+        return t
 
     def _matches(self, gift, gift_id, gift_name):
         if not gift:

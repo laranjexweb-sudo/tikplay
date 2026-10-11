@@ -1615,6 +1615,11 @@ class GameSession:
                 self.duelo.set_config(gifts=cmd.get("gifts"), settings=cmd.get("settings"))
                 emit(self.tenant_id, "log", f"[Duelo] Config de presentes atualizada ({len(self.duelo.gifts)})")
                 if self.duelo.active:
+                    if self.duelo._is_timed() and self.duelo.roundActive and self._duelo_timer_task is None:
+                        # Garante o cronômetro ao trocar para o modo Tempo com a área já ativa.
+                        if self.duelo.time_remaining <= 0 and not self.duelo.winner and not self.duelo.final:
+                            self.duelo._reset_timed_clock()
+                        self._start_duelo_timer()
                     emit(self.tenant_id, "game", {"type": "duelo_state", **self.duelo.state()})
             elif c == "duelo_reset_round":
                 self._cancel_duelo_match_restart()
