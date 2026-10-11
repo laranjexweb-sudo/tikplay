@@ -2045,12 +2045,31 @@ function normalizeDueloSettings(raw) {
       }
     }
     const gm = String(raw.game_mode || "").trim().toLowerCase();
-    out.game_mode = gm === "timed" ? "timed" : "hp";
+    out.game_mode = gm === "timed" ? "timed" : (gm === "hp_new" ? "hp_new" : "hp");
     const nt = (v, lo, hi, fb) => { const x = Number(v); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : fb; };
     out.round_time_s = nt(raw.round_time_s, 15, 3600, 180);
     out.round_result_delay_s = nt(raw.round_result_delay_s, 2, 120, 8);
     out.kick_combo_min = nt(raw.kick_combo_min, 2, 100, 5);
     out.uppercut_combo_min = nt(raw.uppercut_combo_min, 3, 1000, 20);
+    out.damage_multiplier = nt(raw.damage_multiplier, 0.1, 100, 1);
+    out.tap_target = nt(raw.tap_target, 10, 10000, 500);
+    out.tap_damage = nt(raw.tap_damage, 1, 10000, 100);
+    const rawSpec = (raw.special_attacks && typeof raw.special_attacks === "object") ? raw.special_attacks : {};
+    out.special_attacks = {};
+    for (const key of Object.keys(rawSpec)) {
+      if (!/^[a-z0-9_]+$/.test(key)) continue;
+      const s = rawSpec[key];
+      if (!s || typeof s !== "object") { out.special_attacks[key] = {}; continue; }
+      out.special_attacks[key] = {
+        side: (s.side === "flavio" || s.side === "lula") ? s.side : "flavio",
+        gift_id: String(s.gift_id || "").trim().slice(0, 40),
+        gift_name: String(s.gift_name || "").trim().slice(0, 80),
+        damage: nt(s.damage, 0, 100000, 0),
+        sequence: String(s.sequence || "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 60),
+        audio: String(s.audio || "").trim().replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 80),
+        enabled: s.enabled !== false,
+      };
+    }
     const mkGift = (o, o2) => ({
       gift_id: String((o && o.gift_id) || (o2 && o2.gift_id) || "").trim().slice(0, 40),
       gift_name: String((o && o.gift_name) || (o2 && o.gift_name) || "").trim().slice(0, 80),
