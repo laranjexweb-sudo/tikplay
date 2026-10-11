@@ -4151,6 +4151,7 @@ function renderLayoutEditor() {
       if (id === "dl-fighters-s") dueloLayout.fighters.scale = layoutNum(inp.value, 0.2, 2, 0.9);
       if (id === "dl-fighters-g") dueloLayout.fighters.gap = layoutNum(inp.value, 0, 30, 9);
       syncAll();
+      dueloQuickSave();
     });
   });
   ctrl.querySelectorAll("[data-nudge]").forEach((btn) => {
@@ -4163,6 +4164,7 @@ function renderLayoutEditor() {
       if (dir === "up") el.y = layoutNum((el.y || 0) - 1, 0, 100, 0);
       if (dir === "down") el.y = layoutNum((el.y || 0) + 1, 0, 100, 0);
       syncBlock(key);
+      dueloQuickSave();
     });
   });
   ctrl.querySelectorAll("[data-reset]").forEach((btn) => {
@@ -4170,6 +4172,7 @@ function renderLayoutEditor() {
       const key = btn.getAttribute("data-reset");
       dueloLayout[key] = JSON.parse(JSON.stringify(DUELO_LAYOUT_DEFAULT[key]));
       syncAll();
+      dueloQuickSave();
     });
   });
 
@@ -4189,7 +4192,7 @@ function renderLayoutEditor() {
         el.y = layoutNum(oy + dy, 0, 100, 0);
         syncBlock(key);
       }
-      function up() { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); }
+      function up() { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); dueloQuickSave(); }
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
     });
