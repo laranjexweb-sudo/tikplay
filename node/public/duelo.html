@@ -192,22 +192,6 @@
   .win-banner .big { display: none; }
   .win-banner .sub { display: none; }
 
-  .round-result {
-    position: absolute;
-    top: 38%;
-    left: 0;
-    right: 0;
-    display: none;
-    text-align: center;
-    z-index: 71;
-    color: #fff;
-    font: 900 clamp(2.2rem, 5.5vw, 4.5rem)/1.1 "Roboto Condensed", Arial, sans-serif;
-    letter-spacing: 2px;
-    text-shadow: 3px 3px 0 rgba(0, 0, 0, .6);
-    pointer-events: none;
-  }
-  .round-result.show { display: block; animation: bannerPop .45s ease; }
-
   .shield-fx { position: absolute; bottom: calc(var(--fire-y) * 1%); width: 0; height: 0; pointer-events: none; opacity: 0; }
   .shield-fx.show { opacity: 1; animation: shieldBurst .8s ease-out forwards; }
   .shield-fx.left  { left: 52.5%; margin-left: calc(clamp(10vh, 14vh, 17vh) * -1 - var(--fire-gap)); }
@@ -373,7 +357,6 @@
     <div class="big" id="winBig"></div>
     <div class="sub" id="winSub"></div>
   </div>
-  <div class="round-result" id="roundResultTxt"></div>
 
   <div class="debug" id="debug" style="display:none"></div>
   <audio id="bgMusic" preload="auto" style="display:none"></audio>
@@ -969,8 +952,6 @@ let pendingRoundResult = false;
 let roundResultShown = false;
 
 function hideRoundResult() {
-  const txt = $("roundResultTxt");
-  if (txt) txt.classList.remove("show");
   const banner = $("winBanner");
   if (banner) banner.classList.remove("show");
 }
@@ -979,13 +960,6 @@ function renderRoundResult() {
   const res = state.final_result;
   if (!res) return;
   roundResultShown = true;
-  const txt = $("roundResultTxt");
-  if (txt) {
-    txt.textContent = res.winner === "flavio" ? "FLÁVIO GANHOU" : res.winner === "lula" ? "LULA GANHOU" : "EMPATOU";
-    txt.classList.remove("show");
-    void txt.offsetWidth;
-    txt.classList.add("show");
-  }
   const banner = $("winBanner");
   if (banner) {
     const base = res.winner ? res.winner + "-ganhou" : "empate";
