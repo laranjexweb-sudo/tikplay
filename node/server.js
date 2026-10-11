@@ -1984,7 +1984,7 @@ function normalizeDueloSettings(raw) {
     vote_target: 0,
     layout: {},
     sfx_volume: 92,
-    music: { files: [], volume: 50, enabled: false },
+    music: { files: [], volume: 50, enabled: false, default_file: "mixkit-karma-1183.mp3" },
     scene: "brasilia",
     idle: { enabled: true, enter_after: 10, interval: 7 },
     supporters: {},
@@ -2020,7 +2020,7 @@ function normalizeDueloSettings(raw) {
     const safeName = (v) => String((v == null ? "" : v)).trim().replace(/[^a-zA-Z0-9._-]/g, "");
     const mf = (raw.music && Array.isArray(raw.music.files)) ? raw.music.files.map(safeName).filter(Boolean).slice(0, 20) : [];
     const mv = n(raw.music && raw.music.volume);
-    out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled) };
+    out.music = { files: mf, volume: (mv !== null) ? Math.max(0, Math.min(100, mv)) : 50, enabled: !!(raw.music && raw.music.enabled), default_file: safeName((raw.music && raw.music.default_file) || "mixkit-karma-1183.mp3") || "mixkit-karma-1183.mp3" };
     const sc = String(raw.scene || "").trim().toLowerCase();
     out.scene = ["brasilia", "sao-paulo", "rio-de-janeiro", "salvador", "tribunal"].includes(sc) ? sc : "brasilia";
     const idr = (raw.idle && typeof raw.idle === "object") ? raw.idle : {};

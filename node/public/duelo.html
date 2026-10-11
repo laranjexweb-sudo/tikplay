@@ -636,7 +636,7 @@ function showIdleSpeech() {
 
 // ---- Áudio: efeitos + música de fundo ----
 let sfxVolume = 0.92;
-let musicCfg = { files: [], volume: 0.5, enabled: false, base: "" };
+let musicCfg = { files: [], volume: 0.5, enabled: false, base: "", defaultFile: "mixkit-karma-1183.mp3" };
 let musicPlaying = false;
 let musicIdx = 0;
 
@@ -660,6 +660,7 @@ function applyAudioSettings(settings) {
       volume: Math.max(0, Math.min(100, Number(settings.music.volume) || 0)) / 100,
       enabled: !!settings.music.enabled,
       base: settings.music.base || "",
+      defaultFile: String(settings.music.default_file || "mixkit-karma-1183.mp3").replace(/[^a-zA-Z0-9._-]/g, ""),
     };
   }
   refreshMusic();
@@ -674,7 +675,18 @@ function stopMusic() {
 function playMusicTrack(i) {
   const files = musicCfg.files;
   const el = $("bgMusic");
-  if (!files.length || !el) return;
+  if (!el) return;
+  if (!files.length) {
+    if (!musicCfg.defaultFile) return;
+    musicIdx = 0;
+    el.src = "/duelo-audio/_system/" + musicCfg.defaultFile;
+    el.volume = musicCfg.volume;
+    el.loop = true;
+    const p = el.play();
+    if (p && p.then) { p.catch((err) => { try { console.debug("[DUELO MUSIC] autoplay bloqueado (tocará no 1º toque):", (err && err.name) || err); } catch (e) {} }); }
+    musicPlaying = true;
+    return;
+  }
   const idx = ((i % files.length) + files.length) % files.length;
   musicIdx = idx;
   el.src = musicCfg.base + "/" + files[idx];
@@ -689,7 +701,7 @@ function playMusicTrack(i) {
 }
 
 function refreshMusic() {
-  if (!musicCfg.enabled || !musicCfg.files.length) { stopMusic(); return; }
+  if (!musicCfg.enabled || (!musicCfg.files.length && !musicCfg.defaultFile)) { stopMusic(); return; }
   const el = $("bgMusic");
   if (el && musicPlaying) { el.volume = musicCfg.volume; return; }
   if (el) el.volume = musicCfg.volume;
