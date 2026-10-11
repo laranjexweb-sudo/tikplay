@@ -271,6 +271,45 @@
     display: none;
     pointer-events: none;
   }
+  .tap-faces {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 26;
+    overflow: hidden;
+  }
+  .tap-faces .face-bubble {
+    position: absolute;
+    bottom: 6%;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    animation: tapFaceUp var(--d, 1.6s) ease-out forwards;
+    will-change: transform, opacity;
+  }
+  .tap-faces .face-bubble img { width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+  .tap-faces.left .face-bubble { border-color: #1f6feb; }
+  .tap-faces.right .face-bubble { border-color: #c0392b; }
+  @keyframes tapFaceUp {
+    0% { transform: translate(var(--sx, 0px), 0) scale(.8); opacity: .95; }
+    60% { transform: translate(var(--mx, 0px), calc(-1 * var(--rise, 24vh) * .62)) scale(1.05); opacity: .95; }
+    100% { transform: translate(var(--ex, 0px), calc(-1 * var(--rise, 24vh))) scale(.92); opacity: 0; }
+  }
+  .tap-float-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 80; overflow: hidden; }
+  .tap-float {
+    position: absolute;
+    top: calc(var(--score-y) * 1% + 5vh);
+    font: 900 clamp(0.9rem, 2.4vh, 1.3rem)/1 "Roboto Condensed", Arial, sans-serif;
+    text-shadow: 1px 1px 0 #000, 0 0 8px rgba(0,0,0,.5);
+    animation: tapFloatUp 1s ease-out forwards;
+  }
+  .tap-float.f { left: calc(var(--score-x) * 1% - min(24vw, 220px)); color: #5bc0ff; text-align: right; }
+  .tap-float.l { right: calc((100% - var(--score-x) * 1%) - min(24vw, 220px)); color: #ff6b6b; text-align: left; }
+  @keyframes tapFloatUp { 0% { opacity: 0; transform: translateY(10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px); } }
   @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 
   .combat-shake { animation: shk .25s linear; }
@@ -450,6 +489,10 @@
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
   <div class="float-text" id="floatText"></div>
+  <div class="tap-faces left" id="tapFacesL"></div>
+  <div class="tap-faces right" id="tapFacesR"></div>
+  <div class="tap-float-layer" id="tapFloatL"></div>
+  <div class="tap-float-layer" id="tapFloatR"></div>
   <img id="waitingImg" class="waiting-img" src="/duelo/duelo-1x1-aguarde.png" alt="">
   <div class="win-banner" id="winBanner">
     <div class="big" id="winBig"></div>
@@ -941,6 +984,7 @@ const hpMax = state.hp_max || 100;
   if (gpl) gpl.style.display = state.active ? "" : "none";
   if (wt) wt.style.display = state.active ? "none" : "block";
   if (!state.active) {
+    clearTapFaces();
     if (hudF) hudF.style.display = "none";
     if (hudL) hudL.style.display = "none";
     const lbX = $("lbScore");
@@ -1155,6 +1199,7 @@ function applyState(s) {
   } else if (state.winner) {
     pendingWinnerVisual = { winner: state.winner, final: state.final };
     attackQueue = [];
+    clearTapFaces();
     if (!busy) flushPending();
   } else {
     renderWinner();
@@ -1342,7 +1387,73 @@ function voteFloat(char, txt, cls) {
   setTimeout(() => s.remove(), 1600);
 }
 
-function damageFloat(fighter, hpDmg, absorbed) {
+const tapFaceCache = new Map();
+  const tapFaceUserLast = new Map();
+  const tapFaceCount = { left: 0, right: 0 };
+  const TAP_FACE_MAX = 24;
+
+  function tapFaceCountFor(delta) {
+    if (delta <= 2) return 1;
+    if (delta <= 5) return 2;
+    if (delta <= 10) return 3;
+    if (delta <= 20) return 4;
+    if (delta <= 50) return 5 + Math.floor(Math.random() * 2);
+    return 7 + Math.floor(Math.random() * 2);
+  }
+
+  function clearTapFaces() {
+    for (const layer of [["tapFacesL", "left"], ["tapFacesR", "right"]]) {
+      const el = $(layer[0]);
+      tapFaceCount[layer[1]] = 0;
+      if (el) { el.style.transition = "opacity .35s ease"; el.style.opacity = "0"; setTimeout(() => { if (el) { el.innerHTML = ""; el.style.opacity = "1"; el.style.transition = ""; } }, 380); }
+    }
+  }
+
+  function burstTapFaces(side, userId, avatarUrl, delta) {
+    if (!avatarUrl) return;
+    const layer = $("#tapFaces" + (side === "lula" ? "R" : "L"));
+    if (!layer) return;
+    if (tapFaceCount[side] >= TAP_FACE_MAX) return;
+    const now = Date.now();
+    const last = tapFaceUserLast.get(userId) || 0;
+    if (now - last < 120) return;
+    tapFaceUserLast.set(userId, now);
+    const spawn = Math.min(tapFaceCountFor(delta), TAP_FACE_MAX - tapFaceCount[side]);
+    if (spawn <= 0) return;
+    tapFaceCount[side] += spawn;
+    for (let i = 0; i < spawn; i++) {
+      const b = document.createElement("div");
+      b.className = "face-bubble";
+      const size = 28 + Math.floor(Math.random() * 14);
+      b.style.width = b.style.height = size + "px";
+      b.style.left = (side === "lula" ? 66 + Math.random() * 28 : 6 + Math.random() * 26) + "%";
+      b.style.setProperty("--rise", (20 + Math.random() * 15) + "vh");
+      b.style.setProperty("--sx", (Math.random() * 12 - 6) + "px");
+      b.style.setProperty("--mx", ((side === "lula" ? 1 : -1) * (3 + Math.random() * 6)) + "px");
+      b.style.setProperty("--ex", ((side === "lula" ? 1 : -1) * (5 + Math.random() * 8)) + "px");
+      b.style.setProperty("--d", (1.3 + Math.random() * 0.7).toFixed(2) + "s");
+      const im = new Image();
+      const done = () => { if (b.parentNode) { b.remove(); tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); } };
+      im.onload = function () { b.appendChild(im); layer.appendChild(b); b.addEventListener("animationend", done); b.addEventListener("transitionend", done); };
+      im.onerror = function () { if (b.parentNode) b.remove(); tapFaceCount[side] = Math.max(0, tapFaceCount[side] - 1); };
+      im.alt = "";
+      im.src = avatarUrl;
+      setTimeout(done, 2600);
+    }
+  }
+
+  function floatTap(side, delta) {
+    if (delta < 5) return;
+    const host = $("#tapFloat" + (side === "lula" ? "R" : "L"));
+    if (!host) return;
+    const s = document.createElement("span");
+    s.className = "tap-float " + (side === "lula" ? "l" : "f");
+    s.textContent = "+" + delta + " TAP";
+    host.appendChild(s);
+    setTimeout(() => s.remove(), 1100);
+  }
+
+  function damageFloat(fighter, hpDmg, absorbed) {
   const host = $("vote-" + fighter);
   if (!host) return;
   if (absorbed > 0) {
@@ -1703,6 +1814,12 @@ function connectWS() {
       setTimeout(() => say(opponent(msg.attacker), "hit"), 260);
     }
     else if (msg.type === "duelo_tap_meta") { markInteraction(); showTapMeta(msg.side); }
+    else if (msg.type === "duelo_tap_avatar_burst") {
+      if (isHpNewMode() && state.active && state.roundActive && !state.winner) {
+        burstTapFaces(msg.side, msg.user_id, msg.avatar_url, Number(msg.delta) || 0);
+        floatTap(msg.side, Number(msg.delta) || 0);
+      }
+    }
     else if (msg.type === "duelo_special") { markInteraction(); showSpecialFlash(msg.key || "especial", msg.side || ""); }
     else if (msg.type === "duelo_shield") { markInteraction(); if (!isTimedMode()) { shieldEffect(msg.fighter, msg.points || 0); playAudio(msg.audio_url || ""); say(msg.fighter, "shield"); } }
     else if (msg.type === "duelo_vote") {

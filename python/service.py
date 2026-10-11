@@ -600,7 +600,7 @@ class GameSession:
         self._duelo_uid_dbg -= 1
         emit(self.tenant_id, "log", f"[Duelo][debug-uid] {kind}: user={user} meta={user_meta} => uid={self._stable_uid(user, user_meta)}")
 
-    def _duelo_handle_tap(self, user, like_count, user_meta=None):
+    def _duelo_handle_tap(self, user, like_count, user_meta=None, avatar=""):
         if not (self.duelo.active and self.duelo._is_hp_new() and self.duelo.roundActive):
             return
         try:
@@ -609,6 +609,17 @@ class GameSession:
             metas = self.duelo.add_tap(uid, like_count)
             if metas:
                 emit(self.tenant_id, "log", f"[Duelo] META DE TAP! {metas} ataque(s) automático(s) disparado(s)")
+            if self.duelo.active and self.duelo.roundActive and not self.duelo.winner:
+                side = self.duelo.get_team(uid)
+                if side and avatar:
+                    emit(self.tenant_id, "game", {
+                        "type": "duelo_tap_avatar_burst",
+                        "side": side,
+                        "user_id": uid,
+                        "unique_id": user or "",
+                        "avatar_url": str(avatar or ""),
+                        "delta": int(like_count or 0),
+                    })
             if self.duelo.winner and not self.duelo.roundActive and not self.duelo.final:
                 delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
                 self._schedule_duelo_reset(delay)
@@ -655,7 +666,7 @@ class GameSession:
             entry["avatar"] = avatar
         self._likes_dirty = True
         self.battle.add_taps(user, nickname, avatar, like_count)
-        self._duelo_handle_tap(user, like_count, user_meta)
+        self._duelo_handle_tap(user, like_count, user_meta, avatar)
         # Meta de tap da Palavra Secreta (independente do ranking da BATALHA)
         if not self.game.finished:
             self.tap_meta_current += int(like_count or 0)
