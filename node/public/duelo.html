@@ -397,8 +397,9 @@
   .cpc-cloud { position: absolute; left: 0; top: 2%; transform: translateX(-50%); z-index: 6; display: none; pointer-events: none; }
   .cpc-cloud.show { display: block; }
   .cpc-cloud img { display: block; max-height: 72vh; max-width: 55vw; width: auto; }
-  .cpc-cloud.show img { animation: cpcCloudIn .28s ease-out forwards; }
-  @keyframes cpcCloudIn { 0% { transform: translateY(-20px) scale(.75); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+  .cpc-cloud.show img { animation: cpcCloudEnter .3s ease-out, cpcCloudIdle 1.6s ease-in-out .3s infinite; }
+  @keyframes cpcCloudEnter { 0% { transform: translateY(-20px) scale(.75); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+  @keyframes cpcCloudIdle { 0%, 100% { transform: translateY(0) scale(1); } 25% { transform: translate(-7px, 3px) scale(1.03); } 50% { transform: translate(0, 0) scale(1); } 75% { transform: translate(7px, -2px) scale(1.03); } }
   .cpc-rain { position: absolute; inset: 0; pointer-events: none; z-index: 8; overflow: hidden; }
   .cpc-rain.fg { z-index: 20; }
   .cpc-rain img { position: absolute; top: -80px; width: auto; will-change: transform, top, opacity; }
@@ -420,8 +421,8 @@
   .cpc-logo { position: absolute; left: 0; top: 0; display: none; z-index: 24; pointer-events: none; }
   .cpc-logo.show { display: block; }
   .cpc-logo img { display: block; max-height: 15vh; max-width: 34vw; width: auto; transform-origin: center; }
-  .cpc-logo.show img { animation: cpcLogo .7s cubic-bezier(.2,.8,.3,1) forwards; }
-  @keyframes cpcLogo { 0% { transform: scale(.65) rotate(-3deg); opacity: 0; } 20% { transform: scale(1.1) rotate(0deg); opacity: 1; } 32% { transform: scale(1) rotate(0deg); opacity: 1; } 78% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(.9) rotate(0deg); opacity: 0; } }
+  .cpc-logo.show img { animation: cpcLogoHold .55s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes cpcLogoHold { 0% { transform: scale(.5) translateY(16px); opacity: 0; } 16% { transform: scale(1.12) translateY(0); opacity: 1; } 32% { transform: scale(1) translateY(4px); opacity: 1; } 100% { transform: scale(1) translateY(4px); opacity: 1; } }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -1990,7 +1991,7 @@ async function runChuvaDePicanha(item) {
   const sr = stage.getBoundingClientRect();
   const fireY = parseFloat(getComputedStyle(stage).getPropertyValue("--fire-y")) || 20;
   const groundY = Math.max(0, sr.height * (1 - fireY / 100));
-  const cr = (sel) => { const e = $(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { cx: r.left + r.width / 2 - sr.left, top: r.top - sr.top, bottom: r.bottom - sr.top }; };
+  const cr = (sel) => { const e = $(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { cx: r.left + r.width / 2 - sr.left, top: r.top - sr.top, bottom: r.bottom - sr.top, left: r.left - sr.left, right: r.left + r.width - sr.left, width: r.width }; };
   const dir = FIGHTERS.lula.dir;
   const casR = cr("fighter-lula"), defR = cr("fighter-" + tgt);
   const casX = casR ? casR.cx : sr.width * 0.68;
@@ -2012,7 +2013,8 @@ async function runChuvaDePicanha(item) {
     const el = document.createElement("img");
     el.src = CHUVA_FX.smalls[Math.floor(Math.random() * CHUVA_FX.smalls.length)];
     const sX = sr.width * (0.5 + (Math.random() * 0.26 - 0.13)); // centro da nuvem
-    const eX = defX + (Math.random() * 70 - 25);                 // em direção ao Bolsonaro (Flávio)
+    const defW = (defR && defR.width) || sr.width * 0.16;
+    const eX = defX + (Math.random() * (defW * 0.75) - defW * 0.5); // aterrissam NA imagem do Flávio (à esquerda), variando
     const sY = sr.height * (0.20 + Math.random() * 0.12);
     const h = fg ? (5 + Math.random() * 2.6) : (3.4 + Math.random() * 1.6);
     const dur = fg ? (330 + Math.random() * 200) : (400 + Math.random() * 160); // chuva forte e rápida
