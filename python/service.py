@@ -407,6 +407,7 @@ class GameSession:
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         self._duelo_uid_dbg = 5  # logs temporarios para validar a chave de usuario (hp_new)
+        self._duelo_tapface_dbg = 8  # logs temporarios p/ diagnostico do rostinho
         self._duelo_reset_task = None
         self._duelo_match_task = None
         self._duelo_timer_task = None
@@ -612,6 +613,9 @@ class GameSession:
             if self.duelo.active and self.duelo.roundActive and not self.duelo.winner:
                 side = self.duelo.get_team(uid)
                 if side and avatar:
+                    if self._duelo_tapface_dbg > 0:
+                        self._duelo_tapface_dbg -= 1
+                        emit(self.tenant_id, "log", f"[Duelo][tapface] EMIT side={side} user={user} avatar_len={len(str(avatar or ''))}")
                     emit(self.tenant_id, "game", {
                         "type": "duelo_tap_avatar_burst",
                         "side": side,
@@ -620,6 +624,9 @@ class GameSession:
                         "avatar_url": str(avatar or ""),
                         "delta": int(like_count or 0),
                     })
+                elif side and self._duelo_tapface_dbg > 0:
+                    self._duelo_tapface_dbg -= 1
+                    emit(self.tenant_id, "log", f"[Duelo][tapface] SEM avatar (não emite) side={side} user={user}")
             if self.duelo.winner and not self.duelo.roundActive and not self.duelo.final:
                 delay = int(self.duelo.settings.get("reset_delay_s", 6) or 6)
                 self._schedule_duelo_reset(delay)

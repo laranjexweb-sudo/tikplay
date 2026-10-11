@@ -1402,6 +1402,7 @@ const tapFaceCache = new Map();
   }
 
   function clearTapFaces() {
+    tapFaceCount.left = 0; tapFaceCount.right = 0; tapFaceCount.flavio = 0; tapFaceCount.lula = 0;
     for (const layer of [["tapFacesL", "left"], ["tapFacesR", "right"]]) {
       const el = $(layer[0]);
       tapFaceCount[layer[1]] = 0;
@@ -1815,6 +1816,7 @@ function connectWS() {
     }
     else if (msg.type === "duelo_tap_meta") { markInteraction(); showTapMeta(msg.side); }
     else if (msg.type === "duelo_tap_avatar_burst") {
+      try { console.debug("[TAPFACE]", msg.side, (msg.avatar_url || "").slice(0, 40), msg.delta); } catch (e) {}
       if (isHpNewMode() && state.active && state.roundActive && !state.winner) {
         burstTapFaces(msg.side, msg.user_id, msg.avatar_url, Number(msg.delta) || 0);
         floatTap(msg.side, Number(msg.delta) || 0);
