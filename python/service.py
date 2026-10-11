@@ -406,6 +406,7 @@ class GameSession:
         self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
         self._tres_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
+        self._duelo_uid_dbg = 5  # logs temporarios para validar a chave de usuario (hp_new)
         self._duelo_reset_task = None
         self._duelo_match_task = None
         self._duelo_timer_task = None
@@ -593,29 +594,43 @@ class GameSession:
             pass
         return str(user or "")
 
+    def _duelo_uid_dump(self, user, user_meta, kind):
+        if self._duelo_uid_dbg <= 0 or not (self.duelo.active and self.duelo._is_hp_new()):
+            return
+        self._duelo_uid_dbg -= 1
+        emit(self.tenant_id, "log", f"[Duelo][debug-uid] {kind}: user={user} meta={user_meta} => uid={self._stable_uid(user, user_meta)}")
+
     def _duelo_handle_tap(self, user, like_count, user_meta=None):
         if not (self.duelo.active and self.duelo._is_hp_new() and self.duelo.roundActive):
             return
-        uid = self._stable_uid(user, user_meta)
-        metas = self.duelo.add_tap(uid, like_count)
-        if metas:
-            emit(self.tenant_id, "log", f"[Duelo] META DE TAP! {metas} ataque(s) automático(s) disparado(s)")
+        try:
+            self._duelo_uid_dump(user, user_meta, "like")
+            uid = self._stable_uid(user, user_meta)
+            metas = self.duelo.add_tap(uid, like_count)
+            if metas:
+                emit(self.tenant_id, "log", f"[Duelo] META DE TAP! {metas} ataque(s) automático(s) disparado(s)")
+        except Exception as e:
+            emit(self.tenant_id, "log", f"[Duelo] Erro ao processar TAP: {e}")
 
     def _duelo_comment_team(self, user, raw, user_meta=None):
         if not (self.duelo.active and self.duelo._is_hp_new()):
             return
-        norm = strip_accents(raw or "").lower()
-        words = set(re.findall(r"[a-z0-9]+", norm))
-        if "flavio" in words or "bolsonaro" in words:
-            side = "flavio"
-        elif "lula" in words:
-            side = "lula"
-        else:
-            return
-        uid = self._stable_uid(user, user_meta)
-        old = self.duelo.get_team(uid)
-        if self.duelo.register_team(uid, side):
-            emit(self.tenant_id, "log", f"[Duelo] @{user} escolheu equipe {side.upper()}" + (" (troca)" if old and old != side else ""))
+        try:
+            norm = strip_accents(raw or "").lower()
+            words = set(re.findall(r"[a-z0-9]+", norm))
+            if "flavio" in words or "bolsonaro" in words:
+                side = "flavio"
+            elif "lula" in words:
+                side = "lula"
+            else:
+                return
+            self._duelo_uid_dump(user, user_meta, "comment")
+            uid = self._stable_uid(user, user_meta)
+            old = self.duelo.get_team(uid)
+            if self.duelo.register_team(uid, side):
+                emit(self.tenant_id, "log", f"[Duelo] @{user} escolheu equipe {side.upper()}" + (" (troca)" if old and old != side else ""))
+        except Exception as e:
+            emit(self.tenant_id, "log", f"[Duelo] Erro ao registrar equipe: {e}")
 
     async def on_like(self, user, nickname, avatar, like_count, user_meta=None):
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
