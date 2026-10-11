@@ -57,18 +57,22 @@
   #tab-duelo .sup-line:last-child { border-bottom: none; }
   #tab-duelo .sup-lbl { font-weight: 800; min-width: 118px; font-size: 12px; }
   #tab-duelo .sup-line .form-control { height: var(--duelo-field-h); font-size: 13px; }
-  #tab-duelo .duelo-gift-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; padding: 4px 0; border-bottom: 1px dashed #ddd; }
+  #tab-duelo .duelo-gift-head, #tab-duelo .duelo-gift-line { display: grid; grid-template-columns: 1.3fr 88px 1.1fr 106px 28px 32px; gap: 8px; align-items: center; }
+  #tab-duelo .duelo-gift-head { padding: 2px 0; font-size: 11px; font-weight: 800; color: #666; letter-spacing: .03em; text-transform: uppercase; border-bottom: 2px solid #000; }
+  #tab-duelo .duelo-gift-head span:last-child { visibility: hidden; }
+  #tab-duelo .duelo-gift-line { padding: 4px 0; border-bottom: 1px dashed #ddd; }
   #tab-duelo .duelo-gift-line:last-child { border-bottom: none; }
+  #tab-duelo .duelo-gift-line > * { min-width: 0; }
   #tab-duelo .duelo-gift-line .form-control, #tab-duelo .duelo-gift-line .form-select { height: 30px; font-size: 12px; }
-  #tab-duelo .duelo-gift-line .duelo-name-box { flex: 1 1 130px; min-width: 130px; }
-  #tab-duelo .duelo-gift-line > select { flex: 0 0 92px; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields { flex: 1 1 150px; display: flex; align-items: center; gap: 6px; min-width: 140px; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields .form-select { flex: 1; }
-  #tab-duelo .duelo-gift-line .duelo-value-fields input.form-control { width: 68px; }
-  #tab-duelo .duelo-gift-line .duelo-audio-box { flex: 0 0 110px; }
-  #tab-duelo .duelo-gift-line .duelo-gift-check { flex: 0 0 34px; justify-content: center; }
-  #tab-duelo .duelo-gift-x { flex: 0 0 28px; }
+  #tab-duelo .duelo-gift-line .duelo-ac { max-height: 160px; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields .form-select { flex: 1; min-width: 0; }
+  #tab-duelo .duelo-gift-line .duelo-value-fields input[type="number"] { width: 72px; flex: 0 0 72px; }
   #tab-duelo .duelo-apoio-field { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: .03em; }
+  #tab-duelo .duelo-gift-check { display: flex; justify-content: center; align-items: center; }
+  #tab-duelo .duelo-gift-x { height: 30px; width: 32px; padding: 0; font-size: 15px; line-height: 1; }
+  #tab-duelo .duelo-audio-box input[type="file"] { font-size: 11px; padding: 4px; }
+  @media (max-width: 1200px) { #tab-duelo .duelo-gift-head { display: none; } #tab-duelo .duelo-gift-line { grid-template-columns: 1fr 88px; row-gap: 6px; } }
   #tab-duelo .dl-preview { position: relative; width: 100%; max-width: 200px; aspect-ratio: 9 / 16; background: #101014; border: 2px solid #444; border-radius: 10px; overflow: hidden; user-select: none; }
   #tab-duelo .dl-block { position: absolute; transform: translate(-50%, -50%); padding: 5px 7px; background: rgba(255,255,255,.92); border: 2px solid #000; border-radius: 8px; font-size: 11px; font-weight: 900; color: #111; cursor: grab; z-index: 5; white-space: nowrap; box-shadow: 2px 2px 0 rgba(0,0,0,.35); }
   #tab-duelo .dl-block:active { cursor: grabbing; }
@@ -952,6 +956,7 @@
                   <div id="dueloGiftsList-flavio" style="margin-top:4px"></div>
                 </div>
                 <div class="duelo-sub" style="margin-top:10px">Apoiadores</div>
+                <div id="dueloSupportersList-flavio"></div>
               </div>
               <div class="duelo-team duelo-team--red">
                 <div class="duelo-team-title">Lula</div>
@@ -973,12 +978,12 @@
                   <div id="dueloGiftsList-lula" style="margin-top:4px"></div>
                 </div>
                 <div class="duelo-sub" style="margin-top:10px">Apoiadores</div>
+                <div id="dueloSupportersList-lula"></div>
               </div>
             </div>
             <div class="duelo-help" id="dueloSupportersHelp" style="margin-top:8px">
               Presente que invoca um apoio (entra, fala, golpeia e sai) aplicando o DANO configurado + votos. Nikolas e Lucas = Flávio; Ana Elisa e Erika = Lula.
             </div>
-            <div id="dueloSupportersBox"></div>
           </div>
 
           <!-- LAYOUT DA ARENA -->
@@ -3525,15 +3530,13 @@ function dueloSupportersDefault() {
 }
 
 function renderSupporters() {
-  const box = document.getElementById("dueloSupportersBox");
-  if (!box) return;
-  box.innerHTML = `<div class="row g-3">${["flavio", "lula"].map((side) => `
-    <div class="col-lg-6">
-      <div class="border border-2 ${side === 'flavio' ? 'border-primary' : 'border-danger'} rounded p-2" style="background:${side === 'flavio' ? '#eef6ff' : '#fff1f1'}">
-        <div class="fw-bold mb-2" style="color:${side === 'flavio' ? '#1d4ed8' : '#b91c1c'}">APOIADORES — ${side === 'flavio' ? 'FLÁVIO' : 'LULA'}</div>
-        ${Object.keys(DUELO_SUPPORTERS_META).filter((k) => DUELO_SUPPORTERS_META[k].side === side).map(supBlock).join("")}
-      </div>
-    </div>`).join("")}</div>`;
+  const groups = { flavio: "dueloSupportersList-flavio", lula: "dueloSupportersList-lula" };
+  for (const side of Object.keys(groups)) {
+    const box = document.getElementById(groups[side]);
+    if (!box) continue;
+    const html = Object.keys(DUELO_SUPPORTERS_META).filter((k) => DUELO_SUPPORTERS_META[k].side === side).map(supBlock).join("");
+    box.innerHTML = html;
+  }
   Object.keys(DUELO_SUPPORTERS_META).forEach(bindSup);
 }
 
@@ -3917,7 +3920,11 @@ function renderGiftSection(char) {
     box.appendChild(none);
     return;
   }
-items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
+const head = document.createElement("div");
+    head.className = "duelo-gift-head";
+    head.innerHTML = "<span>PRESENTE</span><span>TIPO</span><span>AÇÃO / VALOR</span><span>ÁUDIO</span><span>ATIVO</span><span></span>";
+    box.appendChild(head);
+    items.forEach(({ g, i }) => box.appendChild(buildDueloRow(g, i)));
   }
 
 function buildDueloRow(g_, i) {
