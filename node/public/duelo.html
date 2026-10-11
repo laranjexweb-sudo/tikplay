@@ -387,10 +387,11 @@
   .jacare-smoke img { width: 100%; max-height: none; opacity: .75; }
   .jacare-fx { position: absolute; top: 42%; width: 20vh; pointer-events: none; opacity: 0; transform: translate(-50%, -50%); z-index: 2; transition: opacity .12s ease; }
   .jacare-fx img { width: 100%; max-height: none; }
-  .jacare-logo { position: absolute; top: 12%; left: 50%; transform: translateX(-50%) scale(.8); opacity: 0; pointer-events: none; z-index: 3; }
-  .jacare-logo.show img { animation: logoPop .3s ease forwards; }
-  .jacare-logo img { max-height: 15vh; width: auto; }
-  @keyframes logoPop { 0% { transform: scale(.8); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  .jacare-bubble { position: absolute; top: 0; left: 0; display: none; pointer-events: none; z-index: 26; }
+  .jacare-bubble.show { display: block; }
+  .jacare-bubble img { display: block; max-height: 16vh; max-width: 34vw; width: auto; transform-origin: bottom center; }
+  .jacare-bubble.show img { animation: bubbleRise .7s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes bubbleRise { 0% { transform: translate(-50%, 14px) scale(.4); opacity: 0; } 20% { transform: translate(-50%, 0) scale(1.12); opacity: 1; } 45% { transform: translate(-50%, -20px) scale(1); opacity: 1; } 100% { transform: translate(-50%, -52px) scale(1); opacity: 0; } }
   .hit.show { opacity: 1; }
   .hit.punch { border-left: 46px solid transparent; border-right: 46px solid transparent; border-bottom: 60px solid #fff8d0; bottom: 24vh; animation: hitPunch .28s ease-out forwards; }
   .hit.kick { width: 90px; height: 90px; border-radius: 50%; bottom: 27vh; background: radial-gradient(circle, #fff 0%, #ffd200 40%, rgba(255,180,0,0) 70%); animation: hitKick .3s ease-out forwards; }
@@ -529,7 +530,7 @@
   </div>
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
-  <div id="jacareWrap" class="jacare"><div class="jacare-smoke" id="jacareSmoke"></div><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div><div class="jacare-logo" id="jacareLogo"></div></div>
+  <div id="jacareWrap" class="jacare"><div class="jacare-smoke" id="jacareSmoke"></div><img id="jacareImg" alt=""><div class="jacare-fx" id="jacareFx"></div></div><div class="jacare-bubble" id="jacareLogo"></div>
   <div class="float-text" id="floatText"></div>
   <div class="tap-faces left" id="tapFacesL"></div>
   <div class="tap-faces right" id="tapFacesR"></div>
@@ -1810,7 +1811,24 @@ async function runJacareSpecial(item) {
   const shake = () => { if (stage) { stage.classList.add("combat-shake"); setTimeout(() => stage.classList.remove("combat-shake"), 260); } };
   const setPose = (n, sc) => { img.src = "/duelo/bolsonaro/" + n; img.style.transform = "scale(" + sc + ")"; };
   const fxImg = (n, o, px) => { if (fx) { fx.innerHTML = '<img src="/duelo/bolsonaro/' + n + '" alt="">'; fx.style.opacity = o || 0; fx.style.left = (px != null ? px : 50) + "%"; } };
-  const logoOn = () => { if (logo) { logo.innerHTML = '<img src="/duelo/bolsonaro/virou-jacare.png" alt="">'; logo.classList.remove("show"); void logo.offsetWidth; logo.classList.add("show"); } };
+  const logoOn = () => {
+    if (!logo) return;
+    logo.innerHTML = '<img src="/duelo/bolsonaro/virou-jacare.png" alt="VIROU JACARÉ">';
+    logo.classList.remove("show");
+    void logo.offsetWidth;
+    const mf = $("fighter-" + side);
+    const st = stage;
+    if (mf && st) {
+      const r = mf.getBoundingClientRect();
+      const sr = st.getBoundingClientRect();
+      logo.style.left = ((r.left + r.width / 2 - sr.left) / sr.width) * 100 + "%";
+      logo.style.top = Math.max(4, ((r.top - sr.top) / sr.height) * 100 - 11) + "%";
+    } else {
+      logo.style.left = "54%";
+      logo.style.top = "34%";
+    }
+    logo.classList.add("show");
+  };
   const beginX = side === "flavio" ? "-8%" : "92%";
   const setX = (x) => { wrap.style.transition = "left 240ms ease-out"; wrap.style.left = x; };
 
