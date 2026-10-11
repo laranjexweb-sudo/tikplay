@@ -258,6 +258,17 @@
     white-space: nowrap;
   }
   .float-text.show { animation: floatUp 1s ease-out forwards; }
+  .waiting-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 78;
+    display: none;
+    pointer-events: none;
+  }
   @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 
   .combat-shake { animation: shk .25s linear; }
@@ -437,6 +448,7 @@
   <div class="hit" id="hit"></div>
   <div id="supporterWrap" class="supporter"><img id="supporterImg" alt=""><div id="supporterBubble" class="supporter-bubble"></div></div>
   <div class="float-text" id="floatText"></div>
+  <img id="waitingImg" class="waiting-img" src="/duelo/duelo-1x1-aguarde.png" alt="">
   <div class="win-banner" id="winBanner">
     <div class="big" id="winBig"></div>
     <div class="sub" id="winSub"></div>
@@ -920,6 +932,12 @@ const hpMax = state.hp_max || 100;
   const hpNew = isHpNewMode();
   const hudF = document.querySelector(".hud-flavio");
   const hudL = document.querySelector(".hud-lula");
+  const wt = $("waitingImg");
+  const gpf = document.querySelector(".gift-panel-flavio");
+  const gpl = document.querySelector(".gift-panel-lula");
+  if (gpf) gpf.style.display = state.active ? "" : "none";
+  if (gpl) gpl.style.display = state.active ? "" : "none";
+  if (wt) wt.style.display = state.active ? "none" : "block";
   if (!state.active) {
     if (hudF) hudF.style.display = "none";
     if (hudL) hudL.style.display = "none";
@@ -932,6 +950,10 @@ const hpMax = state.hp_max || 100;
     if (cb) { cb.textContent = ""; cb.classList.remove("show"); }
     const sbdX = $("sbDebates");
     if (sbdX) sbdX.style.display = "none";
+    const wb = $("winBanner");
+    if (wb) wb.classList.remove("show");
+    const lf = $("leadFlash");
+    if (lf) lf.classList.remove("show");
     return;
   }
   if (hudF) hudF.style.display = (timed || hpNew) ? "none" : "";
@@ -1101,11 +1123,9 @@ function renderWinner() {
 
   const banner = $("winBanner");
   if (banner) {
-    // Vitória de DEBATE (KO) usa o banner específico; FINAL usa o "-ganhou".
-    const debate = winner === "lula" ? "lula-ganhou-debate-v3" : winner + "-ganhou-o-debate";
-    const base = state.final ? winner + "-ganhou" : debate;
-    const fb = "/duelo/banners/" + winner + "-ganhou.png?v=3";
-    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png?v=3" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
+    const nome = winner === "lula" ? "vermelho" : "azul";
+    const fb = "/duelo/banners/" + nome + "-ganhou.png?v=3";
+    banner.innerHTML = '<img class="banner-img" src="' + fb + '" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
     banner.classList.add("show");
   }
 }
@@ -1179,9 +1199,9 @@ function renderRoundResult() {
   roundResultShown = true;
   const banner = $("winBanner");
   if (banner) {
-    const base = res.winner ? res.winner + "-ganhou" : "empate";
-    const fb = res.winner ? "/duelo/banners/" + res.winner + "-ganhou.png?v=3" : "/duelo/banners/empate.png?v=3";
-    banner.innerHTML = '<img class="banner-img" src="/duelo/banners/' + base + '.png?v=3" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
+    const nome = res.winner === "lula" ? "vermelho" : "azul";
+    const fb = res.winner ? "/duelo/banners/" + nome + "-ganhou.png?v=3" : "/duelo/banners/empate.png?v=3";
+    banner.innerHTML = '<img class="banner-img" src="' + fb + '" onerror="this.onerror=null;this.src=\'' + fb + '\'">';
     banner.classList.add("show");
   }
 }

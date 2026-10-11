@@ -884,7 +884,7 @@
             <div class="duelo-row duelo-actions">
               <button class="duelo-btn duelo-btn--primary" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
               <button class="duelo-btn duelo-btn--danger" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
-              <button class="duelo-btn duelo-btn--warning" onclick="dueloNewMatch()">Reiniciar Partida</button>
+              <button class="duelo-btn duelo-btn--warning" onclick="dueloResetRound()">Reiniciar Partida</button>
               <button class="duelo-btn duelo-btn--neutral" onclick="dueloSaveConfig()">Salvar Configurações</button>
               <span class="text-secondary duelo-msg" id="dueloMsg0"></span>
             </div>
@@ -4337,9 +4337,10 @@ async function dueloStop() {
 }
 
 async function dueloResetRound() {
+  if (!confirm("Reiniciar a batalha? Votos/vitórias são mantidos.")) return;
   try {
     const data = await apiFetch("/api/duelo/reset-round", { method: "POST" });
-    dueloMsg(data.success ? "Rodada reiniciada." : (data.error || "Erro"));
+    dueloMsg(data.success ? "Batalha reiniciada (pontos mantidos)." : (data.error || "Erro"));
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
 }
 
