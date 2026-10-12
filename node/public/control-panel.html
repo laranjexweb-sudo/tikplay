@@ -248,6 +248,8 @@
         <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
         <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none">Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
+        <button type="button" class="btn btn-nb btn-warning btn-sm" id="btnSyncGifts" title="Sincronizar catálogo de presentes com o TikTok">↻ Sincronizar gifts</button>
+        <span class="badge text-bg-dark" id="giftSyncStatus" style="font-size:0.7rem;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">catálogo: —</span>
         <button class="btn btn-nb btn-dark btn-sm" onclick="location.href='/docs'">Ajuda</button>
         <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
       </div>
@@ -435,10 +437,6 @@
             <div class="text-secondary" id="riddleHint" style="font-size:0.75rem;margin-top:4px">Máximo de 1. É o presente que revela a palavra no Final Boss.</div>
           </div>
 
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <button type="button" class="btn btn-nb btn-dark btn-sm" id="btnSyncGifts">↻ Sincronizar agora</button>
-            <span class="text-secondary" id="giftSyncStatus" style="font-size:0.75rem">catálogo: —</span>
-          </div>
           <div class="d-flex flex-wrap align-items-center gap-2 mb-2" style="font-size:0.8rem">
             <label class="mb-0" for="giftFilterMin">💎 min</label>
             <input type="number" class="form-control form-control-sm" id="giftFilterMin" min="0" style="width:84px" placeholder="0">
