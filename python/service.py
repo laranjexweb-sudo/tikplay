@@ -312,6 +312,15 @@ class GameSession:
                 # Edge: sem gate de disponibilidade — o synthesize decide (igual ao teste;
                 # o flag de import pode ficar False mas o edge funciona em runtime).
                 audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
+                if not audio_path and tts.piper_available():
+                    # Fallback local (sem rate-limit) quando o Edge falhar (intermitente)
+                    audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, self._rate_value())
+                    if audio_path:
+                        self._throttled_log("tts_fb", f"[TTS] fallback local (piper) — edge falhou: '{text[:30]}'", game="tts", level="warn", secs=10.0)
+                if not audio_path and tts.gtts_available():
+                    audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, False)
+                    if audio_path:
+                        self._throttled_log("tts_fb2", f"[TTS] fallback gTTS — edge/piper falharam: '{text[:30]}'", game="tts", level="warn", secs=10.0)
             elif voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX):
                 if not tts.kokoro_available():
                     return None
