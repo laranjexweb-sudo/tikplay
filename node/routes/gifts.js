@@ -42,7 +42,20 @@ module.exports = function registerGiftRoutes(app, ctx = {}) {
     });
   });
 
-  app.post("/api/gifts/sync", auth.requireAuth, (req, res) => {
+app.post("/api/gifts/sync", auth.requireAdmin, (req, res) => {
+    // Sincronização do catálogo GLOBAL é exclusiva do Super Admin (papel "admin").
+    // 401 sem token (requireAuth) / 403 autenticado sem o papel (requireAdmin).
+    // Valida forma: o endpoint não aceita payload/parâmetros (min/max são filtros
+    // locais dos seletores, não da sincronização).
+    if (req.body != null) {
+      if (typeof req.body !== "object" || Array.isArray(req.body)) {
+        return res.status(400).json({ success: false, error: "Payload invalido" });
+      }
+      const keys = Object.keys(req.body);
+      if (keys.length > 0) {
+        return res.status(400).json({ success: false, error: `Parametros invalidos: ${keys.slice(0, 5).join(", ") || "desconhecido"}` });
+      }
+    }
     const ok = daemonSend({ cmd: "sync_gifts", tenant_id: req.user.id });
     res.json({ success: ok, queued: ok });
   });
