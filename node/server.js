@@ -2188,7 +2188,10 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
   const supporter = req.body && req.body.supporter;
   const special = req.body && req.body.special;
   const SUPPORT_KEYS = { nikolas: "flavio", "lucas-pavanato": "flavio", "ana-elisa": "lula", "erika-hilton": "lula" };
+  const tCfgTest = db.getDueloConfig(req.user.id);
+  const spAudioOf = (key) => String((tCfgTest.settings && tCfgTest.settings.special_attacks && tCfgTest.settings.special_attacks[key] && tCfgTest.settings.special_attacks[key].audio) || "").trim().replace(/[^a-zA-Z0-9._-]/g, "");
   if (special === "virou_jacare") {
+    const aJac = spAudioOf("virou_jacare");
     broadcastToClients(tenant.browserClients, {
       type: "duelo_special",
       isTest: true,
@@ -2199,13 +2202,14 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
       absorbed: 0,
       hp_damage: 0,
       sequence: "bolsonaro_jacare",
-      audio_url: "",
+      audio_url: aJac ? `/duelo-audio/${req.user.id}/${aJac}` : "",
       user: "streamer",
       nickname: "Streamer",
     });
     return res.json({ success: true });
   }
   if (special === "chuva_picanha") {
+    const aPica = spAudioOf("chuva_picanha");
     broadcastToClients(tenant.browserClients, {
       type: "duelo_special",
       isTest: true,
@@ -2216,7 +2220,7 @@ app.post("/api/duelo/test", auth.requireAuth, requireFeature("duelo"), (req, res
       absorbed: 0,
       hp_damage: 0,
       sequence: "chuva_picanha",
-      audio_url: "",
+      audio_url: aPica ? `/duelo-audio/${req.user.id}/${aPica}` : "",
       user: "streamer",
       nickname: "Streamer",
     });

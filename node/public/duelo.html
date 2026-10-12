@@ -1444,6 +1444,7 @@ function playAudio(url) {
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 document.addEventListener("touchstart", unlockAudio, { once: true });
+document.addEventListener("pointermove", unlockAudio, { once: true, passive: true });
 
 // ---- Falas (client-side) ----
 const SPEECH = {
