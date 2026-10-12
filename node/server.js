@@ -438,10 +438,16 @@ function broadcastStatusAll(status) {
 
 // ---------------- Daemon (Python service) ----------------
 
+const Daemon = require("./lib/daemon");
+
+const DAEMON_ENV = {
+  ...process.env,
+  PYTHONIOENCODING: "utf-8",
+  PYTHONUNBUFFERED: "1",
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+};
+
 let daemon = null;
-let daemonPid = null;
-let daemonBackoff = 1000;
-let daemonRespawnTimer = null;
 
 function resetAllTenantSessions() {
   for (const tenant of tenants.values()) {
@@ -449,84 +455,35 @@ function resetAllTenantSessions() {
   }
 }
 
-function spawnDaemon() {
-  if (daemonRespawnTimer) {
-    clearTimeout(daemonRespawnTimer);
-    daemonRespawnTimer = null;
-  }
-  if (daemonPid) {
-    try {
-      process.kill(daemonPid);
-    } catch (e) {}
-    daemonPid = null;
-  }
-  const env = {
-    ...process.env,
-    PYTHONIOENCODING: "utf-8",
-    PYTHONUNBUFFERED: "1",
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
-  };
-  daemon = spawn(PYTHON_BIN, ["-u", SERVICE_PATH], { env });
-  daemonPid = daemon.pid;
-
-  let daemonBuffer = "";
-  daemon.stdout.on("data", (data) => {
-    daemonBackoff = 1000;
-    daemonBuffer += data.toString("utf-8");
-    const lines = daemonBuffer.split("\n");
-    daemonBuffer = lines.pop() || "";
-    for (let line of lines) {
-      line = line.replace(/\r$/, "");
-      if (!line.trim()) continue;
-      let msg;
-      try {
-        msg = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      handleDaemonMessage(msg);
-    }
-  });
-
-  daemon.stderr.on("data", (data) => {
-    const lines = data.toString("utf-8").split("\n");
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const tenantId = msgTenant(line);
-      if (tenantId && tenants.has(tenantId)) {
-        broadcastLog(getTenant(tenantId), `[stderr] ${line}`);
-      } else {
-        console.error("[Daemon]", line);
-      }
-    }
-  });
-
-  daemon.on("error", (err) => {
-    console.error("[Daemon] Erro ao iniciar:", err.message);
-    daemon = null;
-    daemonPid = null;
-    resetAllTenantSessions();
-    broadcastStatusAll({ state: "offline" });
-    scheduleDaemonRespawn();
-  });
-
-  daemon.on("close", (code) => {
-    console.log(`[Daemon] Encerrado (codigo: ${code})`);
-    daemon = null;
-    daemonPid = null;
-    resetAllTenantSessions();
-    broadcastStatusAll({ state: "offline" });
-    scheduleDaemonRespawn();
-  });
+function onDaemonDown() {
+  resetAllTenantSessions();
+  broadcastStatusAll({ state: "offline" });
 }
 
-function scheduleDaemonRespawn() {
-  if (daemon || daemonRespawnTimer) return;
-  daemonRespawnTimer = setTimeout(() => {
-    daemonRespawnTimer = null;
-    spawnDaemon();
-  }, daemonBackoff);
-  daemonBackoff = Math.min(daemonBackoff * 2, 15000);
+function routeDaemonStderr(line) {
+  const tenantId = msgTenant(line);
+  if (tenantId && tenants.has(tenantId)) {
+    broadcastLog(getTenant(tenantId), `[stderr] ${line}`);
+  } else {
+    console.error("[Daemon]", line);
+  }
+}
+
+function startDaemon() {
+  daemon = new Daemon({
+    pythonBin: PYTHON_BIN,
+    servicePath: SERVICE_PATH,
+    env: DAEMON_ENV,
+    onMessage: handleDaemonMessage,
+    onStderr: routeDaemonStderr,
+    onDown: onDaemonDown,
+  });
+  daemon.start();
+}
+
+function daemonSend(obj) {
+  if (!daemon) startDaemon();
+  return daemon ? daemon.send(obj) : false;
 }
 
 function handleDaemonMessage(msg) {
@@ -576,38 +533,15 @@ function msgTenant(line) {
   }
 }
 
-function daemonSend(obj) {
-  if (!daemon) {
-    spawnDaemon();
-  }
-  if (!daemon || !daemon.stdin || !daemon.stdin.writable) {
-    return false;
-  }
-  daemon.stdin.write(JSON.stringify(obj) + "\n");
-  return true;
-}
-
-spawnDaemon();
-
-// Ensure the child process is killed when Node exits
 function killDaemon() {
-  if (daemon) {
-    try {
-      daemon.kill();
-    } catch (e) {}
-    daemon = null;
-    daemonPid = null;
-  }
+  if (daemon) daemon.kill();
+  daemon = null;
 }
 process.on("exit", killDaemon);
-process.on("SIGINT", () => {
-  killDaemon();
-  process.exit();
-});
-process.on("SIGTERM", () => {
-  killDaemon();
-  process.exit();
-});
+process.on("SIGINT", () => { killDaemon(); process.exit(); });
+process.on("SIGTERM", () => { killDaemon(); process.exit(); });
+
+startDaemon();
 
 // ---------------- Config helpers ----------------
 
