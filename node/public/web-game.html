@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TikPlay - Acompanhe ao Vivo!</title>
 <link rel="stylesheet" href="ui/tikplay-theme.css">
-<link rel="stylesheet" href="style.css?v=sidebar-readable-20261012f">
+<link rel="stylesheet" href="style.css?v=secret-word-centered-20261012f">
 <link rel="stylesheet" href="ui/secret-word-palette.css?v=contrast-10">
 <style>
   .start-bar { text-align: center; margin-bottom: 10px; }
@@ -49,7 +49,7 @@
   .compact .gift-item-img { width: 40px; height: 40px; }
 </style>
 </head>
-<body>
+<body class="secret-word-public">
 <div class="container compact">
   <span id="statusBadge" style="display:none"></span>
 
@@ -147,7 +147,7 @@
       <div class="meta-card tap-meta" id="tapMetaCard" style="display:none">
         <div class="meta-row">
           <span class="meta-icon" id="tapHeart">❤️</span>
-          <span class="meta-label">META DE TAP</span>
+          <span class="meta-label" id="tapMetaLabel">META DE TAP</span>
           <span class="meta-values" id="tapMetaValues">0 / 0</span>
         </div>
         <div class="meta-track">
@@ -237,6 +237,7 @@ let currentRiddleAudioUrl = "";
 let riddleAudio = null;
 let lastNarratedRiddleKey = "";
 let riddleClosed = false;
+let riddleHideTimeout = null;
 let shakeInterval = null;
 
 function handleMessage(msg) {
@@ -364,6 +365,7 @@ function handleMessage(msg) {
 }
 
 function applyGameStart(msg) {
+  resetRiddleCard();
   guessHighlightQueue = [];
   guessHighlightShowing = false;
   hideWaitingScreen();
@@ -766,8 +768,12 @@ function processRouletteQueue() {
 }
 
 function handleRiddleStarted(msg) {
+  if (riddleHideTimeout) { clearTimeout(riddleHideTimeout); riddleHideTimeout = null; }
   riddleClosed = false;
+  state.display.riddleVisible = true;
+  state.currentRiddleStage = msg.stage || state.currentRiddleStage;
   const panel = document.getElementById("riddlePanel");
+  if (!panel) return;
   panel.classList.remove("riddle-hiding");
   panel.style.display = "block";
   document.getElementById("riddleLoading").style.display = "flex";
@@ -776,6 +782,7 @@ function handleRiddleStarted(msg) {
 }
 
 function handleRiddleReady(msg, opts) {
+  if (riddleHideTimeout) { clearTimeout(riddleHideTimeout); riddleHideTimeout = null; }
   riddleClosed = false;
   state.currentRiddleStage = msg.stage;
   currentRiddleText = msg.text;
@@ -865,15 +872,52 @@ function closeRiddleCard() {
   state.display.riddleVisible = false;
   const rp = document.getElementById("riddlePanel");
   if (rp) {
+    if (riddleHideTimeout) clearTimeout(riddleHideTimeout);
     rp.classList.add("riddle-hiding");
-    setTimeout(() => {
+    riddleHideTimeout = setTimeout(() => {
       rp.style.display = "none";
       rp.classList.remove("riddle-hiding");
+      riddleHideTimeout = null;
     }, 220);
   }
   applyRankingVisibility();
   renderActiveGift(state.activeGift);
   startLetterGiftPromptCycle();
+}
+
+function resetRiddleCard() {
+  riddleClosed = true;
+  stopRiddleAudio();
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
+  if (riddleHideTimeout) {
+    clearTimeout(riddleHideTimeout);
+    riddleHideTimeout = null;
+  }
+  currentRiddleText = "";
+  currentRiddleAudioUrl = "";
+  lastNarratedRiddleKey = "";
+  state.currentRiddleStage = 0;
+  state.display.riddleVisible = false;
+  const panel = document.getElementById("riddlePanel");
+  if (panel) {
+    panel.classList.remove("riddle-hiding");
+    panel.style.display = "none";
+  }
+  const loading = document.getElementById("riddleLoading");
+  if (loading) loading.style.display = "flex";
+  const body = document.getElementById("riddleBody");
+  if (body) body.style.display = "none";
+  const footer = document.getElementById("riddleFooter");
+  if (footer) footer.style.display = "none";
+  const text = document.getElementById("riddleText");
+  if (text) text.textContent = "";
+  for (const id of ["btnPlayRiddle", "btnRepeatRiddle"]) {
+    const button = document.getElementById(id);
+    if (button) button.style.display = "none";
+  }
 }
 
 function handleDisplayAction(msg) {
@@ -937,9 +981,46 @@ function speakCurrentRiddle() {
   setRiddleNarrating(false);
 }
 
+function fitSecretLetterGrid(container) {
+  if (!container || !container.classList.contains("secret-letter-grid")) return;
+  const slots = Array.from(container.querySelectorAll(":scope > .letter-slot"));
+  const width = container.clientWidth;
+  if (!slots.length || !width) return;
+
+  const style = getComputedStyle(container);
+  const maxBox = parseFloat(style.getPropertyValue("--secret-box-max"));
+  const maxFont = parseFloat(style.getPropertyValue("--secret-letter-font-max"));
+  const maxGap = parseFloat(style.getPropertyValue("--secret-letter-gap"));
+  // Keep the original size until the complete centered row exceeds the frame.
+  // Reduce spacing only when keeping it would consume more than half a cell.
+  const gap = Math.min(maxGap, width / (slots.length * 3));
+  const cellWidth = Math.min(maxBox, (width - gap * (slots.length - 1)) / slots.length);
+  const scale = cellWidth / maxBox;
+  container.style.setProperty("--secret-box-width", `${cellWidth}px`);
+  container.style.setProperty("--secret-box-font-size", `${maxFont * scale}px`);
+  container.style.setProperty("--secret-box-gap", `${gap}px`);
+  container.style.setProperty("--secret-number-scale", scale);
+}
+
+let secretBoxesResizeObserver = null;
+function observeSecretBoxes(container) {
+  if (!container || secretBoxesResizeObserver) return;
+  if (typeof ResizeObserver !== "undefined") {
+    secretBoxesResizeObserver = new ResizeObserver(() => fitSecretLetterGrid(container));
+    secretBoxesResizeObserver.observe(container);
+  } else {
+    window.addEventListener("resize", () => fitSecretLetterGrid(container));
+  }
+}
+
 function renderBoxes() {
   const container = document.getElementById("secretBoxes");
   if (!container) return;
+  container.classList.remove("secret-letter-grid");
+  container.style.removeProperty("--secret-box-width");
+  container.style.removeProperty("--secret-box-gap");
+  container.style.removeProperty("--secret-number-scale");
+  container.style.removeProperty("--secret-box-font-size");
   if (wordAreaMode === "letter_gift_prompt" && letterPromptEligible()) {
     renderGiftPromptCard(state.letterGift, "REVELE A PRIMEIRA LETRA");
     return;
@@ -953,6 +1034,7 @@ function renderBoxes() {
     return;
   }
   const n = state.secretLength;
+  container.classList.add("secret-letter-grid");
   // Animação sequencial ao revelar o tamanho (cada letra sobe da esquerda p/ direita)
   const animate = !!state.sizeRevealAnim;
   state.sizeRevealAnim = false;
@@ -976,6 +1058,8 @@ function renderBoxes() {
     slot.appendChild(num);
     container.appendChild(slot);
   }
+  observeSecretBoxes(container);
+  fitSecretLetterGrid(container);
 }
 
 function renderGiftPromptCard(gift, text) {
@@ -1051,14 +1135,21 @@ function renderTapBar() {
   const total = state.tapMetaTotal || 0;
   const cur = Math.max(0, Math.min(total, state.tapMetaCurrent || 0));
   const pct = total > 0 ? (cur / total) * 100 : 0;
-  fill.style.width = pct + "%";
-  fill.classList.toggle("full", state.tapMetaReady || pct >= 100);
+  const full = !!state.tapMetaReady || pct >= 100;
+  fill.style.width = (full ? 100 : pct) + "%";
+  fill.classList.toggle("full", full);
+  fill.classList.toggle("tap-meta-boss-ready", !!state.tapMetaReady);
 
   const metaCard = document.getElementById("tapMetaCard");
   if (metaCard) metaCard.style.display = state.currentGameId ? "block" : "none";
 
+  const label = document.getElementById("tapMetaLabel");
+  if (label) label.hidden = !!state.tapMetaReady;
+
   const values = document.getElementById("tapMetaValues");
-  if (values && total > 0) {
+  if (values && state.tapMetaReady) {
+    values.textContent = "BOSS ATIVO";
+  } else if (values && total > 0) {
     values.textContent = `${Math.round(cur)} / ${Math.round(total)}`;
   } else if (values) {
     values.textContent = "";
@@ -1684,11 +1775,9 @@ async function loadGameState() {
       if (gs.current_riddle && gs.current_riddle.text && state.display.riddleVisible) {
         handleRiddleReady(gs.current_riddle, { narrate: false });
       } else {
-        currentRiddleText = "";
-        currentRiddleAudioUrl = "";
-        const rp = document.getElementById("riddlePanel");
-        if (rp) rp.style.display = "none";
+        resetRiddleCard();
       }
+      state.currentRiddleStage = gs.current_riddle_stage || 0;
       state.secretLength = gs.secret_length;
       state.guesses = gs.guesses || [];
       state.hintCount = (gs.hints || []).length;
@@ -1729,6 +1818,7 @@ async function loadGameState() {
       startLetterGiftPromptCycle();
     } else {
       // Sem partida ativa (live conectada ou offline): tela de espera central.
+      resetRiddleCard();
       showWaitingScreen();
     }
   } catch (e) {}
@@ -1803,6 +1893,105 @@ function getGiftLevel(gName, hintGifts) {
 
 let highlightInterval = null;
 let currentHighlightIdx = 0;
+let dicaWordResizeObserver = null;
+
+function fitDicaWord(element) {
+  if (!element || !element.textContent) return;
+  const sourceText = element.textContent;
+  const text = sourceText.toLocaleUpperCase("pt-BR");
+  const available = element.clientWidth;
+  if (!available) return;
+  // Recomeça do tamanho definido no CSS para também poder crescer ao ampliar a janela.
+  element.style.removeProperty("font-size");
+  const style = getComputedStyle(element);
+  const canvas = fitDicaWord.canvas || (fitDicaWord.canvas = document.createElement("canvas"));
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const weight = style.fontWeight || "900";
+  const family = style.fontFamily || "sans-serif";
+  const letterSpacing = parseFloat(style.letterSpacing) || 0;
+  const maxSize = parseFloat(style.fontSize) || 24;
+  const minSize = 10;
+  const words = text.split(/\s+/).filter(Boolean);
+  const fitsWord = (word, size) => {
+    context.font = `${weight} ${size}px ${family}`;
+    return context.measureText(word).width + Math.max(0, word.length - 1) * letterSpacing <= available * 0.96;
+  };
+  const fits = size => words.every(word => fitsWord(word, size));
+  let low = minSize;
+  let high = maxSize;
+  if (!fits(low)) {
+    // Para tokens extremos, cria oportunidades de quebra em linhas equilibradas,
+    // mantendo o conteúdo textual intacto e evitando uma última letra isolada.
+    const breakOffsets = new Map();
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
+      const word = words[wordIndex];
+      if (fitsWord(word, minSize)) continue;
+      const chars = Array.from(word);
+      let balancedOffsets = null;
+      for (let lineCount = 2; lineCount <= chars.length && !balancedOffsets; lineCount++) {
+        const lineSize = Math.floor(chars.length / lineCount);
+        const longerLines = chars.length % lineCount;
+        const offsets = [];
+        let start = 0;
+        let fitsBalancedLines = true;
+        for (let line = 0; line < lineCount; line++) {
+          const size = lineSize + (line < longerLines ? 1 : 0);
+          const end = start + size;
+          if (!fitsWord(chars.slice(start, end).join(""), maxSize)) {
+            fitsBalancedLines = false;
+            break;
+          }
+          if (line < lineCount - 1) offsets.push(end);
+          start = end;
+        }
+        if (fitsBalancedLines) balancedOffsets = offsets;
+      }
+      if (balancedOffsets) breakOffsets.set(wordIndex, balancedOffsets);
+    }
+
+    if (breakOffsets.size) {
+      const nodes = [];
+      let wordIndex = 0;
+      for (const part of sourceText.split(/(\s+)/)) {
+        const isWhitespace = !part || /^\s+$/.test(part);
+        const offsets = isWhitespace ? null : breakOffsets.get(wordIndex++);
+        if (!offsets) {
+          nodes.push(document.createTextNode(part));
+          continue;
+        }
+        const chars = Array.from(part);
+        const points = new Set(offsets);
+        let chunk = "";
+        for (let index = 0; index < chars.length; index++) {
+          chunk += chars[index];
+          if (points.has(index + 1)) {
+            nodes.push(document.createTextNode(chunk), document.createElement("wbr"));
+            chunk = "";
+          }
+        }
+        if (chunk) nodes.push(document.createTextNode(chunk));
+      }
+      element.replaceChildren(...nodes);
+      element.style.fontSize = `${maxSize}px`;
+    } else {
+      element.style.fontSize = `${minSize}px`;
+    }
+    return;
+  }
+  for (let i = 0; i < 12; i++) {
+    const middle = (low + high) / 2;
+    if (fits(middle)) low = middle;
+    else high = middle;
+  }
+  element.style.fontSize = `${low}px`;
+}
+
+function observeDicaWord(element) {
+  if (!element || dicaWordResizeObserver || typeof ResizeObserver === "undefined") return;
+  dicaWordResizeObserver = new ResizeObserver(() => fitDicaWord(element));
+  dicaWordResizeObserver.observe(element);
+}
 
 function startSequentialHighlight() {
   if (highlightInterval) clearInterval(highlightInterval);
@@ -1867,7 +2056,11 @@ function processDicaQueue() {
       img.style.display = filename ? "block" : "none";
     }
     if (userEl) userEl.textContent = current.user;
-    if (wordEl) wordEl.textContent = current.hintWord;
+    if (wordEl) {
+      wordEl.textContent = current.hintWord;
+      observeDicaWord(wordEl);
+      requestAnimationFrame(() => fitDicaWord(wordEl));
+    }
 
     // Reset countdown bar animation
     const countdownBar = overlay.querySelector(".dica-countdown-bar");

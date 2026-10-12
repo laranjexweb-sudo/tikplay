@@ -19,20 +19,28 @@
   .badge-outline { border: 2px solid #000; }
   .text-secondary { color: #5f6368 !important; }
 </style>
+<link rel="stylesheet" href="/ui/tikplay-theme.css">
+<link rel="stylesheet" href="/ui/tikplay-panels.css">
+
 </head>
-<body>
-<div class="nb-card mb-3 d-flex justify-content-between align-items-center">
+<body class="tp-super-admin">
+<div class="nb-card tp-card mb-3 d-flex justify-content-between align-items-center tp-admin-header">
   <div>
-    <div style="font-size:1.3rem;font-weight:900;letter-spacing:3px">ADMIN</div>
-    <div class="text-secondary" style="font-size:0.8rem">Gestao de usuarios</div>
+    <div class="tp-admin-brand"><strong>SUPER ADMIN</strong><span>Administração SaaS do TikPlay</span></div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-nb btn-success" onclick="location.href='/painel'">Painel</button>
+    <button class="btn btn-nb btn-success" onclick="location.href='/painel'">Painel do streamer</button>
     <button class="btn btn-nb btn-danger" onclick="logout()">Sair</button>
   </div>
 </div>
 
-<div class="nb-card mb-3">
+<nav class="tp-admin-nav" aria-label="Seções do Super Admin">
+  <a href="#adminRules">Regras globais</a>
+  <a href="#adminInvites">Convites</a>
+  <a href="#adminAccounts">Contas e permissões</a>
+  <a href="#adminOperations">Operação local</a>
+</nav>
+<div class="nb-card tp-card mb-3 tp-admin-section" id="adminRules">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Palavras Banidas <span id="bannedCount" class="badge text-bg-dark"></span></h2>
   </div>
@@ -41,12 +49,12 @@
   </div>
   <textarea id="bannedWordsInput" rows="8" class="form-control" placeholder="exemplo&#10;palavra2&#10;termo3" style="font-family:monospace;font-size:0.85rem"></textarea>
   <div class="d-flex gap-2 mt-2 align-items-center">
-    <button class="btn btn-nb btn-success btn-sm" onclick="saveBannedWords()">Salvar Palavras Banidas</button>
-    <span class="text-secondary" style="font-size:0.75rem" id="bannedMsg"></span>
+
+    <span class="text-secondary" style="font-size:0.75rem" id="bannedMsg" role="status" aria-live="polite"></span>
   </div>
 </div>
 
-<div class="nb-card mb-3">
+<div class="nb-card tp-card mb-3 tp-admin-section" id="adminInvites">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Convites de Cadastro</h2>
     <div class="d-flex gap-2 align-items-center">
@@ -71,7 +79,7 @@
   <div class="text-secondary" style="font-size:0.8rem" id="inviteMsg"></div>
 </div>
 
-<div class="nb-card">
+<div class="nb-card tp-card tp-admin-section" id="adminAccounts">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Usuarios <span id="userCount" class="badge text-bg-dark"></span></h2>
     <button class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar Conta</button>
@@ -138,7 +146,15 @@
   </div>
 </div>
 
-<div class="nb-card mt-3">
+<div class="nb-card tp-card mt-3 tp-admin-section" id="adminOperations">
+  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="mb-4 p-3 bg-light border border-dark rounded">
+    <h2 id="giftCatalogAdminTitle">Catálogo global de gifts</h2>
+    <p class="text-secondary" style="font-size:0.85rem">Sincronize os presentes compartilhados do TikTok. Os filtros mínimo e máximo dos seletores no painel são buscas locais e não alteram esta operação.</p>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar catálogo</button>
+      <span class="text-secondary" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
+    </div>
+  </section>
   <h2>Gerar Contextos (Local)</h2>
   <div class="mb-2 d-flex flex-wrap align-items-center gap-3">
     <label class="text-secondary" style="font-size:0.85rem">Intervalo entre alvos (min): <input type="number" id="ctxInterval" value="15" min="1" style="width:70px"></label>
@@ -175,6 +191,73 @@ async function apiFetch(path, opts = {}) {
     throw new Error("Sessao expirada");
   }
   return res.json();
+}
+
+let giftSyncState = null;
+async function loadGiftSyncState() {
+  const response = await fetch("/api/gifts?all=1", { headers: { Authorization: "Bearer " + token } });
+  if (!response.ok) throw new Error("Não foi possível consultar o catálogo");
+  const data = await response.json();
+  if (!data || !data.success) throw new Error("Resposta inválida do catálogo");
+  return data;
+}
+
+function giftSyncSignature(data) {
+  return `${Number(data.synced_at) || 0}|${String(data.last_sync_result || "")}`;
+}
+
+function showGiftSyncState(data) {
+  giftSyncState = data;
+  const status = document.getElementById("giftSyncStatus");
+  if (!status) return;
+  status.textContent = data.synced_at
+    ? `Última sincronização: ${new Date(data.synced_at * 1000).toLocaleString("pt-BR")}`
+    : "Catálogo ainda não sincronizado.";
+}
+
+async function refreshGiftSyncState() {
+  try { showGiftSyncState(await loadGiftSyncState()); }
+  catch (error) { document.getElementById("giftSyncStatus").textContent = error.message; }
+}
+
+async function waitForGiftSync(previousSignature, attempts = 0) {
+  if (attempts >= 30) {
+    document.getElementById("giftSyncStatus").textContent = "Solicitação enviada; a atualização ainda não apareceu. Atualize para conferir.";
+    return;
+  }
+  try {
+    const data = await loadGiftSyncState();
+    if (giftSyncSignature(data) !== previousSignature) {
+      showGiftSyncState(data);
+      return;
+    }
+  } catch {}
+  setTimeout(() => waitForGiftSync(previousSignature, attempts + 1), 2500);
+}
+
+async function syncGiftCatalog() {
+  const button = document.getElementById("btnSyncGifts");
+  const status = document.getElementById("giftSyncStatus");
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  button.textContent = "Sincronizando…";
+  const previousSignature = giftSyncState ? giftSyncSignature(giftSyncState) : null;
+  status.textContent = "Solicitando sincronização do catálogo…";
+  try {
+    const data = await apiFetch("/api/gifts/sync", { method: "POST" });
+    if (!data || !data.success) {
+      status.textContent = (data && data.error) || "Não foi possível solicitar a sincronização.";
+    } else if (previousSignature === null) {
+      status.textContent = "Solicitação enviada. Atualize esta página em instantes para conferir o resultado.";
+    } else {
+      status.textContent = "Solicitação enviada; aguardando atualização do catálogo…";
+      waitForGiftSync(previousSignature);
+    }
+  } catch (error) {
+    status.textContent = "Falha na solicitação: " + error.message;
+  } finally {
+    setTimeout(() => { button.disabled = false; button.textContent = "↻ Sincronizar catálogo"; }, 2000);
+  }
 }
 
 function logout() {
@@ -255,20 +338,27 @@ async function revokeInvite(id) {
   loadInvites();
 }
 
+let bannedHydrated = false, bannedRunning = false, bannedPending = false, bannedTimer;
 async function loadBannedWords() {
   try {
     const data = await apiFetch("/api/admin/banned-words");
-    if (!data.success) return;
+    if (!data.success) throw new Error(data.error || "Falha ao carregar");
     const input = document.getElementById("bannedWordsInput");
     const counter = document.getElementById("bannedCount");
-    if (input) input.value = (data.words || []).join("\n");
+    if (input) { input.value = (data.words || []).join("\n"); input.disabled = false; }
+    bannedHydrated = true;
     if (counter) counter.textContent = (data.words || []).length;
-  } catch (e) {}
+    document.getElementById("bannedMsg").textContent = "Alterações salvas automaticamente.";
+  } catch (e) { document.getElementById("bannedMsg").textContent = "Falha ao carregar. Recarregue a página para tentar novamente."; }
 }
 
 async function saveBannedWords() {
+  if (!bannedHydrated || bannedRunning) return;
+  bannedRunning = true; bannedPending = false;
+  const snapshot = document.getElementById("bannedWordsInput").value;
   const input = document.getElementById("bannedWordsInput");
   const msg = document.getElementById("bannedMsg");
+  if (msg) msg.textContent = "Salvando…";
   const words = (input ? input.value : "").split("\n").map(s => s.trim()).filter(Boolean);
   try {
     const data = await apiFetch("/api/admin/banned-words", {
@@ -279,13 +369,13 @@ async function saveBannedWords() {
     if (data.success) {
       const counter = document.getElementById("bannedCount");
       if (counter) counter.textContent = data.count || 0;
-      if (msg) msg.textContent = `${data.count} palavra(s) banida(s) salvas.`;
+      if (msg && document.getElementById("bannedWordsInput").value === snapshot) msg.textContent = `${data.count} palavra(s) banida(s) salvas.`;
     } else if (msg) {
       msg.textContent = data.error || "Erro ao salvar";
     }
   } catch (e) {
-    if (msg) msg.textContent = "Erro de rede: " + e.message;
-  }
+    if (msg) msg.textContent = "Não salvo: " + e.message + ". Valores mantidos; edite para tentar novamente.";
+  } finally { bannedRunning = false; if (bannedPending) saveBannedWords(); }
 }
 
 async function loadUsers() {
@@ -454,7 +544,10 @@ async function resetPassword(id) {
 apiFetch("/api/auth/me").then((data) => {
   if (!data.success || data.user.role !== "admin") {
     location.href = "/painel";
+    return;
   }
+  document.getElementById("giftCatalogAdminCard").hidden = false;
+  refreshGiftSyncState();
 });
 
 let ctxPoll = null;
@@ -525,6 +618,9 @@ async function pollContextos() {
   }
 }
 
+document.getElementById("bannedWordsInput").disabled = true;
+document.getElementById("bannedWordsInput").addEventListener("input", () => { if(!bannedHydrated) return; bannedPending = true; document.getElementById("bannedMsg").textContent = "Alteração pendente…"; clearTimeout(bannedTimer); bannedTimer = setTimeout(saveBannedWords, 600); });
+document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 loadBannedWords();
 loadUsers();
 loadInvites();

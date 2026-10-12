@@ -436,6 +436,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Palavra Secreta pública: letras em linha única centralizada; largura e fonte reduzidas apenas quando excedem o quadro, com espaçamento adaptativo e altura preservada. Validação de 4 a 20 letras em viewports de 1280, 640, 375 e 320; sem alterações de backend.
+
 - 2026-10-12 — Slot de próximo palpite ocultado ao renderizar resultado final e reativado no início da nova partida.
 
 - 2026-10-12 — Movimento de saída do palpite repetido aplicado diretamente ao card: desliza 110% para a direita em 550 ms, dentro do recorte do slot.

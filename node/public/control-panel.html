@@ -196,6 +196,10 @@
   .chip .remove { cursor: pointer; color: #b30000; font-weight: 900; margin-left: 2px; border: none; background: none; font-size: 1.1em; line-height: 1; padding: 0 2px; }
   .chip .remove:hover { color: #ff0000; }
   #giftCounter { font-size: 0.8rem; font-weight: 700; color: #444; }
+  .gift-ac-filters { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; padding: 8px 10px; background: #fff; border-bottom: 1px solid #bbb; color: #333; }
+  .gift-ac-filters-note { grid-column: 1 / -1; margin: 0; color: #555; font-size: 0.72rem; line-height: 1.3; }
+  .gift-ac-filter-field { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.78rem; font-weight: 700; }
+  .gift-ac-filter-field input { min-width: 0; width: 100%; max-width: 92px; height: 28px; padding: 2px 6px; }
   #giftAutocomplete .ac-item, #riddleAutocomplete .ac-item, #sizeGiftAutocomplete .ac-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #000; font-size: 0.85rem; }
   #giftAutocomplete .ac-item img, #riddleAutocomplete .ac-item img, #sizeGiftAutocomplete .ac-item img { width: 24px; height: 24px; object-fit: contain; }
   #giftAutocomplete .ac-item .ac-name, #riddleAutocomplete .ac-item .ac-name, #sizeGiftAutocomplete .ac-item .ac-name { flex: 1; font-weight: 700; }
@@ -209,7 +213,7 @@
   .gift-ac .ac-item .ac-diam { color: #666; font-size: 0.8em; }
   .gift-ac .ac-item.active, .gift-ac .ac-item:hover { background: #fec90f; }
   #giftHint { font-size: 0.75rem; margin-top: 6px; }
-  #btnSaveSettings.dirty, #btnSaveAll.dirty { outline: 3px solid #fec90f; }
+
   .tab-nav { background: #111; border-bottom: 3px solid #000; }
   .tab-btn { background: transparent; border: none; color: #fff; font-weight: 800; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1px; padding: 13px 18px; cursor: pointer; border-right: 2px solid rgba(255,255,255,0.08); }
   .tab-btn:hover { background: #222; }
@@ -235,10 +239,13 @@
     border-bottom: none;
   }
 </style>
+<link rel="stylesheet" href="/ui/tikplay-theme.css">
+<link rel="stylesheet" href="/ui/tikplay-panels.css">
+
 </head>
-<body>
-<div class="container-fluid p-3 d-flex flex-column" style="min-height:100vh">
-  <div class="nb-card mb-3">
+<body class="tp-panel-streamer">
+<div class="container-fluid p-3 d-flex flex-column tp-app-shell">
+  <div class="nb-card mb-3 tp-card tp-panel-header">
     <div class="topbar">
       <div>
         <img src="/logo.png" alt="TikPlay" class="logo-img">
@@ -249,25 +256,28 @@
         <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
         <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none">Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
-        <button type="button" class="btn btn-nb btn-warning btn-sm" id="btnSyncGifts" title="Sincronizar catálogo de presentes com o TikTok">↻ Sincronizar gifts</button>
-        <span class="badge text-bg-dark" id="giftSyncStatus" style="font-size:0.7rem;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">catálogo: —</span>
         <button class="btn btn-nb btn-dark btn-sm" onclick="location.href='/docs'">Ajuda</button>
         <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
       </div>
     </div>
   </div>
 
-  <div class="nb-card mb-3 p-0" style="overflow:hidden">
+  <div class="nb-card mb-3 p-0 tp-card tp-panel-nav">
     <div class="tab-nav d-flex flex-wrap">
-      <button type="button" class="tab-btn active" data-tab="connect" onclick="switchTab('connect')">Conectar Live</button>
-      <button type="button" class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Leitura de Chat</button>
-      <button type="button" class="tab-btn" data-tab="alerts" onclick="switchTab('alerts')">Alertas Sonoros</button>
-      <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')">Palavra Secreta</button>
-      <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha')">BATALHA</button>
-      <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca')">Caça Palavras</button>
-      <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho')">Bichinho</button>
-      <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')">3 Dicas</button>
-      <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo')">Duelo 1x1</button>
+      <button type="button" class="tab-btn active" data-tab="connect" onclick="switchTab('connect')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"></circle><path d="M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8"></path></svg>Conectar Live</button>
+      <button type="button" class="tab-btn" data-tab="sons" onclick="switchTab('sons')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4Z"></path><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"></path></svg>Sons</button>
+      <button type="button" class="tab-btn" data-tab="overlays" onclick="switchTab('overlays')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="14" rx="2"></rect><path d="M7 20h12a2 2 0 0 0 2-2V8"></path></svg>Sobreposições</button>
+      <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="7" cy="15" r="4"></circle><path d="m10 12 8-8a2.1 2.1 0 0 1 3 3l-2 2-2-2-2 2 2 2-2 2-2-2-2 2"></path><path d="M6 15h2M7 14v2"></path></svg>Palavra Secreta</button>
+      <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5c-.9.7-1.3 1.4-1.5 2.5h-4c-.2-1.1-.6-1.8-1.5-2.5Z"></path><path d="M12 2v2M4.9 5l1.4 1.4M19.1 5l-1.4 1.4"></path></svg>3 Dicas</button>
+      <details class="tp-extra-games" id="extraGamesNav">
+        <summary class="tp-extra-games-trigger" aria-expanded="false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>Mais jogos</summary>
+        <div class="tp-extra-games-menu">
+          <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Batalha</button>
+          <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg>Caça Palavras</button>
+          <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 13c-2.7 0-6 1.3-6 4a3 3 0 0 0 3 3c1.3 0 2-.7 3-.7s1.7.7 3 .7a3 3 0 0 0 3-3c0-2.7-3.3-4-6-4Z"></path><circle cx="5.5" cy="9" r="1.7"></circle><circle cx="9.5" cy="6.5" r="1.7"></circle><circle cx="14.5" cy="6.5" r="1.7"></circle><circle cx="18.5" cy="9" r="1.7"></circle></svg>Bichinho</button>
+          <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Duelo 1x1</button>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -278,39 +288,32 @@
     <div class="text-secondary mt-2" style="font-size:0.75rem" id="billingMsg"></div>
   </div>
 
-  <div class="duelo-panel-split" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;min-height:0;gap:12px">
-    <div class="duelo-panel-col duelo-panel-main" style="display:flex;flex-direction:column;flex:1 1 75%;min-width:0;min-height:0">
+  <div class="duelo-panel-split tp-panel-split">
+    <div class="duelo-panel-col duelo-panel-main tp-panel-main">
 
       <!-- ===================== Conectar Live ===================== -->
       <div class="tab-page" id="tab-connect">
         <div class="nb-card mb-3">
-          <h2>Conexão TikTok</h2>
+          <h2>TikTok Live</h2>
           <div class="mb-3 p-3 bg-light border border-dark rounded">
             <div class="row g-3 align-items-end">
-              <div class="col-md-6">
-                <label class="form-label mb-1" for="username">Usuário TikTok</label>
+              <div class="col-md-12">
+                <label class="form-label mb-1" for="username">Usuário no TikTok Live</label>
                 <input type="text" class="form-control" id="username" placeholder="@ da sua conta TikTok (sem o @)">
               </div>
-              <div class="col-md-6">
-                <label class="form-label mb-1" for="tiktokEngine">Motor de conexão</label>
-                <select class="form-select" id="tiktokEngine" onchange="onEngineChange()">
-                  <option value="tiktoklive">TikTokLive — direto, sem chave</option>
-                  <option value="tiktools">Tik.Tools — precisa de API key</option>
-                </select>
-              </div>
             </div>
-            <div class="text-secondary mt-2" style="font-size:0.8rem" id="engineHint">Conexão direta via TikTokLive — não precisa de API key.</div>
+            <span class="text-secondary mt-2 d-block" id="credentialsSaveStatus" role="status" aria-live="polite"></span>
           </div>
           <div id="apiKeyRow" class="mb-3 p-3 bg-light border border-dark rounded" style="display:none">
-            <label class="form-label mb-1" for="apiKey">API Key Tik.Tools</label>
+            <label class="form-label mb-1" for="apiKey">Credencial da conexão</label>
             <div class="d-flex gap-2">
-              <input type="password" class="form-control" id="apiKey" placeholder="Chave da api.tik.tools" autocomplete="off">
-              <button type="button" class="btn btn-nb btn-danger btn-sm flex-shrink-0" id="btnClearKey" onclick="clearApiKey()" title="Remover chave salva" style="display:none">Limpar</button>
+              <input type="password" class="form-control" id="apiKey" placeholder="Chave da conexão (se necessária)" autocomplete="off">
+              <button type="button" class="btn btn-nb btn-danger btn-sm flex-shrink-0" id="btnClearKey" onclick="clearApiKey()" title="Remover credencial salva" style="display:none">Limpar</button>
             </div>
           </div>
           <div class="d-flex gap-2 mt-3">
-            <button class="btn btn-nb btn-primary flex-fill" id="btnConnect" onclick="startGame()">Conectar Live</button>
-            <button class="btn btn-nb btn-danger flex-fill" id="btnStop" onclick="stopGame()" disabled>Desconectar Live</button>
+            <button class="btn btn-nb btn-primary flex-fill" id="btnConnect" onclick="startGame()">Conectar à TikTok Live</button>
+            <button class="btn btn-nb btn-danger flex-fill" id="btnStop" onclick="stopGame()" disabled>Desconectar da TikTok Live</button>
           </div>
           <div class="nb-card mt-3 p-2" style="box-shadow:none">
             <div class="kv"><strong>Estado:</strong> <span id="liveState">Aguardando...</span></div>
@@ -342,7 +345,8 @@
       </div>
 
       <!-- ===================== Leitura de Chat ===================== -->
-      <div class="tab-page" id="tab-chat" style="display:none">
+      <div class="tab-page tp-sounds-page" id="tab-sons" style="display:none">
+      <section class="tp-sound-section" id="tab-chat" data-feature-section="chat">
         <div class="nb-card mb-3">
           <h2>Narração de Chat e Áudio da Charada</h2>
 
@@ -364,37 +368,46 @@
                 <select class="form-select form-select-sm" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"></select>
               </div>
               <div class="col-3">
-                <button class="btn btn-nb btn-dark btn-tiny" onclick="testPanelVoice()">🎙️ Testar</button>
+                <button class="btn btn-nb btn-dark btn-tiny" onclick="testPanelVoice()">Testar</button>
               </div>
             </div>
           </div>
         </div>
 
-        <button class="btn btn-nb btn-success" id="btnSaveSettings" onclick="saveSettings()" disabled>Salvar Preferências</button>
-      </div>
+        <span id="settingsSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente após alterações.</span>
+      </section>
 
       <!-- ===================== Alertas Sonoros ===================== -->
-      <div class="tab-page" id="tab-alerts" style="display:none">
+      <section class="tp-sound-section" id="tab-alerts" data-feature-section="alerts">
         <div class="nb-card mb-3">
           <h2>Alertas Sonoros</h2>
           <div class="text-secondary" style="font-size:0.85rem">Selecione um gift e anexe um áudio. O som será reproduzido quando o gift chegar na live.</div>
           <div class="mt-3" id="soundAlertsList"></div>
         </div>
+      </section>
+      </div>
+
+      <div class="tab-page tp-overlays-page" id="tab-overlays" style="display:none">
+        <div class="nb-card mb-3">
+          <h2>Sobreposições</h2>
+          <p class="tp-empty-state">Esta área está reservada para configurar sobreposições do painel.</p>
+        </div>
       </div>
 
       <!-- ===================== Jogos ===================== -->
       <div class="tab-page" id="tab-games" style="display:none">
-        <div class="nb-card mb-3">
+        <div class="tp-game-overview">
+        <div class="nb-card mb-3 tp-game-control">
           <h2>Partida em andamento</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
+          <div class="mb-3 p-2 bg-light border border-dark rounded tp-game-status">
             <div class="kv"><strong>Palavra atual:</strong> <span id="currentWord">-</span></div>
             <div class="kv"><strong>Charada atual:</strong> <span id="panelRiddle" style="white-space:pre-wrap;word-break:break-word;text-align:right;max-width:70%">-</span></div>
           </div>
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 tp-game-actions">
             <button class="btn btn-nb btn-success flex-fill" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
             <button class="btn btn-nb btn-info flex-fill" id="btnChangeRanking" onclick="displayActionFromPanel('change_ranking')">Mudar Ranking</button>
           </div>
-          <div class="d-flex gap-2 mt-2 flex-wrap">
+          <div class="d-flex gap-2 mt-2 flex-wrap tp-game-actions">
             <button class="btn btn-nb btn-primary flex-fill" id="btnManualHint" onclick="manualHintFromPanel()" disabled>Dica</button>
             <button class="btn btn-nb btn-warning flex-fill" id="btnManualRiddle" onclick="manualRiddleFromPanel()" disabled>Soltar Charada</button>
             <button class="btn btn-nb btn-secondary flex-fill" id="btnReplayRiddle" onclick="replayRiddleFromPanel()" disabled>Replay</button>
@@ -403,6 +416,17 @@
             <button class="btn btn-nb btn-outline-secondary flex-fill" id="btnClosePostGame" onclick="displayActionFromPanel('close_postgame')" disabled>Ocultar Lista</button>
           </div>
           <div class="text-secondary mt-2" style="font-size:0.8rem" id="obsControlStatus">Ranking atual: Ranking da Live</div>
+        </div>
+
+        <section class="nb-card tp-public-share" aria-labelledby="gamePublicShareTitle">
+          <h2 id="gamePublicShareTitle">Tela pública</h2>
+          <p class="text-secondary">Compartilhe a página da Palavra Secreta com a sala atual.</p>
+          <div class="tp-public-share-actions">
+            <a class="btn btn-nb btn-dark btn-sm" href="#" id="linkGame" target="_blank" rel="noopener">Abrir Palavra Secreta</a>
+            <button type="button" class="btn btn-nb btn-primary btn-sm" onclick="copyRoomLink('/jogo','gamePublicLinkStatus')">Copiar URL completa</button>
+          </div>
+          <span class="tp-public-share-status" id="gamePublicLinkStatus" role="status" aria-live="polite"></span>
+        </section>
         </div>
 
         <div class="nb-card mb-3">
@@ -420,13 +444,6 @@
             <div class="text-secondary" id="riddleHint" style="font-size:0.75rem;margin-top:4px">Máximo de 1. É o presente que revela a palavra no Final Boss.</div>
           </div>
 
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-2" style="font-size:0.8rem">
-            <label class="mb-0" for="giftFilterMin">💎 min</label>
-            <input type="number" class="form-control form-control-sm" id="giftFilterMin" min="0" style="width:84px" placeholder="0">
-            <label class="mb-0" for="giftFilterMax">max</label>
-            <input type="number" class="form-control form-control-sm" id="giftFilterMax" min="0" style="width:84px" placeholder="∞">
-            <span class="text-secondary">filtro por valor</span>
-          </div>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span id="giftCounter">Gifts de dica (0/5)</span>
           </div>
@@ -520,7 +537,8 @@
           </div>
         </div>
 
-        <button class="btn btn-nb btn-success" id="btnSaveAll" onclick="saveAll()" disabled>Salvar Tudo</button>
+        <span id="giftSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente após alterações.</span>
+        <span id="settingsSaveStatusGames" role="status" aria-live="polite">Carregando preferências…</span>
 
         <div class="nb-card mt-3 mb-3">
           <h2>Histórico de Partidas (Todas)</h2>
@@ -567,22 +585,19 @@
         </div>
 
         <div class="nb-card mb-3">
-          <h2>Onde assistir</h2>
-          <div class="text-secondary" style="font-size:0.85rem">
-            Acompanhe ao vivo na página: <a href="#" id="linkGame" target="_blank">Abrir página PALAVRA SECRETA</a>.
-          </div>
+          <h2>Destino técnico — OBS</h2>
+          <p class="text-secondary" style="font-size:0.85rem">O ranking abaixo é uma saída técnica para configurar no OBS, não a página pública para compartilhar com espectadores.</p>
           <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/jogo')">Link público Palavra Secreta</button>
-            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/ranking')">Link público Ranking</button>
+            <button type="button" class="btn btn-nb btn-dark btn-sm" onclick="copyRoomLink('/ranking')">Copiar endereço do ranking para OBS</button>
           </div>
         </div>
       </div>
 
       <!-- ===================== BATALHA ===================== -->
       <div class="tab-page" id="tab-batalha" style="display:none">
-        <div class="nb-card mb-3">
+        <div class="nb-card mb-3 tp-game-control">
           <h2>BATALHA — rodada de Tap × Moeda</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
+          <div class="mb-3 p-2 bg-light border border-dark rounded tp-game-status">
             <div class="kv"><strong>Timer:</strong> <span id="battleTimer" style="font-size:1.4rem;font-weight:900">--:--</span></div>
             <div class="kv"><strong>Última ação:</strong> <span id="battleAction">-</span></div>
           </div>
@@ -591,10 +606,10 @@
               <label class="form-label mb-0" for="battleDuration">Duração (s)</label>
               <input type="number" class="form-control form-control-sm" id="battleDuration" value="180" min="10" max="600">
             </div>
-            <div class="col-8 d-flex align-items-end gap-2">
-              <button class="btn btn-nb btn-primary flex-fill" id="btnBattleStart" onclick="startBattle()">Iniciar Rodada</button>
-              <button class="btn btn-nb btn-danger flex-fill" id="btnBattleStop" onclick="stopBattle()" disabled>Finalizar</button>
-              <button class="btn btn-nb btn-dark" onclick="resetBattle()">Reset Ranking</button>
+            <div class="col-8 d-flex align-items-end gap-2 tp-game-actions">
+              <button class="btn btn-nb btn-primary flex-fill tp-icon-action" id="btnBattleStart" onclick="startBattle()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Iniciar Rodada</button>
+              <button class="btn btn-nb btn-danger flex-fill tp-icon-action" id="btnBattleStop" onclick="stopBattle()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Finalizar</button>
+              <button class="btn btn-nb btn-dark tp-icon-action" onclick="resetBattle()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15"></path></svg>Reset Ranking</button>
             </div>
           </div>
           <div class="row g-2 mt-2">
@@ -692,9 +707,9 @@
 
       <!-- ===================== Caça Palavras ===================== -->
       <div class="tab-page" id="tab-caca" style="display:none">
-        <div class="nb-card mb-3">
+        <div class="nb-card mb-3 tp-game-control">
           <h2>CAÇA PALAVRAS</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
+          <div class="mb-3 p-2 bg-light border border-dark rounded tp-game-status">
             <div class="kv"><strong>Encontradas:</strong> <span id="cacaFound">0</span>/<span id="cacaTotal">0</span></div>
             <div class="kv"><strong>Status:</strong> <span id="cacaStatus">Parado</span></div>
           </div>
@@ -703,9 +718,9 @@
               <label class="form-label mb-0" for="cacaCount">Palavras na grade</label>
               <input type="number" class="form-control form-control-sm" id="cacaCount" value="10" min="4" max="16">
             </div>
-            <div class="col-8 d-flex align-items-end gap-2">
-              <button class="btn btn-nb btn-primary flex-fill" id="btnCacaStart" onclick="startCaca()">Iniciar</button>
-              <button class="btn btn-nb btn-danger flex-fill" id="btnCacaStop" onclick="stopCaca()" disabled>Encerrar</button>
+            <div class="col-8 d-flex align-items-end gap-2 tp-game-actions">
+              <button class="btn btn-nb btn-primary flex-fill tp-icon-action" id="btnCacaStart" onclick="startCaca()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Iniciar</button>
+              <button class="btn btn-nb btn-danger flex-fill tp-icon-action" id="btnCacaStop" onclick="stopCaca()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Encerrar</button>
             </div>
           </div>
         </div>
@@ -722,7 +737,7 @@
             <div class="d-flex align-items-center gap-2 mt-2" id="cacaPrefixRow" style="display:none">
               <label class="form-label mb-0" for="cacaPrefix">Prefixo</label>
               <input type="text" class="form-control form-control-sm" id="cacaPrefix" value="cp" style="max-width:120px">
-              <button class="btn btn-nb btn-dark btn-tiny" onclick="saveCacaConfig()">Salvar</button>
+              <span id="cacaSaveStatus" role="status" aria-live="polite">Aplicação automática somente no serviço em execução; não persiste ao reiniciar.</span>
             </div>
             <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">
               Formato A1:A4 = linha (letra) : coluna (número). A página pública exibe o tabuleiro para o público.
@@ -748,9 +763,9 @@
       </div>
 
       <div class="tab-page" id="tab-bichinho" style="display:none">
-        <div class="nb-card mb-3">
+        <div class="nb-card mb-3 tp-game-control">
           <h2>BICHINHO VIRTUAL</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
+          <div class="mb-3 p-2 bg-light border border-dark rounded tp-game-status">
             <div class="kv"><strong>Fase:</strong> <span id="vpetPhase">-</span></div>
             <div class="kv"><strong>Fome:</strong> <span id="vpetHunger">-</span></div>
             <div class="kv"><strong>Energia:</strong> <span id="vpetEnergy">-</span></div>
@@ -791,22 +806,34 @@
       <div class="tab-page" id="tab-tres" style="display:none">
 
         <!-- PARTIDA -->
-        <div class="nb-card">
+        <div class="tp-game-overview">
+        <div class="nb-card tp-game-control">
           <h2 class="duelo-section-title">Partida</h2>
-          <div class="duelo-row">
+          <div class="duelo-row tp-game-status">
             <span class="duelo-stat"><span class="duelo-stat-lbl">STATUS</span><b id="tresStatus">Parado</b></span>
             <span class="duelo-stat"><span class="duelo-stat-lbl">RODADA</span><b id="tresRound">-</b></span>
             <span class="duelo-stat"><span class="duelo-stat-lbl">DICA</span><b id="tresStage">-</b></span>
             <span class="duelo-stat"><span class="duelo-stat-lbl">TEMPO</span><b id="tresTimer">--:--</b></span>
             <span class="duelo-stat"><span class="duelo-stat-lbl">PALAVRA</span><b id="tresPalavra">-</b></span>
           </div>
-          <div class="duelo-row duelo-actions">
-            <button class="duelo-btn duelo-btn--primary" id="btnTresStart" onclick="tresStart()">Iniciar Jogo</button>
-            <button class="duelo-btn duelo-btn--warning" id="btnTresPause" onclick="tresPause()" disabled>Pausar</button>
-            <button class="duelo-btn duelo-btn--danger" id="btnTresStop" onclick="tresStop()" disabled>Parar</button>
-            <button class="duelo-btn duelo-btn--neutral" onclick="tresReset()">Resetar</button>
+          <div class="duelo-row duelo-actions tp-game-actions">
+            <button class="duelo-btn duelo-btn--primary tp-icon-action" id="btnTresStart" onclick="tresStart()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Iniciar Jogo</button>
+            <button class="duelo-btn duelo-btn--warning tp-icon-action" id="btnTresPause" onclick="tresPause()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"></path></svg>Pausar</button>
+            <button class="duelo-btn duelo-btn--danger tp-icon-action" id="btnTresStop" onclick="tresStop()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Parar</button>
+            <button class="duelo-btn duelo-btn--neutral tp-icon-action" onclick="tresReset()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15"></path></svg>Resetar</button>
           </div>
           <div class="duelo-help">O público adivinha a palavra em texto livre. Quanto antes acertar, mais pontos. A avança de dica é automática pelo tempo configurado.</div>
+        </div>
+
+        <section class="nb-card tp-public-share" aria-labelledby="tresPublicShareTitle">
+          <h2 class="duelo-section-title" id="tresPublicShareTitle">Tela pública</h2>
+          <p class="duelo-help">Compartilhe a página do 3 Dicas com o público da sala atual.</p>
+          <div class="tp-public-share-actions">
+            <a class="duelo-btn duelo-btn--primary" href="#" id="linkTres" target="_blank" rel="noopener">Abrir tela 3 Dicas</a>
+            <button type="button" class="duelo-btn duelo-btn--neutral" onclick="copyRoomLink('/tres-pontinhos','tresPublicLinkStatus')">Copiar URL completa</button>
+          </div>
+          <span class="tp-public-share-status duelo-msg" id="tresPublicLinkStatus" role="status" aria-live="polite"></span>
+        </section>
         </div>
 
         <!-- CONFIGURAÇÃO DAS DICAS -->
@@ -843,7 +870,7 @@
             </div>
           </div>
           <div class="duelo-row duelo-actions">
-            <button class="duelo-btn duelo-btn--success" onclick="saveTresConfig()">Salvar Configurações</button>
+            <span id="tresSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente após alterações.</span>
           </div>
         </div>
 
@@ -854,7 +881,7 @@
             <div class="duelo-field">
               <label class="duelo-field-label" for="tresGiftSize">Presente A — Tamanho</label>
               <div class="position-relative">
-                <input type="text" class="form-control" id="tresGiftSize" placeholder="Nome do gift..." autocomplete="off">
+                <input type="text" class="form-control" id="tresGiftSize" placeholder="Nome do presente..." autocomplete="off">
                 <div id="tresGiftSizeAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
               </div>
               <div id="tresGiftSizeTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
@@ -911,29 +938,25 @@
           </div>
         </div>
 
-        <div class="duelo-row duelo-actions">
-          <a class="duelo-btn duelo-btn--primary" href="#" id="linkTres" target="_blank" rel="noopener">Abrir Tela 3 Dicas</a>
-          <button type="button" class="duelo-btn duelo-btn--neutral" onclick="copyRoomLink('/tres-pontinhos')">Copiar Link</button>
-        </div>
       </div>
 
         <!-- ===================== DUELO 1x1 ===================== -->
         <div class="tab-page" id="tab-duelo" style="display:none" data-game-mode="hp">
 
           <!-- CONTROLE DA PARTIDA -->
-          <div class="nb-card">
+          <div class="nb-card tp-game-control">
             <h2 class="duelo-section-title">Controle da Partida</h2>
-            <div class="duelo-row">
+            <div class="duelo-row tp-game-status">
               <span class="duelo-stat"><span class="duelo-stat-lbl">STATUS</span><b id="dueloStatus">Parado</b></span>
               <span class="duelo-stat"><span class="duelo-stat-lbl">MODO</span><b id="dueloModeLbl">Debate por HP</b></span>
               <span class="duelo-stat"><span class="duelo-stat-lbl">CENÁRIO</span><b id="dueloSceneLbl">Brasília</b></span>
               <span class="duelo-stat"><span class="duelo-stat-lbl">PRESENTES</span><b id="dueloCount">0</b></span>
             </div>
-            <div class="duelo-row duelo-actions">
-              <button class="duelo-btn duelo-btn--primary" id="btnDueloStart" onclick="dueloStart()">Ativar Área</button>
-              <button class="duelo-btn duelo-btn--danger" id="btnDueloStop" onclick="dueloStop()" disabled>Desativar Área</button>
-              <button class="duelo-btn duelo-btn--warning" onclick="dueloResetRound()">Reiniciar Partida</button>
-              <button class="duelo-btn duelo-btn--neutral" onclick="dueloSaveConfig()">Salvar Configurações</button>
+            <div class="duelo-row duelo-actions tp-game-actions">
+              <button class="duelo-btn duelo-btn--primary tp-icon-action" id="btnDueloStart" onclick="dueloStart()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Ativar Área</button>
+              <button class="duelo-btn duelo-btn--danger tp-icon-action" id="btnDueloStop" onclick="dueloStop()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Desativar Área</button>
+              <button class="duelo-btn duelo-btn--warning tp-icon-action" onclick="dueloResetRound()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15"></path></svg>Reiniciar Partida</button>
+              <span id="dueloSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente após alterações.</span>
               <span class="text-secondary duelo-msg" id="dueloMsg0"></span>
             </div>
             <div class="duelo-grid duelo-grid-3" style="margin-top:12px">
@@ -1151,26 +1174,29 @@
           </div>
         </div>
 
-    <div class="duelo-panel-col duelo-panel-side" style="display:flex;flex:0 0 25%;width:25%;min-width:0;min-height:0">
-      <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="duelo-panel-col duelo-panel-side tp-panel-log">
+      <div class="nb-card tp-card d-flex flex-column flex-grow-1 tp-panel-log-card">
+          <div class="d-flex justify-content-between align-items-center mb-2 tp-panel-log-head">
           <h2 class="m-0">Logs <span class="badge text-bg-dark" title="Versão do layout do painel">v75</span></h2>
-          <div class="d-flex gap-2 align-items-center">
-            <select id="logFilter" class="form-select form-select-sm" style="max-width:150px" onchange="setLogFilter(this.value)" title="Filtrar logs por origem">
-              <option value="todos">TODOS</option>
-              <option value="sistema">Sistema</option>
-              <option value="chat">Chat</option>
-              <option value="palavra">Palavra</option>
-              <option value="batalha">Batalha</option>
-              <option value="caca">Caça</option>
-              <option value="bichinho">Bichinho</option>
-              <option value="tres">3 Dicas</option>
-              <option value="duelo">Duelo</option>
-              <option value="tts">Áudio/TTS</option>
-            </select>
-            <button class="btn btn-nb btn-dark btn-sm" onclick="copyAllLogs()">Copiar Logs</button>
-            <button class="btn btn-nb btn-danger btn-sm" onclick="clearLogs()" title="Limpar tela de logs">Limpar</button>
+          <div class="d-flex gap-2 align-items-center tp-panel-log-actions">
+            <button type="button" id="logSettingsToggle" class="btn btn-nb btn-dark btn-sm tp-log-icon-btn" aria-label="Configurar exibição dos logs" aria-controls="logSettings" aria-expanded="false" title="Configurar exibição dos logs" onclick="toggleLogSettings()">
+              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path><path d="m19.4 13.5 1.1.9-1.1 1.9-1.4-.5a7.8 7.8 0 0 1-1.4.8l-.2 1.5h-2.2l-.4-1.4a7.8 7.8 0 0 1-1.6 0l-.8 1.2-1.9-1.1.5-1.4a7.8 7.8 0 0 1-.8-1.4l-1.5-.2v-2.2l1.4-.4a7.8 7.8 0 0 1 0-1.6L7.9 8.8 9 6.9l1.4.5a7.8 7.8 0 0 1 1.4-.8l.2-1.5h2.2l.4 1.4a7.8 7.8 0 0 1 1.6 0L17 5.3l1.9 1.1-.5 1.4a7.8 7.8 0 0 1 .8 1.4l1.5.2v2.2l-1.4.4a7.8 7.8 0 0 1 .1 1.5Z" transform="translate(-2 -1)"></path></svg>
+            </button>
+            <button class="btn btn-nb btn-dark btn-sm tp-log-icon-btn" onclick="copyAllLogs()" title="Copiar logs" aria-label="Copiar logs">
+              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg>
+            </button>
+            <button class="btn btn-nb btn-danger btn-sm tp-log-icon-btn tp-log-clear-btn" onclick="clearLogs()" title="Limpar tela de logs" aria-label="Limpar tela de logs">&times;</button>
           </div>
+        </div>
+        <div id="logSettings" class="tp-log-settings" hidden aria-label="Categorias exibidas nos logs">
+          <div class="tp-log-settings-title">Exibir categorias</div>
+          <label><input type="checkbox" data-log-category="conexao" checked onchange="setLogCategories(true)"> Conexão</label>
+          <label><input type="checkbox" data-log-category="chat" checked onchange="setLogCategories(true)"> Chat</label>
+          <label><input type="checkbox" data-log-category="jogos" checked onchange="setLogCategories(true)"> Eventos dos jogos</label>
+          <label><input type="checkbox" data-log-category="avisos" checked onchange="setLogCategories(true)"> Avisos</label>
+          <label><input type="checkbox" data-log-category="erros" checked onchange="setLogCategories(true)"> Erros</label>
+          <label><input type="checkbox" data-log-category="diagnostico" checked onchange="setLogCategories(true)"> Diagnóstico detalhado</label>
+          <div class="tp-log-settings-note">Classificação baseada nos campos game/level disponíveis e em marcadores explícitos da mensagem. Logs legados sem origem identificável aparecem como Sistema.</div>
         </div>
         <div class="log-area" id="logArea">
           <div class="log-line log-info">[Painel] Pronto. Configure e clique em Conectar.</div>
@@ -1186,21 +1212,27 @@ if (!token) location.href = "/login";
 try { console.log("[PAINEL] build v75_25 — configs 75% esquerda, log 25% direita"); } catch (e) {}
 
 function switchTab(tab) {
+  const menuTab = (tab === "chat" || tab === "alerts") ? "sons" : tab;
+  const requestedSection = (tab === "chat" || tab === "alerts")
+    ? document.querySelector(`[data-feature-section="${tab}"]`)
+    : null;
+  if (requestedSection && requestedSection.hidden) return;
   // Bloqueia navegação para aba não liberada (gating de funcionalidades)
-  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  const btn = document.querySelector(`.tab-btn[data-tab="${menuTab}"]`);
   if (btn && btn.style.display === "none") return;
   document.querySelectorAll(".tab-page").forEach((el) => (el.style.display = "none"));
-  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-  const page = document.getElementById("tab-" + tab);
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === menuTab));
+  const page = document.getElementById("tab-" + menuTab);
   if (page) page.style.display = "block";
-  if (tab === "alerts") loadSoundAlerts();
-  if (tab === "batalha") { loadBattleState(); loadBattleHistory(1); }
-  if (tab === "caca") { loadCacaState(); }
-  if (tab === "bichinho") { vpetLoadState(); }
-  if (tab === "tres") { tresLoadState(); }
-  if (tab === "duelo") { loadDueloState(); }
-  try { localStorage.setItem("panel_tab", tab); } catch (e) {}
-  try { if (location.hash !== "#" + tab) history.replaceState(null, "", location.pathname + location.search + "#" + tab); } catch (e) {}
+  const alertsSection = document.querySelector('[data-feature-section="alerts"]');
+  if (menuTab === "sons" && alertsSection && !alertsSection.hidden) loadSoundAlerts();
+  if (menuTab === "batalha") { loadBattleState(); loadBattleHistory(1); }
+  if (menuTab === "caca") { loadCacaState(); }
+  if (menuTab === "bichinho") { vpetLoadState(); }
+  if (menuTab === "tres") { tresLoadState(); }
+  if (menuTab === "duelo") { loadDueloState(); }
+  try { localStorage.setItem("panel_tab", menuTab); } catch (e) {}
+  try { if (location.hash !== "#" + menuTab) history.replaceState(null, "", location.pathname + location.search + "#" + menuTab); } catch (e) {}
 }
 
 function restoreActiveTab() {
@@ -1217,6 +1249,7 @@ let ws = null;
 let wsRetry = 0;
 let roomCode = "";
 let gameActive = false;
+let panelRiddleState = "hidden";
 
 function apiFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
@@ -1225,6 +1258,7 @@ function apiFetch(path, opts = {}) {
       logout();
       throw new Error("Sessão expirada");
     }
+    if (!res.ok) throw new Error("Falha HTTP " + res.status);
     return res.json();
   });
 }
@@ -1242,6 +1276,7 @@ function connectLogs() {
   ws.onopen = () => {
     wsRetry = 0;
     setStatus(true, "Conectado ao servidor");
+    syncGameState();
   };
 
   ws.onclose = () => {
@@ -1263,23 +1298,17 @@ function connectLogs() {
     } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
       renderPanelRiddle(msg.text, msg.stage);
       if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
-      const replay = document.getElementById("btnReplayRiddle");
-      if (replay) replay.disabled = false;
     } else if (msg.type === "riddle_audio") {
       if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
-      const replay = document.getElementById("btnReplayRiddle");
-      if (replay) replay.disabled = false;
-    } else if (msg.type === "roulette_drop" && msg.reward_type === "riddle_started") {
+      updatePanelRiddleControls();
+    } else if (msg.type === "riddle_started" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_started")) {
       renderPanelRiddle("Gerando charada…", msg.stage);
-      const replay = document.getElementById("btnReplayRiddle");
-      if (replay) replay.disabled = true;
     } else if (msg.type === "display_action" && msg.action === "close_riddle") {
       clearPanelRiddle();
-      const replay = document.getElementById("btnReplayRiddle");
-      if (replay) replay.disabled = true;
     } else if (msg.type === "game_start") {
       gameActive = true;
       clearPanelRiddle();
+      setDisplayControlsEnabled(true);
       syncPanelNewGameButton(window.lastStateStr || "connected");
       setPostGameButtonsEnabled(false);
       fetchHistoryAll();
@@ -1404,6 +1433,10 @@ function cacheAllSoundDurations() {
   }
 }
 
+function getSoundAlertGiftKeys() {
+  return Object.keys(soundAlerts).filter((gift) => gift !== CONNECT_SOUND_KEY);
+}
+
 function resolveSoundEntry(gift) {
   const key = String(gift || "").trim();
   if (!key) return null;
@@ -1462,45 +1495,119 @@ async function loadSoundAlerts() {
   } catch (e) {}
 }
 
+
+let soundPreview = null, soundPreviewButton = null;
+function stopSoundPreview() {
+  if (soundPreview) { soundPreview.pause(); soundPreview.currentTime = 0; }
+  if (soundPreviewButton) { soundPreviewButton.textContent = "▶ Reproduzir"; soundPreviewButton.setAttribute("aria-pressed", "false"); }
+  soundPreview = null; soundPreviewButton = null;
+}
+function toggleSoundPreview(idx, slot, button) {
+  if (soundPreviewButton === button) { stopSoundPreview(); return; }
+  stopSoundPreview();
+  const gift = getSoundAlertGiftKeys()[idx], url = soundAlerts[gift] && soundAlerts[gift][slot];
+  if (!url) return;
+  const audio = new Audio(url); soundPreview = audio; soundPreviewButton = button;
+  const status = document.getElementById("sndStatus_" + idx + "_" + slot);
+  const fail = () => { if (soundPreview === audio) { stopSoundPreview(); if(status) status.textContent = "Erro ao reproduzir. Tente novamente."; } };
+  audio.addEventListener("ended", () => { if (soundPreview === audio) stopSoundPreview(); });
+  audio.addEventListener("error", fail);
+  audio.play().then(() => { if (soundPreview === audio) { button.textContent = "■ Parar"; button.setAttribute("aria-pressed", "true"); } }).catch(fail);
+}
+function existingSoundAlertKey(name) {
+  const gift = giftByName(name); if (!gift) return name;
+  const id = String(gift.id || "").toLowerCase();
+  const alias = Object.keys(soundAlerts).find(key => key !== CONNECT_SOUND_KEY && (key.toLowerCase() === gift.name.toLowerCase() || (id && String((giftByName(key) || {}).id || "").toLowerCase() === id)));
+  return alias || gift.name;
+}
+function soundAlertLabel(key) {
+  const gift = giftByName(key);
+  return gift ? getGiftPtName(gift.name) : (/^\d+$/.test(key) ? "Presente ID " + key : getGiftPtName(key));
+}
+function chooseSoundFile(id) {
+  const input = document.getElementById(id);
+  if (input) { input.value = ""; input.click(); }
+}
+function soundSlotControls(idx, slot, url) {
+  const inputId = (slot === "combo" ? "sndC_" : "sndN_") + idx;
+  return '<div class="d-flex gap-2 align-items-center flex-wrap">' +
+    '<button type="button" class="btn btn-nb btn-dark btn-tiny" aria-pressed="false" '+(!url?'disabled':'')+' onclick="toggleSoundPreview('+idx+',\''+slot+'\',this)">▶ Reproduzir</button>' +
+    '<input type="file" hidden id="'+inputId+'" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" onchange="uploadSoundSlot('+idx+',\''+slot+'\')">' +
+    '<button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="chooseSoundFile(\''+inputId+'\')">Enviar áudio</button>' +
+    '<button type="button" class="btn btn-nb btn-danger btn-tiny" onclick="removeSoundSlot('+idx+',\''+slot+'\')" aria-label="Remover áudio '+slot+'">×</button>' +
+    '<span role="status" aria-live="polite" id="sndStatus_'+idx+'_'+slot+'">'+(url?'Áudio enviado':'Sem áudio')+'</span></div>';
+}
+
+let soundGiftMatches = [], soundGiftActiveIndex = -1, soundGiftBlurTimer = null;
+function closeSoundGiftPicker() {
+  const menu = document.getElementById("soundGiftAutocomplete"), input = document.getElementById("soundGiftInput");
+  if (menu) { menu.style.display = "none"; menu.innerHTML = ""; }
+  if (input) { input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); }
+  soundGiftMatches = []; soundGiftActiveIndex = -1;
+}
+function renderSoundGiftPicker() {
+  const input = document.getElementById("soundGiftInput"), menu = document.getElementById("soundGiftAutocomplete");
+  if (!input || !menu) return;
+  const q = input.value.trim().toLowerCase();
+  soundGiftMatches = giftTagList.filter(g => String(g.status || "active") !== "unavailable" && (!q || g.name.toLowerCase().includes(q) || getGiftPtName(g.name).toLowerCase().includes(q) || String(g.id || "").toLowerCase().includes(q))).slice(0, 20);
+  soundGiftActiveIndex = -1; menu.innerHTML = "";
+  if (!soundGiftMatches.length) { menu.style.display = "none"; input.setAttribute("aria-expanded", "false"); return; }
+  soundGiftMatches.forEach((gift, i) => {
+    const item = document.createElement("div"); item.className = "ac-item"; item.setAttribute("role", "option"); item.id = "soundGiftOption_" + i; item.setAttribute("aria-selected", "false");
+    const file = giftImageMap[gift.name];
+    if (file) { const img = document.createElement("img"); img.src = "/gift-images/" + file; img.alt = ""; item.appendChild(img); }
+    const label = document.createElement("span"); label.className = "ac-name"; label.textContent = getGiftLabel(gift.name); item.appendChild(label);
+    const diamonds = document.createElement("span"); diamonds.className = "ac-diam"; diamonds.textContent = (gift.diamond_count || 0) + " 💎"; item.appendChild(diamonds);
+    if (String(gift.status || "active") === "unavailable") { item.style.opacity = "0.55"; const badge = document.createElement("span"); badge.className = "ac-badge"; badge.textContent = "indisponível"; item.appendChild(badge); }
+    item.addEventListener("mousedown", event => { event.preventDefault(); selectSoundGift(i); }); menu.appendChild(item);
+  });
+  menu.style.display = "block"; input.setAttribute("aria-expanded", "true");
+}
+function selectSoundGift(index) {
+  const gift = soundGiftMatches[index]; if (!gift) return;
+  const input = document.getElementById("soundGiftInput"); input.value = gift.name; input.dataset.giftKey = gift.name;
+  closeSoundGiftPicker();
+}
+function bindSoundGiftPicker() {
+  const input = document.getElementById("soundGiftInput"); if (!input || input.dataset.bound) return;
+  input.dataset.bound = "true";
+  input.addEventListener("focus", renderSoundGiftPicker);
+  input.addEventListener("input", () => { delete input.dataset.giftKey; renderSoundGiftPicker(); });
+  input.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown" && soundGiftMatches.length) { event.preventDefault(); soundGiftActiveIndex = (soundGiftActiveIndex + 1) % soundGiftMatches.length; updateSoundGiftActive(); }
+    else if (event.key === "ArrowUp" && soundGiftMatches.length) { event.preventDefault(); soundGiftActiveIndex = (soundGiftActiveIndex - 1 + soundGiftMatches.length) % soundGiftMatches.length; updateSoundGiftActive(); }
+    else if (event.key === "Enter" && soundGiftActiveIndex >= 0) { event.preventDefault(); selectSoundGift(soundGiftActiveIndex); }
+    else if (event.key === "Escape") closeSoundGiftPicker();
+  });
+  input.addEventListener("blur", () => { clearTimeout(soundGiftBlurTimer); soundGiftBlurTimer = setTimeout(closeSoundGiftPicker, 150); });
+}
+function updateSoundGiftActive() {
+  const input = document.getElementById("soundGiftInput"), menu = document.getElementById("soundGiftAutocomplete"); if (!menu) return;
+  menu.querySelectorAll(".ac-item").forEach((item, i) => { const active = i === soundGiftActiveIndex; item.classList.toggle("active", active); item.setAttribute("aria-selected", String(active)); if (active) { input.setAttribute("aria-activedescendant", item.id); item.scrollIntoView({ block: "nearest" }); } });
+}
+
 function renderSoundAlerts() {
+  stopSoundPreview();
   const container = document.getElementById("soundAlertsList");
   if (!container) return;
-  const connectEntry = soundAlerts[CONNECT_SOUND_KEY] || { normal: "", combo: "" };
-  const gifts = Object.keys(soundAlerts).filter((g) => g !== CONNECT_SOUND_KEY);
   let html = `
-    <div class="mb-3 p-2 bg-light border border-dark rounded">
-      <strong>Som de Conexão</strong>
-      <div class="text-secondary" style="font-size:0.72rem">Toca quando a live conecta. Sem arquivo, usa o beep padrão.</div>
-      <div class="row g-2 mt-1 align-items-end">
-        <div class="col-7">
-          <input type="file" class="form-control form-control-sm" id="connectSoundFile" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
-        </div>
-        <div class="col-5 d-flex gap-2">
-          <button class="btn btn-nb btn-success btn-tiny flex-shrink-0" onclick="uploadConnectSound()">Anexar</button>
-          <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeConnectSound()" title="Remover som de conexão">Remover</button>
-        </div>
-      </div>
-      ${connectEntry.normal ? `<div class="mt-2"><audio controls preload="none" style="height:34px;width:100%" src="${esc(connectEntry.normal)}"></audio></div>` : ""}
-      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px" id="connectSoundMsg"></div>
-    </div>
     <div class="mb-3 p-2 bg-light border border-dark rounded">
       <strong>Adicionar alerta (áudio normal)</strong>
       <div class="row g-2 mt-1 align-items-end">
         <div class="col-5">
-          <label class="form-label mb-0" for="soundGiftInput">Gift</label>
-          <input type="text" class="form-control form-control-sm" id="soundGiftInput" list="soundGiftList" placeholder="Nome do gift..." autocomplete="off">
-          <datalist id="soundGiftList">${giftTagList.map(g => `<option value="${esc(g.name)}">`).join("")}</datalist>
+          <label class="form-label mb-0" for="soundGiftInput">Presente</label>
+          <div class="position-relative"><input type="text" class="form-control form-control-sm" id="soundGiftInput" placeholder="Buscar presente..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="soundGiftAutocomplete"><div id="soundGiftAutocomplete" class="gift-ac" role="listbox" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;z-index:140;box-shadow:3px 3px 0 #000"></div></div>
         </div>
-        <div class="col-4">
-          <label class="form-label mb-0" for="soundFileInput">Áudio normal</label>
-          <input type="file" class="form-control form-control-sm" id="soundFileInput" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
+        <div class="col-auto">
+          <input type="file" hidden id="soundFileInput" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" onchange="uploadSoundAlert()">
         </div>
         <div class="col-3">
-          <button class="btn btn-nb btn-success btn-tiny" onclick="uploadSoundAlert()">Anexar</button>
+          <button class="btn btn-nb btn-success btn-tiny" onclick="chooseSoundFile('soundFileInput')">Enviar áudio</button>
         </div>
       </div>
-      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px" id="soundAlertMsg"></div>
+      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px" id="soundAlertMsg" role="status" aria-live="polite">Sem áudio</div>
     </div>`;
+  const gifts = getSoundAlertGiftKeys();
   if (gifts.length === 0) {
     html += `<div class="text-secondary" style="font-size:0.8rem">Nenhum alerta configurado ainda.</div>`;
   } else {
@@ -1509,42 +1616,36 @@ function renderSoundAlerts() {
       html += `
         <div class="mb-2 p-2 bg-light border border-dark rounded">
           <div class="d-flex justify-content-between align-items-center mb-1">
-            <strong style="font-size:0.85rem">${esc(g)}</strong>
-            <button class="btn btn-nb btn-danger btn-tiny" onclick="removeGiftSound(${idx})">Remover gift</button>
+            <strong style="font-size:0.85rem">${esc(soundAlertLabel(g))}</strong>
+            <button class="btn btn-nb btn-danger btn-tiny" onclick="removeGiftSound(${idx})">Remover presente</button>
           </div>
           <div class="row g-2">
             <div class="col-6">
               <div class="text-secondary" style="font-size:0.72rem;font-weight:700">Áudio normal</div>
-              <audio controls preload="none" style="height:34px;width:100%" src="${esc(entry.normal || "")}"></audio>
-              <div class="d-flex gap-2 mt-1">
-                <input type="file" class="form-control form-control-sm" id="sndN_${idx}" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
-                <button class="btn btn-nb btn-dark btn-tiny flex-shrink-0" onclick="uploadSoundSlot(${idx},'normal')">Anexar</button>
-                <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeSoundSlot(${idx},'normal')" title="Remover áudio normal">×</button>
-              </div>
+              ${soundSlotControls(idx, 'normal', entry.normal)}
             </div>
             <div class="col-6">
               <div class="text-secondary" style="font-size:0.72rem;font-weight:700">Áudio combo</div>
-              <audio controls preload="none" style="height:34px;width:100%" src="${esc(entry.combo || "")}"></audio>
-              <div class="d-flex gap-2 mt-1">
-                <input type="file" class="form-control form-control-sm" id="sndC_${idx}" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac">
-                <button class="btn btn-nb btn-dark btn-tiny flex-shrink-0" onclick="uploadSoundSlot(${idx},'combo')">Anexar</button>
-                <button class="btn btn-nb btn-danger btn-tiny flex-shrink-0" onclick="removeSoundSlot(${idx},'combo')" title="Remover áudio combo">×</button>
-              </div>
+              ${soundSlotControls(idx, 'combo', entry.combo)}
             </div>
           </div>
         </div>`;
     });
   }
   container.innerHTML = html;
+  bindSoundGiftPicker();
 }
 
 async function uploadSoundAlert() {
   const giftInput = document.getElementById("soundGiftInput");
   const fileInput = document.getElementById("soundFileInput");
   const msg = document.getElementById("soundAlertMsg");
-  const gift = (giftInput.value || "").trim();
+  const entered = (giftInput.value || "").trim();
+  const gift = existingSoundAlertKey(giftInput.dataset.giftKey || giftByName(entered)?.name || entered);
   if (!gift) { if (msg) msg.textContent = "Digite o nome do gift."; return; }
+  if (gift === CONNECT_SOUND_KEY) { if (msg) msg.textContent = "Esse nome está reservado e não pode ser usado como gift."; return; }
   if (!fileInput.files || !fileInput.files[0]) { if (msg) msg.textContent = "Selecione um arquivo de áudio."; return; }
+  if (msg) msg.textContent = "Enviando…";
   const fd = new FormData();
   fd.append("gift", gift);
   fd.append("type", "normal");
@@ -1556,66 +1657,22 @@ async function uploadSoundAlert() {
       cur.normal = data.url;
       soundAlerts[gift] = cur;
       renderSoundAlerts();
-      if (msg) msg.textContent = "Alerta salvo!";
+      document.getElementById("soundAlertMsg").textContent = "Áudio enviado";
       addLog(`[Alerta] Som anexado ao gift: ${gift}`);
     } else {
-      if (msg) msg.textContent = data.error || "Erro ao salvar.";
+      if (msg) msg.textContent = "Erro no envio. Use Enviar áudio para tentar novamente.";
     }
   } catch (e) {
-    if (msg) msg.textContent = "Erro de rede: " + e.message;
-  }
-}
-
-async function uploadConnectSound() {
-  const fileInput = document.getElementById("connectSoundFile");
-  const msg = document.getElementById("connectSoundMsg");
-  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-    if (msg) msg.textContent = "Selecione um arquivo de áudio.";
-    return;
-  }
-  const fd = new FormData();
-  fd.append("gift", CONNECT_SOUND_KEY);
-  fd.append("type", "normal");
-  fd.append("file", fileInput.files[0]);
-  try {
-    const data = await apiFetch("/api/sound-alerts", { method: "POST", body: fd });
-    if (data.success) {
-      const cur = soundAlerts[CONNECT_SOUND_KEY] || { normal: "", combo: "" };
-      cur.normal = data.url;
-      soundAlerts[CONNECT_SOUND_KEY] = cur;
-      cacheSoundDuration(data.url);
-      renderSoundAlerts();
-      if (msg) msg.textContent = "Som de conexão salvo!";
-      addLog("[Alerta] Som de conexão configurado");
-    } else {
-      if (msg) msg.textContent = data.error || "Erro ao salvar.";
-    }
-  } catch (e) {
-    if (msg) msg.textContent = "Erro de rede: " + e.message;
-  }
-}
-
-async function removeConnectSound() {
-  const msg = document.getElementById("connectSoundMsg");
-  try {
-    const data = await apiFetch(`/api/sound-alerts?gift=${encodeURIComponent(CONNECT_SOUND_KEY)}`, { method: "DELETE" });
-    if (data.success) {
-      delete soundAlerts[CONNECT_SOUND_KEY];
-      renderSoundAlerts();
-      if (msg) msg.textContent = "Som de conexão removido (volta o beep padrão).";
-      addLog("[Alerta] Som de conexão removido");
-    } else {
-      if (msg) msg.textContent = data.error || "Erro ao remover.";
-    }
-  } catch (e) {
-    if (msg) msg.textContent = "Erro de rede: " + e.message;
+    if (msg) msg.textContent = "Erro no envio. Use Enviar áudio para tentar novamente.";
   }
 }
 
 async function uploadSoundSlot(idx, slot) {
-  const gifts = Object.keys(soundAlerts);
+  const gifts = getSoundAlertGiftKeys();
   const gift = gifts[idx];
-  if (!gift) return;  const fileInput = document.getElementById(slot === "combo" ? `sndC_${idx}` : `sndN_${idx}`);
+  if (!gift) return;
+  const msg = document.getElementById(`sndStatus_${idx}_${slot}`);
+  const fileInput = document.getElementById(slot === "combo" ? `sndC_${idx}` : `sndN_${idx}`);
   if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
   const fd = new FormData();
   fd.append("gift", gift);
@@ -1628,13 +1685,13 @@ async function uploadSoundSlot(idx, slot) {
       cur[slot] = data.url;
       soundAlerts[gift] = cur;
       renderSoundAlerts();
-      addLog(`[Alerta] Som ${slot} anexado ao gift: ${gift}`);
-    }
-  } catch (e) {}
+      addLog(`[Alerta] Som ${slot} anexado ao gift: ${soundAlertLabel(gift)}`);
+    } else if(msg) msg.textContent = "Erro no envio. Use Enviar áudio para tentar novamente.";
+  } catch (e) { if(msg) msg.textContent = "Erro no envio. Use Enviar áudio para tentar novamente."; }
 }
 
 async function removeSoundSlot(idx, slot) {
-  const gifts = Object.keys(soundAlerts);
+  const gifts = getSoundAlertGiftKeys();
   const gift = gifts[idx];
   if (!gift) return;
   try {
@@ -1649,7 +1706,7 @@ async function removeSoundSlot(idx, slot) {
 }
 
 async function removeGiftSound(idx) {
-  const gifts = Object.keys(soundAlerts);
+  const gifts = getSoundAlertGiftKeys();
   const gift = gifts[idx];
   if (!gift) return;
   try {
@@ -1903,22 +1960,7 @@ function onCacaCmdMode() {
   document.getElementById("cacaPrefixRow").style.display = mode === "prefix" ? "flex" : "none";
 }
 
-async function saveCacaConfig() {
-  const mode = document.getElementById("cacaCmdMode").value;
-  const prefix = mode === "prefix" ? (document.getElementById("cacaPrefix").value.trim() || "cp") : "";
-  try {
-    const data = await apiFetch("/api/caca/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prefix }),
-    });
-    const label = mode === "emoji" ? "com emoji ao redor (ex: ❤️A1:A3✨)" : (prefix ? `com prefixo '${prefix}'` : "só coordenadas");
-    if (data.success) addLog(`[CaçaPalavras] Comando configurado — ${label}`);
-    else addLog(`[CaçaPalavras] [!] ${data.error}`);
-  } catch (err) {
-    addLog(`[CaçaPalavras] [!] Erro de rede: ${err.message}`);
-  }
-}
+async function saveCacaConfig() { return cacaSaver.flush(); }
 
 async function startCaca() {
   const count = parseInt(document.getElementById("cacaCount").value, 10) || 10;
@@ -2259,32 +2301,7 @@ async function tresTest(action, extra) {
   } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
-async function saveTresConfig() {
-  const config = {
-    size: tresGiftSizeVal,
-    letter: tresGiftLetterVal,
-    ticket: tresGiftTicketVal,
-    stage_times: [
-      parseInt(document.getElementById("tresTime1").value) || 120,
-      parseInt(document.getElementById("tresTime2").value) || 60,
-      parseInt(document.getElementById("tresTime3").value) || 30,
-    ],
-    stage_points: [
-      parseInt(document.getElementById("tresPts1").value) || 30,
-      parseInt(document.getElementById("tresPts2").value) || 20,
-      parseInt(document.getElementById("tresPts3").value) || 10,
-    ],
-  };
-  try {
-    const data = await apiFetch("/api/tres/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config }),
-    });
-    if (data.success) addLog("[3 Dicas] Configuração salva!");
-    else addLog(`[3 Dicas] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
-}
+async function saveTresConfig() { return tresSaver.flush(); }
 
 function syncPanelNewGameButton(stateStr) {
   const btn = document.getElementById("btnNewGame");
@@ -2320,10 +2337,9 @@ function syncPanelNewGameButton(stateStr) {
 function setManualButtonsEnabled(enabled) {
   const hint = document.getElementById("btnManualHint");
   const riddle = document.getElementById("btnManualRiddle");
-  const replay = document.getElementById("btnReplayRiddle");
   if (hint) hint.disabled = !enabled;
   if (riddle) riddle.disabled = !enabled;
-  if (replay) replay.disabled = !enabled;
+  updatePanelRiddleControls();
 }
 
 function setPostGameButtonsEnabled(enabled) {
@@ -2336,15 +2352,24 @@ function setPostGameButtonsEnabled(enabled) {
 function setDisplayControlsEnabled(enabled) {
   const close = document.getElementById("btnCloseRiddle");
   const rank = document.getElementById("btnChangeRanking");
-  if (close) close.disabled = !enabled;
+  if (close) close.disabled = !(enabled && panelRiddleState !== "hidden");
   if (rank) rank.disabled = false;
+}
+
+function updatePanelRiddleControls() {
+  const visible = gameActive && panelRiddleState !== "hidden";
+  const close = document.getElementById("btnCloseRiddle");
+  const replay = document.getElementById("btnReplayRiddle");
+  if (close) close.disabled = !visible;
+  if (replay) replay.disabled = !(visible && panelRiddleState === "ready");
 }
 
 function setRunningUI(running) {
   document.getElementById("btnConnect").disabled = running;
   document.getElementById("btnStop").disabled = !running;
   syncPanelNewGameButton(running ? "connected" : "offline");
-  document.getElementById("btnConnect").textContent = running ? "Conectar Live" : "Conectar Live";
+  document.getElementById("btnConnect").textContent = running ? "TikTok Live conectada" : "Conectar à TikTok Live";
+  document.getElementById("btnStop").textContent = "Desconectar da TikTok Live";
 }
 
 function formatTime() {
@@ -2391,8 +2416,7 @@ function updateStatus(s) {
   connectSoundSeenOnce = true;
 }
 
-const LOG_GAMES = ["sistema", "chat", "palavra", "batalha", "caca", "bichinho", "tres", "duelo", "tts"];
-let currentLogFilter = "todos";
+const LOG_GAMES = ["palavra", "batalha", "caca", "bichinho", "tres", "duelo"];
 
 function normLogGame(g) {
   const s = String(g || "").toLowerCase();
@@ -2400,17 +2424,38 @@ function normLogGame(g) {
   return s || "sistema";
 }
 
-function applyLogFilter(game) {
-  if (currentLogFilter === "todos") return true;
-  return normLogGame(game) === currentLogFilter;
+function classifyLog(text, game, level) {
+  const normalizedLevel = String(level || "").toLowerCase();
+  const normalizedGame = normLogGame(game);
+  const content = String(text || "").toLowerCase();
+  if (normalizedLevel === "err" || normalizedLevel === "error" || /\[!\]|\berro\b|\berror\b|\[stderr\]/i.test(text)) return "erros";
+  if (normalizedLevel === "warn" || normalizedLevel === "warning" || /\bwarning\b|\baviso\b|\batencao\b|\[warn\]/i.test(text)) return "avisos";
+  if (normalizedLevel === "debug" || normalizedLevel === "trace" || /\[diag(?:nostico)?\]|\[debug\]|\[trace\]/i.test(text)) return "diagnostico";
+  if (normalizedLevel === "chat" || normalizedGame === "chat" || /^\s*\[chat\]/i.test(text)) return "chat";
+  if (LOG_GAMES.includes(normalizedGame)) return "jogos";
+  if (/\[(?:live|conexao|painel)\]/i.test(text) || /conectad[oa]|desconectad[oa]|reconectando|conex[aã]o/i.test(content)) return "conexao";
+  // O protocolo legado pode enviar somente texto. Mantém o padrão antigo: origem desconhecida vira Sistema.
+  return "conexao";
 }
 
-function setLogFilter(v) {
-  currentLogFilter = (v && LOG_GAMES.includes(v)) ? v : "todos";
+function setLogCategories(persist = false) {
   const area = document.getElementById("logArea");
-  if (area) Array.from(area.querySelectorAll(".log-line")).forEach((l) => {
-    l.style.display = applyLogFilter(l.dataset.game) ? "" : "none";
+  const settings = document.getElementById("logSettings");
+  if (!area || !settings) return;
+  const enabled = new Set(Array.from(settings.querySelectorAll("[data-log-category]:checked"), (input) => input.dataset.logCategory));
+  if (persist) try { localStorage.setItem("tikplay.logCategories", JSON.stringify([...enabled])); } catch (e) {}
+  Array.from(area.querySelectorAll(".log-line")).forEach((line) => {
+    line.style.display = enabled.has(line.dataset.category) ? "" : "none";
   });
+}
+
+function toggleLogSettings(forceOpen) {
+  const settings = document.getElementById("logSettings");
+  const button = document.getElementById("logSettingsToggle");
+  if (!settings || !button) return;
+  const open = typeof forceOpen === "boolean" ? forceOpen : settings.hidden;
+  settings.hidden = !open;
+  button.setAttribute("aria-expanded", String(open));
 }
 
 function addLog(item) {
@@ -2422,6 +2467,7 @@ function addLog(item) {
   const level = (item && item.level) || "";
   line.dataset.game = normLogGame(game);
   line.dataset.level = level || "info";
+  line.dataset.category = classifyLog(text, game, level);
 
   if (level === "err" || text.includes("ERRO") || text.includes("Error")) {
     line.classList.add("log-err");
@@ -2440,8 +2486,8 @@ function addLog(item) {
   }
 
   line.textContent = `[${formatTime()}] ${text}`;
-  line.style.display = applyLogFilter(line.dataset.game) ? "" : "none";
   area.appendChild(line);
+  setLogCategories();
   area.scrollTop = area.scrollHeight;
 }
 
@@ -2488,52 +2534,43 @@ function copyAllLogs() {
 
 function clearLogs() {
   const area = document.getElementById("logArea");
-  area.innerHTML = '<div class="log-line log-info">[Painel] Tela de logs limpada.</div>';
+  area.innerHTML = "";
+  addLog("[Painel] Tela de logs limpada.");
 }
 
-async function saveCredentials() {
-  const username = document.getElementById("username").value.trim();
-  const apiKey = document.getElementById("apiKey").value.trim();
-  const engine = document.getElementById("tiktokEngine") ? document.getElementById("tiktokEngine").value : "";
-  const body = {};
-  if (username) body.username = username;
-  if (apiKey) body.api_key = apiKey;
-  if (engine) body.tiktok_engine = engine;
-  if (!body.username && !body.api_key && !body.tiktok_engine) return;
-  try {
-    await apiFetch("/api/panel-config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {}
-}
+async function saveCredentials() { return credentialsSaver.flush(); }
+let configuredTikTokEngine = null;
+const credentialsSaver = createPreferenceSaver({ statusId: "credentialsSaveStatus",
+  read: () => { const body = { username: document.getElementById("username").value.trim() }; const key = document.getElementById("apiKey").value.trim(); if (key) body.api_key = key; return body; },
+  send: body => preferencePost("/api/panel-config", body)
+});
 
-function onEngineChange() {
-  const engine = document.getElementById("tiktokEngine").value;
-  const hint = document.getElementById("engineHint");
-  if (hint) hint.textContent = engine === "tiktools"
-    ? "Conexão via Tik.Tools — exige API key."
-    : "Conexão direta via TikTokLive — não precisa de API key.";
+function updateConnectionCredentialFields(engine) {
+  if (typeof engine === "string" && engine.trim()) configuredTikTokEngine = engine.trim();
   const apiKeyRow = document.getElementById("apiKeyRow");
-  if (apiKeyRow) apiKeyRow.style.display = engine === "tiktools" ? "block" : "none";
-  saveCredentials();
+  const keyRequired = configuredTikTokEngine === "tiktools" || configuredTikTokEngine === "tiktoks";
+  if (apiKeyRow) apiKeyRow.style.display = keyRequired ? "block" : "none";
 }
 
 async function clearApiKey() {
+  const field = document.getElementById("apiKey");
+  field.value = "";
+  field.disabled = true;
   try {
-    await apiFetch("/api/panel-config", {
+    await credentialsSaver.flush();
+    const result = await apiFetch("/api/panel-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clear_api_key: true }),
     });
+    if (!result || !result.success) throw new Error(result && result.error || "Falha ao remover chave");
     document.getElementById("apiKey").value = "";
-    document.getElementById("apiKey").placeholder = "Chave da api.tik.tools";
+    document.getElementById("apiKey").placeholder = "Chave da conexão (se necessária)";
     document.getElementById("btnClearKey").style.display = "none";
     addLog("[Painel] Chave API removida");
   } catch (err) {
     addLog(`[Painel] [!] Erro ao limpar chave: ${err.message}`);
-  }
+  } finally { field.disabled = false; }
 }
 
 async function startGame() {
@@ -2548,7 +2585,7 @@ async function startGame() {
 
   const btn = document.getElementById("btnConnect");
   btn.disabled = true;
-  btn.textContent = "Conectando...";
+  btn.textContent = "Conectando à TikTok Live…";
 
   addLog(`[Painel] Solicitando conexão com @${username}...`);
 
@@ -2564,12 +2601,12 @@ async function startGame() {
     } else {
       addLog(`[Painel] [!] ${data.error}`);
       btn.disabled = false;
-      btn.textContent = "Conectar";
+      btn.textContent = "Conectar à TikTok Live";
     }
   } catch (err) {
     addLog(`[Painel] [!] Erro de rede: ${err.message}`);
     btn.disabled = false;
-    btn.textContent = "Conectar";
+    btn.textContent = "Conectar à TikTok Live";
   }
 }
 
@@ -2662,7 +2699,7 @@ async function replayRiddleFromPanel() {
   } catch (err) {
     addLog(`[Painel] [!] Erro de rede: ${err.message}`);
   }
-  if (btn) btn.disabled = false;
+  updatePanelRiddleControls();
 }
 
 // Gift config
@@ -2684,18 +2721,10 @@ let tresGiftTicketVal = "";
 let giftTagList = [];
 let giftImageMap = {};
 let giftCatalogList = [];
-let giftSyncedAt = 0;
-let giftFilterMin = NaN;
-let giftFilterMax = NaN;
-const btnSyncGifts = document.getElementById("btnSyncGifts");
-const giftSyncStatus = document.getElementById("giftSyncStatus");
-const giftFilterMinEl = document.getElementById("giftFilterMin");
-const giftFilterMaxEl = document.getElementById("giftFilterMax");
+const giftValueFilter = { min: "", max: "" };
 const giftInput = document.getElementById("giftTagInput");
 const giftCounter = document.getElementById("giftCounter");
 const giftHint = document.getElementById("giftHint");
-const btnSaveGift = document.getElementById("btnSaveGiftConfig");
-const btnSaveAll = document.getElementById("btnSaveAll");
 
 // Preferências de Jogo
 let settingsDirty = false;
@@ -2708,8 +2737,6 @@ const pctCharadaInput = document.getElementById("pctCharada");
 const ttsRateInput = document.getElementById("ttsRate");
 const ttsRateLabel = document.getElementById("ttsRateLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
-const btnSaveSettings = document.getElementById("btnSaveSettings");
-const btnSaveSettingsGames = document.getElementById("btnSaveSettingsGames");
 let currentTtsVoice = "";
 
 // Gift translation dictionary (EN -> PT-BR)
@@ -2820,11 +2847,6 @@ function refreshAllGiftPickers() {
   letterGiftPicker && letterGiftPicker.render();
 }
 
-function updateGiftSyncStatus() {
-  if (!giftSyncStatus) return;
-  giftSyncStatus.textContent = giftSyncedAt ? `última sync: ${new Date(giftSyncedAt * 1000).toLocaleString("pt-BR")}` : "catálogo: ainda não sincronizado";
-}
-
 function giftDiamonds(name) {
   const g = giftByName(name);
   return g ? Number(g.diamond_count) || 0 : 0;
@@ -2849,10 +2871,59 @@ function createGiftPicker(opts) {
   const max = opts.max || 1;
   const isMulti = !!opts.multi;
   const showMeta = !!opts.showMeta;
+  const filterByValue = !!opts.filterByValue;
   const getValue = opts.getValue;
   const onChange = opts.onChange;
   let matches = [];
   let idx = -1;
+  let resultsContainer = autocomplete;
+  let minFilterInput = null;
+  let maxFilterInput = null;
+
+  if (autocomplete && filterByValue) {
+    const filterPanel = document.createElement("div");
+    filterPanel.className = "gift-ac-filters";
+    filterPanel.setAttribute("role", "group");
+    filterPanel.setAttribute("aria-label", "Filtro local de valor dos presentes");
+
+    const note = document.createElement("p");
+    note.className = "gift-ac-filters-note";
+    note.textContent = "Faixa em diamantes aplicada aos resultados abaixo.";
+    filterPanel.appendChild(note);
+
+    const minLabel = document.createElement("label");
+    minLabel.className = "gift-ac-filter-field";
+    const minText = document.createElement("span");
+    minText.textContent = "💎 Mín.";
+    minFilterInput = document.createElement("input");
+    minFilterInput.type = "number";
+    minFilterInput.min = "0";
+    minFilterInput.className = "form-control form-control-sm";
+    minFilterInput.placeholder = "0";
+    minFilterInput.setAttribute("aria-label", "Valor mínimo em diamantes");
+    minFilterInput.id = opts.inputId + "ValueMin";
+    minLabel.htmlFor = minFilterInput.id;
+    minLabel.append(minText, minFilterInput);
+    filterPanel.appendChild(minLabel);
+
+    const maxLabel = document.createElement("label");
+    maxLabel.className = "gift-ac-filter-field";
+    const maxText = document.createElement("span");
+    maxText.textContent = "Máx.";
+    maxFilterInput = document.createElement("input");
+    maxFilterInput.type = "number";
+    maxFilterInput.min = "0";
+    maxFilterInput.className = "form-control form-control-sm";
+    maxFilterInput.placeholder = "∞";
+    maxFilterInput.setAttribute("aria-label", "Valor máximo em diamantes");
+    maxFilterInput.id = opts.inputId + "ValueMax";
+    maxLabel.htmlFor = maxFilterInput.id;
+    maxLabel.append(maxText, maxFilterInput);
+    filterPanel.appendChild(maxLabel);
+
+    resultsContainer = document.createElement("div");
+    autocomplete.replaceChildren(filterPanel, resultsContainer);
+  }
 
   function values() {
     const v = getValue();
@@ -2864,24 +2935,31 @@ function createGiftPicker(opts) {
     const selected = new Set(values().map((n) => n.toLowerCase()));
     let list = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
     if (val) list = list.filter((g) => g.name.toLowerCase().includes(val) || getGiftPtName(g.name).toLowerCase().includes(val) || String(g.id || "").toLowerCase().includes(val));
-    if (!isNaN(giftFilterMin)) list = list.filter((g) => giftDiamonds(g.name) >= giftFilterMin);
-    if (!isNaN(giftFilterMax)) list = list.filter((g) => giftDiamonds(g.name) <= giftFilterMax);
+    if (giftValueFilter.min !== "") list = list.filter((g) => giftDiamonds(g.name) >= Number(giftValueFilter.min));
+    if (giftValueFilter.max !== "") list = list.filter((g) => giftDiamonds(g.name) <= Number(giftValueFilter.max));
     return list.slice(0, 20);
   }
 
   function hide() {
     if (!autocomplete) return;
     autocomplete.style.display = "none";
-    autocomplete.innerHTML = "";
+    if (resultsContainer) resultsContainer.replaceChildren();
     matches = [];
     idx = -1;
   }
 
   function renderAc() {
     if (!autocomplete) return;
-    autocomplete.innerHTML = "";
-    if (!matches.length) { autocomplete.style.display = "none"; return; }
+    if (resultsContainer) resultsContainer.replaceChildren();
     autocomplete.style.display = "block";
+    if (!matches.length) {
+      const empty = document.createElement("div");
+      empty.className = "text-secondary p-2";
+      empty.style.fontSize = "0.8rem";
+      empty.textContent = filterByValue ? "Nenhum presente nessa busca e faixa de valor." : "Nenhum presente encontrado.";
+      if (resultsContainer) resultsContainer.appendChild(empty);
+      return;
+    }
     matches.forEach((g, i) => {
       const item = document.createElement("div");
       item.className = "ac-item" + (i === idx ? " active" : "");
@@ -2914,13 +2992,25 @@ function createGiftPicker(opts) {
         if (input) input.value = "";
         hide();
       });
-      autocomplete.appendChild(item);
+      resultsContainer.appendChild(item);
     });
   }
 
   function open() {
     if (!input || input.disabled || values().length >= max) { hide(); return; }
+    if (filterByValue) {
+      minFilterInput.value = giftValueFilter.min;
+      maxFilterInput.value = giftValueFilter.max;
+    }
     matches = available(input.value);
+    idx = matches.length ? 0 : -1;
+    renderAc();
+  }
+
+  function updateValueFilter() {
+    giftValueFilter.min = minFilterInput.value;
+    giftValueFilter.max = maxFilterInput.value;
+    matches = available(input ? input.value : "");
     idx = matches.length ? 0 : -1;
     renderAc();
   }
@@ -3006,7 +3096,9 @@ function createGiftPicker(opts) {
         if (matches.length && idx >= 0) { add(matches[idx].name); this.value = ""; hide(); return; }
         const q = this.value.trim();
         if (!q) return;
-        const found = giftByName(q) || giftTagList.find((g) => g.name.toLowerCase().includes(q.toLowerCase()) || getGiftPtName(g.name).toLowerCase().includes(q.toLowerCase()));
+        const candidates = available(q);
+        const exact = giftByName(q);
+        const found = (exact && candidates.some((g) => g.name === exact.name)) ? exact : candidates[0];
         if (found) { add(found.name); this.value = ""; hide(); }
       }
       if (e.key === "Backspace" && this.value === "" && isMulti && values().length > 0) {
@@ -3016,6 +3108,11 @@ function createGiftPicker(opts) {
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#" + opts.inputId) && !(opts.autocompleteId && e.target.closest("#" + opts.autocompleteId))) hide();
     });
+  }
+
+  if (filterByValue) {
+    minFilterInput.addEventListener("input", updateValueFilter);
+    maxFilterInput.addEventListener("input", updateValueFilter);
   }
 
   renderTags();
@@ -3034,54 +3131,35 @@ function createGiftPicker(opts) {
 // --- Palavra Secreta ---
 const giftPicker = createGiftPicker({
   inputId: "giftTagInput", autocompleteId: "giftAutocomplete", tagsId: "giftTags",
-  counterId: "giftCounter", max: MAX_HINT_GIFTS, multi: true, showMeta: true,
+  counterId: "giftCounter", max: MAX_HINT_GIFTS, multi: true, showMeta: true, filterByValue: true,
   placeholder: "Busque o gift no catálogo...",
   getValue: () => giftTags,
-  onChange: (arr) => { giftTags = arr.slice(); updateGiftSaveState(); },
+  onChange: (arr) => { giftTags = arr.slice(); updateGiftSaveState(); if (giftsHydrated) giftSaver.schedule(0); },
 });
 
 const riddlePicker = createGiftPicker({
   inputId: "riddleTagInput", autocompleteId: "riddleAutocomplete", tagsId: "riddleTags",
-  counterId: "riddleCounter", max: MAX_RIDDLE_GIFTS, multi: false,
+  counterId: "riddleCounter", max: MAX_RIDDLE_GIFTS, multi: false, filterByValue: true,
   placeholder: "Escolha 1 presente revelador...",
   getValue: () => riddleTags,
-  onChange: (arr) => { riddleTags = arr.slice(0, 1); updateGiftSaveState(); },
+  onChange: (arr) => { riddleTags = arr.slice(0, 1); updateGiftSaveState(); if (giftsHydrated) giftSaver.schedule(0); },
 });
 
 const sizeGiftPicker = createGiftPicker({
   inputId: "sizeGiftInput", autocompleteId: "sizeGiftAutocomplete", tagsId: "sizeGiftTags",
-  max: MAX_SIZE_GIFTS,
+  max: MAX_SIZE_GIFTS, filterByValue: true,
   placeholder: "Escolha 1 presente para revelar o tamanho...",
   getValue: () => sizeGiftTag,
-  onChange: (arr) => { sizeGiftTag = arr[0] || ""; updateGiftSaveState(); },
+  onChange: (arr) => { sizeGiftTag = arr[0] || ""; updateGiftSaveState(); if (giftsHydrated) giftSaver.schedule(0); },
 });
 
 const letterGiftPicker = createGiftPicker({
   inputId: "letterGiftInput", autocompleteId: "letterGiftAutocomplete", tagsId: "letterGiftTags",
-  max: MAX_LETTER_GIFTS,
+  max: MAX_LETTER_GIFTS, filterByValue: true,
   placeholder: "Escolha 1 presente para revelar a 1ª letra...",
   getValue: () => letterGiftTag,
-  onChange: (arr) => { letterGiftTag = arr[0] || ""; updateGiftSaveState(); },
+  onChange: (arr) => { letterGiftTag = arr[0] || ""; updateGiftSaveState(); if (giftsHydrated) giftSaver.schedule(0); },
 });
-
-// --- Sincronização do catálogo + filtro por valor ---
-if (btnSyncGifts) {
-  btnSyncGifts.addEventListener("click", async () => {
-    if (btnSyncGifts.disabled) return;
-    btnSyncGifts.disabled = true;
-    btnSyncGifts.textContent = "Sincronizando…";
-    addLog("[Gifts] Solicitando sincronização do catálogo com o TikTok...");
-    try {
-      const data = await apiFetch("/api/gifts/sync", { method: "POST" });
-      if (!data || !data.success) addLog("[Gifts] [!] " + ((data && data.error) || "não foi possível agendar a sincronização"));
-    } catch (e) {
-      addLog("[Gifts] [!] Erro: " + e.message);
-    }
-    setTimeout(() => { btnSyncGifts.disabled = false; btnSyncGifts.textContent = "↻ Sincronizar agora"; }, 2000);
-  });
-}
-if (giftFilterMinEl) giftFilterMinEl.addEventListener("input", () => { giftFilterMin = giftFilterMinEl.value === "" ? NaN : parseInt(giftFilterMinEl.value, 10); });
-if (giftFilterMaxEl) giftFilterMaxEl.addEventListener("input", () => { giftFilterMax = giftFilterMaxEl.value === "" ? NaN : parseInt(giftFilterMaxEl.value, 10); });
 
 // --- 3 Dicas (3 Pontinhos) ---
 const tresSizePicker = createGiftPicker({
@@ -3089,21 +3167,21 @@ const tresSizePicker = createGiftPicker({
   max: 1,
   placeholder: "Presente A — Revelar Tamanho",
   getValue: () => tresGiftSizeVal,
-  onChange: (arr) => { tresGiftSizeVal = arr[0] || ""; },
+  onChange: (arr) => { tresGiftSizeVal = arr[0] || ""; if (tresHydrated) tresSaver.schedule(0); },
 });
 const tresLetterPicker = createGiftPicker({
   inputId: "tresGiftLetter", autocompleteId: "tresGiftLetterAutocomplete", tagsId: "tresGiftLetterTags",
   max: 1,
   placeholder: "Presente B — Primeira Letra",
   getValue: () => tresGiftLetterVal,
-  onChange: (arr) => { tresGiftLetterVal = arr[0] || ""; },
+  onChange: (arr) => { tresGiftLetterVal = arr[0] || ""; if (tresHydrated) tresSaver.schedule(0); },
 });
 const tresTicketPicker = createGiftPicker({
   inputId: "tresGiftTicket", autocompleteId: "tresGiftTicketAutocomplete", tagsId: "tresGiftTicketTags",
   max: 1,
   placeholder: "Ingresso — Liberar Chat",
   getValue: () => tresGiftTicketVal,
-  onChange: (arr) => { tresGiftTicketVal = arr[0] || ""; },
+  onChange: (arr) => { tresGiftTicketVal = arr[0] || ""; if (tresHydrated) tresSaver.schedule(0); },
 });
 
 // Wrappers mantidos para compatibilidade com loadGiftConfig
@@ -3123,11 +3201,7 @@ function isGiftDirty() {
 
 function updateGiftSaveState() {
   const dirty = isGiftDirty();
-  if (btnSaveGift) {
-    btnSaveGift.disabled = !dirty;
-    btnSaveGift.classList.toggle("dirty", dirty);
-  }
-  updateSaveAllState();
+
   if (giftCounter) giftCounter.textContent = `Gifts de dica (${giftTags.length}/${MAX_HINT_GIFTS})`;
   const full = giftTags.length >= MAX_HINT_GIFTS;
   if (giftInput) giftInput.disabled = full;
@@ -3136,19 +3210,6 @@ function updateGiftSaveState() {
       ? "Limite de 5 atingido. Remova um gift para adicionar outro."
       : "Máximo de 5. Só gifts do catálogo. Setas + Enter para selecionar.";
   }
-}
-
-function updateSaveAllState() {
-  if (!btnSaveAll) return;
-  const dirty = isGiftDirty() || settingsDirty;
-  btnSaveAll.disabled = !dirty;
-  btnSaveAll.classList.toggle("dirty", dirty);
-}
-
-async function saveAll() {
-  await saveGiftConfig();
-  await saveSettings();
-  updateSaveAllState();
 }
 
 async function displayActionFromPanel(action, extra) {
@@ -3177,43 +3238,104 @@ function updateObsControlStatus(data) {
   if (el) el.textContent = "Ranking atual: " + (map[data.ranking_view] || data.ranking_view);
 }
 
-async function saveGiftConfig() {
-  if (btnSaveGift) btnSaveGift.disabled = true;
-  if (btnSaveAll) btnSaveAll.disabled = true;
-  try {
-    const data = await apiFetch("/api/gift-config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hint_gifts: giftTags.map(giftListId),
-        riddle_gifts: riddleTags.map(giftListId),
-        size_gift: giftListId(sizeGiftTag),
-        letter_gift: giftListId(letterGiftTag),
-      }),
-    });
-    if (data.success) {
-      giftTags = ((data.hint_gifts || giftTags).map((n) => giftNameById(n))).filter(Boolean);
-      riddleTags = ((data.riddle_gifts || riddleTags).map((n) => giftNameById(n))).filter(Boolean).slice(0, 1);
-      sizeGiftTag = data.size_gift !== undefined ? giftNameById(data.size_gift || "") : sizeGiftTag;
-      letterGiftTag = data.letter_gift !== undefined ? giftNameById(data.letter_gift || "") : letterGiftTag;
-      savedGiftTags = [...giftTags];
-      savedRiddleTags = [...riddleTags];
-      savedSizeGiftTag = sizeGiftTag;
-      savedLetterGiftTag = letterGiftTag;
-      renderGiftTags();
-      renderRiddleTags();
-      renderSizeGiftTags();
-      renderLetterGiftTags();
-      addLog(`[GiftConfig] Configuração salva: ${giftTags.length} dicas, ${riddleTags.length} revelador` + (sizeGiftTag ? `, tamanho: ${sizeGiftTag}` : "") + (letterGiftTag ? `, 1ª letra: ${letterGiftTag}` : ""));
-    } else {
-      addLog(`[GiftConfig] [!] ${data.error}`);
-      updateGiftSaveState();
-    }
-  } catch (err) {
-    addLog(`[GiftConfig] [!] Erro: ${err.message}`);
-    updateGiftSaveState();
+
+// A fila lê um snapshot completo ao enviar, sem sobrepor requests do mesmo escopo.
+function createPreferenceSaver({ statusId, ready = () => true, read, send, commit = () => {}, success = "Salvo automaticamente." }) {
+  let timer, running = null, revision = 0, pending = false;
+  const status = (text) => { for (const id of [statusId, statusId + "Games"]) { const el = document.getElementById(id); if (el) el.textContent = text; } };
+  async function drain() {
+    if (running) return running;
+    running = (async () => {
+      while (pending) {
+        pending = false;
+        const version = revision;
+        try {
+          if (!ready()) throw new Error("Configuração ainda não carregada. Recarregue o painel para tentar novamente.");
+          const snapshot = read();
+          status("Salvando…");
+          const result = await send(snapshot);
+          if (!result || !result.success) throw new Error(result && result.error || "Falha ao salvar");
+          commit(snapshot, result, version === revision);
+          if (version === revision) status(success);
+        } catch (error) {
+          status("Não salvo: " + error.message + ". Valores mantidos em tela; altere o campo para tentar novamente.");
+          addLog("[Preferências] [!] " + error.message);
+        }
+      }
+    })();
+    try { await running; } finally { running = null; }
   }
+  return {
+    schedule(delay = 500) { revision++; pending = true; clearTimeout(timer); status("Alteração pendente…"); timer = setTimeout(drain, delay); },
+    flush() { clearTimeout(timer); revision++; pending = true; return drain(); },
+    get busy() { return pending || !!running; }
+  };
 }
+const preferencePost = (path, body) => apiFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+function preferenceHydration(scope, loaded, error = "") {
+  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
+  document.querySelectorAll(selectors[scope]).forEach(el => { if (el.matches("input,select,textarea")) el.disabled = !loaded; else el.inert = !loaded; });
+  const statusId = {settings:"settingsSaveStatus",gifts:"giftSaveStatus",tres:"tresSaveStatus",duelo:"dueloSaveStatus"}[scope];
+  const el = document.getElementById(statusId); if(el) el.textContent = loaded ? "Preferências salvas automaticamente após alterações." : (error || "Carregando preferências…");
+  if(scope === "settings") { const mirror = document.getElementById("settingsSaveStatusGames"); if(mirror && el) mirror.textContent = el.textContent; }
+}
+
+let settingsHydrated = false, giftsHydrated = false, tresHydrated = false, dueloHydrated = false;
+let savedTresConfig = {};
+function validatePreferenceNumbers(selector) {
+  for(const el of document.querySelectorAll(selector)) if(el.value === "" || !el.checkValidity()) throw new Error("Preencha um valor válido para " + (el.id || "o campo numérico"));
+}
+function readPanelSettings() {
+  validatePreferenceNumbers("#pctDica,#pctCharada,#autoRoundPause,#tapMeta");
+  return { ...savedSettings,
+    apenas_seguidores: chkFollowers.checked, apenas_heart_me: chkHeartMe.checked,
+    command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
+    pct_dica: Math.max(0, Math.min(100, Number(pctDicaInput.value))),
+    tts_rate: Number(ttsRateInput.value) || 1, tts_voice: currentTtsVoice,
+    auto_round: document.getElementById("autoRound").checked,
+    auto_round_pause: Number(document.getElementById("autoRoundPause").value) || 20,
+    tap_meta: Number(document.getElementById("tapMeta").value) || 1000,
+    riddle_auto_narrate: document.getElementById("riddleAutoNarrate").checked
+  };
+}
+const settingsSaver = createPreferenceSaver({ statusId: "settingsSaveStatus", ready: () => settingsHydrated,
+  read: readPanelSettings, send: settings => preferencePost("/api/settings", { settings }),
+  commit: (snapshot, data, latest) => { savedSettings = { ...snapshot, ...data.settings }; settingsDirty = !latest; }
+});
+const giftSaver = createPreferenceSaver({ statusId: "giftSaveStatus", ready: () => giftsHydrated,
+  read: () => ({ hint_gifts: giftTags.map(giftListId), riddle_gifts: riddleTags.map(giftListId), size_gift: giftListId(sizeGiftTag), letter_gift: giftListId(letterGiftTag) }),
+  send: body => preferencePost("/api/gift-config", body),
+  commit: snapshot => { savedGiftTags = snapshot.hint_gifts.map(giftNameById); savedRiddleTags = snapshot.riddle_gifts.map(giftNameById); savedSizeGiftTag = giftNameById(snapshot.size_gift); savedLetterGiftTag = giftNameById(snapshot.letter_gift); }
+});
+const tresSaver = createPreferenceSaver({ statusId: "tresSaveStatus", ready: () => tresHydrated,
+  read: () => { validatePreferenceNumbers("#tab-tres input[type=number]"); return ({ ...savedTresConfig, size: tresGiftSizeVal, letter: tresGiftLetterVal, ticket: tresGiftTicketVal,
+    stage_times: [1,2,3].map(n => Number(document.getElementById("tresTime"+n).value)),
+    stage_points: [1,2,3].map(n => Number(document.getElementById("tresPts"+n).value)) }); },
+  send: config => preferencePost("/api/tres/config", { config }), commit: snapshot => { savedTresConfig = snapshot; }
+});
+const cacaSaver = createPreferenceSaver({ statusId: "cacaSaveStatus",
+  read: () => ({ prefix: document.getElementById("cacaCmdMode").value === "prefix" ? (document.getElementById("cacaPrefix").value.trim() || "cp") : "" }),
+  send: body => preferencePost("/api/caca/config", body), success: "Aplicado ao serviço em execução. Não persiste ao reiniciar; emoji e coordenadas usam o mesmo prefixo vazio."
+});
+let dueloRequestChain = Promise.resolve();
+function dueloRequest(path, body) {
+  const request = dueloRequestChain.then(async () => {
+    if (path === "/api/duelo/config") body = { ...body, active: dueloActive };
+    const result = await preferencePost(path, body || {});
+    if (result && result.success && result.active !== undefined) dueloActive = !!result.active;
+    return result;
+  });
+  dueloRequestChain = request.catch(() => {});
+  return request;
+}
+const dueloSaver = createPreferenceSaver({ statusId: "dueloSaveStatus", ready: () => dueloHydrated,
+  read: () => { return { gifts: dueloConfiguredGifts(), active: dueloActive, settings: { ...dueloSettings, ...readDueloSettings() } }; },
+  send: body => dueloRequest("/api/duelo/config", body),
+  commit: (snapshot, data, latest) => { if (latest && data.settings) dueloSyncFlat(data.settings); }
+});
+
+async function saveGiftConfig() { return giftSaver.flush(); }
 
 async function loadGiftCatalog() {
   try {
@@ -3229,8 +3351,6 @@ async function loadGiftCatalog() {
       cat = await r.json();
     } catch (e) { cat = null; }
     giftCatalogList = Array.isArray(cat && cat.gifts) ? cat.gifts : [];
-    giftSyncedAt = (cat && cat.synced_at) || 0;
-
     if (giftCatalogList.length) {
       // fonte principal: catálogo do DB (id/status/icon_local/diamond)
       giftTagList = giftCatalogList.map((g) => ({
@@ -3246,7 +3366,6 @@ async function loadGiftCatalog() {
       giftTagList = tagsData.gifts || [];
       giftImageMap = mapData.map || {};
     }
-    updateGiftSyncStatus();
   } catch (e) {
     addLog("[GiftConfig] [!] Falha ao carregar catálogo de gifts");
   }
@@ -3257,7 +3376,7 @@ function applySettingsUI(settings) {
   chkFollowers.checked = !!s.apenas_seguidores;
   chkHeartMe.checked = !!s.apenas_heart_me;
   if (cmdPrefixInput) cmdPrefixInput.value = (s.command_prefix === undefined || s.command_prefix === null) ? "#" : s.command_prefix;
-  const dica = Math.max(0, Math.min(100, Number(s.pct_dica) || 70));
+  const dica = Math.max(0, Math.min(100, Number(s.pct_dica ?? 70)));
   pctDicaInput.value = dica;
   pctCharadaInput.value = 100 - dica;
   const rate = Math.max(0.1, Math.min(10, Number(s.tts_rate) || 1));
@@ -3277,34 +3396,13 @@ function applySettingsUI(settings) {
   updateSettingsSaveState();
 }
 
-let ttsRatePushTimer = null;
 
 function onTtsRateChanged(el) {
   if (ttsRateLabel) ttsRateLabel.textContent = `${el.value}x`;
   onSettingsChanged();
-  clearTimeout(ttsRatePushTimer);
-  ttsRatePushTimer = setTimeout(pushLiveTtsRate, 600);
+
 }
 
-async function pushLiveTtsRate() {
-  try {
-    const settings = {
-      ...savedSettings,
-      command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
-      tts_rate: parseFloat(ttsRateInput.value) || 1,
-      pct_dica: parseInt(pctDicaInput.value, 10) || 70,
-      tts_voice: currentTtsVoice,
-    };
-    const data = await apiFetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ settings }),
-    });
-    if (data.success) {
-      savedSettings = { ...data.settings };
-    }
-  } catch (e) {}
-}
 
 let panelVoicesCache = [];
 function loadPanelVoices() {
@@ -3320,8 +3418,8 @@ function loadPanelVoices() {
 function refreshPanelVoices() {
   if (!ttsVoiceSelect) return;
   const current = (currentTtsVoice || "").trim();
-  let options = '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>💙 Edge — Antonio (servidor)</option>';
-  options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>💜 Edge — Francisca (servidor)</option>';
+  let options = '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>Edge — Antonio (servidor)</option>';
+  options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>Edge — Francisca (servidor)</option>';
   ttsVoiceSelect.innerHTML = options;
 }
 
@@ -3350,10 +3448,13 @@ function testPanelVoice() {
 async function loadSettings() {
   try {
     const data = await apiFetch("/api/settings");
+    if (!data || !data.success) throw new Error("Falha ao carregar");
     if (data && data.success) {
+      savedSettings = { ...data.settings };
       applySettingsUI(data.settings);
+      settingsHydrated = true; preferenceHydration("settings", true);
     }
-  } catch {}
+  } catch (e) { preferenceHydration("settings", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
 }
 
 function onPctChanged(el) {
@@ -3375,7 +3476,7 @@ function isSettingsDirty() {
     chkFollowers.checked !== !!savedSettings.apenas_seguidores ||
     chkHeartMe.checked !== !!savedSettings.apenas_heart_me ||
     (cmdPrefixInput ? cmdPrefixInput.value : "#") !== (savedSettings.command_prefix === undefined || savedSettings.command_prefix === null ? "#" : savedSettings.command_prefix) ||
-    dica !== (savedSettings.pct_dica || 70) ||
+    dica !== (savedSettings.pct_dica ?? 70) ||
     Math.abs(rate - (savedSettings.tts_rate || 1)) > 0.001 ||
     (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
@@ -3388,59 +3489,17 @@ function isSettingsDirty() {
 function onSettingsChanged() {
   settingsDirty = isSettingsDirty();
   updateSettingsSaveState();
+  if (settingsHydrated) settingsSaver.schedule(window.event && window.event.type === "change" ? 0 : 500);
 }
 
-function updateSettingsSaveState() {
-  if (btnSaveSettings) {
-    btnSaveSettings.disabled = !settingsDirty;
-    btnSaveSettings.classList.toggle("dirty", settingsDirty);
-  }
-  updateSaveAllState();
-}
+function updateSettingsSaveState() { /* Estado exibido pela fila de autosave. */ }
 
-async function saveSettings() {
-  if (btnSaveSettings) btnSaveSettings.disabled = true;
-  if (btnSaveSettingsGames) btnSaveSettingsGames.disabled = true;
-  if (btnSaveAll) btnSaveAll.disabled = true;
-  const settings = {
-    apenas_seguidores: chkFollowers.checked,
-    apenas_heart_me: chkHeartMe.checked,
-    command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
-    pct_dica: Math.max(0, Math.min(100, parseInt(pctDicaInput.value, 10) || 0)),
-    tts_rate: parseFloat(ttsRateInput.value) || 1,
-    tts_voice: currentTtsVoice,
-    auto_round: document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false,
-    auto_round_pause: Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) || 20,
-    tap_meta: Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) || 1000,
-    riddle_auto_narrate: document.getElementById("riddleAutoNarrate") ? !!document.getElementById("riddleAutoNarrate").checked : true,
-  };
-  try {
-    const data = await apiFetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ settings }),
-    });
-    if (data.success) {
-      savedSettings = { ...data.settings };
-      applySettingsUI(data.settings);
-      const seg = data.settings.apenas_seguidores ? "Seguidores" : "";
-      const heart = data.settings.apenas_heart_me ? "Heart-me" : "";
-      const filtro = [seg, heart].filter(Boolean).join(" + ") || "Todos";
-      const voz = data.settings.tts_voice || "auto (pt-BR)";
-      addLog(`[Preferências] Salvas — Filtro: ${filtro} | Dicas ${data.settings.pct_dica}% / Charadas ${data.settings.pct_charada}% | Voz: ${voz} (${data.settings.tts_rate}x)`);
-    } else {
-      addLog(`[Preferências] [!] ${data.error || "Erro ao salvar"}`);
-      onSettingsChanged();
-    }
-  } catch (err) {
-    addLog(`[Preferências] [!] Erro: ${err.message}`);
-    onSettingsChanged();
-  }
-}
+async function saveSettings() { return settingsSaver.flush(); }
 
 async function loadGiftConfig() {
   try {
     const data = await apiFetch("/api/gift-config");
+    if (!data || !data.success) throw new Error("Falha ao carregar");
     const list = Array.isArray(data.hint_gifts) ? data.hint_gifts : [];
     giftTags = list.map((n) => giftByName(n)?.name || n).filter(Boolean);
     giftTags = [...new Set(giftTags)];
@@ -3461,18 +3520,24 @@ async function loadGiftConfig() {
     renderRiddleTags();
     renderSizeGiftTags();
     renderLetterGiftTags();
-  } catch (e) {}
+    giftsHydrated = true; preferenceHydration("gifts", true);
+    refreshAllGiftPickers();
+  } catch (e) { preferenceHydration("gifts", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
 }
 
 function renderPanelRiddle(text, stage) {
   const el = document.getElementById("panelRiddle");
-  if (!el) return;
-  el.textContent = text ? String(text) : "-";
+  const value = text ? String(text) : "";
+  panelRiddleState = !value ? "hidden" : (value === "Gerando charada…" ? "loading" : "ready");
+  if (el) el.textContent = value || "-";
+  updatePanelRiddleControls();
 }
 
 function clearPanelRiddle() {
+  panelRiddleState = "hidden";
   const el = document.getElementById("panelRiddle");
   if (el) el.textContent = "-";
+  updatePanelRiddleControls();
 }
 
 async function syncGameState() {
@@ -3482,8 +3547,6 @@ async function syncGameState() {
     setDisplayControlsEnabled(gameActive);
     setManualButtonsEnabled(gameActive);
     const riddleVisible = !!(data.current_riddle && data.display && data.display.riddle_visible);
-    const replay = document.getElementById("btnReplayRiddle");
-    if (replay) replay.disabled = !(gameActive && riddleVisible);
     const hasPostGame = !!(data.finished && data.post_game_summary && data.post_game_summary.palavras);
     setPostGameButtonsEnabled(hasPostGame && !!data.python_connected);
     const cwEl = document.getElementById("currentWord");
@@ -3493,6 +3556,7 @@ async function syncGameState() {
     } else {
       clearPanelRiddle();
     }
+    updatePanelRiddleControls();
     if (data.display) updateObsControlStatus({ ranking_view: data.display.ranking_view });
     if (data.python_connected) {
       setRunningUI(true);
@@ -3535,24 +3599,63 @@ async function loadMe() {
   } catch {}
 }
 
-const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
+const FEATURE_TABS = ["connect", "sons", "overlays", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
+
+function syncExtraGamesNav() {
+  const menu = document.getElementById("extraGamesNav");
+  if (!menu) return;
+  menu.hidden = !Array.from(menu.querySelectorAll(".tab-btn")).some((button) => button.style.display !== "none");
+}
+
+function syncExtraGamesExpanded(menu) {
+  const trigger = menu && menu.querySelector(".tp-extra-games-trigger");
+  if (trigger) trigger.setAttribute("aria-expanded", String(menu.open));
+}
+
+const extraGamesMenu = document.getElementById("extraGamesNav");
+if (extraGamesMenu) {
+  syncExtraGamesExpanded(extraGamesMenu);
+  extraGamesMenu.addEventListener("toggle", () => syncExtraGamesExpanded(extraGamesMenu));
+  document.addEventListener("click", (event) => {
+    if (extraGamesMenu.open && !extraGamesMenu.contains(event.target)) {
+      extraGamesMenu.open = false;
+      syncExtraGamesExpanded(extraGamesMenu);
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && extraGamesMenu.open) {
+      extraGamesMenu.open = false;
+      syncExtraGamesExpanded(extraGamesMenu);
+      extraGamesMenu.querySelector(".tp-extra-games-trigger")?.focus();
+    }
+  });
+}
 
 function applyFeatureGating(user) {
   if (!user || user.role === "admin") {
     // Admin: mostra tudo
     document.querySelectorAll(".tab-btn").forEach((b) => (b.style.display = ""));
     document.querySelectorAll(".tab-page").forEach((p) => (p.style.display = ""));
+    document.querySelectorAll(".tp-sound-section").forEach((section) => (section.hidden = false));
+    syncExtraGamesNav();
     return;
   }
   const f = (user.features && typeof user.features === "object") ? user.features : {};
   const allAllowed = !Object.keys(f).length; // {} = tudo liberado
+  const featureAllowed = (tab) => tab === "connect" ? true : (allAllowed ? true : f[tab] !== false);
   let visibleTabs = [];
   document.querySelectorAll(".tab-btn").forEach((b) => {
     const tab = b.dataset.tab;
-    const allowed = tab === "connect" ? true : (allAllowed ? true : f[tab] !== false);
+    const allowed = tab === "sons"
+      ? (featureAllowed("chat") || featureAllowed("alerts"))
+      : featureAllowed(tab);
     b.style.display = allowed ? "" : "none";
     if (allowed) visibleTabs.push(tab);
   });
+  document.querySelectorAll(".tp-sound-section").forEach((section) => {
+    section.hidden = !featureAllowed(section.dataset.featureSection);
+  });
+  syncExtraGamesNav();
   document.querySelectorAll(".tab-page").forEach((p) => {
     const tab = p.id.replace("tab-", "");
     if (FEATURE_TABS.includes(tab) && !visibleTabs.includes(tab)) {
@@ -3596,9 +3699,10 @@ let dueloSettings = { mode: "hp", hp_start: 100, hp_max: 100, shield_start: 100,
 let dueloGifts = [];
 
 async function loadDueloState() {
+  if (dueloHydrated) return; // Não reidratar por cima de edições locais pendentes.
   try {
     const data = await apiFetch("/api/duelo/config");
-    if (!data.success) return;
+    if (!data.success) throw new Error(data.error || "Falha ao carregar");
     dueloActive = !!data.active;
     if (data.settings && typeof data.settings === "object") {
       dueloSettings = Object.assign({}, dueloSettings, data.settings);
@@ -3646,7 +3750,8 @@ async function loadDueloState() {
     renderLayoutEditor();
     renderSupporters();
     setDueloStatusButtons(dueloActive);
-  } catch (e) {}
+    dueloHydrated = true; preferenceHydration("duelo", true);
+  } catch (e) { preferenceHydration("duelo", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
 }
 
 function dueloSyncFlat(s) {
@@ -4190,6 +4295,7 @@ function selectDueloGiftName(i, name) {
   dueloGifts[i] = dueloGifts[i] || {};
   dueloGifts[i].name = name;
   closeDueloAc(i);
+  dueloQuickSave();
 }
 
 function closeDueloAc(i) {
@@ -4225,11 +4331,13 @@ function openDueloAc(i) {
 function addDueloGiftRow(character) {
   dueloGifts.push({ name: "", character: (character === "lula" ? "lula" : "flavio"), type: "golpe", action: "punch", damage: 0, audio: "", active: true });
   renderDueloGifts();
+  dueloQuickSave();
 }
 
 function removeDueloGift(i) {
   dueloGifts.splice(i, 1);
   renderDueloGifts();
+  dueloQuickSave();
 }
 
 async function uploadDueloAudio(i, file) {
@@ -4241,6 +4349,7 @@ async function uploadDueloAudio(i, file) {
     if (data.success) {
       dueloGifts[i] = dueloGifts[i] || {};
       dueloGifts[i].audio = data.filename;
+      dueloQuickSave();
       dueloMsg("Áudio enviado: " + data.filename);
       renderDueloGifts();
     } else dueloMsg(data.error || "Erro no upload");
@@ -4551,54 +4660,15 @@ function renderLayoutEditor() {
   });
 }
 
-let dueloAutoTimer = null;
-function dueloQuickSave() {
-  clearTimeout(dueloAutoTimer);
-  dueloAutoTimer = setTimeout(async () => {
-    try {
-      const settings = readDueloSettings();
-      const data = await apiFetch("/api/duelo/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gifts: dueloConfiguredGifts(), active: dueloActive, settings }),
-      });
-      if (data && data.success && data.settings) dueloSyncFlat(data.settings);
-      dueloMsg("Áudio/cenário salvos automaticamente.");
-    } catch (e) { dueloMsg("Erro ao salvar: " + e.message); }
-  }, 300);
-}
+function dueloQuickSave() { if (dueloHydrated) dueloSaver.schedule(); }
 
-async function dueloSaveConfig() {
-  try {
-    const settings = readDueloSettings();
-    const data = await apiFetch("/api/duelo/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gifts: dueloConfiguredGifts(), active: dueloActive, settings }),
-    });
-    if (data.success) {
-      dueloSyncFlat(data.settings);
-      renderDueloGifts();
-      renderDueloSettings();
-      const st = data.settings || {};
-      const timed = st.game_mode === "timed";
-      dueloMsg(timed
-        ? `Configuração salva! Modo TEMPO · rodada ${st.round_time_s || 180}s · resultado ${st.round_result_delay_s || 8}s · presentes ${(st.main_gifts || {}).flavio ? 'OK' : '—'}`
-        : `Configuração salva! HP ${st.hp_start || 100} · Escudo ${st.shield_start || 100} · Meta ${st.vote_target || 0}`);
-    } else {
-      dueloMsg(data.error || "Erro ao salvar");
-    }
-  } catch (e) { dueloMsg("Erro de rede: " + e.message); }
-}
+async function dueloSaveConfig() { return dueloSaver.flush(); }
 
 async function dueloStart() {
   try {
     const settings = readDueloSettings();
-    const data = await apiFetch("/api/duelo/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gifts: dueloConfiguredGifts(), settings }),
-    });
+    await dueloSaver.flush();
+    const data = await dueloRequest("/api/duelo/start", { gifts: dueloConfiguredGifts(), settings });
     setDueloStatusButtons(data.active);
     dueloMsg(data.success ? "Área ativa!" : (data.error || "Erro"));
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
@@ -4606,7 +4676,8 @@ async function dueloStart() {
 
 async function dueloStop() {
   try {
-    const data = await apiFetch("/api/duelo/stop", { method: "POST" });
+    await dueloSaver.flush();
+    const data = await dueloRequest("/api/duelo/stop");
     setDueloStatusButtons(data.active);
     dueloMsg(data.success ? "Área desativada." : (data.error || "Erro"));
   } catch (e) { dueloMsg("Erro de rede: " + e.message); }
@@ -4665,23 +4736,29 @@ function copyRoomUrl() {
   }).catch(() => {});
 }
 
-async function copyRoomLink(path) {
+async function copyRoomLink(path, statusId = "") {
+  const status = statusId ? document.getElementById(statusId) : null;
+  if (status) status.textContent = "Preparando URL…";
   try {
     const data = await apiFetch("/api/game/room-link", { method: "POST" });
     if (!data.success) {
       addLog(`[Link] [!] ${data.error || "Erro"}`);
+      if (status) status.textContent = data.error || "Não foi possível gerar a URL.";
       return;
     }
     const url = `${location.origin}${path}?room=${encodeURIComponent(data.room)}&tk=${encodeURIComponent(data.token)}`;
     await navigator.clipboard.writeText(url);
     addLog(`[Link] Link público copiado: ${path}`);
+    if (status) status.textContent = "URL completa copiada.";
   } catch (err) {
     addLog(`[Link] [!] Erro de rede: ${err.message}`);
+    if (status) status.textContent = "Não foi possível copiar a URL. Verifique a conexão e a permissão da área de transferência.";
   }
 }
 
 (async function initGiftPanel() {
   await loadGiftCatalog();
+  renderSoundAlerts();
   await loadGiftConfig();
   await loadSettings();
   await loadTresConfig();
@@ -4691,20 +4768,23 @@ async function copyRoomLink(path) {
 async function loadTresConfig() {
   try {
     const data = await apiFetch("/api/tres/config");
-    if (data && data.config) {
+    if (!data || !data.success || !data.config) throw new Error("Falha ao carregar");
+    if (data && data.success && data.config) {
+      savedTresConfig = { ...data.config };
       if (tresSizePicker) tresSizePicker.setValues(data.config.size ? [data.config.size] : []);
       if (tresLetterPicker) tresLetterPicker.setValues(data.config.letter ? [data.config.letter] : []);
       if (tresTicketPicker) tresTicketPicker.setValues(data.config.ticket ? [data.config.ticket] : []);
       const st = data.config.stage_times || [120, 60, 30];
       const sp = data.config.stage_points || [30, 20, 10];
-      if (document.getElementById("tresTime1")) document.getElementById("tresTime1").value = st[0] || 120;
-      if (document.getElementById("tresTime2")) document.getElementById("tresTime2").value = st[1] || 60;
-      if (document.getElementById("tresTime3")) document.getElementById("tresTime3").value = st[2] || 30;
-      if (document.getElementById("tresPts1")) document.getElementById("tresPts1").value = sp[0] || 30;
-      if (document.getElementById("tresPts2")) document.getElementById("tresPts2").value = sp[1] || 20;
-      if (document.getElementById("tresPts3")) document.getElementById("tresPts3").value = sp[2] || 10;
+      if (document.getElementById("tresTime1")) document.getElementById("tresTime1").value = st[0] ?? 120;
+      if (document.getElementById("tresTime2")) document.getElementById("tresTime2").value = st[1] ?? 60;
+      if (document.getElementById("tresTime3")) document.getElementById("tresTime3").value = st[2] ?? 30;
+      if (document.getElementById("tresPts1")) document.getElementById("tresPts1").value = sp[0] ?? 30;
+      if (document.getElementById("tresPts2")) document.getElementById("tresPts2").value = sp[1] ?? 20;
+      if (document.getElementById("tresPts3")) document.getElementById("tresPts3").value = sp[2] ?? 10;
+      tresHydrated = true; preferenceHydration("tres", true);
     }
-  } catch (e) {}
+  } catch (e) { preferenceHydration("tres", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
 }
 async function loadPanelConfig() {
   try {
@@ -4712,10 +4792,7 @@ async function loadPanelConfig() {
     if (data && data.current_word) {
       document.getElementById("currentWord").textContent = data.current_word;
     }
-    if (data && data.tiktok_engine && document.getElementById("tiktokEngine")) {
-      document.getElementById("tiktokEngine").value = data.tiktok_engine;
-      onEngineChange();
-    }
+    if (data && typeof data.tiktok_engine === "string") updateConnectionCredentialFields(data.tiktok_engine);
   } catch {}
 }
 let whPage = 1;
@@ -4800,11 +4877,25 @@ function fetchHistoryAll() { loadWordHistory(1); }
 loadMe().then(() => { fetchHistoryAll(); restoreActiveTab(); });
 syncGameState();
 loadPanelConfig();
-loadPanelConfig();
 loadSoundAlerts();
 loadCacaState();
 document.getElementById("username").addEventListener("blur", saveCredentials);
 document.getElementById("apiKey").addEventListener("blur", saveCredentials);
+
+for (const type of ["input", "change"]) document.addEventListener(type, event => {
+  const el = event.target;
+  if (!el.matches("input, select, textarea") || el.type === "file" || el.type === "button") return;
+  if (el.id === "username" || el.id === "apiKey") credentialsSaver.schedule(type === "change" ? 0 : 600);
+  if (el.id === "cacaCmdMode" || el.id === "cacaPrefix") cacaSaver.schedule(type === "change" ? 0 : 500);
+  if (/^tres(Time|Pts)[123]$/.test(el.id) && tresHydrated) tresSaver.schedule(type === "change" ? 0 : 500);
+  if (el.closest("#tab-duelo") && !/test/i.test(el.id) && dueloHydrated) {
+    if (el.dataset.f && el.dataset.i !== undefined) { const idx = Number(el.dataset.i); if (dueloGifts[idx]) dueloGifts[idx][el.dataset.f] = el.dataset.f === "active" ? el.checked : el.value; }
+    dueloSaver.schedule(type === "change" ? 0 : 500);
+  }
+});
+try { const filters = JSON.parse(localStorage.getItem("tikplay.logCategories")); if (Array.isArray(filters)) document.querySelectorAll("[data-log-category]").forEach(el => { el.checked = filters.includes(el.dataset.logCategory); }); } catch (e) {}
+setLogCategories();
+for (const scope of ["settings","gifts","tres","duelo"]) preferenceHydration(scope, false);
 </script>
 </body>
 </html>

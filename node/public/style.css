@@ -7,6 +7,33 @@ body {
   min-height: 100vh;
 }
 
+/* Degradê fixo com os 15% inferiores sólidos na página pública. */
+body.secret-word-public {
+  position: relative;
+  isolation: isolate;
+}
+body.secret-word-public::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  pointer-events: none;
+  background: linear-gradient(to bottom,
+    rgba(15, 17, 26, 0) 0%,
+    rgba(15, 17, 26, 0) 40%,
+    rgba(15, 17, 26, 0.028) 44.5%,
+    rgba(15, 17, 26, 0.104) 49%,
+    rgba(15, 17, 26, 0.216) 53.5%,
+    rgba(15, 17, 26, 0.352) 58%,
+    rgba(15, 17, 26, 0.5) 62.5%,
+    rgba(15, 17, 26, 0.648) 67%,
+    rgba(15, 17, 26, 0.784) 71.5%,
+    rgba(15, 17, 26, 0.896) 76%,
+    rgba(15, 17, 26, 0.972) 80.5%,
+    rgba(15, 17, 26, 1) 85%,
+    rgba(15, 17, 26, 1) 100%);
+}
+
 .container {
   max-width: 640px;
   margin: 0 auto;
@@ -504,15 +531,17 @@ body {
   background: linear-gradient(165deg, #20242F 0%, #171A24 55%, #141826 100%);
   border: 1px solid rgba(139, 92, 246, 0.4);
   border-radius: 16px;
-  padding: 18px 26px 16px;
+  padding: 18px clamp(8px, 4vw, 26px) 16px;
   text-align: center;
   box-shadow:
     0 14px 34px rgba(4, 6, 16, 0.6),
     0 0 22px rgba(139, 92, 246, 0.14),
     inset 0 1px 0 rgba(167, 139, 250, 0.08);
   animation: dicaPopIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  max-width: 260px;
-  width: 80%;
+  box-sizing: border-box;
+  max-width: min(320px, calc(100vw - 12px));
+  width: min(94vw, 320px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -563,15 +592,21 @@ body {
 }
 
 .dica-word {
-  font-size: 1.55em;
+  box-sizing: border-box;
+  font-size: clamp(1rem, 5.8vw, 1.45em);
   font-weight: 900;
   color: #C4B5FD;
-  letter-spacing: 2.5px;
-  margin-right: -2.5px;
+  letter-spacing: clamp(0.02em, 0.45vw, 0.08em);
   text-align: center;
   width: 100%;
+  max-width: 100%;
+  line-height: 1.15;
   text-transform: uppercase;
   text-shadow: 0 0 18px rgba(167, 139, 250, 0.25);
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
 }
 
 .dica-countdown {
@@ -2204,6 +2239,30 @@ body {
   background: linear-gradient(90deg, #22c55e, #a3e635, #facc15);
   box-shadow: 0 0 18px rgba(250, 204, 21, 0.9);
 }
+.compact .tap-meta .meta-track-fill.full.tap-meta-boss-ready {
+  position: relative;
+  overflow: hidden;
+}
+.compact .tap-meta .meta-track-fill.full.tap-meta-boss-ready::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(236, 253, 245, 0.12) 25%,
+    rgba(255, 255, 255, 0.72) 50%,
+    rgba(236, 253, 245, 0.12) 75%,
+    rgba(255, 255, 255, 0) 100%);
+  background-size: 320% 100%;
+  animation: techBorderFlow 4.5s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .compact .tap-meta .meta-track-fill.full.tap-meta-boss-ready::after {
+    animation: none;
+    background-position: center;
+  }
+}
 
 .compact .tension-meta .meta-track-fill {
   background: linear-gradient(90deg, #38BDF8, #22D3EE);
@@ -2508,10 +2567,49 @@ body {
   }
 }
 
+/* Uma única linha centralizada; o encaixe altera só largura, fonte e espaçamento. */
+.compact .secret-display .boxes.secret-letter-grid {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--secret-box-gap, var(--secret-letter-gap));
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+.compact .secret-display .boxes.secret-letter-grid .letter-slot {
+  flex: 0 0 var(--secret-box-width, var(--secret-box-max));
+  min-width: 0;
+}
+.compact .secret-display .boxes.secret-letter-grid .letter-slot .box {
+  width: 100%;
+  min-width: 0;
+  height: var(--secret-box-height);
+  box-sizing: border-box;
+  font-size: var(--secret-box-font-size, var(--secret-letter-font-max));
+  line-height: 1;
+}
+.compact .secret-display .boxes.secret-letter-grid .letter-number {
+  transform: scale(var(--secret-number-scale, 1));
+}
+
 /* Leitura do painel lateral no OBS, preservando as classes e estados do jogo. */
 @media (min-width: 641px) {
   .compact .game-layout {
     grid-template-columns: var(--tp-overlay-side-width) minmax(0, 1fr);
+  }
+}
+.compact .secret-display .boxes.secret-letter-grid {
+  --secret-box-max: 34px;
+  --secret-box-height: 46px;
+  --secret-letter-gap: 6px;
+  --secret-letter-font-max: 23.2px;
+}
+@media (max-width: 640px) {
+  .compact .secret-display .boxes.secret-letter-grid {
+    --secret-box-max: 30px;
+    --secret-box-height: 40px;
+    --secret-letter-font-max: 20.8px;
   }
 }
 .compact .gl-side { min-width: 0; }
