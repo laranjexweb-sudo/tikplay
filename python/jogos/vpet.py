@@ -656,17 +656,3 @@ class VPetEngine:
             "hatched": self.state.get("hatched", False),
             "battle": dict(b),
         }
-
-
-# =====================================================================
-# Jogo dos 3 Pontinhos — adivinhação de palavra com 3 dicas progressivas
-# Dica 1 (difícil): 120s / 30 pts | Dica 2 (contextual): 60s / 20 pts |
-# Dica 3 (fácil): 30s / 10 pts. Presentes revelam tamanho e primeira letra.
-# =====================================================================
-
-TRES_STAGE_TIMES = {1: 120, 2: 60, 3: 30}
-TRES_STAGE_POINTS = {1: 30, 2: 20, 3: 10}
-TRES_PAUSE_AFTER_END = 10  # pausa entre rodadas
-TRES_COUNTDOWN = 5         # cronômetro pré-jogo (dicas ocultas)
-
-

@@ -296,3 +296,16 @@ if __name__ == "__main__":
     if len(sys.argv) <= 1:
         print(f"DB: {DB_PATH}")
         print(f"gifts cadastrados: {len(GiftCatalog()._rows)}")
+
+_catalog_instance = None
+
+
+def get_catalog():
+    """Singleton preguiçoso do catálogo (compatível com o antigo game._gift_catalog)."""
+    global _catalog_instance
+    if _catalog_instance is None:
+        try:
+            _catalog_instance = GiftCatalog()
+        except Exception:
+            _catalog_instance = False
+    return _catalog_instance if _catalog_instance is not False else None

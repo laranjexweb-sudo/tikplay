@@ -109,3 +109,30 @@ def strip_accents(s: str) -> str:
         return ""
     s = s.lower().strip()
     return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+GIFT_PT_MAP = {
+    "rose": "Rosa",
+    "finger heart": "Coração com os Dedos",
+    "hand heart": "Coração com as Mãos",
+    "tiktok": "TikTok",
+    "ice cream": "Casquinha de Sorvete",
+    "doughnut": "Rosquinha",
+    "donut": "Rosquinha",
+    "coffee": "Café",
+    "weights": "Halteres",
+    "paper crane": "Ave de Papel (Tsuru)",
+    "cap": "Boné",
+    "panda": "Panda",
+    "perfume": "Perfume",
+    "microphone": "Microfone",
+    "crown": "Coroa",
+    "gg": "GG",
+    "love bear": "Ursinho do Amor",
+    "sunglasses": "Óculos de Sol",
+    "gold mine": "Mina de Ouro",
+    "lion": "Leão",
+    "galaxy": "Galáxia",
+    "universe": "Universo",
+    "rosa": "Rosa",
+}
