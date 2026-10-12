@@ -1,0 +1,35 @@
+/* Experimento de cores: nenhum tamanho ou espaçamento é alterado. */
+:root {
+  --tp-game-bg: #090c12;
+  --tp-game-card: #222936;
+  --tp-game-row: #1b2230;
+  --tp-game-row-hover: #293345;
+  --tp-game-track: #101620;
+  --tp-game-border: #39465a;
+  --tp-game-muted: #b6c4d8;
+}
+body { background: var(--tp-game-bg); }
+.compact .gl-side .roulette-card,
+.compact .gl-side .meta-card,
+.compact .gl-side .winners-panel,
+.compact .secret-display,
+.compact .riddle-panel {
+  background: var(--tp-game-card);
+  border-color: var(--tp-game-border);
+}
+.compact .guess-row,
+.compact .guess-row.rank-green,
+.compact .guess-row.rank-lime,
+.compact .guess-row.rank-yellow,
+.compact .guess-row.rank-orange,
+.compact .guess-row.rank-red,
+.compact .gl-side .winner-entry {
+  background: var(--tp-game-row);
+}
+.compact .guess-row:hover { background: var(--tp-game-row-hover); }
+.compact .gl-side .meta-track,
+.compact .secret-display .size-lock { background: var(--tp-game-track); }
+.compact .guess-nickname,
+.compact .secret-display .label,
+.compact .riddle-loading,
+.compact .roulette-info { color: var(--tp-game-muted); }

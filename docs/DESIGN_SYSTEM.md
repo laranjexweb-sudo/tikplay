@@ -436,6 +436,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Segundo teste de paleta: grafite neutro sem matiz azul, fundo #121212 e cards #292929, mantendo medidas. Primeira paleta salva em `docs/layout-backups/2026-10-12-contraste-01/palette-01-azulada.css`.
+
 - 2026-10-12 — Teste reversível de paleta da Palavra Secreta: fundo quase preto, cards grafite azulado e texto secundário mais claro, sem mudanças de dimensões. Override isolado em `ui/secret-word-palette.css`; backup em `docs/layout-backups/2026-10-12-contraste-01`.
 
 - 2026-10-12 — Ranking lateral mais compacto: avatar de 24px, espaçamento vertical de 4px e nomes de 16px para exibir mais participantes; vitórias mantidas à direita.
