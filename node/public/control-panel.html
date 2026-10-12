@@ -174,8 +174,9 @@
   .log-ok { color: #0b7a3a; }
   .log-warn { color: #9a6a00; }
   .log-err { color: #b30000; }
-  .log-guess { color: #006699; }
-  .log-hint { color: #7a2fbf; }
+.log-guess { color: #006699; }
+.log-hint { color: #7a2fbf; }
+.log-chat { color: #0496a0; }
   .kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dashed #ccc; font-size: 0.85rem; }
   .kv strong { font-weight: 800; }
   .kv span { font-weight: 600; }
@@ -1172,7 +1173,19 @@
       <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h2 class="m-0">Logs <span class="badge text-bg-dark" title="Versão do layout do painel">v75</span></h2>
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 align-items-center">
+            <select id="logFilter" class="form-select form-select-sm" style="max-width:150px" onchange="setLogFilter(this.value)" title="Filtrar logs por origem">
+              <option value="todos">TODOS</option>
+              <option value="sistema">Sistema</option>
+              <option value="chat">Chat</option>
+              <option value="palavra">Palavra</option>
+              <option value="batalha">Batalha</option>
+              <option value="caca">Caça</option>
+              <option value="bichinho">Bichinho</option>
+              <option value="tres">3 Dicas</option>
+              <option value="duelo">Duelo</option>
+              <option value="tts">Áudio/TTS</option>
+            </select>
             <button class="btn btn-nb btn-dark btn-sm" onclick="copyAllLogs()">Copiar Logs</button>
             <button class="btn btn-nb btn-danger btn-sm" onclick="clearLogs()" title="Limpar tela de logs">Limpar</button>
           </div>
@@ -1259,7 +1272,7 @@ function connectLogs() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === "log") {
-      addLog(msg.text);
+      addLog(msg);
     } else if (msg.type === "status") {
       updateStatus(msg);
     } else if (msg.type === "word") {
@@ -2398,26 +2411,56 @@ function updateStatus(s) {
   connectSoundSeenOnce = true;
 }
 
-function addLog(text) {
+const LOG_GAMES = ["sistema", "chat", "palavra", "batalha", "caca", "bichinho", "tres", "duelo", "tts"];
+let currentLogFilter = "todos";
+
+function normLogGame(g) {
+  const s = String(g || "").toLowerCase();
+  if (s === "vpet") return "bichinho";
+  return s || "sistema";
+}
+
+function applyLogFilter(game) {
+  if (currentLogFilter === "todos") return true;
+  return normLogGame(game) === currentLogFilter;
+}
+
+function setLogFilter(v) {
+  currentLogFilter = (v && LOG_GAMES.includes(v)) ? v : "todos";
+  const area = document.getElementById("logArea");
+  if (area) Array.from(area.querySelectorAll(".log-line")).forEach((l) => {
+    l.style.display = applyLogFilter(l.dataset.game) ? "" : "none";
+  });
+}
+
+function addLog(item) {
   const area = document.getElementById("logArea");
   const line = document.createElement("div");
   line.className = "log-line";
+  const text = (typeof item === "string" ? item : (item && item.text)) || "";
+  const game = (item && item.game) || "sistema";
+  const level = (item && item.level) || "";
+  line.dataset.game = normLogGame(game);
+  line.dataset.level = level || "info";
 
-  if (text.includes("ERRO") || text.includes("Error")) {
+  if (level === "err" || text.includes("ERRO") || text.includes("Error")) {
     line.classList.add("log-err");
   } else if (text.includes("[Guess]")) {
     line.classList.add("log-guess");
+  } else if (level === "chat" || text.startsWith("[Chat]")) {
+    line.classList.add("log-chat");
   } else if (text.includes("[Hint]") || text.includes("dica")) {
     line.classList.add("log-hint");
-  } else if (text.includes("OK") || text.includes("Conectado") || text.includes("ao vivo")) {
+  } else if (level === "ok" || text.includes("OK") || text.includes("Conectado") || text.includes("ao vivo")) {
     line.classList.add("log-ok");
-  } else if (text.includes("ATENCAO") || text.includes("Warning")) {
+  } else if (level === "warn" || text.includes("ATENCAO") || text.includes("Warning")) {
     line.classList.add("log-warn");
   } else {
     line.classList.add("log-info");
   }
 
   line.textContent = `[${formatTime()}] ${text}`;
+  line.style.display = applyLogFilter(line.dataset.game) ? "" : "none";
   area.appendChild(line);
   area.scrollTop = area.scrollHeight;
 }

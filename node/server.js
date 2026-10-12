@@ -437,7 +437,7 @@ function handleDaemonMessage(msg) {
       broadcastToClients(tenant.browserClients, gameMsg);
       broadcastToClients(tenant.logClients, gameMsg);
     } else if (msg.type === "log") {
-      broadcastLog(tenant, msg.text || "");
+      broadcastLog(tenant, { text: msg.text || "", game: msg.game || "", level: msg.level || "" });
     } else if (msg.type === "panel_word") {
       tenant.currentWord = msg.text || "";
       broadcastToClients(tenant.logClients, { type: "word", word: tenant.currentWord });

@@ -63,8 +63,9 @@ function broadcastToClients(clients, msg) {
   }
 }
 
-function broadcastLog(tenant, text) {
-  broadcastToClients(tenant.logClients, { type: "log", text });
+function broadcastLog(tenant, item) {
+  // Aceita string (legado) ou objeto estruturado {text, game, level}.
+  broadcastToClients(tenant.logClients, { type: "log", ...(typeof item === "string" ? { text: item } : item || {}) });
 }
 
 module.exports = { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog };

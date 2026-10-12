@@ -296,6 +296,13 @@ class GameSession:
             return None
         voice_key = self.settings.get("tts_voice") or ""
         audio_dir = os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id))
+        if voice_key:
+            avail = (voice_key == tts.VOICE_PIPER_FABER and tts.piper_available()) or \
+                    (voice_key == tts.VOICE_GTTAS and tts.gtts_available()) or \
+                    (voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA) and tts.edge_available()) or \
+                    (voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX) and tts.kokoro_available())
+            if not avail:
+                self._throttled_log("tts_motor", f"[TTS] voz '{voice_key}' indisponível no servidor (motor/instalação/rede)", game="tts", level="warn")
         if voice_key == tts.VOICE_PIPER_FABER:
             if not tts.piper_available():
                 return None
@@ -323,6 +330,16 @@ class GameSession:
         if p is None:
             return "#"
         return str(p)
+
+    def _throttled_log(self, key, text, game="sistema", level="info", secs=2.0):
+        """Log estruturado com throttle por chave (evita flood no diagnóstico)."""
+        now = time.time()
+        last = getattr(self, "_log_last", {})
+        if now - last.get(key, -999) < secs:
+            return
+        last[key] = now
+        self._log_last = last
+        emit(self.tenant_id, "log", {"text": text, "game": game, "level": level})
 
     def _queue_narration(self, raw: str):
         """Enfileira/envia a narração do bate-papo conforme as preferências.
@@ -836,6 +853,7 @@ class GameSession:
 
     async def on_comment(self, user, nickname, avatar, text, user_meta=None):
         raw = text.strip()
+        self._throttled_log("chat_arrival", f"[Chat] {user}: {raw}"[:130], game="chat", level="chat", secs=1.0)
         emit(self.tenant_id, "game", {
             "type": "chat",
             "user": user,
@@ -873,6 +891,7 @@ class GameSession:
                     pass
                 self._emit_tres_weekly_refresh()
             # Sempre retorna quando o jogo está ativo: o chat é capturado pelo 3 Pontinhos
+            self._throttled_log("tres_capture", "[Chat] capturado pelo 3 Dicas (jogo ativo) — outros jogos não recebem", game="tres", level="warn", secs=2.0)
             return
 
         # ---------------------------------------------------------
@@ -905,9 +924,11 @@ class GameSession:
                 return
 
         if not self.game.secret_word or self.game.finished:
+            self._throttled_log("palavra_nopartida", "[Palavra] comentário ignorado: jogo sem partida ativa ou finalizado", game="palavra", level="info", secs=2.0)
             return
         prefix = self._command_prefix()
         if prefix and not raw.startswith(prefix):
+            self._throttled_log("palavra_prefix", f"[Palavra] palpite ignorado: exige prefixo '{prefix}' no início do comentário", game="palavra", level="warn", secs=2.0)
             return
 
         body = raw[len(prefix):].strip() if prefix else raw.strip()
@@ -1791,6 +1812,7 @@ async def process_commands(queue):
             if not isinstance(rate, (int, float)):
                 rate = 1.0
             voice_key = str(cmd.get("voice") or tts.VOICE_GTTAS)
+            emit(tid, "log", {"text": f"[TTS] teste de voz '{voice_key}' (rate {rate})", "game": "tts", "level": "info"})
             audio_dir = os.path.join(TTS_AUDIO_ROOT, str(tid))
             if voice_key == tts.VOICE_PIPER_FABER:
                 audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, float(rate))
@@ -1802,8 +1824,9 @@ async def process_commands(queue):
                 audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, float(rate) < 1.0)
             if audio_path:
                 emit(tid, "tts_test_ready", f"/tts-audio/{tid}/{os.path.basename(audio_path)}")
+                emit(tid, "log", {"text": f"[TTS] áudio de teste gerado: /tts-audio/{tid}/{os.path.basename(audio_path)}", "game": "tts", "level": "ok"})
             else:
-                emit(tid, "log", "[TTS] Falha ao gerar áudio de teste (motor indisponível)")
+                emit(tid, "log", {"text": "[TTS] Falha ao gerar áudio de teste (motor indisponível)", "game": "tts", "level": "err"})
 
     for tid in list(sessions.keys()):
         await stop_session_task(tid)

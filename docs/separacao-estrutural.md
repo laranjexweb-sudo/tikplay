@@ -109,3 +109,16 @@
 - **Fase B-1 (Node/daemon) concluída:** `node/lib/daemon.js` (classe `Daemon`: spawn/IO stdout→`onMessage`, stderr→`onStderr`, backoff/respawn, `send`, `kill`). `server.js` passou a usar o `Daemon` e manteve `handleDaemonMessage`/`msgTenant`/`daemonSend` (33 usos); sem refs antigas (`spawnDaemon`/`daemonPid`/`daemonBackoff`/`daemonRespawnTimer`). Verificado: `node --check` + restart ("Daemon ... iniciado" roteado) + `/api/gifts` 200.
 - **Fase B-2a (Node/ws) concluída:** camada de estado/broadcast extraída para `node/lib/ws.js` (`tenants`, `emptyGameState`, `getTenant`, `broadcastToClients`, `broadcastLog`); `server.js` importa do módulo e mantém `broadcastStatus`/`broadcastStatusAll`/`updateGameState`/`wss`/connection handler. Verificado: `node --check` + restart ("Daemon ... iniciado") + `/api/gifts` 200.
 - Pendente: **B-2b (Node): `routes/*.js` por grupo**, C (Design System), D/E (aguardam decisões). Validação LIVE não verificada.
+
+## 11. Logs — diagnóstico e divisão por jogo (2026-10-12)
+
+**L1 (estrutura) concluída:**
+- Python `service_common.emit`: `type=="log"` aceita dict `{text, game, level}` (compat string).
+- Node: `handleDaemonMessage` repassa `{text, game, level}`; `lib/ws.js broadcastLog` aceita objeto/string.
+- Painel: `addLog` aceita objeto (dataset game/level), cores por nível (incl. `.log-chat`), **filtro por jogo** (`#logFilter`: Todos/Sistema/Chat/Palavra/Batalha/Caça/Bichinho/3 Dicas/Duelo/Áudio-TTS).
+
+**L2 (diagnóstico) concluída:**
+- `on_comment`: log de chegada `[Chat] ...` (throttle 1s) e motivos de descarte: `3 Dicas ativo` (game=tres), `jogo sem partida`, `exige prefixo` (game=palavra).
+- TTS: `_tts_url` loga "voz indisponível" (game=tts); `tts_test` loga início/ok/erro.
+
+**Pendente:** usar os logs para corrigir (TTS mudo; overlap 3 Dicas×Palavra/prefixo) e **L3** mini-log por jogo + indicadores.
