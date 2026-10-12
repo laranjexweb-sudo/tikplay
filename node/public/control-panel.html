@@ -91,6 +91,37 @@
   #tab-duelo { min-width: 0; }
   #tab-duelo .nb-card { max-width: 100%; }
   #tab-duelo .sup-audio .duelo-help { word-break: break-all; font-size: 10px; line-height: 1.15; }
+  /* ============ Aba 3 Dicas no padrão Duelo ============ */
+  #tab-tres { --duelo-gap: 10px; --duelo-radius: 10px; --duelo-border: 2px; --duelo-field-h: 34px; --duelo-section-pad: 12px; }
+  #tab-tres, #tab-tres *, #tab-tres *::before, #tab-tres *::after { box-sizing: border-box; }
+  #tab-tres .nb-card { padding: var(--duelo-section-pad); margin-bottom: 10px; max-width: 100%; }
+  #tab-tres .duelo-section-title { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; padding-bottom: 8px; border-bottom: var(--duelo-border) solid #000; margin-bottom: 10px; }
+  #tab-tres .duelo-grid { display: grid; gap: var(--duelo-gap); }
+  #tab-tres .duelo-grid-3 { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  #tab-tres .duelo-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  #tab-tres .duelo-field-label, #tab-tres .duelo-sub { font-size: 12px; font-weight: 800; margin: 0; letter-spacing: .02em; }
+  #tab-tres .duelo-sub { text-transform: uppercase; margin: 10px 0 4px; }
+  #tab-tres .duelo-hr { border: none; border-top: 2px solid #000; margin: 12px 0 10px; }
+  #tab-tres .duelo-field input[type="number"], #tab-tres .duelo-field input[type="text"], #tab-tres .duelo-field select,
+  #tab-tres .form-control, #tab-tres .form-select { height: var(--duelo-field-h); border: 2px solid #000; border-radius: 8px; font-size: 13px; box-shadow: none; }
+  #tab-tres .duelo-btn { height: 36px; border: 2px solid #000; border-radius: 8px; font-weight: 800; font-size: 13px; padding: 0 14px; box-shadow: 2px 2px 0 #000; display: inline-flex; align-items: center; justify-content: center; color: #000; text-decoration: none; }
+  #tab-tres .duelo-btn:hover { filter: brightness(1.06); }
+  #tab-tres .duelo-btn:disabled { opacity: .5; box-shadow: none; }
+  #tab-tres .duelo-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
+  #tab-tres .duelo-btn--primary { background: #fec90f; }
+  #tab-tres .duelo-btn--danger { background: #ff6b6b; }
+  #tab-tres .duelo-btn--warning { background: #ffd166; }
+  #tab-tres .duelo-btn--neutral { background: #e8e2d5; }
+  #tab-tres .duelo-btn--success { background: #3ddc84; }
+  #tab-tres .duelo-btn--small { height: 30px; font-size: 12px; padding: 0 10px; box-shadow: 1px 1px 0 #000; }
+  #tab-tres .duelo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #tab-tres .duelo-actions { margin-top: 8px; }
+  #tab-tres .duelo-help { font-size: 12px; color: #555; margin: 0 0 6px; }
+  #tab-tres .duelo-msg { font-size: 12px; color: #555; }
+  #tab-tres .duelo-stat { display: inline-flex; align-items: baseline; gap: 6px; border: 2px solid #000; border-radius: 8px; background: #fff; padding: 4px 10px; font-size: 12px; box-shadow: 2px 2px 0 #000; }
+  #tab-tres .duelo-stat-lbl { font-weight: 700; color: #666; font-size: 11px; }
+  #tab-tres .duelo-stat b { font-size: 13px; }
+  #tab-tres .duelo-testgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
   .duelo-panel-split { display: flex; flex-wrap: nowrap; align-items: stretch; flex: 1 1 auto; min-height: 0; }
   .duelo-panel-col { min-width: 0; min-height: 0; display: flex; }
   .duelo-panel-main { flex: 1 1 75%; flex-direction: column; }
@@ -378,10 +409,13 @@
             <button class="btn btn-nb btn-success flex-fill" id="btnNewGame" onclick="startNewGameFromPanel()" disabled>Iniciar Partida</button>
             <button class="btn btn-nb btn-info flex-fill" id="btnChangeRanking" onclick="displayActionFromPanel('change_ranking')">Mudar Ranking</button>
           </div>
-          <div class="d-flex gap-2 mt-2">
+          <div class="d-flex gap-2 mt-2 flex-wrap">
             <button class="btn btn-nb btn-primary flex-fill" id="btnManualHint" onclick="manualHintFromPanel()" disabled>Dica</button>
             <button class="btn btn-nb btn-warning flex-fill" id="btnManualRiddle" onclick="manualRiddleFromPanel()" disabled>Soltar Charada</button>
+            <button class="btn btn-nb btn-secondary flex-fill" id="btnReplayRiddle" onclick="replayRiddleFromPanel()" disabled>Replay</button>
             <button class="btn btn-nb btn-danger flex-fill" id="btnCloseRiddle" onclick="displayActionFromPanel('close_riddle')" disabled>Fechar Charada</button>
+            <button class="btn btn-nb btn-dark flex-fill" id="btnShowPostGame" onclick="displayActionFromPanel('show_postgame')" disabled>Exibir Lista</button>
+            <button class="btn btn-nb btn-outline-secondary flex-fill" id="btnClosePostGame" onclick="displayActionFromPanel('close_postgame')" disabled>Ocultar Lista</button>
           </div>
           <div class="text-secondary mt-2" style="font-size:0.8rem" id="obsControlStatus">Ranking atual: Ranking da Live</div>
         </div>
@@ -763,118 +797,133 @@
 
       <!-- ===================== 3 PONTINHOS ===================== -->
       <div class="tab-page" id="tab-tres" style="display:none">
-        <div class="nb-card mb-3">
-          <h2>JOGO DAS 3 DICAS</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
-            <div class="kv"><strong>Rodada:</strong> <span id="tresRound">-</span></div>
-            <div class="kv"><strong>Dica:</strong> <span id="tresStage">-</span></div>
-            <div class="kv"><strong>Timer:</strong> <span id="tresTimer">--:--</span></div>
-            <div class="kv"><strong>Palavra:</strong> <span id="tresPalavra">-</span></div>
-            <div class="kv"><strong>Status:</strong> <span id="tresStatus">Parado</span></div>
+
+        <!-- PARTIDA -->
+        <div class="nb-card">
+          <h2 class="duelo-section-title">Partida</h2>
+          <div class="duelo-row">
+            <span class="duelo-stat"><span class="duelo-stat-lbl">STATUS</span><b id="tresStatus">Parado</b></span>
+            <span class="duelo-stat"><span class="duelo-stat-lbl">RODADA</span><b id="tresRound">-</b></span>
+            <span class="duelo-stat"><span class="duelo-stat-lbl">DICA</span><b id="tresStage">-</b></span>
+            <span class="duelo-stat"><span class="duelo-stat-lbl">TEMPO</span><b id="tresTimer">--:--</b></span>
+            <span class="duelo-stat"><span class="duelo-stat-lbl">PALAVRA</span><b id="tresPalavra">-</b></span>
           </div>
-          <div class="row g-2 mb-2">
-            <div class="col-8 d-flex align-items-end gap-2">
-              <button class="btn btn-nb btn-primary flex-fill" id="btnTresStart" onclick="tresStart()">Iniciar Jogo</button>
-              <button class="btn btn-nb btn-warning flex-fill" id="btnTresPause" onclick="tresPause()" disabled>Pausar</button>
-              <button class="btn btn-nb btn-danger flex-fill" id="btnTresStop" onclick="tresStop()" disabled>Parar</button>
+          <div class="duelo-row duelo-actions">
+            <button class="duelo-btn duelo-btn--primary" id="btnTresStart" onclick="tresStart()">Iniciar Jogo</button>
+            <button class="duelo-btn duelo-btn--warning" id="btnTresPause" onclick="tresPause()" disabled>Pausar</button>
+            <button class="duelo-btn duelo-btn--danger" id="btnTresStop" onclick="tresStop()" disabled>Parar</button>
+            <button class="duelo-btn duelo-btn--neutral" onclick="tresReset()">Resetar</button>
+          </div>
+          <div class="duelo-help">O público adivinha a palavra em texto livre. Quanto antes acertar, mais pontos. A avança de dica é automática pelo tempo configurado.</div>
+        </div>
+
+        <!-- CONFIGURAÇÃO DAS DICAS -->
+        <div class="nb-card">
+          <h2 class="duelo-section-title">Configuração das Dicas</h2>
+          <div class="duelo-sub">Tempos (segundos)</div>
+          <div class="duelo-grid duelo-grid-3">
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresTime1">Dica 1</label>
+              <input type="number" class="form-control" id="tresTime1" min="10" max="300" value="120">
             </div>
-            <div class="col-4 d-flex align-items-end">
-              <button class="btn btn-nb btn-dark flex-fill" onclick="tresReset()">Resetar</button>
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresTime2">Dica 2</label>
+              <input type="number" class="form-control" id="tresTime2" min="10" max="300" value="60">
+            </div>
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresTime3">Dica 3</label>
+              <input type="number" class="form-control" id="tresTime3" min="10" max="300" value="30">
             </div>
           </div>
-          <div class="text-secondary" style="font-size:0.78rem">
-            Dica 1 (2min, 30pts) → Dica 2 (1min, 20pts) → Dica 3 (30s, 10pts). O chat adivinha a palavra em texto livre.
+          <div class="duelo-sub">Pontos</div>
+          <div class="duelo-grid duelo-grid-3">
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresPts1">Dica 1 (difícil)</label>
+              <input type="number" class="form-control" id="tresPts1" min="1" max="100" value="30">
+            </div>
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresPts2">Dica 2</label>
+              <input type="number" class="form-control" id="tresPts2" min="1" max="100" value="20">
+            </div>
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresPts3">Dica 3 (fácil)</label>
+              <input type="number" class="form-control" id="tresPts3" min="1" max="100" value="10">
+            </div>
+          </div>
+          <div class="duelo-row duelo-actions">
+            <button class="duelo-btn duelo-btn--success" onclick="saveTresConfig()">Salvar Configurações</button>
           </div>
         </div>
 
-        <div class="nb-card mb-3">
-          <h2>Configuração de Presentes</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
-            <div class="row g-2 align-items-end">
-              <div class="col-4">
-                <label class="form-label mb-0" for="tresGiftSize">Presente A — Revelar Tamanho</label>
-                <div class="position-relative">
-                  <input type="text" class="form-control form-control-sm" id="tresGiftSize" placeholder="Nome do gift..." autocomplete="off">
-                  <div id="tresGiftSizeAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
-                </div>
-                <div id="tresGiftSizeTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+        <!-- PRESENTES -->
+        <div class="nb-card">
+          <h2 class="duelo-section-title">Presentes</h2>
+          <div class="duelo-grid duelo-grid-3">
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresGiftSize">Presente A — Tamanho</label>
+              <div class="position-relative">
+                <input type="text" class="form-control" id="tresGiftSize" placeholder="Nome do gift..." autocomplete="off">
+                <div id="tresGiftSizeAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
               </div>
-              <div class="col-4">
-                <label class="form-label mb-0" for="tresGiftLetter">Presente B — Primeira Letra</label>
-                <div class="position-relative">
-                  <input type="text" class="form-control form-control-sm" id="tresGiftLetter" placeholder="Nome do gift..." autocomplete="off">
-                  <div id="tresGiftLetterAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
-                </div>
-                <div id="tresGiftLetterTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0" for="tresGiftTicket">Ingresso — Liberar Chat</label>
-                <div class="position-relative">
-                  <input type="text" class="form-control form-control-sm" id="tresGiftTicket" placeholder="Nome do gift..." autocomplete="off">
-                  <div id="tresGiftTicketAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
-                </div>
-                <div id="tresGiftTicketTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
-              </div>
+              <div id="tresGiftSizeTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
             </div>
-            <div class="text-secondary mt-2" style="font-size:0.72rem">
-              Presente A revela o tamanho. Presente B revela a 1ª letra (só após o A). Ingresso libera o chat para palpitar (Passe Livre); deixe vazio para todos participarem.
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresGiftLetter">Presente B — 1ª Letra</label>
+              <div class="position-relative">
+                <input type="text" class="form-control" id="tresGiftLetter" placeholder="Nome do gift..." autocomplete="off">
+                <div id="tresGiftLetterAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+              </div>
+              <div id="tresGiftLetterTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+            </div>
+            <div class="duelo-field">
+              <label class="duelo-field-label" for="tresGiftTicket">Ingresso — Passe Livre</label>
+              <div class="position-relative">
+                <input type="text" class="form-control" id="tresGiftTicket" placeholder="Nome do gift..." autocomplete="off">
+                <div id="tresGiftTicketAutocomplete" class="gift-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:2px solid #000;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:3px 3px 0 #000"></div>
+              </div>
+              <div id="tresGiftTicketTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
             </div>
           </div>
+          <div class="duelo-help">Presente A revela o tamanho. Presente B revela a 1ª letra (só após o A). Ingresso libera o chat para palpitar (Passe Livre); deixe vazio para todos participarem.</div>
         </div>
 
-        <div class="nb-card mb-3">
-          <h2>Tempos do Jogo</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
-            <div class="row g-2 align-items-end">
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 1 — Tempo (s)</label>
-                <input type="number" class="form-control form-control-sm" id="tresTime1" min="10" max="300" value="120">
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 2 — Tempo (s)</label>
-                <input type="number" class="form-control form-control-sm" id="tresTime2" min="10" max="300" value="60">
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 3 — Tempo (s)</label>
-                <input type="number" class="form-control form-control-sm" id="tresTime3" min="10" max="300" value="30">
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 1 — Pontos</label>
-                <input type="number" class="form-control form-control-sm" id="tresPts1" min="1" max="100" value="30">
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 2 — Pontos</label>
-                <input type="number" class="form-control form-control-sm" id="tresPts2" min="1" max="100" value="20">
-              </div>
-              <div class="col-4">
-                <label class="form-label mb-0">Dica 3 — Pontos</label>
-                <input type="number" class="form-control form-control-sm" id="tresPts3" min="1" max="100" value="10">
-              </div>
-            </div>
-            <div class="d-flex align-items-end mt-2">
-              <button class="btn btn-nb btn-success btn-tiny" onclick="saveTresConfig()">Salvar</button>
-            </div>
-            <div class="text-secondary mt-2" style="font-size:0.72rem">
-              Configure o tempo (em segundos) e pontos de cada dica. A Dica 1 vale mais por ser mais difícil.
-            </div>
-          </div>
-        </div>
-
-        <div class="nb-card mb-3">
-          <h2>Ranking Semanal</h2>
+        <!-- RANKING -->
+        <div class="nb-card">
+          <h2 class="duelo-section-title">Ranking Semanal</h2>
           <div id="tresWeeklyList" class="text-secondary" style="font-size:0.85rem">Ninguém acertou ainda esta semana.</div>
         </div>
 
-        <div class="nb-card mb-3">
-          <h2>Onde assistir</h2>
-          <div class="text-secondary" style="font-size:0.85rem">
-            Acompanhe ao vivo na página: <a href="#" id="linkTres" target="_blank">Abrir página 3 DICAS</a>.
+        <!-- TESTES VISUAIS -->
+        <div class="nb-card">
+          <h2 class="duelo-section-title">Testes Visuais</h2>
+          <div class="duelo-help">Simula efeitos na tela pública (não altera pontuação nem ranking).</div>
+          <div class="duelo-sub">Dica</div>
+          <div class="duelo-testgrid">
+            <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="tresTest('dica',{stage:1})">Testar Dica 1</button>
+            <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="tresTest('dica',{stage:2})">Testar Dica 2</button>
+            <button class="duelo-btn duelo-btn--neutral duelo-btn--small" onclick="tresTest('dica',{stage:3})">Testar Dica 3</button>
           </div>
-          <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/tres-pontinhos')">Link público 3 Dicas</button>
+          <div class="duelo-sub">Presentes &amp; Passe</div>
+          <div class="duelo-testgrid">
+            <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="tresTest('presente',{kind:'size',len:8})">Presente Tamanho</button>
+            <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="tresTest('presente',{kind:'letter',len:8,letter:'A'})">Presente 1ª Letra</button>
+            <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="tresTest('passe')">Passe Livre</button>
+            <button class="duelo-btn duelo-btn--warning duelo-btn--small" onclick="tresTest('apoiador')">Apoiador 2x</button>
+          </div>
+          <div class="duelo-sub">Resultados</div>
+          <div class="duelo-testgrid">
+            <button class="duelo-btn duelo-btn--success duelo-btn--small" onclick="tresTest('vencedor',{pontos:30,multiplicador:false})">Vencedor +30</button>
+            <button class="duelo-btn duelo-btn--success duelo-btn--small" onclick="tresTest('vencedor',{pontos:60,multiplicador:true})">Vencedor 2x +60</button>
+            <button class="duelo-btn duelo-btn--danger duelo-btn--small" onclick="tresTest('timeout')">Tempo Esgotado</button>
+            <button class="duelo-btn duelo-btn--primary duelo-btn--small" onclick="tresTest('ranking')">Testar Ranking</button>
           </div>
         </div>
-</div>
+
+        <div class="duelo-row duelo-actions">
+          <a class="duelo-btn duelo-btn--primary" href="#" id="linkTres" target="_blank" rel="noopener">Abrir Tela 3 Dicas</a>
+          <button type="button" class="duelo-btn duelo-btn--neutral" onclick="copyRoomLink('/tres-pontinhos')">Copiar Link</button>
+        </div>
+      </div>
 
         <!-- ===================== DUELO 1x1 ===================== -->
         <div class="tab-page" id="tab-duelo" style="display:none" data-game-mode="hp">
@@ -1101,15 +1150,14 @@
               </div>
             </div>
             <div class="duelo-help" style="margin-top:6px">Teste é somente visual — não altera HP, escudo, votos nem o vencedor.</div>
-          </div>
 
           <!-- RODAPÉ -->
           <div class="duelo-row duelo-actions">
             <a class="duelo-btn duelo-btn--primary" href="#" id="linkDuelo" target="_blank" rel="noopener">Abrir Arena</a>
             <button type="button" class="duelo-btn duelo-btn--neutral" onclick="copyRoomLink('/duelo')">Copiar Link</button>
           </div>
+          </div>
         </div>
-      </div>
 
     <div class="duelo-panel-col duelo-panel-side" style="display:flex;flex:0 0 25%;width:25%;min-width:0;min-height:0">
       <div class="nb-card d-flex flex-column flex-grow-1" style="min-height:0">
@@ -1210,19 +1258,27 @@ function connectLogs() {
       if (el) el.textContent = msg.word || "-";
     } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
       renderPanelRiddle(msg.text, msg.stage);
+      const replay = document.getElementById("btnReplayRiddle");
+      if (replay) replay.disabled = false;
     } else if (msg.type === "roulette_drop" && msg.reward_type === "riddle_started") {
       renderPanelRiddle("Gerando charada…", msg.stage);
+      const replay = document.getElementById("btnReplayRiddle");
+      if (replay) replay.disabled = true;
     } else if (msg.type === "display_action" && msg.action === "close_riddle") {
       clearPanelRiddle();
+      const replay = document.getElementById("btnReplayRiddle");
+      if (replay) replay.disabled = true;
     } else if (msg.type === "game_start") {
       gameActive = true;
       clearPanelRiddle();
       syncPanelNewGameButton(window.lastStateStr || "connected");
+      setPostGameButtonsEnabled(false);
       fetchHistoryAll();
     } else if (msg.type === "game_over") {
       gameActive = false;
       clearPanelRiddle();
       syncPanelNewGameButton(window.lastStateStr || "connected");
+      setPostGameButtonsEnabled(!!(msg.post_game_summary && msg.post_game_summary.palavras));
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
       const a = new Audio(msg.url);
@@ -2181,6 +2237,18 @@ async function tresReset() {
   } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
 }
 
+async function tresTest(action, extra) {
+  try {
+    const data = await apiFetch("/api/tres/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ action }, extra || {})),
+    });
+    if (data.success) addLog(`[3 Dicas] Teste visual '${action}' enviado.`);
+    else addLog(`[3 Dicas] [!] ${(data && data.error) || "Falha ao testar"}`);
+  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+}
+
 async function saveTresConfig() {
   const config = {
     size: tresGiftSizeVal,
@@ -2242,8 +2310,17 @@ function syncPanelNewGameButton(stateStr) {
 function setManualButtonsEnabled(enabled) {
   const hint = document.getElementById("btnManualHint");
   const riddle = document.getElementById("btnManualRiddle");
+  const replay = document.getElementById("btnReplayRiddle");
   if (hint) hint.disabled = !enabled;
   if (riddle) riddle.disabled = !enabled;
+  if (replay) replay.disabled = !enabled;
+}
+
+function setPostGameButtonsEnabled(enabled) {
+  const show = document.getElementById("btnShowPostGame");
+  const hide = document.getElementById("btnClosePostGame");
+  if (show) show.disabled = !enabled;
+  if (hide) hide.disabled = !enabled;
 }
 
 function setDisplayControlsEnabled(enabled) {
@@ -2505,6 +2582,22 @@ async function manualActionFromPanel(action) {
 
 function manualHintFromPanel() { manualActionFromPanel("hint"); }
 function manualRiddleFromPanel() { manualActionFromPanel("riddle"); }
+
+async function replayRiddleFromPanel() {
+  const btn = document.getElementById("btnReplayRiddle");
+  if (btn) btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/play-riddle`, { method: "POST" });
+    if (res.success) {
+      addLog("[Painel] Reproduzindo audio da charada...");
+    } else {
+      addLog(`[Painel] [!] Erro ao reproduzir charada: ${res.error}`);
+    }
+  } catch (err) {
+    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  }
+  if (btn) btn.disabled = false;
+}
 
 // Gift config
 const MAX_HINT_GIFTS = 5;
@@ -3328,9 +3421,15 @@ async function syncGameState() {
     const data = await apiFetch("/api/game-state");
     gameActive = data.active && !data.finished;
     setDisplayControlsEnabled(gameActive);
+    setManualButtonsEnabled(gameActive);
+    const riddleVisible = !!(data.current_riddle && data.display && data.display.riddle_visible);
+    const replay = document.getElementById("btnReplayRiddle");
+    if (replay) replay.disabled = !(gameActive && riddleVisible);
+    const hasPostGame = !!(data.finished && data.post_game_summary && data.post_game_summary.palavras);
+    setPostGameButtonsEnabled(hasPostGame && !!data.python_connected);
     const cwEl = document.getElementById("currentWord");
     if (cwEl) cwEl.textContent = data.current_word ? data.current_word : "-";
-    if (data.current_riddle && data.display && data.display.riddle_visible) {
+    if (riddleVisible) {
       renderPanelRiddle(data.current_riddle.text, data.current_riddle.stage);
     } else {
       clearPanelRiddle();
