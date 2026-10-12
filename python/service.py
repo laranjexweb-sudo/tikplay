@@ -296,30 +296,27 @@ class GameSession:
             return None
         voice_key = self.settings.get("tts_voice") or ""
         audio_dir = os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id))
-        if voice_key:
-            avail = (voice_key == tts.VOICE_PIPER_FABER and tts.piper_available()) or \
-                    (voice_key == tts.VOICE_GTTAS and tts.gtts_available()) or \
-                    (voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA) and tts.edge_available()) or \
-                    (voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX) and tts.kokoro_available())
-            if not avail:
-                self._throttled_log("tts_motor", f"[TTS] voz '{voice_key}' indisponível no servidor (motor/instalação/rede)", game="tts", level="warn")
-        if voice_key == tts.VOICE_PIPER_FABER:
-            if not tts.piper_available():
+        try:
+            if voice_key == tts.VOICE_PIPER_FABER:
+                if not tts.piper_available():
+                    return None
+                audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, self._rate_value())
+            elif voice_key == tts.VOICE_GTTAS:
+                if not tts.gtts_available():
+                    return None
+                audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, self._gtts_slow())
+            elif voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA):
+                # Edge: sem gate de disponibilidade — o synthesize decide (igual ao teste;
+                # o flag de import pode ficar False mas o edge funciona em runtime).
+                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
+            elif voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX):
+                if not tts.kokoro_available():
+                    return None
+                audio_path = await asyncio.to_thread(tts.synthesize_kokoro, text, audio_dir, voice_key, self._rate_value())
+            else:
                 return None
-            audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, self._rate_value())
-        elif voice_key == tts.VOICE_GTTAS:
-            if not tts.gtts_available():
-                return None
-            audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, self._gtts_slow())
-        elif voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA):
-            if not tts.edge_available():
-                return None
-            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
-        elif voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX):
-            if not tts.kokoro_available():
-                return None
-            audio_path = await asyncio.to_thread(tts.synthesize_kokoro, text, audio_dir, voice_key, self._rate_value())
-        else:
+        except Exception as e:
+            self._throttled_log("tts_err", f"[TTS] erro ao sintetizar '{voice_key}': {type(e).__name__}: {e}", game="tts", level="err")
             return None
         if not audio_path:
             return None
