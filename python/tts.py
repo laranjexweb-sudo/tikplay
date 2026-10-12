@@ -249,10 +249,21 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
     if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
         return out_path
     try:
-        async def _run():
-            c = edge_tts.Communicate(text, ms_voice, rate=_edge_rate_str(rate))
-            await c.save(out_path)
-        asyncio.run(_run())
+        _last_err = None
+        for attempt in range(3):
+            try:
+                async def _run():
+                    c = edge_tts.Communicate(text, ms_voice, rate=_edge_rate_str(rate))
+                    await c.save(out_path)
+                asyncio.run(_run())
+                break
+            except Exception as e:
+                _last_err = e
+                _cleanup(out_path)
+                if attempt < 2:
+                    time.sleep(0.6)
+        else:
+            raise _last_err
     except Exception:
         _cleanup(out_path)
         return None

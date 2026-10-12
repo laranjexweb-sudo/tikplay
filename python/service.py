@@ -377,6 +377,10 @@ class GameSession:
             text = await self._narrate_queue.get()
             try:
                 audio_url = await self._tts_url(text)
+                if not audio_url:
+                    # Edge pode falhar de forma intermitente: tenta mais uma vez
+                    await asyncio.sleep(0.4)
+                    audio_url = await self._tts_url(text)
                 if audio_url:
                     emit(self.tenant_id, "narrate", {"url": audio_url})
                 else:
