@@ -11,6 +11,39 @@
   .start-bar { text-align: center; margin-bottom: 10px; }
   .start-bar .status-msg { font-size: 0.92em; color: #B8C2DA; font-weight: 500; padding: 6px 10px; line-height: 1.4; }
   .start-bar .status-msg b { color: #A78BFA; font-weight: 800; }
+
+  .gl-main { position: relative; }
+  .waiting-screen {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    background: var(--tp-game-bg, #121212);
+    text-align: center;
+    /* fundo graphite opaco: cobre o conteudo anterior sem piscar */
+  }
+  .waiting-screen .waiting-logo { height: 72px; max-width: 70%; object-fit: contain; opacity: 0.95; }
+  .waiting-screen .waiting-title {
+    font-size: 3.2rem;
+    font-weight: 900;
+    letter-spacing: 10px;
+    color: #A78BFA;
+    text-shadow: 0 0 18px rgba(167, 139, 250, 0.45);
+  }
+  .waiting-screen .waiting-aux {
+    color: var(--tp-game-muted, #8b93a7);
+    font-size: 0.9rem;
+    font-weight: 500;
+    max-width: 34rem;
+    line-height: 1.5;
+    min-height: 1.5em;
+  }
+  .waiting-screen .waiting-aux b { color: #C4B5FD; }
   .guess-dica { font-size: 0.7em; color: #A78BFA; opacity: 0.85; letter-spacing: 1.5px; font-weight: 700; }
   .compact .gifts-label { font-size: 0.68em; letter-spacing: 1px; font-weight: 700; }
   .compact .gift-item { font-size: 0.85em; padding: 6px 10px; gap: 6px; }
@@ -31,6 +64,11 @@
 
   <div class="game-layout">
     <div class="gl-main">
+      <div class="waiting-screen" id="waitingScreen">
+        <img src="logo.png" alt="TikPlay" class="waiting-logo" onerror="this.style.display='none'">
+        <div class="waiting-title">AGUARDE</div>
+        <div class="waiting-aux" id="waitingAux">A próxima partida começará em breve</div>
+      </div>
       <div class="secret-display">
         <div class="label">Palavra Secreta <span id="gameIdLabel"></span></div>
         <div class="boxes" id="secretBoxes"></div>
@@ -217,6 +255,7 @@ function handleMessage(msg) {
     case "game_start":
       applyGameStart(msg);
       hideStartBar();
+      hideWaitingScreen();
       break;
 
     case "game_preparing":
@@ -329,6 +368,7 @@ function handleMessage(msg) {
 function applyGameStart(msg) {
   guessHighlightQueue = [];
   guessHighlightShowing = false;
+  hideWaitingScreen();
   document.getElementById("guessIncomingSlot").replaceChildren();
   document.getElementById("guessIncomingSlot").style.display = "";
   rouletteQueue = [];
@@ -1095,6 +1135,7 @@ function processGuessHighlightQueue() {
     renderBoxes();
     refreshRanking();
     showStartBar("Jogo finalizado! Aguardando a próxima partida...");
+    hideWaitingScreen();
     enablePostGame();
     state.display.riddleVisible = false;
     stopLetterGiftPromptCycle();
@@ -1593,6 +1634,34 @@ function hideStartBar() {
   startOrientationCycle();
 }
 
+let waitingInterval = null;
+
+function showWaitingScreen() {
+  const el = document.getElementById("waitingScreen");
+  if (!el) return;
+  el.style.display = "flex";
+  // Evita duplicar mensagens: a tela de espera assume a área principal.
+  stopOrientationCycle();
+  const bar = document.getElementById("startBar");
+  if (bar) bar.style.display = "none";
+  const aux = document.getElementById("waitingAux");
+  if (aux) {
+    aux.innerHTML = "A próxima partida começará em breve";
+    if (waitingInterval) clearInterval(waitingInterval);
+    waitingInterval = setInterval(() => {
+      if (!aux || !document.getElementById("waitingScreen") || document.getElementById("waitingScreen").style.display === "none") return;
+      const list = orientationMessages();
+      aux.innerHTML = list[Math.floor(Math.random() * list.length)];
+    }, 8000);
+  }
+}
+
+function hideWaitingScreen() {
+  const el = document.getElementById("waitingScreen");
+  if (el) el.style.display = "none";
+  if (waitingInterval) { clearInterval(waitingInterval); waitingInterval = null; }
+}
+
 async function loadGameState() {
   try {
     if (!giftImageMap || !Object.keys(giftImageMap).length) {
@@ -1607,6 +1676,7 @@ async function loadGameState() {
     updateTensionBar(state.tensionScore, state.isFinalBoss);
     renderActiveGift(state.activeGift);
     if (gs.active && gs.game_id) {
+      hideWaitingScreen();
       document.getElementById("gameIdLabel").textContent = `#${gs.game_id}`;
       state.currentGameId = gs.game_id;
       const disp = gs.display || {};
@@ -1659,10 +1729,9 @@ async function loadGameState() {
       refreshRanking();
       stopLetterGiftPromptCycle();
       startLetterGiftPromptCycle();
-    } else if (gs.python_connected) {
-      showStartBar("Live conectada! Aguardando o streamer iniciar a partida.");
     } else {
-      startOrientationCycle();
+      // Sem partida ativa (live conectada ou offline): tela de espera central.
+      showWaitingScreen();
     }
   } catch (e) {}
 }
