@@ -27,6 +27,9 @@ PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.
 
 _gifts_sync_running = False
 
+# Intervalo mínimo entre sínteses de narração (evita rate-limit do Edge e spam).
+NARRATE_GAP_S = 2.0
+
 
 from service_common import DEFAULT_SETTINGS, normalize_settings, get_rank_color, emit
 
@@ -365,6 +368,13 @@ class GameSession:
                         (voice_key == tts.VOICE_PIPER_FABER and tts.piper_available()) or \
                         (voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA) and tts.edge_available()) or \
                         (voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX) and tts.kokoro_available())
+        now = time.time()
+        if now - getattr(self, "_narrate_emit_last", 0) < NARRATE_GAP_S:
+            # Coalesce mensagens rápidas: guarda só a mais recente (evita rate-limit do Edge e spam)
+            self._narrate_next = {"text": text, "ts": now}
+            self._throttled_log("narr_gap", "[TTS] narração agrupada (intervalo mínimo)", game="tts", level="info", secs=5.0)
+            return
+        self._narrate_emit_last = now
         if server_engine:
             self._narrate_queue.put_nowait(text)
             self._throttled_log("narr_enq", f"[TTS] narração enfileirada: '{text[:60]}'", game="tts", level="info", secs=6.0)
@@ -382,11 +392,20 @@ class GameSession:
                     await asyncio.sleep(0.4)
                     audio_url = await self._tts_url(text)
                 if audio_url:
+                    self._narrate_emit_last = time.time()
                     emit(self.tenant_id, "narrate", {"url": audio_url})
                 else:
                     self._throttled_log("narr_turl", f"[TTS] narração sem áudio (motor falhou) para: '{text[:40]}'", game="tts", level="warn", secs=5.0)
             except Exception as e:
                 self._throttled_log("narr_exc", f"[TTS] erro ao narrar: {type(e).__name__}: {e}", game="tts", level="err", secs=5.0)
+            finally:
+                # Gap mínimo entre sínteses (rate-limit do Edge) e repõe a mensagem agrupada
+                await asyncio.sleep(NARRATE_GAP_S)
+                nxt = getattr(self, "_narrate_next", None)
+                if nxt:
+                    self._narrate_next = None
+                    self._narrate_emit_last = nxt["ts"]
+                    self._narrate_queue.put_nowait(nxt["text"])
 
     def _stable_uid(self, user, user_meta=None):
         try:
