@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
+const { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog } = require("./lib/ws");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -84,56 +85,6 @@ console.log(`[WS] WebSocket compartilhando a porta ${HTTP_PORT}`);
 
 const GIFT_TAGS_PATH = path.join(__dirname, "gift-tags.json");
 const GIFT_IMAGE_MAP_PATH = path.join(__dirname, "public", "gift-image-map.json");
-
-const tenants = new Map();
-
-function emptyGameState() {
-  return {
-    active: false,
-    game_id: null,
-    secret_length: 0,
-    secret_word: null,
-    guesses: [],
-    hints: [],
-    finished: false,
-    winner: null,
-    guess_count: 0,
-    hint_gifts: [],
-    riddle_gifts: [],
-    current_riddle_stage: 0,
-    current_riddle: null,
-    size_gift: "",
-    size_revealed: false,
-    letter_gift: "",
-    first_letter: "",
-    first_letter_revealed: false,
-    display: { riddle_visible: false, ranking_view: "live" },
-    post_game_summary: null,
-    likes_ranking: [],
-    tap_meta_current: 0,
-    tap_meta_total: 1000,
-    tap_meta_ready: false,
-    settings: { ...DEFAULT_SETTINGS },
-  };
-}
-
-function getTenant(id) {
-  if (!tenants.has(id)) {
-    tenants.set(id, {
-      id,
-      gameState: emptyGameState(),
-      browserClients: [],
-      logClients: [],
-      currentStatus: null,
-      currentWord: "",
-      sessionStarted: false,
-      cacaState: { active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false },
-      vpetState: null,
-      tresState: null,
-    });
-  }
-  return tenants.get(id);
-}
 
 // Trava de seguranca: jogos so iniciam com a live ONLINE (status "connected")
 function liveOnline(tenant) {
@@ -394,21 +345,6 @@ function updateGameState(tenant, msg) {
       // o estado completo chega junto via caca_state
       break;
   }
-}
-
-function broadcastToClients(clients, msg) {
-  const data = JSON.stringify(msg);
-  for (let i = clients.length - 1; i >= 0; i--) {
-    try {
-      clients[i].send(data);
-    } catch {
-      clients.splice(i, 1);
-    }
-  }
-}
-
-function broadcastLog(tenant, text) {
-  broadcastToClients(tenant.logClients, { type: "log", text });
 }
 
 function broadcastStatus(tenant, status) {
