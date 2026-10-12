@@ -69,6 +69,28 @@ try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN riddle_auto_narrate INTEGER DEFAULT 1");
 } catch {}
 
+// Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
+db.exec(`
+CREATE TABLE IF NOT EXISTS gifts (
+  gid INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT UNIQUE,
+  name TEXT NOT NULL,
+  name_pt TEXT,
+  diamond_count INTEGER DEFAULT 0,
+  icon_url TEXT DEFAULT '',
+  icon_local TEXT DEFAULT '',
+  status TEXT DEFAULT 'active',
+  first_seen INTEGER DEFAULT 0,
+  last_seen INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_gifts_name ON gifts(name);
+CREATE TABLE IF NOT EXISTS gift_meta (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  last_sync INTEGER DEFAULT 0,
+  last_sync_result TEXT DEFAULT ''
+);
+`);
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -905,9 +927,68 @@ function saveBannedWords(words) {
   return clean;
 }
 
+// ---------------- Catálogo de gifts (sincronizado) ----------------
+// Leitura no node; a ESCRITA é feita exclusivamente pelo python (python/sync_gifts.py),
+// evitando dois escritores concorrentes no mesmo SQLite.
+
+function getGifts(opts = {}) {
+  const onlyActive = opts.onlyActive !== false; // default: só ativos
+  const sql = onlyActive
+    ? "SELECT gid, id, name, name_pt, diamond_count, icon_url, icon_local, status, first_seen, last_seen FROM gifts WHERE status = 'active' ORDER BY diamond_count, name"
+    : "SELECT gid, id, name, name_pt, diamond_count, icon_url, icon_local, status, first_seen, last_seen FROM gifts ORDER BY diamond_count, name";
+  return db.prepare(sql).all();
+}
+
+function getGiftById(id) {
+  if (id === null || id === undefined || String(id).trim() === "") return null;
+  return db.prepare("SELECT gid, id, name, name_pt, diamond_count, icon_url, icon_local, status FROM gifts WHERE id = ?").get(String(id).trim()) || null;
+}
+
+function getGiftByName(name) {
+  const n = String(name || "").trim();
+  if (!n) return null;
+  return db.prepare("SELECT gid, id, name, name_pt, diamond_count, icon_url, icon_local, status FROM gifts WHERE lower(name) = lower(?) OR (name_pt IS NOT NULL AND lower(name_pt) = lower(?)) LIMIT 1").get(n, n) || null;
+}
+
+// Resolve uma referência (ID ou nome EN/PT) para o ID canônico. Retorna "" se não achar.
+function resolveGiftId(ref) {
+  const r = String(ref || "").trim();
+  if (!r) return "";
+  const byId = getGiftById(r);
+  if (byId && byId.id) return String(byId.id);
+  const byName = getGiftByName(r);
+  if (byName && byName.id) return String(byName.id);
+  return "";
+}
+
+function getGiftMeta() {
+  const row = db.prepare("SELECT last_sync, last_sync_result FROM gift_meta WHERE id = 1").get();
+  return row || { last_sync: 0, last_sync_result: "" };
+}
+
+// Derivados (compat) — usados por /api/gift-tags e /api/gift-image-map.
+function getGiftTagsDerived() {
+  const rows = db.prepare("SELECT name, diamond_count FROM gifts WHERE status = 'active' AND name <> '' ORDER BY diamond_count, name").all();
+  return rows.map(r => ({ name: r.name, diamond_count: r.diamond_count }));
+}
+
+function getGiftImageMapDerived() {
+  const rows = db.prepare("SELECT name, icon_local FROM gifts WHERE status = 'active' AND icon_local <> '' AND name <> ''").all();
+  const out = {};
+  for (const r of rows) out[r.name] = r.icon_local;
+  return out;
+}
+
 module.exports = {
   db,
   DEFAULT_SETTINGS,
+  getGifts,
+  getGiftById,
+  getGiftByName,
+  resolveGiftId,
+  getGiftMeta,
+  getGiftTagsDerived,
+  getGiftImageMapDerived,
   createUser,
   createInvite,
   getInviteByToken,

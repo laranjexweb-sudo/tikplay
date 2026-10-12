@@ -557,6 +557,8 @@ function handleDaemonMessage(msg) {
         text: typeof payload === "object" ? payload.text || "" : payload,
         url: (typeof payload === "object" && payload.url) || "",
       });
+    } else if (msg.type === "gifts_synced") {
+      broadcastToClients(tenant.logClients, { type: "gifts_synced", result: msg.text || {} });
     }
     return;
   }
@@ -611,9 +613,25 @@ process.on("SIGTERM", () => {
 
 function readGiftTags() {
   try {
+    const derived = db.getGiftTagsDerived();
+    if (derived && derived.length) return derived;
+  } catch {}
+  try {
     return JSON.parse(fs.readFileSync(GIFT_TAGS_PATH, "utf-8"));
   } catch {
     return [];
+  }
+}
+
+function readGiftImageMap() {
+  try {
+    const derived = db.getGiftImageMapDerived();
+    if (derived && Object.keys(derived).length) return derived;
+  } catch {}
+  try {
+    return JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8"));
+  } catch {
+    return {};
   }
 }
 
@@ -1039,11 +1057,29 @@ app.get("/api/gift-tags", (req, res) => {
 
 app.get("/api/gift-image-map", (req, res) => {
   try {
-    const map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8"));
+    const map = readGiftImageMap();
     res.json({ success: true, map });
   } catch {
     res.json({ success: false, map: {} });
   }
+});
+
+// ---------------- Catálogo de gifts (sincronizado) ----------------
+
+app.get("/api/gifts", (req, res) => {
+  const meta = db.getGiftMeta();
+  const gifts = db.getGifts({ onlyActive: req.query.all === "1" ? false : true });
+  res.json({
+    success: true,
+    gifts,
+    synced_at: meta.last_sync || 0,
+    last_sync_result: meta.last_sync_result || "",
+  });
+});
+
+app.post("/api/gifts/sync", auth.requireAuth, (req, res) => {
+  const ok = daemonSend({ cmd: "sync_gifts", tenant_id: req.user.id });
+  res.json({ success: ok, queued: ok });
 });
 
 // ---------------- Tenant gift config ----------------

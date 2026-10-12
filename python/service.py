@@ -24,6 +24,8 @@ import tts
 TTS_AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "public", "tts-audio")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.br")
 
+_gifts_sync_running = False
+
 
 def get_rank_color(rank: int) -> str:
     if rank == 1:
@@ -1828,6 +1830,27 @@ async def stop_session_task(tid):
             pass
 
 
+async def _run_gifts_sync(tid):
+    """Sincroniza o catálogo de gifts em background (não bloqueia o loop de comandos)."""
+    global _gifts_sync_running
+    if _gifts_sync_running:
+        emit(tid, "log", "[Gifts] Sincronização já em andamento.")
+        return
+    _gifts_sync_running = True
+    try:
+        import sync_gifts as _sync
+        emit(tid, "log", "[Gifts] Sincronizando catálogo de presentes com o TikTok...")
+        result = await _sync.sync(username=None, download=True, log=lambda m: emit(tid, "log", m))
+        emit(tid, "gifts_synced", result)
+        emit(tid, "log", f"[Gifts] Catálogo atualizado: +{result.get('inserted', 0)} novos, "
+                          f"{result.get('updated', 0)} atualizados, {result.get('unavailable', 0)} indisponíveis.")
+    except Exception as e:
+        emit(tid, "log", f"[Gifts] Falha na sincronização: {type(e).__name__}: {e}")
+        emit(tid, "gifts_synced", {"error": str(e)})
+    finally:
+        _gifts_sync_running = False
+
+
 async def process_commands(queue):
     while True:
         cmd = await queue.get()
@@ -1864,6 +1887,9 @@ async def process_commands(queue):
             s = sessions.get(tid)
             if s and getattr(s, "duelo", None):
                 s.duelo.reset_teams()
+
+        elif c == "sync_gifts":
+            asyncio.create_task(_run_gifts_sync(tid))
 
         elif c == "battle_start":
             s = sessions.get(tid)
