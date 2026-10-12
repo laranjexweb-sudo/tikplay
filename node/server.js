@@ -46,9 +46,10 @@ const LEGACY_PAGES = {
 };
 
 app.get("/", (req, res) => res.redirect("/login"));
+const NO_CACHE_ROUTES = new Set(["/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
-    if (route === "/duelo" || route === "/painel") {
+    if (NO_CACHE_ROUTES.has(route)) {
       res.set("Cache-Control", "no-cache, no-store, must-revalidate");
     }
     res.sendFile(path.join(PUBLIC_DIR, file));
@@ -2394,6 +2395,12 @@ wss.on("connection", (ws, req) => {
     });
     if (tenant.currentStatus && tenant.currentStatus.state === "connected") {
       ws.send(JSON.stringify({ type: "python_connected" }));
+    }
+    if (tenant.cacaState) {
+      ws.send(JSON.stringify({ type: "caca_state", ...tenant.cacaState }));
+    }
+    if (tenant.tresState) {
+      ws.send(JSON.stringify({ type: "tres_state", ...tenant.tresState }));
     }
     if (tenant.vpetState) {
       ws.send(JSON.stringify({ type: "vpet_state", ...tenant.vpetState }));
