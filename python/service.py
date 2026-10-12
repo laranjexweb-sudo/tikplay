@@ -429,49 +429,80 @@ class GameSession:
         self._likes_dirty = True
         self.battle.add_taps(user, nickname, avatar, like_count)
         self._duelo_handle_tap(user, like_count, user_meta, avatar)
-        # Meta de tap da Palavra Secreta (independente do ranking da BATALHA)
-        if not self.game.finished:
+        # Meta de tap da Palavra Secreta: durante o Final Boss ela fica CONGELADA
+        # (não incrementa nem dispara ações da meta enquanto o Boss estiver ativo).
+        if not self.game.finished and not getattr(self.game, "is_final_boss", False):
             self.tap_meta_current += int(like_count or 0)
+
+    def _tap_meta_public(self) -> dict:
+        """Estado da meta enviado à página pública.
+
+        Durante o Final Boss a meta fica congelada (valor não avança) e é exibida
+        como concluída (verde): tap_meta_ready = True mesmo que os taps ainda não
+        tenham atingido o total. Prêmio devido (meta já atingida) fica retido até
+        o fim do Boss, sem despachar nada enquanto ele estiver ativo.
+        """
+        return {
+            "tap_meta_current": int(self.tap_meta_current or 0),
+            "tap_meta_total": int(self.tap_meta_total or 1000),
+            "tap_meta_ready": bool(self.tap_meta_ready) or bool(getattr(self.game, "is_final_boss", False)),
+        }
 
     async def _likes_loop(self):
         while True:
             await asyncio.sleep(3)
-            if not self._likes_dirty:
+            # Durante o Final Boss mantém a marcação "concluída" (verde) na página,
+            # mesmo sem likes novos; sem boss, só emite quando houver mudanças.
+            if not self._likes_dirty and not getattr(self.game, "is_final_boss", False):
                 continue
             self._likes_dirty = False
             ranking = self.build_likes_ranking(5)
+            pub = self._tap_meta_public()
             emit(self.tenant_id, "game", {
                 "type": "likes_ranking",
                 "ranking": ranking,
-                "tap_meta_current": self.tap_meta_current,
-                "tap_meta_total": self.tap_meta_total,
-                "tap_meta_ready": self.tap_meta_ready,
+                "tap_meta_current": pub["tap_meta_current"],
+                "tap_meta_total": pub["tap_meta_total"],
+                "tap_meta_ready": pub["tap_meta_ready"],
             })
             # Meta de tap: se atingiu, despacha dica/charada (respeitando Final Boss e cooldown)
             if self.game.secret_word and not self.game.finished:
                 await self._check_tap_meta()
 
     async def _check_tap_meta(self):
-        """Verifica se a meta de tap foi atingida e despacha o prêmio (ou segura no Final Boss)."""
+        """Verifica a meta de tap.
+
+        Sem Final Boss: ao atingir o total despacha o prêmio (dica/charada).
+        Com Final Boss ativo: a meta fica congelada e nada é despachado; uma meta
+        já atingida antes/ao entrar no Boss fica retida como prêmio pendente e
+        só é despachada se o estado sair do Boss (não dispara no meio do Boss).
+        """
         import time
         now = time.time()
         meta = int(self.tap_meta_total or 1000)
+        boss = bool(getattr(self.game, "is_final_boss", False))
 
-        # Despacha dica pendente (meta atingida durante Final Boss) assim que sair do top 3
-        if self.tap_meta_ready and not getattr(self.game, "is_final_boss", False):
-            self.tap_meta_ready = False
+        if not boss:
+            # Prêmio pendente retido durante o Boss (caminho sem Boss agora): despacha.
+            if self.tap_meta_ready:
+                self.tap_meta_ready = False
+                self.tap_meta_current = 0
+                await self._dispatch_tap_reward()
+                return
+            if self.tap_meta_current < meta:
+                return
+            if now < self._tap_meta_cooldown_until:
+                return
+            # Atingiu a meta (sem Boss)
             self.tap_meta_current = 0
+            self._tap_meta_cooldown_until = now + 15
             await self._dispatch_tap_reward()
             return
 
-        if self.tap_meta_current < meta:
-            return
-        if now < self._tap_meta_cooldown_until:
-            return
-
-        # Atingiu a meta
-        if getattr(self.game, "is_final_boss", False):
-            # Final Boss: segura a dica até sair do top 3
+        # Final Boss ativo: nada é despachado.
+        if self.tap_meta_ready:
+            return  # prêmio já pendente — evita re-emitir a cada tick
+        if self.tap_meta_current >= meta:
             self.tap_meta_ready = True
             emit(self.tenant_id, "game", {
                 "type": "tap_meta_reached",
@@ -479,11 +510,6 @@ class GameSession:
                 "blocked": True,
             })
             emit(self.tenant_id, "log", "[Tap] Meta atingida, mas o jogo está no Final Boss — dica aguardando...")
-            return
-
-        self.tap_meta_current = 0
-        self._tap_meta_cooldown_until = now + 15
-        await self._dispatch_tap_reward()
 
     async def _dispatch_tap_reward(self):
         """Prêmio da meta de tap: segue a porcentagem dica/charada da roleta."""
@@ -720,6 +746,7 @@ class GameSession:
         if self.game.size_gift:
             emit(self.tenant_id, "log", f"[Jogo] Presente de tamanho: {self.game.size_gift} — tamanho oculto até ser enviado")
         emit(self.tenant_id, "panel_word", self.game.secret_word)
+        pub_tap = self._tap_meta_public()
         emit(self.tenant_id, "game", {
             "type": "game_start",
             "game_id": self.game.game_id,
@@ -734,17 +761,17 @@ class GameSession:
             "active_gift": active_gift,
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
-            "tap_meta_current": self.tap_meta_current,
-            "tap_meta_total": int(self.settings.get("tap_meta", 1000) or 1000),
-            "tap_meta_ready": self.tap_meta_ready,
+            "tap_meta_current": pub_tap["tap_meta_current"],
+            "tap_meta_total": pub_tap["tap_meta_total"],
+            "tap_meta_ready": pub_tap["tap_meta_ready"],
         })
         # Garante que os clientes recebam o estado zerado da meta imediatamente
         emit(self.tenant_id, "game", {
             "type": "likes_ranking",
             "ranking": self.build_likes_ranking(5),
-            "tap_meta_current": self.tap_meta_current,
-            "tap_meta_total": int(self.settings.get("tap_meta", 1000) or 1000),
-            "tap_meta_ready": self.tap_meta_ready,
+            "tap_meta_current": pub_tap["tap_meta_current"],
+            "tap_meta_total": pub_tap["tap_meta_total"],
+            "tap_meta_ready": pub_tap["tap_meta_ready"],
         })
 
     @staticmethod
@@ -1773,12 +1800,13 @@ async def process_commands(queue):
                 # Meta de tap: aplica em runtime preservando o progresso atual
                 s.tap_meta_total = int(s.settings.get("tap_meta", 1000) or 1000)
                 if s.game.secret_word and not s.game.finished:
+                    s_pub = s._tap_meta_public()
                     emit(tid, "game", {
                         "type": "likes_ranking",
                         "ranking": s.build_likes_ranking(5),
-                        "tap_meta_current": s.tap_meta_current,
-                        "tap_meta_total": s.tap_meta_total,
-                        "tap_meta_ready": s.tap_meta_ready,
+                        "tap_meta_current": s_pub["tap_meta_current"],
+                        "tap_meta_total": s_pub["tap_meta_total"],
+                        "tap_meta_ready": s_pub["tap_meta_ready"],
                     })
                     await s._check_tap_meta()
                 emit(tid, "log",
