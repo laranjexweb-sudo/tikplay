@@ -436,6 +436,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Teste reversível de paleta da Palavra Secreta: fundo quase preto, cards grafite azulado e texto secundário mais claro, sem mudanças de dimensões. Override isolado em `ui/secret-word-palette.css`; backup em `docs/layout-backups/2026-10-12-contraste-01`.
+
 - 2026-10-12 — Ranking lateral mais compacto: avatar de 24px, espaçamento vertical de 4px e nomes de 16px para exibir mais participantes; vitórias mantidas à direita.
 
 - 2026-10-12 — Refinamento do ranking lateral: foto, nome e vitórias à direita em linha única, com detalhe chanfrado à esquerda no top 3 inspirado na V2 de taps.

@@ -1265,6 +1265,10 @@ function connectLogs() {
       if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
       const replay = document.getElementById("btnReplayRiddle");
       if (replay) replay.disabled = false;
+    } else if (msg.type === "riddle_audio") {
+      if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
+      const replay = document.getElementById("btnReplayRiddle");
+      if (replay) replay.disabled = false;
     } else if (msg.type === "roulette_drop" && msg.reward_type === "riddle_started") {
       renderPanelRiddle("Gerando charada…", msg.stage);
       const replay = document.getElementById("btnReplayRiddle");

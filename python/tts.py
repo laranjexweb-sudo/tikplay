@@ -109,7 +109,7 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
                 with _EDGE_LOCK:
                     async def _run():
                         c = edge_tts.Communicate(text, ms_voice, rate=_edge_rate_str(rate))
-                        await c.save(out_path)
+                        await asyncio.wait_for(c.save(out_path), timeout=10)
                     asyncio.run(_run())
                 break
             except Exception as e:

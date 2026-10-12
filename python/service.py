@@ -299,6 +299,21 @@ class GameSession:
             return None
         return f"/tts-audio/{self.tenant_id}/{os.path.basename(audio_path)}"
 
+    async def _narrate_riddle_async(self, stage, riddle_text):
+        """Gera o áudio da charada em background (não trava a liberação na live)
+        e emite 'riddle_audio' quando o mp3 fica pronto."""
+        try:
+            audio_url = await self._tts_url(riddle_text)
+        except Exception as e:
+            emit(self.tenant_id, "log", f"[TTS] erro ao gerar audio em background: {type(e).__name__}: {e}", game="tts", level="err")
+            return
+        if audio_url:
+            emit(self.tenant_id, "game", {
+                "type": "riddle_audio",
+                "stage": stage,
+                "audio_url": audio_url,
+            })
+
     def _command_prefix(self) -> str:
         p = self.settings.get("command_prefix")
         if p is None:
@@ -1149,7 +1164,7 @@ class GameSession:
                 emit(self.tenant_id, "log", f"[{source}] Charada do Estágio {stage} usando cluster: {', '.join(cluster_words)}...")
 
                 riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
-                audio_url = await self._tts_url(riddle_text)
+                asyncio.create_task(self._narrate_riddle_async(stage, riddle_text))
 
                 emit(self.tenant_id, "game", {
                     "type": "roulette_drop",
@@ -1160,7 +1175,7 @@ class GameSession:
                     "avatar": avatar,
                     "gift": gift,
                     "text": riddle_text,
-                    "audio_url": audio_url,
+                    "audio_url": None,
                     "words": cluster_words,
                     "active_gift": self.game.get_active_gift(),
                     "tension_score": getattr(self.game, "tension_score", 0),
@@ -1340,7 +1355,7 @@ class GameSession:
         })
         emit(self.tenant_id, "log", f"[Manual] Gerando charada do Estágio {stage} usando cluster: {', '.join(cluster_words)}...")
         riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
-        audio_url = await self._tts_url(riddle_text)
+        asyncio.create_task(self._narrate_riddle_async(stage, riddle_text))
         emit(self.tenant_id, "game", {
             "type": "roulette_drop",
             "reward_type": "riddle_ready",
@@ -1350,7 +1365,7 @@ class GameSession:
             "avatar": "",
             "gift": None,
             "text": riddle_text,
-            "audio_url": audio_url,
+            "audio_url": None,
             "words": cluster_words,
             "active_gift": self.game.get_active_gift(),
             "tension_score": getattr(self.game, "tension_score", 0),
