@@ -435,6 +435,17 @@
             <div class="text-secondary" id="riddleHint" style="font-size:0.75rem;margin-top:4px">Máximo de 1. É o presente que revela a palavra no Final Boss.</div>
           </div>
 
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <button type="button" class="btn btn-nb btn-dark btn-sm" id="btnSyncGifts">↻ Sincronizar agora</button>
+            <span class="text-secondary" id="giftSyncStatus" style="font-size:0.75rem">catálogo: —</span>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2" style="font-size:0.8rem">
+            <label class="mb-0" for="giftFilterMin">💎 min</label>
+            <input type="number" class="form-control form-control-sm" id="giftFilterMin" min="0" style="width:84px" placeholder="0">
+            <label class="mb-0" for="giftFilterMax">max</label>
+            <input type="number" class="form-control form-control-sm" id="giftFilterMax" min="0" style="width:84px" placeholder="∞">
+            <span class="text-secondary">filtro por valor</span>
+          </div>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span id="giftCounter">Gifts de dica (0/5)</span>
           </div>
@@ -1305,6 +1316,14 @@ function connectLogs() {
       setDueloStatusButtons(msg.active);
     } else if (msg.type === "battle_reset") {
       loadBattleState();
+    } else if (msg.type === "gifts_synced") {
+      const r = msg.result || {};
+      if (r.error) {
+        addLog("[Gifts] [!] " + r.error);
+      } else {
+        addLog(`[Gifts] Catálogo sincronizado: +${r.inserted || 0} novos, ${r.updated || 0} atualizados, ${r.unavailable || 0} indisponíveis.`);
+      }
+      loadGiftCatalog().then(() => { try { refreshAllGiftPickers(); } catch (e) {} });
     }
   };
 }
@@ -2617,6 +2636,14 @@ let tresGiftLetterVal = "";
 let tresGiftTicketVal = "";
 let giftTagList = [];
 let giftImageMap = {};
+let giftCatalogList = [];
+let giftSyncedAt = 0;
+let giftFilterMin = NaN;
+let giftFilterMax = NaN;
+const btnSyncGifts = document.getElementById("btnSyncGifts");
+const giftSyncStatus = document.getElementById("giftSyncStatus");
+const giftFilterMinEl = document.getElementById("giftFilterMin");
+const giftFilterMaxEl = document.getElementById("giftFilterMax");
 const giftInput = document.getElementById("giftTagInput");
 const giftCounter = document.getElementById("giftCounter");
 const giftHint = document.getElementById("giftHint");
@@ -2720,10 +2747,38 @@ function getGiftLabel(name) {
 function giftByName(name) {
   const key = String(name || "").toLowerCase().trim();
   return giftTagList.find((t) => {
+    const id = String(t.id || "").toLowerCase();
     const en = t.name.toLowerCase();
     const pt = getGiftPtName(t.name).toLowerCase();
-    return en === key || pt === key;
+    return (id && id === key) || en === key || pt === key;
   }) || null;
+}
+
+function giftListId(name) {
+  const g = giftByName(name);
+  return (g && g.id) ? String(g.id) : String(name || "").trim();
+}
+
+function giftNameById(v) {
+  const g = giftByName(v);
+  return g ? g.name : String(v || "").trim();
+}
+
+function giftStatus(name) {
+  const g = giftByName(name);
+  return (g && g.status) || "active";
+}
+
+function refreshAllGiftPickers() {
+  giftPicker && giftPicker.render();
+  riddlePicker && riddlePicker.render();
+  sizeGiftPicker && sizeGiftPicker.render();
+  letterGiftPicker && letterGiftPicker.render();
+}
+
+function updateGiftSyncStatus() {
+  if (!giftSyncStatus) return;
+  giftSyncStatus.textContent = giftSyncedAt ? `última sync: ${new Date(giftSyncedAt * 1000).toLocaleString("pt-BR")}` : "catálogo: ainda não sincronizado";
 }
 
 function giftDiamonds(name) {
@@ -2764,7 +2819,9 @@ function createGiftPicker(opts) {
     const val = String(q || "").trim().toLowerCase();
     const selected = new Set(values().map((n) => n.toLowerCase()));
     let list = giftTagList.filter((g) => !selected.has(g.name.toLowerCase()));
-    if (val) list = list.filter((g) => g.name.toLowerCase().includes(val) || getGiftPtName(g.name).toLowerCase().includes(val));
+    if (val) list = list.filter((g) => g.name.toLowerCase().includes(val) || getGiftPtName(g.name).toLowerCase().includes(val) || String(g.id || "").toLowerCase().includes(val));
+    if (!isNaN(giftFilterMin)) list = list.filter((g) => giftDiamonds(g.name) >= giftFilterMin);
+    if (!isNaN(giftFilterMax)) list = list.filter((g) => giftDiamonds(g.name) <= giftFilterMax);
     return list.slice(0, 20);
   }
 
@@ -2799,6 +2856,14 @@ function createGiftPicker(opts) {
       diam.className = "ac-diam";
       diam.textContent = g.diamond_count + " 💎";
       item.appendChild(diam);
+      if (String(g.status || "active") === "unavailable") {
+        item.style.opacity = "0.55";
+        const bad = document.createElement("span");
+        bad.className = "ac-badge";
+        bad.style.cssText = "font-size:0.65rem;color:#fff;background:#ff6969;border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:700";
+        bad.textContent = "indisponível";
+        item.appendChild(bad);
+      }
       item.addEventListener("mousedown", (e) => {
         e.preventDefault();
         add(g.name);
@@ -2955,6 +3020,25 @@ const letterGiftPicker = createGiftPicker({
   onChange: (arr) => { letterGiftTag = arr[0] || ""; updateGiftSaveState(); },
 });
 
+// --- Sincronização do catálogo + filtro por valor ---
+if (btnSyncGifts) {
+  btnSyncGifts.addEventListener("click", async () => {
+    if (btnSyncGifts.disabled) return;
+    btnSyncGifts.disabled = true;
+    btnSyncGifts.textContent = "Sincronizando…";
+    addLog("[Gifts] Solicitando sincronização do catálogo com o TikTok...");
+    try {
+      const data = await apiFetch("/api/gifts/sync", { method: "POST" });
+      if (!data || !data.success) addLog("[Gifts] [!] " + ((data && data.error) || "não foi possível agendar a sincronização"));
+    } catch (e) {
+      addLog("[Gifts] [!] Erro: " + e.message);
+    }
+    setTimeout(() => { btnSyncGifts.disabled = false; btnSyncGifts.textContent = "↻ Sincronizar agora"; }, 2000);
+  });
+}
+if (giftFilterMinEl) giftFilterMinEl.addEventListener("input", () => { giftFilterMin = giftFilterMinEl.value === "" ? NaN : parseInt(giftFilterMinEl.value, 10); });
+if (giftFilterMaxEl) giftFilterMaxEl.addEventListener("input", () => { giftFilterMax = giftFilterMaxEl.value === "" ? NaN : parseInt(giftFilterMaxEl.value, 10); });
+
 // --- 3 Dicas (3 Pontinhos) ---
 const tresSizePicker = createGiftPicker({
   inputId: "tresGiftSize", autocompleteId: "tresGiftSizeAutocomplete", tagsId: "tresGiftSizeTags",
@@ -3056,13 +3140,18 @@ async function saveGiftConfig() {
     const data = await apiFetch("/api/gift-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hint_gifts: giftTags, riddle_gifts: riddleTags, size_gift: sizeGiftTag, letter_gift: letterGiftTag }),
+      body: JSON.stringify({
+        hint_gifts: giftTags.map(giftListId),
+        riddle_gifts: riddleTags.map(giftListId),
+        size_gift: giftListId(sizeGiftTag),
+        letter_gift: giftListId(letterGiftTag),
+      }),
     });
     if (data.success) {
-      giftTags = data.hint_gifts || giftTags;
-      riddleTags = data.riddle_gifts || riddleTags;
-      sizeGiftTag = data.size_gift || sizeGiftTag;
-      letterGiftTag = (data.letter_gift !== undefined) ? (data.letter_gift || "") : letterGiftTag;
+      giftTags = ((data.hint_gifts || giftTags).map((n) => giftNameById(n))).filter(Boolean);
+      riddleTags = ((data.riddle_gifts || riddleTags).map((n) => giftNameById(n))).filter(Boolean).slice(0, 1);
+      sizeGiftTag = data.size_gift !== undefined ? giftNameById(data.size_gift || "") : sizeGiftTag;
+      letterGiftTag = data.letter_gift !== undefined ? giftNameById(data.letter_gift || "") : letterGiftTag;
       savedGiftTags = [...giftTags];
       savedRiddleTags = [...riddleTags];
       savedSizeGiftTag = sizeGiftTag;
@@ -3090,8 +3179,30 @@ async function loadGiftCatalog() {
     ]);
     const tagsData = await tagsRes.json();
     const mapData = await mapRes.json();
-    giftTagList = tagsData.gifts || [];
-    giftImageMap = mapData.map || {};
+    let cat = null;
+    try {
+      const r = await fetch("/api/gifts?all=1");
+      cat = await r.json();
+    } catch (e) { cat = null; }
+    giftCatalogList = Array.isArray(cat && cat.gifts) ? cat.gifts : [];
+    giftSyncedAt = (cat && cat.synced_at) || 0;
+
+    if (giftCatalogList.length) {
+      // fonte principal: catálogo do DB (id/status/icon_local/diamond)
+      giftTagList = giftCatalogList.map((g) => ({
+        name: g.name,
+        diamond_count: g.diamond_count,
+        id: g.id || "",
+        status: g.status || "active",
+        icon_local: g.icon_local || "",
+      }));
+      giftImageMap = {};
+      for (const g of giftCatalogList) if (g.icon_local) giftImageMap[g.name] = g.icon_local;
+    } else {
+      giftTagList = tagsData.gifts || [];
+      giftImageMap = mapData.map || {};
+    }
+    updateGiftSyncStatus();
   } catch (e) {
     addLog("[GiftConfig] [!] Falha ao carregar catálogo de gifts");
   }

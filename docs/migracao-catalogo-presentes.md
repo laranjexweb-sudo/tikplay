@@ -161,8 +161,9 @@ Tabela `gift_meta` (single-row): `id INTEGER PK CHECK(id=1)`, `last_sync INTEGER
 - [x] **Fase 2** — Resolver ID-first nos motores: `JogoContexto.process_gift`/`process_riddle_gift`,
   `TresPontinhos.process_gift`/`_gift_matches` + repasse de `gift_id` em `service.py:1286`/`:1230`.
   Fallback por nome (EN/PT) preservado; `duelo.py` já era ID-first (validado).
-- [ ] **Fase 3** — Painel: seletor ID-first, busca/filtro, botão "Sincronizar agora", badge indisponível.
-- [ ] **Fase 3** — Painel: seletor ID-first, busca/filtro, botão "Sincronizar agora", badge indisponível.
+- [x] **Fase 3** — Painel: seletor consome `/api/gifts` (ID como valor quando sincronizado), busca por
+  nome/PT/ID, badge "indisponível", 💎 no autocomplete, filtro por valor (min/max), botão
+  "Sincronizar agora" + última sync + refresh via WS `gifts_synced`. `normalizeHintGifts` aceita ID ou nome.
 - [ ] **Fase 4** — Migração/backfill das configs existentes (nomes → IDs) + regenerar derivados.
 - [ ] **Fase 5** — Validação por jogo + limpeza (fallback pode virar definitivo).
 

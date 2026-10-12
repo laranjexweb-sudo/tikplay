@@ -1091,22 +1091,27 @@ function normalizeHintGifts(rawList, maxCount = 5) {
   if (rawList.length > maxCount) {
     return { ok: false, error: `Maximo de ${maxCount} gifts` };
   }
-  const catalog = readGiftTags();
-  const byLower = new Map();
-  for (const g of catalog) {
-    if (g && g.name) byLower.set(String(g.name).toLowerCase(), g.name);
-  }
+  const legacyNames = new Set(readGiftTags().map((g) => String(g && g.name || "").toLowerCase()));
   const seen = new Set();
   const normalized = [];
   for (const item of rawList) {
-    const name = String(item || "").trim();
-    if (!name) return { ok: false, error: "Nome de gift vazio" };
-    const canonical = byLower.get(name.toLowerCase());
-    if (!canonical) return { ok: false, error: `Gift invalido: ${name}` };
-    const key = canonical.toLowerCase();
+    const ref = String(item || "").trim();
+    if (!ref) return { ok: false, error: "Nome/ID de gift vazio" };
+    // Aceita ID do TikTok ou nome. Resolve para a referência canônica (ID quando sincronizado).
+    let g = null;
+    try { g = db.getGiftById(ref) || db.getGiftByName(ref); } catch {}
+    let value;
+    if (g) {
+      value = g.id || g.name;
+    } else if (legacyNames.has(ref.toLowerCase())) {
+      value = ref; // nome legado ainda não sincronizado
+    } else {
+      return { ok: false, error: `Gift invalido: ${ref}` };
+    }
+    const key = String(value).toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    normalized.push(canonical);
+    normalized.push(value);
   }
   return { ok: true, gifts: normalized };
 }
