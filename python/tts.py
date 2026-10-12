@@ -32,6 +32,8 @@ EDGE_VOICE_MAP = {
 
 _EDGE_LOCK = threading.Lock()
 
+EDGE_LAST_ERROR = ""
+
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts_models")
 
 
@@ -93,14 +95,17 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
     """
     text = clean_text(text)
     if not EDGE_AVAILABLE or not text:
+        EDGE_LAST_ERROR = "edge_tts indisponivel" if not EDGE_AVAILABLE else "texto vazio"
         return None
     ms_voice = EDGE_VOICE_MAP.get(voice_key)
     if not ms_voice:
+        EDGE_LAST_ERROR = f"voz desconhecida: {voice_key}"
         return None
     os.makedirs(out_dir, exist_ok=True)
     fname = f"edge_{_hash(text, f'{voice_key}|{round(float(rate), 3)}')}.mp3"
     out_path = os.path.join(out_dir, fname)
     if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+        EDGE_LAST_ERROR = ""
         return out_path
     try:
         _last_err = None
@@ -114,6 +119,7 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
                 break
             except Exception as e:
                 _last_err = e
+                EDGE_LAST_ERROR = f"(tentativa {attempt + 1}) {type(e).__name__}: {e}"
                 _cleanup(out_path)
                 time.sleep(0.8 * (attempt + 1))
         else:
@@ -121,4 +127,5 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
     except Exception:
         _cleanup(out_path)
         return None
+    EDGE_LAST_ERROR = ""
     return out_path

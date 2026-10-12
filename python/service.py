@@ -247,7 +247,11 @@ class GameSession:
         if meta.get("is_subscriber") is True:
             return True
         for badge in meta.get("badges") or []:
-            name = str(badge.get("name") or "").lower()
+            if isinstance(badge, dict):
+                bname = str(badge.get("name") or "")
+            else:
+                bname = str(getattr(badge, "name", None) or "")
+            name = bname.lower()
             if any(k in name for k in ("coracao", "coração", "heart", "fan", "sub", "membro")):
                 return True
         return False
@@ -295,7 +299,9 @@ class GameSession:
             self._throttled_log("tts_err", f"[TTS] erro ao sintetizar '{voice_key}': {type(e).__name__}: {e}", game="tts", level="err")
             return None
         if not audio_path:
-            self._throttled_log("tts_noaudio", f"[TTS] sem áudio (Edge falhou) para: '{text[:40]}'", game="tts", level="warn", secs=5.0)
+            motivo = getattr(tts, "EDGE_LAST_ERROR", "") or ""
+            suffix = f" | motivo: {motivo}" if motivo else ""
+            self._throttled_log("tts_noaudio", f"[TTS] sem áudio (Edge falhou) para: '{text[:40]}'{suffix}", game="tts", level="warn", secs=5.0)
             return None
         return f"/tts-audio/{self.tenant_id}/{os.path.basename(audio_path)}"
 

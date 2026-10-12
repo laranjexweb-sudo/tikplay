@@ -75,7 +75,11 @@ class TikTokLiveHandler:
             "follow_role": getattr(user, "follow_role", None) if hasattr(user, "follow_role") else (1 if getattr(user, "is_follower", False) else None),
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
             "is_follower": getattr(user, "is_follower", False) or getattr(user, "follow_info", None) is not None,
-            "badges": list(getattr(user, "badges", None) or []),
+            "badges": [
+                {"name": str(getattr(b, "name", "") or "")}
+                for b in (getattr(user, "badges", None) or [])
+                if b is not None
+            ],
             "user_id": str(getattr(user, "id", None) or ""),
         }
 
