@@ -96,3 +96,9 @@
 
 - Sem acesso a LIVE neste ambiente → validação funcional de fluxos reais (gift da live, combo, áudio) é **não verificada**.
 - `gift_diamonds`/matching ID-first dependem do catálogo sincronizado (já aplicado; `game.py` atualizado).
+
+## 10. Progresso — atualização (2026-10-12)
+
+- Fase A-1 concluída: `python/service_common.py` (emit, normalize_settings, DEFAULT_SETTINGS, get_rank_color) + doc.
+- **Fase A-2 concluída:** `BatalhaEngine` extraído para `python/batalha.py` (importa `emit` de `service_common` e `db`); `service.py` agora usa `from batalha import BatalhaEngine` (classe removida do `service.py`). Equivalência verificada offline: `battle_state`/`battle_action` (payload type tap/coin)/`battle_round_end`/`battle_ranking`; `service.BatalhaEngine is batalha.BatalhaEngine`; `import service` OK.
+- Pendente: A-3+ (motores de `game.py`), B (Node), C (Design System), D/E (aguardam decisões). Validação LIVE não verificada.
