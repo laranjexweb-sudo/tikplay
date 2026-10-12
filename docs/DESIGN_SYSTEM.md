@@ -424,7 +424,7 @@ node/public/
 
 ## 10. Status / Progresso
 
-- [ ] **Fase 0** — Backup / `git init` antes de qualquer alteração
+- [x] **Fase 0** — Backup / versionamento (git) antes de qualquer alteração
 - [ ] **ETAPA 1** — Tokens (`ui/tikplay-theme.css`)
 - [ ] **ETAPA 2** — Componentes globais
 - [ ] **ETAPA 3** — Header + navegação
@@ -437,6 +437,7 @@ node/public/
 **Concluído:**
 
 - 2026-10-12 — Inventário/diagnóstico visual completo (§2) + tokens preliminares (§3) + governança (este doc, `REGRAS_DO_PROJETO.md`, `AGENTS.md`).
+- 2026-10-12 — Versionamento: repo guarda-chuva na raiz + `jogo-contexto` como submódulo do TikPlay.
 
 ### Acompanhamento por arquivo
 
