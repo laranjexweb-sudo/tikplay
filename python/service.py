@@ -1663,6 +1663,9 @@ async def process_commands(queue):
             tres_gifts = cmd.get("tres_gifts")
             if isinstance(tres_gifts, dict):
                 session.tres.set_gift_config(tres_gifts)
+            caca_config = cmd.get("caca_config")
+            if isinstance(caca_config, dict):
+                session.caca_prefix = str(caca_config.get("prefix") or "").strip()
             sessions[tid] = session
             session.task = asyncio.create_task(session.run())
             emit(tid, "log", f"[Service] Sessao iniciada para @{session.username} (motor {session.engine}) — voz={session.settings.get('tts_voice') or 'padrao'} {session.settings.get('tts_rate', 1.0)}x")

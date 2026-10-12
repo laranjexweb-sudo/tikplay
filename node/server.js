@@ -709,7 +709,10 @@ app.get("/api/settings", auth.requireAuth, (req, res) => {
 });
 
 app.post("/api/settings", auth.requireAuth, (req, res) => {
-  const settings = normalizeSettings(req.body && req.body.settings);
+  // Merge defensivo sobre o que já está no banco: campos ausentes mantêm o valor
+  // persistido (não voltam ao default), reduzindo clobber entre abas/dispositivos.
+  const current = readTenantSettings(req.user.id);
+  const settings = normalizeSettings({ ...current, ...((req.body && req.body.settings) || {}) });
   try {
     db.saveTenantSettings(req.user.id, settings);
     const tenant = getTenant(req.user.id);
@@ -959,10 +962,19 @@ app.post("/api/caca/stop", auth.requireAuth, (req, res) => {
 });
 
 app.post("/api/caca/config", auth.requireAuth, (req, res) => {
-  const prefix = (req.body && typeof req.body.prefix === "string") ? req.body.prefix.trim() : "";
+  const prefix = (req.body && typeof req.body.prefix === "string") ? req.body.prefix.trim().slice(0, 8) : "";
+  try {
+    db.saveCacaConfig(req.user.id, { prefix });
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
   const ok = daemonSend({ cmd: "caca_config", tenant_id: req.user.id, prefix });
   if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
   res.json({ success: true });
+});
+
+app.get("/api/caca/config", auth.requireAuth, (req, res) => {
+  res.json({ success: true, ...db.getCacaConfig(req.user.id) });
 });
 
 app.post("/api/caca/reveal", auth.requireAuth, (req, res) => {
@@ -1734,6 +1746,7 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
     settings: readTenantSettings(user.id),
     engine,
     tres_gifts: db.getTresGiftConfig(user.id),
+    caca_config: db.getCacaConfig(user.id),
   });
   if (!ok) {
     return res.json({ success: false, error: "Servico Python indisponivel" });

@@ -85,6 +85,14 @@ CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_id ON log_entries(tenant_id, i
 CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_ts ON log_entries(tenant_id, ts);
 `);
 db.exec(`
+CREATE TABLE IF NOT EXISTS tenant_caca_config (
+  tenant_id INTEGER PRIMARY KEY,
+  prefix TEXT DEFAULT '',
+  count INTEGER DEFAULT 10,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+db.exec(`
 CREATE TABLE IF NOT EXISTS gifts (
   gid INTEGER PRIMARY KEY AUTOINCREMENT,
   id TEXT UNIQUE,
@@ -513,6 +521,23 @@ function saveTenantGiftConfig(tenantId, hint_gifts, riddle_gifts, size_gift, let
     VALUES (?,?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET hint_gifts=excluded.hint_gifts, riddle_gifts=excluded.riddle_gifts, size_gift=excluded.size_gift, letter_gift=excluded.letter_gift
   `).run(tenantId, JSON.stringify(hint_gifts || []), JSON.stringify(riddle_gifts || []), String(size_gift || ""), String(letter_gift || ""));
+}
+
+function getCacaConfig(tenantId) {
+  const row = db.prepare("SELECT prefix, count FROM tenant_caca_config WHERE tenant_id = ?").get(tenantId);
+  if (!row) return { prefix: "", count: 10 };
+  return { prefix: row.prefix || "", count: row.count || 10 };
+}
+
+function saveCacaConfig(tenantId, cfg) {
+  const prefix = String((cfg && cfg.prefix != null) ? cfg.prefix : "").trim().slice(0, 8);
+  const count = Math.max(4, Math.min(16, parseInt((cfg && cfg.count != null) ? cfg.count : 10, 10) || 10));
+  db.prepare(`
+    INSERT INTO tenant_caca_config (tenant_id, prefix, count)
+    VALUES (?,?,?)
+    ON CONFLICT(tenant_id) DO UPDATE SET prefix=excluded.prefix, count=excluded.count, updated_at=CURRENT_TIMESTAMP
+  `).run(tenantId, prefix, count);
+  return { prefix, count };
 }
 
 function getTresGiftConfig(tenantId) {
@@ -1108,6 +1133,8 @@ module.exports = {
   saveTenantGiftConfig,
   getTresGiftConfig,
   saveTresGiftConfig,
+  getCacaConfig,
+  saveCacaConfig,
   getSoundAlerts,
   saveSoundAlert,
   getTenantHistory,
