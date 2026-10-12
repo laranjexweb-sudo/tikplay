@@ -132,6 +132,36 @@ def init_db():
     conn.close()
 
 
+def get_tenant_settings(tenant_id):
+    """Lê as preferências salvas do tenant (painel). Usado para hidratar a sessão
+    do daemon mesmo após restart, garantindo voz/velocidade da narração do menu."""
+    try:
+        conn = _conn()
+        row = conn.execute(
+            "SELECT apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, "
+            "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix "
+            "FROM tenant_settings WHERE tenant_id=?",
+            (tenant_id,),
+        ).fetchone()
+        conn.close()
+        if not row:
+            return {}
+        return {
+            "apenas_seguidores": bool(row[0]),
+            "apenas_heart_me": bool(row[1]),
+            "pct_dica": int(row[2] if row[2] is not None else 70),
+            "pct_charada": int(row[3] if row[3] is not None else 30),
+            "tts_rate": float(row[4] if row[4] is not None else 1.0),
+            "tts_voice": (row[5] or ""),
+            "chat_narr_enabled": bool(row[6]),
+            "chat_narr_mode": (row[7] or "all"),
+            "chat_narr_char": (row[8] or "#"),
+            "command_prefix": (row[9] or "#"),
+        }
+    except Exception:
+        return {}
+
+
 def record_guess(username, nickname, avatar):
     if not username:
         return

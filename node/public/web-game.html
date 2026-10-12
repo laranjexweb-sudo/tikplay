@@ -852,28 +852,6 @@ function typewriterText(elementId, text, speed) {
   }, speed);
 }
 
-let riddleVoicesCache = [];
-function loadRiddleVoices() {
-  if ('speechSynthesis' in window) riddleVoicesCache = window.speechSynthesis.getVoices() || [];
-}
-if ('speechSynthesis' in window) {
-  loadRiddleVoices();
-  window.speechSynthesis.onvoiceschanged = loadRiddleVoices;
-}
-
-function pickRiddleVoice(ttsSettings) {
-  const voices = riddleVoicesCache;
-  if (!voices.length) return null;
-  const name = ((ttsSettings && ttsSettings.tts_voice) || "").trim().toLowerCase();
-  if (name) {
-    const byName = voices.find(v => (v.name || "").toLowerCase().includes(name));
-    if (byName) return byName;
-    const byLang = voices.find(v => (v.lang || "").toLowerCase().includes(name));
-    if (byLang) return byLang;
-  }
-  return voices.find(v => (v.lang || "").toLowerCase().startsWith("pt")) || null;
-}
-
 function playRiddleAudio() {
   if (!currentRiddleAudioUrl) return;
   if (riddleAudio) riddleAudio.pause();
@@ -890,19 +868,9 @@ function speakCurrentRiddle() {
     playRiddleAudio();
     return;
   }
-  if (!currentRiddleText || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(currentRiddleText);
-  utterance.lang = "pt-BR";
-  const s = state.ttsSettings || {};
-  utterance.rate = Number(s.tts_rate) || 1.0;
-  utterance.pitch = 1.0;
-  const voice = pickRiddleVoice(s);
-  if (voice) utterance.voice = voice;
-  setRiddleNarrating(true);
-  utterance.onend = () => setRiddleNarrating(false);
-  utterance.onerror = () => setRiddleNarrating(false);
-  window.speechSynthesis.speak(utterance);
+  // Sem mp3 do Edge (voz do servidor/menu) a narração fica de fora:
+  // fallback com speechSynthesis usava voz aleatória do navegador, ignorando o menu.
+  setRiddleNarrating(false);
 }
 
 function renderBoxes() {

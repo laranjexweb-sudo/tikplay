@@ -221,16 +221,13 @@ class GameSession:
         self.tap_meta_total = 1000
         self.tap_meta_ready = False
         self._tap_meta_cooldown_until = 0
-        self.settings = {
-            "apenas_seguidores": False,
-            "apenas_heart_me": False,
-            "pct_dica": 70,
-            "pct_charada": 30,
-            "tts_rate": 1.0,
-            "tts_voice": "",
-            "chat_narr_enabled": False,
-            "chat_narr_mode": "all",
-        }
+        self.settings = dict(DEFAULT_SETTINGS)
+        try:
+            db_settings = db.get_tenant_settings(tenant_id)
+            if isinstance(db_settings, dict) and db_settings:
+                self.settings = normalize_settings(db_settings)
+        except Exception:
+            pass
 
     @staticmethod
     def _is_follower(meta) -> bool:
@@ -1620,7 +1617,7 @@ async def process_commands(queue):
                 session.tres.set_gift_config(tres_gifts)
             sessions[tid] = session
             session.task = asyncio.create_task(session.run())
-            emit(tid, "log", f"[Service] Sessao iniciada para @{session.username} (motor {session.engine})")
+            emit(tid, "log", f"[Service] Sessao iniciada para @{session.username} (motor {session.engine}) — voz={session.settings.get('tts_voice') or 'padrao'} {session.settings.get('tts_rate', 1.0)}x")
 
         elif c == "stop":
             await stop_session_task(tid)
