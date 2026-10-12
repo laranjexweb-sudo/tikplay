@@ -1971,6 +1971,19 @@ function dueloClientSettings(userId, settings) {
     }
     s.extra_gifts = out;
   }
+  if (s.special_attacks && typeof s.special_attacks === "object") {
+    let map = {};
+    try { map = JSON.parse(fs.readFileSync(GIFT_IMAGE_MAP_PATH, "utf-8")) || {}; } catch {}
+    const saOut = {};
+    for (const k of Object.keys(s.special_attacks)) {
+      const v = s.special_attacks[k];
+      if (!v || typeof v !== "object") { saOut[k] = v; continue; }
+      saOut[k] = Object.assign({}, v, {
+        image: (v.gift_name && map[v.gift_name]) ? `/gift-images/${map[v.gift_name]}` : "",
+      });
+    }
+    s.special_attacks = saOut;
+  }
   return s;
 }
 

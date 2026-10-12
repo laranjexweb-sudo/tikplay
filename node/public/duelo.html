@@ -1015,13 +1015,21 @@ if (isTimedMode() || isHpNewMode()) {
         if ((sc.side || sm.side) !== f) continue;
         const ts2 = document.createElement("span");
         ts2.className = "gift-tag";
-        const ic2 = document.createElement("span");
-        ic2.className = "gift-icon";
-        ic2.textContent = "⭐";
-        ts2.appendChild(ic2);
+        if (sc.image) {
+          const img2 = document.createElement("img");
+          img2.src = sc.image;
+          img2.alt = "";
+          img2.onerror = function () { this.style.display = "none"; };
+          ts2.appendChild(img2);
+        } else {
+          const ic2 = document.createElement("span");
+          ic2.className = "gift-icon";
+          ic2.textContent = "⭐";
+          ts2.appendChild(ic2);
+        }
         const e3 = document.createElement("span");
         e3.className = "gift-effect";
-        e3.textContent = "ESPECIAL · " + String(sc.gift_name).toUpperCase();
+        e3.textContent = "ESPECIAL";
         ts2.appendChild(e3);
         tags.push(ts2);
       }
