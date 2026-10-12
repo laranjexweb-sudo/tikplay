@@ -4,6 +4,7 @@ Fase A do plano de separação estrutural (ver docs/separacao-estrutural.md).
 Extrações: get_rank_color, DEFAULT_SETTINGS, normalize_settings, emit.
 """
 import json
+import unicodedata
 
 
 def get_rank_color(rank: int) -> str:
@@ -102,3 +103,9 @@ def emit(tenant_id, type_, payload):
     else:
         out["text"] = payload
     print(json.dumps(out, ensure_ascii=False), flush=True)
+
+def strip_accents(s: str) -> str:
+    if not s:
+        return ""
+    s = s.lower().strip()
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")

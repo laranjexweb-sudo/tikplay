@@ -101,4 +101,5 @@
 
 - Fase A-1 concluída: `python/service_common.py` (emit, normalize_settings, DEFAULT_SETTINGS, get_rank_color) + doc.
 - **Fase A-2 concluída:** `BatalhaEngine` extraído para `python/batalha.py` (importa `emit` de `service_common` e `db`); `service.py` agora usa `from batalha import BatalhaEngine` (classe removida do `service.py`). Equivalência verificada offline: `battle_state`/`battle_action` (payload type tap/coin)/`battle_round_end`/`battle_ranking`; `service.BatalhaEngine is batalha.BatalhaEngine`; `import service` OK.
-- Pendente: A-3+ (motores de `game.py`), B (Node), C (Design System), D/E (aguardam decisões). Validação LIVE não verificada.
+- **Fase A-3 (motor 1) concluída:** `CacaPalavras` extraído para `python/jogos/caca.py` (extração byte-a-byte); `strip_accents` movido para `service_common.py`; `game.py` re-exporta (`from jogos.caca import CacaPalavras`) e `service.CacaPalavras is jogos.caca.CacaPalavras`. Verificado: `py_compile` + geração de grade + `find_word` + `import service`.
+- Pendente: A-3 restante (JogoContexto, VPetEngine, TresPontinhos), B (Node), C (Design System), D/E (aguardam decisões). Validação LIVE não verificada.
