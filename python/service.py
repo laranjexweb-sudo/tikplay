@@ -348,6 +348,7 @@ class GameSession:
         + chat_narr_char (caractere manual). Não depende do command_prefix.
         """
         if not self.settings.get("chat_narr_enabled"):
+            self._throttled_log("narr_off", "[Narração] DESATIVADA (chat_narr_enabled=off) — ative em 'Leitura de Chat'", game="tts", level="warn", secs=6.0)
             return
         mode = self.settings.get("chat_narr_mode") or "all"
         char = str(self.settings.get("chat_narr_char") or "#")
@@ -369,15 +370,22 @@ class GameSession:
                         (voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX) and tts.kokoro_available())
         if server_engine:
             self._narrate_queue.put_nowait(text)
+            self._throttled_log("narr_enq", f"[TTS] narração enfileirada: '{text[:60]}'", game="tts", level="info", secs=6.0)
         else:
             emit(self.tenant_id, "narrate", {"text": text})
+            self._throttled_log("narr_fb", f"[TTS] narração via navegador (texto): '{text[:60]}'", game="tts", level="info", secs=6.0)
 
     async def _narrate_loop(self):
         while True:
             text = await self._narrate_queue.get()
-            audio_url = await self._tts_url(text)
-            if audio_url:
-                emit(self.tenant_id, "narrate", {"url": audio_url})
+            try:
+                audio_url = await self._tts_url(text)
+                if audio_url:
+                    emit(self.tenant_id, "narrate", {"url": audio_url})
+                else:
+                    self._throttled_log("narr_turl", f"[TTS] narração sem áudio (motor falhou) para: '{text[:40]}'", game="tts", level="warn", secs=5.0)
+            except Exception as e:
+                self._throttled_log("narr_exc", f"[TTS] erro ao narrar: {type(e).__name__}: {e}", game="tts", level="err", secs=5.0)
 
     def _stable_uid(self, user, user_meta=None):
         try:
