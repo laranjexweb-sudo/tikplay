@@ -2058,7 +2058,11 @@ class TresPontinhos:
         if not self.active or self.finished:
             return
         # Apoiador: qualquer gift na rodada vale multiplicador 2x
+        is_new_supporter = user not in self.supporter_users
         self.supporter_users.add(user)
+        if is_new_supporter:
+            # Evento apenas visual (faixa de apoiadores na tela) — não altera pontuação/regras
+            self._emit("tres_supporter", {"user": user, "nickname": nickname or user, "avatar": avatar or ""})
         n = self._norm(gift_name)
         cfg = self.gift_config
         if self._gift_matches(n, cfg.get("size")) and not self.size_revealed:

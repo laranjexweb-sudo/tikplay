@@ -34,3 +34,5 @@ python/game.db
 
 # logs
 *.log
+
+node/public/duelo-audio/

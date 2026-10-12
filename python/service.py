@@ -976,6 +976,17 @@ class GameSession:
             "active_gift": active_gift,
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
+            "tap_meta_current": self.tap_meta_current,
+            "tap_meta_total": int(self.settings.get("tap_meta", 1000) or 1000),
+            "tap_meta_ready": self.tap_meta_ready,
+        })
+        # Garante que os clientes recebam o estado zerado da meta imediatamente
+        emit(self.tenant_id, "game", {
+            "type": "likes_ranking",
+            "ranking": self.build_likes_ranking(5),
+            "tap_meta_current": self.tap_meta_current,
+            "tap_meta_total": int(self.settings.get("tap_meta", 1000) or 1000),
+            "tap_meta_ready": self.tap_meta_ready,
         })
 
     @staticmethod

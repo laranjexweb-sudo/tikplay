@@ -2,345 +2,659 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Jogo das 3 Dicas</title>
 <style>
   :root {
-    --neon-pink: #ff2d78;
-    --neon-gold: #ffd700;
-    --neon-purple: #a855f7;
-    --neon-blue: #22d3ee;
-    --bg-1: #0b0620;
-    --bg-2: #1a0b2e;
+    --bg:        #0b0f1a;
+    --panel:     #121a2c;
+    --panel-2:   #16203a;
+    --line:      #22304d;
+    --cyan:      #22d3ee;
+    --blue:      #38bdf8;
+    --gold:      #ffd22e;
+    --gold-2:    #f0c84a;
+    --green:     #4ade80;
+    --red:       #fb5b5b;
+    --amber:     #ffc23e;
+    --txt:       #eef3ff;
+    --muted:     #93a4c6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
   body {
-    background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
-    color: #fff;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    /* brilho tecnológico sutil, sem glassmorphism */
+    background-image:
+      radial-gradient(1100px 480px at 50% -140px, rgba(34,211,238,.10), transparent 70%),
+      radial-gradient(900px 420px at 100% 110%, rgba(255,210,46,.05), transparent 70%);
+    background-repeat: no-repeat;
+    color: var(--txt);
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
     width: 100vw;
     height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
   #stage {
+    position: relative;
     width: 100%;
-    max-width: 680px;
-    height: 100%;
-    max-height: 1200px;
-    padding: 12px 20px;
+    max-width: 600px;
+    height: 100vh;
+    max-height: 1100px;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    position: relative;
+    gap: 10px;
+    overflow: hidden;
   }
-  .toprow {
+
+  /* ===================== HUD / TOPO ===================== */
+  #hud {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: stretch;
+    gap: 10px;
   }
-  .header {
-    text-align: left;
-  }
-  .title {
+  .brand { flex: 1; min-width: 0; }
+  .brand-title {
     font-size: 24px;
     font-weight: 900;
-    letter-spacing: 2px;
-    color: var(--neon-gold);
-    text-shadow: 0 0 16px rgba(255,215,0,.8);
-  }
-  .subtitle {
-    font-size: 11px;
-    color: #cbd5e1;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 2px;
-  }
-  .round {
-    font-size: 11px;
-    color: var(--neon-blue);
-    text-shadow: 0 0 10px rgba(34,211,238,.7);
-  }
-
-  .timer {
-    text-align: right;
-    font-size: 44px;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-    color: var(--neon-pink);
-    text-shadow: 0 0 22px rgba(255,45,120,.9);
-    letter-spacing: 2px;
-    margin: 2px 0;
-    white-space: nowrap;
-  }
-  .timer.warn { color: #fff; text-shadow: 0 0 22px rgba(255,255,255,.9); animation: pulse 1s infinite; }
-  @keyframes pulse { 50% { opacity: .4; } }
-
-  .answer {
-    text-align: center;
-    font-size: 34px;
-    font-weight: 900;
-    letter-spacing: 14px;
-    color: var(--neon-gold);
-    text-shadow: 0 0 18px rgba(255,215,0,.8);
-    min-height: 46px;
-    line-height: 46px;
-    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: #fff;
     text-transform: uppercase;
   }
-  .answer .letter { display: inline-block; min-width: .65em; text-align: center; }
-  .answer.locked { color: #94a3b8; text-shadow: none; }
-  .answer.revealed { color: #4ade80; text-shadow: 0 0 18px rgba(74,222,128,.8); }
-  .answer.timeout { color: #f87171; text-shadow: 0 0 18px rgba(248,113,113,.8); }
-
-  .dicas {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .dica {
-    background: rgba(168,85,247,.12);
-    border: 2px solid var(--neon-purple);
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: 18px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 0 14px rgba(168,85,247,.4);
-  }
-  .dica .num {
-    color: var(--neon-gold);
-    background: rgba(255,215,0,.12);
-    border: 2px solid var(--neon-gold);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 15px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .dica .dica-play {
-    margin-left: auto;
-    flex-shrink: 0;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 50%;
-    border: 2px solid var(--neon-blue);
-    background: rgba(34,211,238,.12);
-    color: var(--neon-blue);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background .2s;
-  }
-  .dica .dica-play svg {
-    width: 12px;
-    height: 12px;
-    margin-left: 2px;
-    display: block;
-  }
-  .dica .dica-play:hover { background: rgba(34,211,238,.3); }
-  .gift-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-  }
-  .gift-tag {
-    font-size: 13px;
-    font-weight: 700;
-    color: #e2e8f0;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(255,215,0,.06);
-    border: 1px solid rgba(255,215,0,.25);
-    border-radius: 10px;
-    padding: 6px 14px;
-  }
-  .gift-img {
-    width: 42px;
-    height: 42px;
-    object-fit: contain;
-    border-radius: 6px;
-  }
-  .gift-img.gift-active {
-    animation: giftPulse 1s ease-in-out 2;
-    filter: drop-shadow(0 0 14px var(--neon-gold));
-  }
-  @keyframes giftPulse {
-    0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px var(--neon-gold)); }
-    40% { transform: scale(1.45) rotate(-8deg); filter: drop-shadow(0 0 22px var(--neon-gold)); }
-    60% { transform: scale(1.45) rotate(8deg); filter: drop-shadow(0 0 22px var(--neon-gold)); }
-    100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px var(--neon-gold)); }
-  }
-  .gift-by {
-    color: var(--neon-blue);
-    font-size: 12px;
-    font-style: italic;
-    font-weight: 700;
-  }
-  .gift-name-text {
-    font-size: 14px;
-    color: #e2e8f0;
-  }
-  .gift-sep {
-    color: #475569;
-    font-size: 12px;
-  }
-
-  #ticketToast {
-    position: absolute;
-    top: 16px;
-    left: 0;
-    right: 0;
-    display: none;
-    justify-content: center;
-    z-index: 25;
-    pointer-events: none;
-  }
-  #ticketToast.show { display: flex; animation: ticketIn .4s ease; }
-  @keyframes ticketIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .ticket-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(0,0,0,.9);
-    border: 2px solid var(--neon-gold);
-    border-radius: 16px;
-    padding: 10px 22px;
-    box-shadow: 0 0 30px rgba(255,215,0,.7);
-  }
-  .ticket-label {
-    font-size: 13px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    letter-spacing: 2px;
-  }
-  .ticket-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 2px solid var(--neon-gold);
-    object-fit: cover;
-  }
-  .ticket-name {
-    font-size: 20px;
+  .brand-title em { font-style: normal; color: var(--gold); text-shadow: 0 0 14px rgba(255,210,46,.55); }
+  .brand-title small {
+    font-size: .42em;
     font-weight: 900;
     color: #fff;
+    background: var(--cyan);
+    color: #04121a;
+    border-radius: 6px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    letter-spacing: 1px;
+    vertical-align: 3px;
   }
-
-  #wrongGuess {
-    min-height: 34px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  .stage-label {
+    margin-top: 5px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(34,211,238,.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .wrong-item {
-    background: rgba(248,113,113,.14);
-    border: 2px solid #f87171;
-    border-radius: 10px;
-    padding: 6px 12px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #fca5a5;
+  .stage-label.flash { animation: stageFlash .45s ease; }
+  @keyframes stageFlash {
+    0% { opacity: 0; transform: translateY(-5px); letter-spacing: 6px; }
+    100% { opacity: 1; transform: translateY(0); letter-spacing: 2px; }
+  }
+  .pills { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+  .pill {
     display: flex;
     align-items: center;
-    gap: 8px;
-    text-shadow: 0 0 8px rgba(248,113,113,.5);
+    gap: 7px;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 5px 11px;
+    background: var(--panel);
+    box-shadow: 0 0 12px rgba(0,0,0,.35);
   }
-  .wrong-item img {
-    width: 26px; height: 26px; border-radius: 50%; border: 1px solid #f87171; object-fit: cover;
+  .pill-label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 900; }
+  #pointsVal { font-size: 17px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px rgba(255,210,46,.35); font-variant-numeric: tabular-nums; }
+  #timerVal {
+    font-size: 24px; font-weight: 900; color: var(--cyan);
+    text-shadow: 0 0 12px rgba(34,211,238,.35);
+    font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1;
   }
-  .wrong-item .wu { color: #fff; font-weight: 900; }
-  .wrong-item .wx { color: #f87171; margin-left: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+  #timerPill.t-amber #timerVal { color: var(--amber); text-shadow: 0 0 12px rgba(255,194,62,.5); }
+  #timerPill.t-red #timerVal {
+    color: var(--red); text-shadow: 0 0 16px rgba(251,91,91,.7);
+    animation: timePulse 1s ease-in-out infinite;
+  }
+  @keyframes timePulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
-  #winnerOverlay {
+  .statusbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; min-height: 22px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: var(--muted);
+    background: var(--panel);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-excl { border-color: var(--gold); color: var(--gold); background: rgba(255,210,46,.07); }
+  .badge-2x   { border-color: var(--blue); color: var(--blue); background: rgba(56,189,248,.07); }
+
+  /* ===================== PALAVRA ESCONDIDA ===================== */
+  #wordZone { margin: 10px 0 8px; }
+  #wordTiles {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: var(--tg, 7px);
+    width: 100%;
+    padding: 8px 0 22px;
+  }
+  .wtile {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: var(--tw, 46px);
+    height: var(--th, 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--tf, 27px);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #dbe8ff;
+    background: linear-gradient(180deg, #0f1830, #0c1222);
+    border: 2px solid var(--blue);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(56,189,248,.18), inset 0 2px 6px rgba(0,0,0,.5);
+  }
+  .wtile .idx {
+    position: absolute;
+    bottom: -17px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0;
+  }
+  /* Faixas de tamanho — o flex encolhe/estica para caber sempre numa linha */
+  #wordTiles.tiles-med  { --tg: 5px; --tw: 40px; --th: 50px; --tf: 23px; }
+  #wordTiles.tiles-lg   { --tg: 4px; --tw: 34px; --th: 43px; --tf: 19px; }
+  #wordTiles.tiles-xl   { --tg: 3px; --tw: 30px; --th: 38px; --tf: 16px; }
+  #wordTiles.tiles-2xl  { --tg: 2px; --tw: 26px; --th: 33px; --tf: 13px; }
+  .wtile.myst  { color: rgba(219,232,255,.28); border-color: var(--line); box-shadow: none; }
+  .wtile.pending { border-color: var(--line); }
+  .wtile.solved { color: var(--green); border-color: var(--green); box-shadow: 0 0 14px rgba(74,222,128,.4); }
+  .wtile.solved-timeout { color: var(--red); border-color: var(--red); box-shadow: 0 0 14px rgba(251,91,91,.4); text-shadow: none; }
+  .wtile.scan {
+    color: var(--gold);
+    border-color: var(--gold);
+    animation: firstScan 1.1s ease-in-out infinite;
+  }
+  @keyframes firstScan {
+    0%,100% { box-shadow: 0 0 8px rgba(255,210,46,.35); background: #16150a; }
+    50%     { box-shadow: 0 0 24px rgba(255,210,46,.85); background: #241c05; transform: scale(1.06); }
+  }
+  .wtile.pop { animation: tileIn .22s both; }
+  @keyframes tileIn {
+    0% { transform: scale(.25) rotate(-6deg); opacity: 0; }
+    60% { transform: scale(1.14); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .waiting-txt {
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--muted);
+    font-size: 15px;
+    padding: 18px 0;
+  }
+  .word-meta { text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: 2px; min-height: 16px; margin-top: 2px; text-transform: uppercase; }
+
+  /* ===================== DICAS PROGRESSIVAS ===================== */
+  #dicas { display: flex; flex-direction: column; gap: 8px; }
+  .dica { position: relative; border-radius: 12px; }
+  .dica-inner {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(180deg, #131c31, #0f1729);
+    border: 2px solid var(--line);
+    border-radius: 11px;
+    padding: 8px 13px 10px;
+    transition: transform .3s ease, opacity .3s ease;
+  }
+  .dica-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .dica-num {
+    width: 27px; height: 27px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 13px;
+    flex-shrink: 0;
+    background: rgba(34,211,238,.12);
+    border: 2px solid var(--cyan);
+    color: var(--cyan);
+  }
+  .dica-num.on { background: rgba(255,210,46,.14); border-color: var(--gold); color: var(--gold); }
+  .dica-tag { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; color: var(--cyan); text-transform: uppercase; }
+  .dica-tag.ok { color: var(--green); }
+  .dica-points { margin-left: auto; font-size: 11px; font-weight: 900; color: var(--muted); letter-spacing: 1px; white-space: nowrap; }
+  .dica-points.gold { color: var(--gold); font-size: 13px; }
+  .dica-text { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .dica-text.sm { font-size: 14px; color: #c6d3ee; }
+  .dica-text.dim { color: var(--muted); }
+  .dica-text.big { font-size: 21px; font-weight: 800; }
+  .dica-play {
+    margin-left: auto;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--blue);
+    background: rgba(56,189,248,.12);
+    color: var(--blue);
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background .2s;
+  }
+  .dica-play:hover { background: rgba(56,189,248,.32); }
+
+  /* História */
+  .dica.history .dica-inner { opacity: .82; }
+  .dica.history .dica-text { font-size: 14px; }
+
+  /* Bloqueada */
+  .dica.locked .dica-inner { opacity: .8; }
+  .dica.locked .dica-lock-blur {
+    position: relative;
+    filter: blur(5px);
+    opacity: .45;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* Dica ATUAL — ativa, com borda tecnológica correndo + brilho respirando */
+  .dica.current { transform: scale(1.02); }
+  .dica.current .dica-inner { animation: dicaUp .4s ease; }
+  @keyframes dicaUp {
+    0% { transform: translateY(12px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .dica.current::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(115deg,
+      rgba(34,211,238,.12) 0%,
+      rgba(34,211,238,.8) 25%,
+      rgba(255,210,46,.9) 50%,
+      rgba(34,211,238,.8) 75%,
+      rgba(34,211,238,.12) 100%);
+    background-size: 320% 100%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    animation: techBorderFlow 5s linear infinite;
+    pointer-events: none;
+  }
+  .dica.current::after {
+    content: "";
+    position: absolute;
+    inset: -16px;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 40%, rgba(34,211,238,.13), transparent 65%);
+    animation: techBreath 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+  @keyframes techBorderFlow {
+    0% { background-position: 0% 0; }
+    100% { background-position: 320% 0; }
+  }
+  @keyframes techBreath {
+    0%,100% { opacity: .45; transform: scale(.99); }
+    50% { opacity: 1; transform: scale(1.02); }
+  }
+
+  /* ===================== PRESENTES / GIFT INFO ===================== */
+  #giftInfo { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 6px 0 2px; }
+  .gift-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 2px solid var(--line);
+    border-radius: 20px;
+    padding: 3px 11px;
+    background: var(--panel);
+    font-size: 11px; font-weight: 800; color: #dfe9ff;
+    letter-spacing: .5px;
+  }
+  .gift-tag .gift-img { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; }
+  .gift-tag .by { color: var(--cyan); font-style: normal; font-weight: 900; }
+  .gift-tag .gift-active { animation: giftPulse 1s ease-in-out 2; filter: drop-shadow(0 0 12px var(--gold)); }
+  /* Destaque sutil contínuo no presente que revela o TAMANHO */
+  .gift-tag.pulse-size {
+    border-color: rgba(255,210,46,.75);
+    animation: sizeTagPulse 2s ease-in-out infinite;
+  }
+  @keyframes sizeTagPulse {
+    0%,100% { box-shadow: 0 0 0 rgba(255,210,46,0); }
+    50%     { box-shadow: 0 0 14px rgba(255,210,46,.5); }
+  }
+  @keyframes giftPulse {
+    0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px var(--gold)); }
+    40% { transform: scale(1.35) rotate(-10deg); filter: drop-shadow(0 0 18px var(--gold)); }
+    60% { transform: scale(1.35) rotate(10deg); filter: drop-shadow(0 0 18px var(--gold)); }
+    100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px var(--gold)); }
+  }
+
+  /* ===================== PALPITES ERRADOS ===================== */
+  #wrongGuess { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+  .wrong-item {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(251,91,91,.09);
+    border: 2px solid rgba(251,91,91,.5);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 13px;
+    color: #ffd8d8;
+  }
+  .wrong-item img { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(251,91,91,.6); object-fit: cover; flex-shrink: 0; }
+  .wrong-item .wu { color: #fff; font-weight: 900; }
+  .wrong-item .wx { margin-left: auto; color: #f4a6a6; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+  /* ===================== APOIADORES ===================== */
+  #supportersBox {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 2px solid var(--blue);
+    border-radius: 12px;
+    background: rgba(56,189,248,.06);
+    margin-top: auto;
+  }
+  #supportersBox.show { display: flex; }
+  #supportersBox .lbl { font-size: 10px; font-weight: 900; letter-spacing: 2px; color: var(--blue); text-transform: uppercase; margin-right: 2px; }
+  .supp-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    object-fit: cover;
+    margin-left: -4px;
+    box-shadow: 0 0 8px rgba(255,210,46,.35);
+    background: var(--panel-2);
+  }
+  .supp-avatar.fb { display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: 900; font-size: 13px; margin-left: 0; }
+  .supp-more { font-weight: 900; color: var(--gold); font-size: 13px; }
+
+  /* ===================== RANKING COMPACTO (RODAPÉ) ===================== */
+  .weekly { margin-top: auto; }
+  .weekly-title {
+    text-align: center;
+    font-size: 11px; font-weight: 900; letter-spacing: 2px;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .weekly-list { display: flex; flex-direction: column; gap: 4px; }
+  .weekly-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 14px;
+    transition: border-color .3s, background .3s;
+  }
+  .weekly-row .pos { width: 24px; text-align: center; font-weight: 900; color: var(--gold); }
+  .weekly-row .nm { font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .weekly-row .pt { margin-left: auto; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .weekly-row.hl { border-color: var(--gold); background: rgba(255,210,46,.08); animation: rowFlash 1.1s ease; }
+  @keyframes rowFlash { 0% { background: rgba(255,210,46,.4); } 100% { background: rgba(255,210,46,.08); } }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+  /* ===================== OVERLAYS ===================== */
+  .overlay {
     position: absolute;
     inset: 0;
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 30;
     pointer-events: none;
-    background: rgba(0,0,0,.5);
   }
-  #winnerOverlay.show { display: flex; }
+  .overlay.show { display: flex; }
+
+  /* Flash verde/dourado de acerto */
+  #genFlash {
+    z-index: 35;
+    opacity: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(74,222,128,.55), rgba(255,210,46,.2) 55%, transparent 80%);
+  }
+  #genFlash.on { animation: genFlash 1.1s ease; }
+  @keyframes genFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* Nova palavra */
+  #newRound { z-index: 36; background: rgba(5,10,20,.55); }
+  .nr-title {
+    font-size: 38px; font-weight: 900; letter-spacing: 5px; color: var(--gold);
+    text-shadow: 0 0 26px rgba(255,210,46,.65);
+    animation: nrPop .55s ease;
+  }
+  .nr-sub { margin-top: 10px; color: #cfe0ff; font-weight: 800; letter-spacing: 3px; font-size: 15px; text-align: center; }
+  @keyframes nrPop { 0% { transform: scale(1.6); opacity: 0; letter-spacing: 14px; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* Popup de presente (tamanho / 1ª letra) — acima, fora da área do chat */
+  #revealPopup { z-index: 40; align-items: flex-start; padding-top: clamp(150px, 26vh, 34%); }
+  .rp-card {
+    background: #0e1626;
+    border: 3px solid var(--gold);
+    border-radius: 16px;
+    padding: 16px 22px;
+    text-align: center;
+    min-width: 250px;
+    box-shadow: 0 0 34px rgba(255,210,46,.55), inset 0 0 0 1px #000;
+    animation: popIn .35s ease;
+  }
+  @keyframes popIn { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .rp-av { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; margin: 0 auto 6px; display: block; background: var(--panel-2); }
+  .rp-name { color: var(--cyan); font-weight: 900; font-size: 14px; }
+  .rp-title { font-weight: 900; font-size: 21px; letter-spacing: 1px; color: #fff; margin-top: 2px; }
+  .rp-detail { font-size: 16px; font-weight: 800; color: var(--gold); margin-top: 5px; letter-spacing: 2px; }
+  .rp-detail.letters { font-size: 21px; letter-spacing: 3px; font-family: 'Courier New', monospace; }
+
+  /* Passe livre / apoiador 2x — logo abaixo do HUD */
+  #ticketToast { z-index: 45; top: 88px; align-items: flex-start; }
+  .ticket-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #0e1626;
+    border: 3px solid var(--gold);
+    border-radius: 14px;
+    padding: 8px 16px;
+    box-shadow: 0 0 26px rgba(255,210,46,.5), inset 0 0 0 1px #000;
+    animation: slideDown .35s ease;
+  }
+  @keyframes slideDown { from { transform: translateY(-26px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .ticket-label { font-weight: 900; letter-spacing: 2px; color: var(--gold); font-size: 12px; white-space: nowrap; }
+  .ticket-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; background: var(--panel-2); }
+  .ticket-avatar.fb { display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: 900; }
+  .ticket-name { font-weight: 900; color: #fff; }
+  .ticket-sub { font-size: 11px; color: var(--cyan); font-weight: 800; }
+
+  /* Vencedor — acima, fora da área do chat */
+  #winnerOverlay { z-index: 50; align-items: flex-start; padding-top: clamp(120px, 19vh, 24%); background: radial-gradient(circle at 50% 42%, rgba(255,210,46,.2), rgba(5,10,20,.75) 75%); }
   .winner-card {
     text-align: center;
-    background: rgba(0,0,0,.9);
-    border: 4px solid var(--neon-gold);
-    border-radius: 24px;
-    padding: 28px 44px;
-    box-shadow: 0 0 60px rgba(255,215,0,.9);
-    transform: translateY(-12%);
+    background: #0e1626;
+    border: 3px solid var(--gold);
+    border-top-color: var(--gold-2);
+    border-radius: 20px;
+    padding: 20px 32px;
+    box-shadow: 0 0 44px rgba(255,210,46,.6), inset 0 0 0 1px #000;
+    animation: winPop .45s cubic-bezier(.18,1.1,.4,1);
   }
-  .winner-avatar { width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--neon-gold); object-fit: cover; }
-  .winner-title { font-size: 30px; font-weight: 900; color: var(--neon-gold); margin-top: 12px; letter-spacing: 2px; }
-  .winner-name { font-size: 34px; font-weight: 900; margin-top: 6px; }
-  .winner-pts { font-size: 26px; color: var(--neon-pink); margin-top: 6px; font-weight: 800; }
-  .winner-word { font-size: 22px; font-weight: 800; color: #fff; margin-top: 8px; letter-spacing: 3px; }
-  .winner-mult { font-size: 20px; color: var(--neon-blue); font-weight: 800; margin-top: 4px; }
+  @keyframes winPop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+  .w-av { width: 96px; height: 96px; border-radius: 50%; border: 3px solid var(--gold); object-fit: cover; margin: 0 auto 8px; display: block; box-shadow: 0 0 20px rgba(255,210,46,.5); background: var(--panel-2); }
+  .w-av.fb { display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: 900; font-size: 38px; }
+  .w-name { font-size: 27px; font-weight: 900; color: #fff; }
+  .w-title { font-size: 18px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-top: 2px; text-transform: uppercase; }
+  .w-pts { font-size: 23px; font-weight: 900; color: var(--green); margin-top: 7px; text-shadow: 0 0 14px rgba(74,222,128,.4); }
+  .w-word { font-size: 21px; font-weight: 900; letter-spacing: 4px; color: #fff; margin-top: 9px; text-transform: uppercase; }
+  .w-mult {
+    display: none;
+    margin: 9px auto 0;
+    width: fit-content;
+    background: var(--blue);
+    color: #04121a;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
 
-  .weekly {
-    margin-top: auto;
-    background: rgba(34,211,238,.08);
-    border: 2px solid var(--neon-blue);
-    border-radius: 12px;
-    padding: 12px 16px;
+  /* Tempo esgotado — acima, fora da área do chat */
+  #timeoutMsg { z-index: 50; align-items: flex-start; padding-top: clamp(120px, 19vh, 24%); background: rgba(90,10,18,.28); }
+  .tm-card {
+    background: #171019;
+    border: 3px solid var(--red);
+    border-radius: 18px;
+    padding: 20px 28px;
+    text-align: center;
+    box-shadow: 0 0 32px rgba(251,91,91,.45);
+    animation: popIn .35s ease;
   }
-  .weekly-title { font-size: 14px; color: var(--neon-blue); font-weight: 800; letter-spacing: 2px; margin-bottom: 8px; text-align: center; }
-  .weekly-row { display: flex; justify-content: space-between; font-size: 15px; padding: 3px 6px; color: #e2e8f0; }
-  .weekly-row .medal { color: var(--neon-gold); font-weight: 800; margin-right: 8px; }
-  .weekly-row .pts { color: var(--neon-pink); font-weight: 700; }
-  .empty { text-align: center; color: #94a3b8; font-size: 14px; }
+  .tm-title { font-weight: 900; font-size: 23px; color: var(--red); letter-spacing: 2px; text-shadow: 0 0 14px rgba(251,91,91,.5); }
+  .tm-sub { color: #f4c6c6; font-weight: 800; font-size: 14px; margin-top: 6px; letter-spacing: 1px; }
+  .tm-word { font-family: 'Courier New', monospace; font-weight: 900; font-size: 25px; letter-spacing: 5px; color: #fff; margin-top: 9px; text-transform: uppercase; }
+
+  /* Ranking pós-rodada / teste — acima, fora da área do chat */
+  #rankingPopup { z-index: 44; align-items: flex-start; padding-top: clamp(130px, 21vh, 27%); background: rgba(4,8,16,.68); }
+  .rk-card {
+    background: #0e1626;
+    border: 3px solid var(--cyan);
+    border-radius: 18px;
+    padding: 18px 22px;
+    min-width: min(84%, 320px);
+    box-shadow: 0 0 34px rgba(34,211,238,.4), inset 0 0 0 1px #000;
+    animation: popIn .35s ease;
+  }
+  .rk-title { text-align: center; font-weight: 900; letter-spacing: 2px; color: var(--cyan); font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
+  .rk-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 15px; }
+  .rk-row:nth-child(2) { padding-top: 0; }
+  .rk-row .pos { width: 26px; font-weight: 900; color: var(--gold); text-align: center; }
+  .rk-row .nm { font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rk-row .pt { margin-left: auto; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .rk-row.hl { border: 2px solid var(--gold); border-radius: 8px; animation: rowFlash 1.1s ease; }
+  .rk-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 0; }
 </style>
 </head>
 <body>
 <div id="stage">
-  <div class="toprow">
-    <div class="header">
-      <div class="round" id="roundLabel">JOGO DAS 3 DICAS</div>
-      <div class="title">3 DICAS</div>
-      <div class="subtitle" id="stageLabel">Aguarde o streamer iniciar</div>
+
+  <!-- ======= ZONA 1 · TOPO ======= -->
+  <div id="hud">
+    <div class="brand">
+      <div class="brand-title">3 <em>DICAS</em><small id="roundTag">JOGO</small></div>
+      <div class="stage-label" id="stageLabel">AGUARDANDO</div>
     </div>
-    <div class="timer" id="timer">--:--</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-label">Pontos</span><span id="pointsVal">—</span></div>
+      <div class="pill timer-pill" id="timerPill"><span class="pill-label">Tempo</span><span id="timerVal">0:00</span></div>
+    </div>
   </div>
-  <div class="answer locked" id="answer">---</div>
-  <div class="dicas" id="dicas"></div>
+
+  <div class="statusbar">
+    <span class="badge badge-round" id="roundTag2">JOGO DAS 3 DICAS</span>
+    <span class="badge badge-excl" id="badgeExcl" style="display:none">SÓ APOIADORES RESPONDEM</span>
+    <span class="badge badge-2x" id="badge2x" style="display:none">2x ATIVO</span>
+  </div>
+
+  <!-- ======= ZONA 2 · PALAVRA ESCONDIDA ======= -->
+  <div id="wordZone">
+    <div id="wordTiles"><div class="waiting-txt">AGUARDANDO O STREAMER...</div></div>
+    <div class="word-meta" id="wordMeta">&nbsp;</div>
+  </div>
+
+  <!-- ======= ZONA 3 · DICAS PROGRESSIVAS ======= -->
+  <div id="dicas"></div>
   <div id="giftInfo"></div>
   <div id="wrongGuess"></div>
 
-  <div id="ticketToast"><div class="ticket-card">
-    <div class="ticket-label">🎟️ PASSE LIVRE</div>
-    <img class="ticket-avatar" id="ticketAvatar" onerror="this.style.visibility='hidden'">
-    <div class="ticket-name" id="ticketName"></div>
-  </div></div>
-
-  <div id="winnerOverlay"><div class="winner-card">
-    <img class="winner-avatar" id="winnerAvatar" onerror="this.style.visibility='hidden'">
-    <div class="winner-title" id="winnerTitle">ACERTOU!</div>
-    <div class="winner-name" id="winnerName"></div>
-    <div class="winner-pts" id="winnerPts"></div>
-    <div class="winner-word" id="winnerWord"></div>
-    <div class="winner-mult" id="winnerMult"></div>
-  </div></div>
+  <!-- ======= ZONA 4 · RODAPÉ ======= -->
+  <div id="supportersBox"><span class="lbl">APOIADORES</span></div>
 
   <div class="weekly">
-    <div class="weekly-title">🏆 RANKING DA SEMANA</div>
-    <div id="weeklyList" class="empty">Ninguém acertou ainda.</div>
+    <div class="weekly-title">RANKING DA SEMANA</div>
+    <div class="weekly-list" id="weeklyList"><div class="empty">Ninguém acertou ainda.</div></div>
+  </div>
+
+  <!-- ===================== OVERLAYS ===================== -->
+
+  <!-- Presente: tamanho / 1ª letra -->
+  <div class="overlay" id="revealPopup">
+    <div class="rp-card">
+      <img class="rp-av" id="rpAvatar" alt="" onerror="this.style.visibility='hidden'">
+      <div class="rp-name" id="rpName"></div>
+      <div class="rp-title" id="rpTitle"></div>
+      <div class="rp-detail letters" id="rpDetail"></div>
+    </div>
+  </div>
+
+  <!-- Passe livre / apoiador -->
+  <div class="overlay" id="ticketToast">
+    <div class="ticket-card">
+      <div class="ticket-label">🎟️ PASSE LIVRE</div>
+      <img class="ticket-avatar" id="ticketAvatar" alt="" onerror="this.style.visibility='hidden'">
+      <span class="ticket-avatar fb" id="ticketAvatarFb" style="display:none">🎟️</span>
+      <div>
+        <div class="ticket-name" id="ticketName"></div>
+        <div class="ticket-sub">ENTROU COMO APOIADOR — 2x PONTOS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flash verde/dourado de acerto -->
+  <div class="overlay" id="genFlash"></div>
+
+  <!-- Nova palavra -->
+  <div class="overlay" id="newRound">
+    <div>
+      <div class="nr-title">NOVA PALAVRA</div>
+      <div class="nr-sub">PREPARE-SE...</div>
+    </div>
+  </div>
+
+  <!-- Ranking maior pós-rodada -->
+  <div class="overlay" id="rankingPopup">
+    <div class="rk-card">
+      <div class="rk-title" id="rkTitle">TOP DA SEMANA</div>
+      <div id="rkList" class="rk-empty">Ninguém acertou ainda.</div>
+    </div>
+  </div>
+
+  <!-- Vencedor -->
+  <div class="overlay" id="winnerOverlay">
+    <div class="winner-card">
+      <img class="w-av" id="wAvatar" alt="" onerror="this.style.visibility='hidden'">
+      <span class="w-av fb" id="wAvatarFb" style="display:none">👑</span>
+      <div class="w-name" id="wName"></div>
+      <div class="w-title" id="wTitle">ACERTOU A PALAVRA!</div>
+      <div class="w-pts" id="wPts"></div>
+      <div class="w-word" id="wWord"></div>
+      <div class="w-mult" id="wMult">APOIADOR 2x</div>
+    </div>
+  </div>
+
+  <!-- Tempo esgotado -->
+  <div class="overlay" id="timeoutMsg">
+    <div class="tm-card">
+      <div class="tm-title">TEMPO ESGOTADO</div>
+      <div class="tm-sub">A PALAVRA ERA:</div>
+      <div class="tm-word" id="tmWord"></div>
+    </div>
   </div>
 </div>
 
@@ -354,86 +668,334 @@ const state = {
   stage: 0, stage_remaining: 0, finished: false, timeout: false,
   palavra: null, palavra_len: 0, first_letter: "", size_revealed: false,
   first_letter_revealed: false, dicas: [], winner: null, dicaAudio: {},
-  size_by: "", letter_by: "",
+  size_by: "", letter_by: "", supporters: [], supporterCount: 0, lastRoundId: 0,
 };
 let winTimer = null;
+let rankTimer = null;
+let revealTimer = null;
+let ticketTimer = null;
+let nrTimer = null;
+let appliedOnce = false;
 let wrongItems = [];
 let giftImageMap = {};
+let weeklyData = [];
+let lastWinnerUser = "";
 
 function authFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
   return fetch(path, { ...opts, headers });
 }
 let currentDicaAudio = null;
-let ticketTimer = null;
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function fmt(s) { s = Math.max(0, s || 0); return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); }
+
+function ptsForStage(i) { return (state.stage_points && state.stage_points[i - 1]) || 30; }
+
+// ------------------------------------------------------------
+// Popups / overlays genéricos
+// ------------------------------------------------------------
+function clearPopups() {
+  for (const id of ["revealPopup","winnerOverlay","timeoutMsg","rankingPopup","ticketToast","newRound"]) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("show");
+  }
+  for (const t of [winTimer, rankTimer, revealTimer, ticketTimer, nrTimer]) {
+    if (t) clearTimeout(t);
+  }
+}
+
+function showRevealPopup(kind, entry, extra) {
+  const el = document.getElementById("revealPopup");
+  const nm = document.getElementById("rpName");
+  const av = document.getElementById("rpAvatar");
+  const name = entry && (entry.nickname || entry.user) || "alguém";
+  nm.textContent = "@" + name;
+  const gc = state.gift_config || {};
+  const giftFile = giftImageMap[kind === "size" ? gc.size : gc.letter];
+  const userAvatar = entry && entry.avatar;
+  if (userAvatar) {
+    av.src = userAvatar; av.style.visibility = ""; av.style.display = "";
+  } else if (giftFile) {
+    av.src = "/gift-images/" + esc(giftFile); av.style.visibility = ""; av.style.display = "";
+  } else {
+    av.style.visibility = "hidden"; av.style.display = "none";
+  }
+  const title = document.getElementById("rpTitle");
+  const detail = document.getElementById("rpDetail");
+  if (kind === "size") {
+    title.textContent = "REVELOU O TAMANHO!";
+    detail.className = "rp-detail";
+    detail.textContent = (extra || 0) + " LETRAS";
+  } else {
+    title.textContent = "REVELOU A 1ª LETRA!";
+    detail.className = "rp-detail letters";
+    const l = state.first_letter || (extra && String(extra).charAt(0)) || "?";
+    const n = Math.max(0, (state.palavra_len || 0) - 1);
+    detail.textContent = (l.toUpperCase() + " " + Array(n).fill("_").join(" ")).trim();
+  }
+  el.classList.add("show");
+  if (revealTimer) clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => el.classList.remove("show"), 2500);
+}
 
 function showTicket(entry) {
   if (!entry) return;
   const el = document.getElementById("ticketToast");
   document.getElementById("ticketName").textContent = "@" + (entry.nickname || entry.user);
   const av = document.getElementById("ticketAvatar");
-  if (entry.avatar) { av.src = entry.avatar; av.style.visibility = ""; } else av.style.visibility = "hidden";
+  const avf = document.getElementById("ticketAvatarFb");
+  if (entry.avatar) {
+    av.src = entry.avatar; av.style.visibility = ""; av.style.display = "";
+    avf.style.display = "none";
+  } else {
+    av.style.visibility = "hidden"; av.style.display = "none";
+    avf.style.display = "flex";
+  }
   el.classList.add("show");
   if (ticketTimer) clearTimeout(ticketTimer);
-  ticketTimer = setTimeout(() => el.classList.remove("show"), 5000);
+  ticketTimer = setTimeout(() => el.classList.remove("show"), 4000);
 }
 
-function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
-function fmt(s) { s = Math.max(0, s || 0); return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); }
-
-function applyState(s) {
-  Object.assign(state, {
-    active: !!s.active, phase: s.phase || "idle", countdown_remaining: s.countdown_remaining || 0,
-    pause_remaining: s.pause_remaining || 0,    stage: s.stage || 0, stage_remaining: s.stage_remaining || 0,
-    finished: !!s.finished, timeout: !!s.timeout, palavra: s.palavra || null,
-    palavra_len: s.palavra_len || 0, first_letter: s.first_letter || "",
-    size_revealed: !!s.size_revealed, first_letter_revealed: !!s.first_letter_revealed,
-    dicas: s.dicas || [], winner: s.winner || null,
-    gift_config: s.gift_config || { size: "", letter: "" },
-    stage_points: s.stage_points || [30, 20, 10],
-  });
-  // Nova rodada: limpa quem ativou cada reveal
-  if (!s.size_revealed && !s.first_letter_revealed) { state.size_by = ""; state.letter_by = ""; }
-  render();
+function showNewRound(ms) {
+  const nr = document.getElementById("newRound");
+  nr.classList.add("show");
+  if (nrTimer) clearTimeout(nrTimer);
+  nrTimer = setTimeout(() => nr.classList.remove("show"), ms || 1600);
 }
 
-function renderAnswer() {
-  const el = document.getElementById("answer");
-  if (!state.active && !state.finished) { el.textContent = "AGUARDANDO..."; el.className = "answer locked"; return; }
-  if (state.phase === "countdown") { el.textContent = "PREPARANDO..."; el.className = "answer locked"; return; }
-  if (state.timeout && state.finished) { el.textContent = state.palavra || ""; el.className = "answer timeout"; return; }
-  if (state.phase === "pause") { el.textContent = state.palavra || ""; el.className = "answer revealed"; return; }
-  if (state.finished && state.winner) { el.textContent = state.palavra || ""; el.className = "answer revealed"; return; }
-  if (!state.palavra_len) { el.textContent = "---"; el.className = "answer locked"; return; }
-  let chars;
-  if (state.first_letter_revealed) {
-    chars = [state.first_letter, ...Array(Math.max(0, state.palavra_len - 1)).fill("_")];
-  } else if (state.size_revealed) {
-    chars = Array(state.palavra_len).fill("_");
+function showRankingPopup(hlUser, ms) {
+  const rk = document.getElementById("rankingPopup");
+  renderRankingList("rkList", weeklyData, 5, hlUser);
+  rk.classList.add("show");
+  if (rankTimer) clearTimeout(rankTimer);
+  rankTimer = setTimeout(() => rk.classList.remove("show"), ms || 5000);
+}
+
+function fillAvatar(img, fb, val, fbChar) {
+  if (val) {
+    img.src = val; img.style.visibility = ""; img.classList.remove("fb"); img.style.display = "";
+    fb.style.display = "none";
   } else {
-    chars = Array(state.palavra_len).fill("█");
+    fb.style.display = "flex";
+    fb.textContent = fbChar;
   }
-  el.innerHTML = chars.map(c => `<span class="letter">${esc(c)}</span>`).join("");
-  el.className = "answer " + (state.first_letter_revealed || state.size_revealed ? "" : "locked");
 }
 
+function showWinner(w, isTest) {
+  if (!w) return;
+  if (!isTest) {
+    state.finished = true;
+    state.winner = w;
+    if (w.palavra) state.palavra = w.palavra;
+    render();
+  }
+  const gf = document.getElementById("genFlash");
+  gf.classList.remove("on"); void gf.offsetWidth; gf.classList.add("on");
+
+  document.getElementById("wName").textContent = w.nickname || w.user;
+  fillAvatar(document.getElementById("wAvatar"), document.getElementById("wAvatarFb"), w.avatar, "🏆");
+  document.getElementById("wTitle").textContent = "ACERTOU A PALAVRA!";
+  document.getElementById("wWord").textContent = ((w.palavra || state.palavra || "") + "").toUpperCase();
+  document.getElementById("wPts").textContent = "+" + w.pontos + " PONTOS";
+  document.getElementById("wMult").style.display = w.multiplicador ? "flex" : "none";
+
+  const ov = document.getElementById("winnerOverlay");
+  if (winTimer) clearTimeout(winTimer);
+  setTimeout(() => ov.classList.add("show"), 220);
+  winTimer = setTimeout(() => {
+    ov.classList.remove("show");
+    showRankingPopup(w.user || "", 5200);
+  }, 3900);
+  if (!isTest) highlightWeekly(w.user || "");
+}
+
+function showTimeout(w, isTest) {
+  const palavra = (w && w.palavra) || (!isTest ? state.palavra : "") || "";
+  if (!isTest) state.palavra = w.palavra || state.palavra || "";
+  document.getElementById("tmWord").textContent = String(palavra).toUpperCase();
+  const tm = document.getElementById("timeoutMsg");
+  tm.classList.add("show");
+  if (winTimer) clearTimeout(winTimer);
+  winTimer = setTimeout(() => {
+    tm.classList.remove("show");
+    showRankingPopup("", 5000);
+  }, 3200);
+}
+
+// ------------------------------------------------------------
+// Apoiadores
+// ------------------------------------------------------------
+function addSupporter(entry) {
+  if (!entry) return;
+  const key = entry.user || entry.nickname || "";
+  if (!key) return;
+  if (state.supporters.some(s => s.key === key)) return;
+  state.supporters.push({ key, nickname: entry.nickname || entry.user, avatar: entry.avatar || "" });
+  state.supporterCount = state.supporters.length;
+  renderSupporters();
+  renderStatusBar();
+}
+
+function renderSupporters() {
+  const box = document.getElementById("supportersBox");
+  if (!state.supporters.length) { box.classList.remove("show"); return; }
+  box.classList.add("show");
+  const last = state.supporters.slice(-4);
+  let html = '<span class="lbl">APOIADORES</span>';
+  html += last.map(s =>
+    s.avatar
+      ? `<img class="supp-avatar" src="${esc(s.avatar)}" alt="" onerror="this.style.visibility='hidden'">`
+      : `<span class="supp-avatar fb">@</span>`
+  ).join("");
+  if (state.supporters.length > 4) html += `<span class="supp-more">+${state.supporters.length - 4}</span>`;
+  box.innerHTML = html;
+}
+
+// ------------------------------------------------------------
+// Ranking
+// ------------------------------------------------------------
+function renderRankingList(id, list, max, hlUser) {
+  const el = document.getElementById(id);
+  if (!list || !list.length) {
+    el.innerHTML = '<div class="' + (id === "rkList" ? "rk-empty" : "empty") + '">Ninguém acertou ainda.</div>';
+    return;
+  }
+  const medals = ["🥇", "🥈", "🥉"];
+  const rowCls = id === "rkList" ? "rk-row" : "weekly-row";
+  const rows = list.slice(0, max || 10).map((r, i) => {
+    const u = r.user || r.nickname || "";
+    const hl = hlUser && (u === hlUser || (r.nickname || "") === hlUser) ? " hl" : "";
+    return `<div class="${rowCls}${hl}"><span class="pos">${medals[i] || (i + 1) + "º"}</span><span class="nm">${esc(r.nickname || r.user)}</span><span class="pt">${r.pontos} pts</span></div>`;
+  }).join("");
+  el.innerHTML = rows;
+}
+
+function renderWeekly(list) {
+  weeklyData = list || [];
+  renderRankingList("weeklyList", weeklyData, 3, lastWinnerUser);
+}
+
+function highlightWeekly(user) {
+  lastWinnerUser = user || "";
+  renderRankingList("weeklyList", weeklyData, 3, lastWinnerUser);
+}
+
+// ------------------------------------------------------------
+// Palavra escondida (blocos por letra)
+// ------------------------------------------------------------
+let answerSig = "__init__";
+function tilesSizeClass(n) {
+  if (n <= 7) return "";
+  if (n <= 9) return "tiles-med";
+  if (n <= 11) return "tiles-lg";
+  if (n <= 15) return "tiles-xl";
+  return "tiles-2xl";
+}
+function renderAnswer() {
+  const tiles = document.getElementById("wordTiles");
+  const meta = document.getElementById("wordMeta");
+  const waiting = (!state.active && !state.finished) || state.phase === "countdown" || !state.palavra_len;
+  const timeout = state.timeout && state.finished;
+  const solved = state.finished && (state.winner || state.palavra);
+
+  let sig;
+  if (state.active || state.finished) {
+    sig = [state.phase, state.palavra_len, state.size_revealed || 0, state.first_letter_revealed || 0,
+           state.first_letter, state.finished || 0, state.timeout || 0, state.palavra || ""].join("|");
+  } else {
+    sig = "idle";
+  }
+
+  if (sig !== answerSig) {
+    answerSig = sig;
+    if (waiting || (!state.size_revealed && !state.first_letter_revealed && !state.finished)) {
+      if (waiting && !state.active && !state.finished) {
+        tiles.className = "";
+        tiles.innerHTML = '<div class="waiting-txt">AGUARDANDO O STREAMER...</div>';
+      } else if (state.phase === "countdown") {
+        tiles.className = "";
+        tiles.innerHTML = '<div class="waiting-txt">PREPARANDO...</div>';
+      } else if (!state.palavra_len) {
+        tiles.className = "";
+        tiles.innerHTML = '<div class="waiting-txt">______</div>';
+      } else {
+        // tamanho ainda secreto: blocos misteriosos
+        const n = state.palavra_len;
+        tiles.className = tilesSizeClass(n);
+        let html = "";
+        for (let i = 0; i < n; i++) {
+          html += `<div class="wtile myst"><span class="idx">${i + 1}</span></div>`;
+        }
+        tiles.innerHTML = html;
+      }
+    } else {
+      const n = state.palavra_len;
+      tiles.className = tilesSizeClass(n);
+      let html = "";
+      for (let i = 0; i < n; i++) {
+        let ch = "_";
+        if (state.first_letter_revealed && i === 0) ch = state.first_letter || "_";
+        if (solved && state.palavra) ch = state.palavra[i] || "_";
+        let cls = "wtile";
+        if (timeout) cls += " solved-timeout";
+        else if (solved) cls += " solved";
+        else if (state.size_revealed || state.first_letter_revealed) cls += " pending";
+        const isFirst = state.first_letter_revealed && i === 0 && !solved;
+        if (isFirst) cls += " scan";
+        else cls += " pop";
+        html += `<div class="${cls}" style="animation-delay:${(i * 0.05).toFixed(2)}s"><span class="idx">${i + 1}</span>${esc(ch)}</div>`;
+      }
+      tiles.innerHTML = html;
+    }
+  }
+
+  if (state.size_revealed || state.first_letter_revealed || state.finished) {
+    meta.textContent = "PALAVRA COM " + (state.palavra_len || 0) + " LETRAS";
+  } else {
+    meta.textContent = "\u00A0";
+  }
+}
+
+// ------------------------------------------------------------
+// Dicas progressivas
+// ------------------------------------------------------------
+let dicaSig = "__init__";
 function renderDicas() {
   const el = document.getElementById("dicas");
-  const dicas = state.dicas || [];
-  const hasStarted = state.phase === "play" || state.finished;
+  const audioSig = [1,2,3].map(i => state.dicaAudio[i] ? "a" : "-").join("");
+  const sig = [state.phase, state.stage, state.finished / 1, state.timeout / 1, audioSig, (state.dicas || []).join("|")].join("|");
+  if (sig === dicaSig) return;
+  dicaSig = sig;
+
+  const started = state.phase === "play" || state.phase === "pause" || state.finished;
+  const curStage = state.timeout ? 4 : state.stage; // sem card "ativo" no timeout
   let html = "";
+
   for (let i = 0; i < 3; i++) {
     const idx = i + 1;
-    if (!hasStarted || idx > state.stage) continue;
-    const txt = dicas[i] || "???";
-    const audio = state.dicaAudio[idx];
-    const btn = audio
-      ? `<button class="dica-play" onclick="playDica(${idx})" title="Ouvir dica"><svg viewBox="0 0 12 14"><path fill="currentColor" d="M0 0v14l12-7z"></path></svg></button>`
-      : "";
-    html += `<div class="dica"><span class="num">${idx}</span>${esc(txt)}${btn}</div>`;
+    const txt = (state.dicas && state.dicas[i]) || "?";
+    if (!started) {
+      if (i === 0) {
+        html += `<div class="dica"><div class="dica-inner"><div class="dica-head"><span class="dica-num">${idx}</span><span class="dica-tag">DICA ${idx}</span><span class="dica-points">EM BREVE</span></div><div class="dica-text dim">Preparem-se...</div></div></div>`;
+      } else {
+        html += `<div class="dica locked"><div class="dica-inner"><div class="dica-head"><span class="dica-num">🔒</span><span class="dica-tag">BLOQUEADA</span><span class="dica-points">PRÓXIMA</span></div><div class="dica-lock-blur"><div class="dica-text sm dim">????????</div></div></div></div>`;
+      }
+      continue;
+    }
+    if (idx < curStage) {
+      html += `<div class="dica history"><div class="dica-inner"><div class="dica-head"><span class="dica-num">${idx}</span><span class="dica-tag ok">✓ DICA ${idx}</span><span class="dica-points">${ptsForStage(idx)} PTS</span></div><div class="dica-text sm">${esc(txt)}</div></div></div>`;
+    } else if (idx === curStage) {
+      const audio = state.dicaAudio[idx];
+      const btn = audio
+        ? `<button class="dica-play" onclick="playDica(${idx})" title="Ouvir dica">▶</button>`
+        : "";
+      html += `<div class="dica current"><div class="dica-inner"><div class="dica-head"><span class="dica-num on">${idx}</span><span class="dica-tag">DICA ${idx} DE 3</span>${btn}<span class="dica-points gold">VALE ${ptsForStage(idx)} PONTOS</span></div><div class="dica-text big">${esc(txt)}</div></div></div>`;
+    } else {
+      html += `<div class="dica locked"><div class="dica-inner"><div class="dica-head"><span class="dica-num">🔒</span><span class="dica-tag">BLOQUEADA</span><span class="dica-points">PRÓXIMA DICA</span></div><div class="dica-lock-blur"><div class="dica-text sm dim">????????</div></div></div></div>`;
+    }
   }
   el.innerHTML = html;
-  renderGiftInfo();
 }
 
 function playDica(stage) {
@@ -445,28 +1007,33 @@ function playDica(stage) {
   currentDicaAudio.onended = () => { currentDicaAudio = null; };
 }
 
+// ------------------------------------------------------------
+// Presentes configurados (lembrete compacto)
+// ------------------------------------------------------------
+let giftSig = "";
 function renderGiftInfo() {
   const el = document.getElementById("giftInfo");
-  if (!el) return;
   const gc = state.gift_config || {};
-  const hasStarted = state.phase === "play" || state.finished;
-  if (!hasStarted || (!gc.size && !gc.letter)) { el.innerHTML = ""; return; }
-  function giftImg(name, extra) {
+  const hasStarted = state.phase === "play" || state.finished || state.phase === "pause";
+  const sig = [hasStarted, gc.size || "", gc.letter || "", gc.ticket || "", state.size_revealed, state.size_by || "", state.letter_by || ""].join("|");
+  if (sig === giftSig) return;
+  giftSig = sig;
+  if (!hasStarted || (!gc.size && !gc.letter && !gc.ticket)) { el.innerHTML = ""; return; }
+  function giftImg(name) {
     const file = giftImageMap[name];
-    if (file) return `<img class="gift-img ${extra || ""}" src="/gift-images/${esc(file)}" alt="${esc(name)}" onerror="this.style.display='none'">`;
-    return `<span class="gift-name-text">🎁 ${esc(name)}</span>`;
+    if (file) return `<img class="gift-img" src="/gift-images/${esc(file)}" alt="${esc(name)}" onerror="this.style.display='none'">`;
+    return `<span>🎁 ${esc(name)}</span>`;
   }
-  const sizeBy = state.size_by ? `<span class="gift-by">ativado por @${esc(state.size_by)}</span>` : "";
-  const letterBy = state.letter_by ? `<span class="gift-by">ativado por @${esc(state.letter_by)}</span>` : "";
+  const sizeBy = state.size_by ? `<span class="by">@${esc(state.size_by)}</span>` : "";
+  const letterBy = state.letter_by ? `<span class="by">@${esc(state.letter_by)}</span>` : "";
   let parts = [];
-  if (gc.size) parts.push(`<span class="gift-tag">${giftImg(gc.size)} REVELAR TAMANHO ${sizeBy}</span>`);
-  // Só exibe a 1ª letra depois que o tamanho já foi revelado
-  if (gc.letter && state.size_revealed) parts.push(`<span class="gift-tag">${giftImg(gc.letter)} REVELAR 1ª LETRA ${letterBy}</span>`);
-  el.innerHTML = `<div class="gift-info">${parts.join("")}</div>`;
+  if (gc.size) parts.push(`<span class="gift-tag${state.size_revealed ? "" : " pulse-size"}">${giftImg(gc.size)} TAMANHO ${sizeBy}</span>`);
+  if (gc.letter && state.size_revealed) parts.push(`<span class="gift-tag">${giftImg(gc.letter)} 1ª LETRA ${letterBy}</span>`);
+  if (gc.ticket) parts.push(`<span class="gift-tag">🎟️ PALPITE EXCLUSIVO</span>`);
+  el.innerHTML = parts.join("");
 }
 
 function flashGift(kind) {
-  // Aplica a animação na imagem do presente recém-ativado
   const gc = state.gift_config || {};
   const name = kind === "size" ? gc.size : gc.letter;
   const file = name && giftImageMap[name];
@@ -478,74 +1045,133 @@ function flashGift(kind) {
   }
 }
 
+// ------------------------------------------------------------
+// Palpites errados
+// ------------------------------------------------------------
 function addWrongGuess(item) {
   if (!item || !item.text) return;
   wrongItems.unshift(item);
-  if (wrongItems.length > 4) wrongItems.pop();
+  if (wrongItems.length > 3) wrongItems.pop();
   const el = document.getElementById("wrongGuess");
   el.innerHTML = wrongItems.map(w => `
     <div class="wrong-item">
-      ${w.avatar ? `<img src="${esc(w.avatar)}" onerror="this.style.visibility='hidden'">` : ""}
+      ${w.avatar ? `<img src="${esc(w.avatar)}" alt="" onerror="this.style.visibility='hidden'">` : ""}
       <span class="wu">@${esc(w.nickname || w.user)}</span>
       <span class="wx">${esc(w.text)}</span>
     </div>`).join("");
 }
 
-function render() {
-  const timer = document.getElementById("timer");
-  const stageLabel = document.getElementById("stageLabel");
-  const roundLabel = document.getElementById("roundLabel");
+// ------------------------------------------------------------
+// HUD
+// ------------------------------------------------------------
+function renderTimerPill() {
+  const el = document.getElementById("timerPill");
+  const val = document.getElementById("timerVal");
+  let cls = "";
   if (state.phase === "countdown") {
-    timer.textContent = String(Math.max(0, state.countdown_remaining || 0));
-    timer.classList.add("warn");
-    stageLabel.textContent = "PREPARANDO...";
+    val.textContent = String(Math.max(0, state.countdown_remaining || 0));
+    cls = "t-amber";
   } else if (state.phase === "pause") {
-    timer.textContent = String(Math.max(0, state.pause_remaining || 0));
-    timer.classList.add("warn");
-    stageLabel.textContent = "PRÓXIMA RODADA EM...";
+    val.textContent = fmt(state.pause_remaining);
+    cls = "";
   } else {
-    timer.textContent = fmt(state.stage_remaining);
-    timer.classList.toggle("warn", state.active && state.phase === "play" && state.stage_remaining <= 10);
-    if (!state.active && !state.finished) {
-      stageLabel.textContent = "Aguarde o streamer iniciar";
-    } else if (state.timeout) {
-      stageLabel.textContent = "TEMPO ESGOTADO";
-    } else if (state.finished && state.winner) {
-      stageLabel.textContent = "RODADA ENCERRADA";
-    } else {
-      stageLabel.textContent = "Dica " + state.stage + " — " + ((state.stage_points || [30,20,10])[state.stage - 1] || 0) + " pts";
+    val.textContent = fmt(state.stage_remaining);
+    if (state.active && state.phase === "play") {
+      if (state.stage_remaining <= 5) cls = "t-red";
+      else if (state.stage_remaining <= 10) cls = "t-amber";
     }
   }
-  roundLabel.textContent = state.active || state.finished ? "RODADA " + (state.round_id || "") : "JOGO DAS 3 DICAS";
+  el.className = "pill timer-pill" + (cls ? " " + cls : "");
+}
+
+function renderPointsPill() {
+  const el = document.getElementById("pointsVal");
+  if (state.phase === "play" && state.stage >= 1) {
+    el.textContent = ptsForStage(state.stage) + " PTS";
+  } else {
+    el.textContent = "—";
+  }
+}
+
+function renderStageLabel() {
+  const el = document.getElementById("stageLabel");
+  if (!state.active && !state.finished) { el.textContent = "AGUARDANDO"; }
+  else if (state.phase === "countdown") { el.textContent = "DICA 1 DE 3 EM BREVE"; }
+  else if (state.timeout && state.finished) { el.textContent = "TEMPO ESGOTADO"; }
+  else if (state.finished && state.winner) { el.textContent = "RODADA ENCERRADA"; }
+  else if (state.phase === "pause") { el.textContent = "PRÓXIMA RODADA EM..."; }
+  else if (state.stage >= 1) { el.textContent = "DICA " + state.stage + " DE 3"; }
+  else { el.textContent = "AGUARDANDO"; }
+}
+
+function renderStatusBar() {
+  const r2 = document.getElementById("roundTag2");
+  r2.textContent = (state.active || state.finished) && state.round_id ? "RODADA " + state.round_id : "JOGO DAS 3 DICAS";
+  document.getElementById("roundTag").textContent = state.round_id && (state.active || state.finished) ? "R" + state.round_id : "TIK";
+  const excl = document.getElementById("badgeExcl");
+  const ticket = (state.gift_config || {}).ticket;
+  excl.style.display = (state.active && ticket && !state.finished) ? "inline-flex" : "none";
+  excl.textContent = "SÓ APOIADORES RESPONDEM";
+  const b2x = document.getElementById("badge2x");
+  b2x.style.display = state.supporterCount > 0 ? "inline-flex" : "none";
+}
+
+function flashStage() {
+  const el = document.getElementById("stageLabel");
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+}
+
+// ------------------------------------------------------------
+// Estado
+// ------------------------------------------------------------
+function applyState(s) {
+  Object.assign(state, {
+    active: !!s.active, phase: s.phase || "idle", countdown_remaining: s.countdown_remaining || 0,
+    pause_remaining: s.pause_remaining || 0,    stage: s.stage || 0, stage_remaining: s.stage_remaining || 0,
+    finished: !!s.finished, timeout: !!s.timeout, palavra: s.palavra || null,
+    palavra_len: s.palavra_len || 0, first_letter: s.first_letter || "",
+    size_revealed: !!s.size_revealed, first_letter_revealed: !!s.first_letter_revealed,
+    dicas: s.dicas || [], winner: s.winner || null, round_id: s.round_id || 0,
+    gift_config: s.gift_config || { size: "", letter: "" },
+    stage_points: s.stage_points || [30, 20, 10],
+  });
+  if (!s.size_revealed && !s.first_letter_revealed) { state.size_by = ""; state.letter_by = ""; }
+  if (!appliedOnce) {
+    appliedOnce = true;
+    state.lastRoundId = state.round_id;
+  } else if (state.round_id !== state.lastRoundId) {
+    state.lastRoundId = state.round_id;
+    if (state.round_id > 0) onNewRound();
+  }
+  render();
+}
+
+function onNewRound() {
+  wrongItems = [];
+  document.getElementById("wrongGuess").innerHTML = "";
+  state.supporters = [];
+  state.supporterCount = 0;
+  clearPopups();
+  renderSupporters();
+  renderStatusBar();
+  showNewRound(1600);
+}
+
+function render() {
+  renderTimerPill();
+  renderPointsPill();
+  renderStageLabel();
+  renderStatusBar();
   renderAnswer();
   renderDicas();
+  renderGiftInfo();
 }
 
-function showWinner(w) {
-  if (!w) return;
-  const ov = document.getElementById("winnerOverlay");
-  document.getElementById("winnerName").textContent = w.nickname || w.user;
-  document.getElementById("winnerPts").textContent = "+" + w.pontos + " PONTOS";
-  document.getElementById("winnerMult").textContent = w.multiplicador ? "APOIADOR 2x! 💛" : "";
-  document.getElementById("winnerTitle").textContent = "ACERTOU NA DICA " + (w.stage || 1) + "!";
-  document.getElementById("winnerWord").textContent = w.palavra ? "PALAVRA: " + w.palavra.toUpperCase() : "";
-  const av = document.getElementById("winnerAvatar");
-  if (w.avatar) { av.src = w.avatar; av.style.visibility = ""; } else av.style.visibility = "hidden";
-  ov.classList.add("show");
-  if (winTimer) clearTimeout(winTimer);
-  winTimer = setTimeout(() => ov.classList.remove("show"), 8000);
-}
-
-function renderWeekly(list) {
-  const el = document.getElementById("weeklyList");
-  if (!list || !list.length) { el.innerHTML = '<div class="empty">Ninguém acertou ainda.</div>'; return; }
-  const medals = ["🥇", "🥈", "🥉"];
-  el.innerHTML = list.map((r, i) =>
-    `<div class="weekly-row"><span><span class="medal">${medals[i] || (i + 1) + "º"}</span>${esc(r.nickname || r.user)}</span><span class="pts">${r.pontos} pts</span></div>`
-  ).join("");
-}
-
-// ---- WS ----
+// ------------------------------------------------------------
+// WS
+// ------------------------------------------------------------
 let ws;
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -554,27 +1180,118 @@ function connectWS() {
   ws.onclose = () => setTimeout(connectWS, 3000);
 }
 
-function handle(msg) {
-  switch (msg.type) {
-    case "tres_state": applyState(msg); break;
-    case "tres_dica": state.stage = msg.stage; state.stage_remaining = msg.remaining; state.phase = "play"; render(); break;
-    case "tres_tick":
-      if (msg.phase === "countdown") { state.phase = "countdown"; state.countdown_remaining = msg.remaining; }
-      else if (msg.phase === "pause") { state.phase = "pause"; state.pause_remaining = msg.remaining; }
-      else { state.phase = "play"; state.stage_remaining = msg.remaining; }
-      render();
+function handleTest(msg) {
+  if (!msg) return;
+  const name = msg.nickname || msg.user || "Streamer";
+  switch (msg.action) {
+    case "dica":
+      flashStage();
       break;
-    case "tres_reveal_size": state.size_revealed = true; state.palavra_len = msg.len || state.palavra_len; state.size_by = msg.nickname || msg.user || ""; render(); flashGift("size"); break;
-    case "tres_reveal_letter": state.first_letter_revealed = true; state.first_letter = msg.letter || ""; state.palavra_len = msg.palavra_len || state.palavra_len; state.letter_by = msg.nickname || msg.user || ""; render(); flashGift("letter"); break;
-    case "tres_narrate": if (msg.stage && msg.url) { state.dicaAudio[msg.stage] = msg.url; render(); } break;
-    case "tres_ticket": showTicket(msg); break;
-    case "tres_wrong_guess": addWrongGuess(msg); break;
-    case "tres_winner": state.finished = true; state.winner = msg; state.palavra = msg.palavra; render(); showWinner(msg); break;
-    case "tres_timeout": state.finished = true; state.timeout = true; state.palavra = msg.palavra; render(); break;
-    case "tres_weekly": renderWeekly(msg.weekly || []); break;
+    case "presente": {
+      const snap = {
+        size_revealed: state.size_revealed,
+        first_letter_revealed: state.first_letter_revealed,
+        first_letter: state.first_letter,
+        palavra_len: state.palavra_len,
+      };
+      const kind = msg.kind === "letter" ? "letter" : "size";
+      if (kind === "letter") {
+        state.first_letter_revealed = true;
+        state.first_letter = msg.letter || "A";
+        state.palavra_len = msg.len || state.palavra_len || 7;
+        render();
+      } else {
+        state.size_revealed = true;
+        state.palavra_len = msg.len || state.palavra_len || 7;
+        render();
+      }
+      showRevealPopup(kind, { nickname: name, avatar: msg.avatar || "" }, msg.len || state.palavra_len);
+      setTimeout(() => { Object.assign(state, snap); render(); }, 5600);
+      break;
+    }
+    case "passe":
+      showTicket(msg);
+      addSupporter(msg);
+      break;
+    case "apoiador":
+      addSupporter(msg);
+      break;
+    case "vencedor":
+      showWinner({ nickname: name, user: msg.user, avatar: msg.avatar || "", pontos: msg.pontos || 30, multiplicador: !!msg.multiplicador, stage: msg.stage || 1, palavra: msg.palavra || "" }, true);
+      break;
+    case "timeout":
+      showTimeout(msg, true);
+      break;
+    case "ranking": {
+      renderRankingList("rkList", msg.weekly || mascaraWeekly(), 5, "");
+      const rk = document.getElementById("rankingPopup");
+      rk.classList.add("show");
+      if (rankTimer) clearTimeout(rankTimer);
+      rankTimer = setTimeout(() => rk.classList.remove("show"), 5000);
+      break;
+    }
   }
 }
 
+function mascaraWeekly() {
+  return [
+    { user: "streamer", nickname: "Streamer", pontos: 300 },
+    { user: "convida", nickname: "Convidado", pontos: 120 },
+    { user: "fanta", nickname: "Fantasma", pontos: 60 },
+  ];
+}
+
+function handle(msg) {
+  switch (msg.type) {
+    case "tres_state": applyState(msg); break;
+    case "tres_dica":
+      state.stage = msg.stage;
+      state.stage_remaining = msg.remaining;
+      state.phase = "play";
+      render();
+      flashStage();
+      break;
+    case "tres_tick":
+      if (msg.phase === "countdown") { state.phase = "countdown"; state.countdown_remaining = msg.remaining; }
+      else if (msg.phase === "pause") { state.phase = "pause"; state.pause_remaining = msg.remaining; }
+      else {
+        state.phase = "play";
+        state.stage_remaining = msg.remaining;
+        if (msg.stage) state.stage = msg.stage;
+      }
+      render();
+      break;
+    case "tres_reveal_size":
+      state.size_revealed = true;
+      state.palavra_len = msg.len || state.palavra_len;
+      state.size_by = msg.nickname || msg.user || "";
+      render();
+      flashGift("size");
+      showRevealPopup("size", msg, msg.len);
+      break;
+    case "tres_reveal_letter":
+      state.first_letter_revealed = true;
+      state.first_letter = msg.letter || "";
+      state.palavra_len = msg.palavra_len || state.palavra_len;
+      state.letter_by = msg.nickname || msg.user || "";
+      render();
+      flashGift("letter");
+      showRevealPopup("letter", msg, msg.palavra_len || msg.letter);
+      break;
+    case "tres_narrate": if (msg.stage && msg.url) { state.dicaAudio[msg.stage] = msg.url; renderDicas(); } break;
+    case "tres_ticket": showTicket(msg); addSupporter(msg); break;
+    case "tres_supporter": addSupporter(msg); break;
+    case "tres_wrong_guess": addWrongGuess(msg); break;
+    case "tres_winner": showWinner(msg, false); break;
+    case "tres_timeout": state.finished = true; state.timeout = true; state.phase = "pause"; render(); showTimeout(msg, false); break;
+    case "tres_weekly": renderWeekly(msg.weekly || []); break;
+    case "tres_test": handleTest(msg); break;
+  }
+}
+
+// ------------------------------------------------------------
+// Carga inicial
+// ------------------------------------------------------------
 async function load() {
   try {
     const res = await authFetch(`/api/tres/state`);

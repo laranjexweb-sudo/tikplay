@@ -6,8 +6,9 @@
 <title>TikPlay - Acompanhe ao Vivo!</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  .start-bar { text-align: center; margin-bottom: 12px; }
-  .start-bar .status-msg { font-size: 0.95em; color: #9CA3AF; font-weight: 600; padding: 6px 0; }
+  .start-bar { text-align: center; margin-bottom: 10px; }
+  .start-bar .status-msg { font-size: 0.92em; color: #B8C2DA; font-weight: 500; padding: 6px 10px; line-height: 1.4; }
+  .start-bar .status-msg b { color: #A78BFA; font-weight: 800; }
   .guess-dica { font-size: 0.7em; color: #A78BFA; opacity: 0.85; letter-spacing: 1.5px; font-weight: 700; }
   .compact .gifts-label { font-size: 0.68em; letter-spacing: 1px; font-weight: 700; }
   .compact .gift-item { font-size: 0.85em; padding: 6px 10px; gap: 6px; }
@@ -18,34 +19,8 @@
 <div class="container compact">
   <span id="statusBadge" style="display:none"></span>
 
-  <div class="start-bar" id="startBar" style="display:none">
+  <div class="start-bar" id="startBar">
     <div class="status-msg" id="startStatus"></div>
-  </div>
-
-  <div class="secret-display">
-    <div class="label">Palavra Secreta <span id="gameIdLabel"></span></div>
-    <div class="boxes" id="secretBoxes"></div>
-    <div class="stats">
-      <span class="stat-text">PALPITES: <b id="guessCount">0</b></span>
-      <span class="stat-text stat-sep">-</span>
-      <span class="stat-text">DICAS: <b id="hintCount">0</b></span>
-    </div>
-    
-    <div class="tension-bar-container" id="tensionBarContainer" style="display:none">
-      <div class="tension-bar-label">
-        <span>NÍVEL DE TENSÃO</span>
-        <span id="tensionBarIcon">❄️</span>
-      </div>
-      <div class="tension-bar">
-        <div class="tension-bar-fill" id="tensionBarFill"></div>
-      </div>
-    </div>
-
-    <div class="post-game-btn-wrap" id="postGameBtnWrap" style="display:none">
-      <button class="post-game-trigger" id="btnPostGame" onclick="openPostGameModal()">
-        Ver Palavras Próximas (Pós-Partida)
-      </button>
-    </div>
   </div>
 
   <div id="gameOverBanner" style="display:none" class="game-over-banner">
@@ -54,6 +29,21 @@
 
   <div class="game-layout">
     <div class="gl-main">
+      <div class="secret-display">
+        <div class="label">Palavra Secreta <span id="gameIdLabel"></span></div>
+        <div class="boxes" id="secretBoxes"></div>
+        <div class="stats">
+          <span class="stat-text">PALPITES: <b id="guessCount">0</b></span>
+          <span class="stat-text stat-sep">-</span>
+          <span class="stat-text">DICAS: <b id="hintCount">0</b></span>
+        </div>
+        <div class="post-game-btn-wrap" id="postGameBtnWrap" style="display:none">
+          <button class="post-game-trigger" id="btnPostGame" onclick="openPostGameModal()">
+            Ver Palavras Próximas (Pós-Partida)
+          </button>
+        </div>
+      </div>
+
       <div class="guesses-list" id="guessesList">
         <div style="text-align:center;padding:30px;color:#555577">
           Aguardando o jogo come&ccedil;ar...
@@ -63,33 +53,32 @@
 
     <div class="gl-side">
       <div class="gifts-section" id="giftsSection" style="display:none">
-        <div class="gifts-row">
-          <div class="roulette-card" id="rouletteCard" style="margin-bottom: 10px;">
-            <!-- Standard View -->
-            <div id="rouletteStandardView" style="display: block; width: 100%;">
-              <div class="roulette-title">ROLETA DE PRESENTES</div>
-              <div class="roulette-gift-display">
+        <div class="roulette-card" id="rouletteCard">
+          <!-- Standard View: DICA / BOSS -->
+          <div id="rouletteStandardView" style="display: block; width: 100%;">
+            <div class="roulette-line">
+              <div class="roulette-gift-icon">
                 <img id="rouletteGiftImg" src="" alt="Presente Ativo" style="display:none">
-                <div id="rouletteGiftName" class="roulette-gift-name">Carregando...</div>
+                <span id="rouletteRiddleIcon" style="display:none; font-size:1.6em; line-height:1;">🎯</span>
               </div>
-              <div class="roulette-info">Envie na live para liberar Dicas ou Charadas com IA!</div>
-            </div>
-            <!-- Reveal View -->
-            <div id="rouletteRevealView" style="display: none; width: 100%;">
-              <div class="roulette-title" id="rouletteRevealTitle" style="color: #a78bfa; text-shadow: 0 0 8px rgba(167,139,250,0.6);">🎉 REVELADO!</div>
-              <div class="roulette-gift-display" id="rouletteRevealDisplay" style="border-color: rgba(167, 139, 250, 0.4); margin: 8px auto;">
-                <span id="rouletteRevealIcon" style="font-size: 2.2em;">💡</span>
-                <div id="rouletteRevealReward" class="roulette-gift-name">Dica de Palavra</div>
+              <div class="roulette-copy">
+                <div class="roulette-title" id="rouletteTitle">DICA</div>
+                <div class="roulette-sub" id="rouletteSub">Envie para liberar dica</div>
               </div>
-              <div class="roulette-info" id="rouletteRevealUser" style="color: #E5E7EB; font-weight: bold;">@usuario</div>
             </div>
           </div>
-
-          <div class="tap-bar-wrap" id="tapBarWrap">
-            <div class="tap-bar-track">
-              <div class="tap-bar-fill" id="tapBarFill"></div>
+          <!-- Reveal View -->
+          <div id="rouletteRevealView" style="display: none; width: 100%;">
+            <div class="roulette-title" id="rouletteRevealTitle" style="color: #a78bfa; text-shadow: 0 0 8px rgba(167,139,250,0.6);">🎉 REVELADO!</div>
+            <div class="roulette-line" id="rouletteRevealDisplay" style="border-color: rgba(167, 139, 250, 0.4); margin-top: 8px;">
+              <div class="roulette-gift-icon">
+                <span id="rouletteRevealIcon" style="font-size: 1.8em;">💡</span>
+              </div>
+              <div class="roulette-copy">
+                <div id="rouletteRevealReward" class="roulette-gift-name">Dica de Palavra</div>
+                <div class="roulette-info" id="rouletteRevealUser" style="color: #E5E7EB; font-weight: bold;">@usuario</div>
+              </div>
             </div>
-            <div class="tap-heart" id="tapHeart">❤️</div>
           </div>
         </div>
       </div>
@@ -97,10 +86,15 @@
       <div class="riddle-panel" id="riddlePanel" style="display:none">
         <div class="riddle-header">
           <div class="riddle-title">CHARADA</div>
-          <button class="riddle-close-btn" id="btnCloseRiddle" onclick="closeRiddleCard()">✕ Fechar</button>
+          <div class="riddle-right">
+            <span class="riddle-narrating" id="riddleNarrating" style="display:none" title="Narrando">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
+            </span>
+            <button class="riddle-close-btn" id="btnCloseRiddle" onclick="closeRiddleCard()">✕ Fechar</button>
+          </div>
         </div>
         <div class="riddle-loading" id="riddleLoading">
-          <div class="riddle-loading-text">A IA está gerando a charada...</div>
+          <div class="riddle-loading-text">Gerando a charada...</div>
         </div>
         <div class="riddle-body" id="riddleBody" style="display:none">
           <div class="riddle-text" id="riddleText"></div>
@@ -108,13 +102,33 @@
         <div class="riddle-footer" id="riddleFooter" style="display:none">
           <button class="btn-riddle-tts" id="btnPlayRiddle" onclick="triggerPlayRiddle()" style="display:none">Ouvir</button>
           <button class="btn-riddle-tts" id="btnRepeatRiddle" onclick="speakCurrentRiddle()" style="display:none">Repetir</button>
-          <div class="riddle-user-info" id="riddleUserInfo"></div>
+        </div>
+      </div>
+
+      <div class="meta-card tap-meta" id="tapMetaCard" style="display:none">
+        <div class="meta-row">
+          <span class="meta-icon" id="tapHeart">❤️</span>
+          <span class="meta-label">META DE TAP</span>
+          <span class="meta-values" id="tapMetaValues">0 / 0</span>
+        </div>
+        <div class="meta-track">
+          <div class="meta-track-fill" id="tapBarFill"></div>
+        </div>
+      </div>
+
+      <div class="meta-card tension-meta" style="display:none">
+        <div class="meta-row">
+          <span class="meta-icon" id="tensionBarIcon">❄️</span>
+          <span class="meta-label">NÍVEL DE TENSÃO</span>
+        </div>
+        <div class="meta-track">
+          <div class="meta-track-fill tension-fill" id="tensionBarFill"></div>
         </div>
       </div>
 
       <div class="winners-panel" id="winnersPanel">
         <div class="panel-title rank-title" id="rankTitle" onclick="cycleRankingMode()">
-          RANKING SEMANAL ▸
+          <span class="ranking-icon">🏆</span><span class="ranking-label">RANKING SEMANAL</span>
         </div>
         <div id="winnersContainer"></div>
       </div>
@@ -139,13 +153,14 @@
       <button class="btn-pg-close" onclick="closePostGameModal()">Fechar</button>
     </div>
   </div>
+</div>
 
 <script>
 const q = new URLSearchParams(location.search);
 const token = q.get("tk") || localStorage.getItem("token");
 if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
-let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", letterGift: "", firstLetterRevealed: false, firstLetter: "", letterHintDismissed: false, tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false, display: { riddleVisible: false, rankingView: "live" } };
+let state = { secretLength: 0, guesses: [], hintCount: 0, finished: false, secretWord: "", currentGameId: null, postGameSummary: null, ttsSettings: {}, sizeRevealed: false, sizeGift: "", letterGift: "", firstLetterRevealed: false, firstLetter: "", letterHintDismissed: false, tapMetaCurrent: 0, tapMetaTotal: 0, tapMetaReady: false, sizeRevealAnim: false, display: { riddleVisible: false, rankingView: "live" } };
 let ws = null;
 
 function authFetch(path, opts = {}) {
@@ -182,6 +197,7 @@ let currentRiddleText = "";
 let currentRiddleAudioUrl = "";
 let riddleAudio = null;
 let lastNarratedRiddleKey = "";
+let riddleClosed = false;
 let shakeInterval = null;
 
 function handleMessage(msg) {
@@ -255,6 +271,7 @@ function handleMessage(msg) {
     case "size_revealed":
       state.sizeRevealed = true;
       if (msg.secret_length) state.secretLength = msg.secret_length;
+      state.sizeRevealAnim = true;
       renderBoxes();
       startLetterGiftPromptCycle();
       if (msg.nickname || msg.user) {
@@ -319,6 +336,7 @@ function applyGameStart(msg) {
   state.hintGifts = msg.hint_gifts || [];
   state.sizeGift = msg.size_gift || "";
   state.sizeRevealed = !!msg.size_revealed;
+  state.sizeRevealAnim = false;
   state.letterGift = msg.letter_gift || "";
   state.firstLetterRevealed = !!msg.first_letter_revealed;
   state.firstLetter = msg.first_letter || "";
@@ -336,9 +354,13 @@ function applyGameStart(msg) {
   state.activeGift = msg.active_gift || null;
   state.tensionScore = msg.tension_score || 0;
   state.isFinalBoss = !!msg.is_final_boss;
+  state.tapMetaCurrent = 0;
+  state.tapMetaTotal = msg.tap_meta_total || 1000;
+  state.tapMetaReady = false;
 
   updateTensionBar(state.tensionScore, state.isFinalBoss);
   renderActiveGift(state.activeGift);
+  renderTapBar();
   startShakeInterval();
   renderBoxes();
   renderGuesses();
@@ -383,15 +405,17 @@ function getGiftPtName(name) {
 function renderActiveGift(giftName) {
   state.activeGift = giftName;
   const section = document.getElementById("giftsSection");
-  if (!giftName) {
+  // Card DICA/BOSS é parte da coluna de status: aparece sempre que há jogo ativo.
+  if (!state.currentGameId) {
     if (section) section.style.display = "none";
     return;
   }
-
   if (section) section.style.display = "block";
   const img = document.getElementById("rouletteGiftImg");
-  const nameEl = document.getElementById("rouletteGiftName");
-  const titleEl = document.querySelector("#rouletteStandardView .roulette-title");
+  const riddleIcon = document.getElementById("rouletteRiddleIcon");
+  const iconBox = document.querySelector("#rouletteStandardView .roulette-gift-icon");
+  const titleEl = document.getElementById("rouletteTitle");
+  const subEl = document.getElementById("rouletteSub");
   const card = document.getElementById("rouletteCard");
 
   const filename = giftImageMap[giftName];
@@ -399,26 +423,35 @@ function renderActiveGift(giftName) {
     img.src = filename ? `/gift-images/${filename}` : "";
     img.style.display = filename ? "block" : "none";
   }
-  if (nameEl) {
-    nameEl.textContent = getGiftPtName(giftName);
+  if (riddleIcon) riddleIcon.style.display = "none";
+  if (iconBox) {
+    iconBox.style.display = filename ? "flex" : "none";
   }
 
   // Final Boss UI mutation
   if (state.isFinalBoss) {
+    if (card) card.classList.add("boss-mode");
     if (titleEl) {
-      titleEl.textContent = "🚨 REVELE A PALAVRA SECRETA";
+      titleEl.textContent = "🔥 BOSS";
       titleEl.style.color = "#fbbf24";
       titleEl.style.textShadow = "0 0 10px rgba(251, 191, 36, 0.8)";
+    }
+    if (subEl) {
+      subEl.textContent = "Envie para ganhar o jogo!";
     }
     if (card) {
       card.style.borderColor = "#fbbf24";
       card.style.boxShadow = "0 0 25px rgba(251, 191, 36, 0.4), inset 0 0 15px rgba(251, 191, 36, 0.15)";
     }
   } else {
+    if (card) card.classList.remove("boss-mode");
     if (titleEl) {
-      titleEl.textContent = "ROLETA DE PRESENTES";
+      titleEl.textContent = "DICA";
       titleEl.style.color = "#cc88ff";
       titleEl.style.textShadow = "0 0 8px rgba(167, 139, 250, 0.6)";
+    }
+    if (subEl) {
+      subEl.textContent = "Envie para liberar dica";
     }
     if (card) {
       card.style.borderColor = "rgba(167, 139, 250, 0.4)";
@@ -465,13 +498,13 @@ function triggerTensionCharge() {
 }
 
 function updateTensionBar(score, isFinalBoss) {
-  const container = document.getElementById("tensionBarContainer");
+  const metaCard = document.querySelector(".tension-meta");
   const fill = document.getElementById("tensionBarFill");
   const icon = document.getElementById("tensionBarIcon");
   
-  if (!container || !fill || !icon) return;
+  if (!metaCard || !fill || !icon) return;
 
-  container.style.display = state.currentGameId ? "block" : "none";
+  metaCard.style.display = state.currentGameId ? "block" : "none";
 
   // Clamp score
   score = Math.max(0, Math.min(100, score));
@@ -516,44 +549,45 @@ function handleRouletteDrop(msg) {
   processRouletteQueue();
 }
 
-function showRouletteReveal(type, username, hintWord) {
+function showCardHintWord(word) {
   const std = document.getElementById("rouletteStandardView");
   const rev = document.getElementById("rouletteRevealView");
-  const card = document.getElementById("rouletteCard");
-  
-  if (!std || !rev) return;
+  const titleEl = document.getElementById("rouletteTitle");
+  const subEl = document.getElementById("rouletteSub");
 
-  const title = document.getElementById("rouletteRevealTitle");
-  const icon = document.getElementById("rouletteRevealIcon");
-  const reward = document.getElementById("rouletteRevealReward");
-  const user = document.getElementById("rouletteRevealUser");
-  const display = document.getElementById("rouletteRevealDisplay");
-
-  if (type === "hint") {
-    if (title) { title.textContent = "DICA REVELADA!"; title.style.color = "#a78bfa"; }
-    if (icon) icon.textContent = "💡";
-    if (reward) {
-      reward.textContent = hintWord ? hintWord.toUpperCase() : "Dica de Palavra";
-      reward.style.fontSize = "0.95em";
-    }
-    if (user) user.textContent = `@${username}`;
-    if (display) display.style.borderColor = "rgba(167, 139, 250, 0.4)";
-  } else {
-    if (title) { title.textContent = "CHARADA DE IA!"; title.style.color = "#FBBF24"; }
-    if (icon) icon.textContent = "🎯";
-    if (reward) {
-      reward.textContent = "Charada";
-      reward.style.fontSize = "0.95em";
-    }
-    if (user) user.textContent = `@${username}`;
-    if (display) display.style.borderColor = "rgba(251, 191, 36, 0.4)";
+  if (std) std.style.display = "block";
+  if (rev) rev.style.display = "none";
+  if (titleEl) {
+    titleEl.textContent = (word || "").toUpperCase();
+    titleEl.style.color = "#a78bfa";
+    titleEl.style.textShadow = "0 0 8px rgba(167,139,250,0.6)";
   }
+  if (subEl) {
+    subEl.textContent = "Última dica revelada";
+  }
+}
 
-  std.style.display = "none";
-  rev.style.display = "flex";
+function showCardRiddle() {
+  const std = document.getElementById("rouletteStandardView");
+  const rev = document.getElementById("rouletteRevealView");
+  const iconBox = document.querySelector("#rouletteStandardView .roulette-gift-icon");
+  const img = document.getElementById("rouletteGiftImg");
+  const riddleIcon = document.getElementById("rouletteRiddleIcon");
+  const titleEl = document.getElementById("rouletteTitle");
+  const subEl = document.getElementById("rouletteSub");
 
-  if (card) {
-    card.classList.add("roulette-pulsing");
+  if (std) std.style.display = "block";
+  if (rev) rev.style.display = "none";
+  if (img) img.style.display = "none";
+  if (riddleIcon) riddleIcon.style.display = "block";
+  if (iconBox) iconBox.style.display = "flex";
+  if (titleEl) {
+    titleEl.textContent = "CHARADA";
+    titleEl.style.color = "#FBBF24";
+    titleEl.style.textShadow = "0 0 10px rgba(251, 191, 36, 0.7)";
+  }
+  if (subEl) {
+    subEl.textContent = "Gerando charada...";
   }
 }
 
@@ -608,8 +642,10 @@ function processRouletteQueue() {
   // Rule of queue acceleration: If more than 4 items are pending, use a fast spin (500ms)
   const isFast = rouletteQueue.length > 4;
   const spinTime = isFast ? 500 : 2000;
-  
-  if (card) {
+
+  // Dica não gira/agita o card: apenas troca o texto e restaura depois.
+  const isHint = current.reward_type === "hint";
+  if (card && !isHint) {
     card.classList.add(isFast ? "roulette-vibrating" : "roulette-spinning");
   }
 
@@ -624,7 +660,8 @@ function processRouletteQueue() {
       state.hintCount++;
       document.getElementById("hintCount").textContent = state.hintCount;
 
-      showRouletteReveal("hint", current.nickname || current.user, current.hint_word);
+      // Card DICA/BOSS: exibe a palavra revelada no lugar de "DICA"
+      showCardHintWord(current.hint_word);
 
       showDicaOverlay(current.gift, current.nickname || current.user, current.hint_word);
       addGuessToList({
@@ -648,7 +685,7 @@ function processRouletteQueue() {
       }, 5500);
 
     } else if (current.reward_type === "riddle_started") {
-      showRouletteReveal("riddle", current.nickname || current.user);
+      showCardRiddle();
       handleRiddleStarted(current);
       
       setTimeout(() => {
@@ -661,7 +698,7 @@ function processRouletteQueue() {
       }, 4000);
 
     } else if (current.reward_type === "riddle_ready") {
-      showRouletteReveal("riddle", current.nickname || current.user);
+      showCardRiddle();
       handleRiddleReady(current);
 
       setTimeout(() => {
@@ -677,8 +714,9 @@ function processRouletteQueue() {
 }
 
 function handleRiddleStarted(msg) {
-  document.getElementById("winnersPanel").style.display = "none";
+  riddleClosed = false;
   const panel = document.getElementById("riddlePanel");
+  panel.classList.remove("riddle-hiding");
   panel.style.display = "block";
   document.getElementById("riddleLoading").style.display = "flex";
   document.getElementById("riddleBody").style.display = "none";
@@ -686,6 +724,7 @@ function handleRiddleStarted(msg) {
 }
 
 function handleRiddleReady(msg, opts) {
+  riddleClosed = false;
   state.currentRiddleStage = msg.stage;
   currentRiddleText = msg.text;
   currentRiddleAudioUrl = msg.audio_url || "";
@@ -695,7 +734,6 @@ function handleRiddleReady(msg, opts) {
   document.getElementById("riddleLoading").style.display = "none";
   document.getElementById("riddleBody").style.display = "block";
   document.getElementById("riddleFooter").style.display = "flex";
-  document.getElementById("riddleUserInfo").textContent = `Presente enviado por @${msg.nickname || msg.user}`;
 
   // Typewriter effect
   typewriterText("riddleText", msg.text, 30);
@@ -710,31 +748,64 @@ function handleRiddleReady(msg, opts) {
   if (auto && (!opts || opts.narrate !== false) && rkey !== lastNarratedRiddleKey) {
     lastNarratedRiddleKey = rkey;
     speakCurrentRiddle();
+  } else {
+    setRiddleNarrating(false);
   }
 }
 
+function setRiddleNarrating(on) {
+  const el = document.getElementById("riddleNarrating");
+  if (el) el.style.display = on ? "inline-block" : "none";
+}
+
+function stopRiddleAudio() {
+  // Áudio por arquivo (mp3)
+  if (riddleAudio) {
+    try {
+      riddleAudio.pause();
+      riddleAudio.src = "";
+      riddleAudio.load();
+    } catch (e) {}
+    riddleAudio = null;
+  }
+  // TTS do navegador (speechSynthesis)
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.pause();
+    } catch (e) {}
+  }
+  setRiddleNarrating(false);
+}
+
 function playRiddleSfxAndTimer() {
+  if (riddleClosed) { stopRiddleAudio(); return; }
   const playBtn = document.getElementById("btnPlayRiddle");
   if (playBtn) playBtn.style.display = "none";
   const repeatBtn = document.getElementById("btnRepeatRiddle");
   if (repeatBtn) repeatBtn.style.display = "inline-block";
 
   // Speech TTS
+  setRiddleNarrating(true);
   speakCurrentRiddle();
 }
 
 function closeRiddleCard() {
-  if (riddleAudio) {
-    riddleAudio.pause();
-    riddleAudio = null;
-  }
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  riddleClosed = true;
+  stopRiddleAudio();
   if (typewriterInterval) {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
   }
   state.display.riddleVisible = false;
-  document.getElementById("riddlePanel").style.display = "none";
+  const rp = document.getElementById("riddlePanel");
+  if (rp) {
+    rp.classList.add("riddle-hiding");
+    setTimeout(() => {
+      rp.style.display = "none";
+      rp.classList.remove("riddle-hiding");
+    }, 220);
+  }
   applyRankingVisibility();
   renderActiveGift(state.activeGift);
   startLetterGiftPromptCycle();
@@ -746,6 +817,10 @@ function handleDisplayAction(msg) {
     closeRiddleCard();
   } else if (msg.action === "change_ranking") {
     if (msg.ranking_view) setRankingMode(msg.ranking_view);
+  } else if (msg.action === "show_postgame") {
+    openPostGameModal();
+  } else if (msg.action === "close_postgame") {
+    closePostGameModal();
   }
 }
 
@@ -801,11 +876,15 @@ function pickRiddleVoice(ttsSettings) {
 function playRiddleAudio() {
   if (!currentRiddleAudioUrl) return;
   if (riddleAudio) riddleAudio.pause();
+  setRiddleNarrating(true);
   riddleAudio = new Audio(currentRiddleAudioUrl);
-  riddleAudio.play().catch(() => {});
+  riddleAudio.onended = () => setRiddleNarrating(false);
+  riddleAudio.onerror = () => setRiddleNarrating(false);
+  riddleAudio.play().catch(() => setRiddleNarrating(false));
 }
 
 function speakCurrentRiddle() {
+  if (riddleClosed) { stopRiddleAudio(); return; }
   if (currentRiddleAudioUrl) {
     playRiddleAudio();
     return;
@@ -819,6 +898,9 @@ function speakCurrentRiddle() {
   utterance.pitch = 1.0;
   const voice = pickRiddleVoice(s);
   if (voice) utterance.voice = voice;
+  setRiddleNarrating(true);
+  utterance.onend = () => setRiddleNarrating(false);
+  utterance.onerror = () => setRiddleNarrating(false);
   window.speechSynthesis.speak(utterance);
 }
 
@@ -838,9 +920,13 @@ function renderBoxes() {
     return;
   }
   const n = state.secretLength;
+  // Animação sequencial ao revelar o tamanho (cada letra sobe da esquerda p/ direita)
+  const animate = !!state.sizeRevealAnim;
+  state.sizeRevealAnim = false;
   for (let i = 0; i < n; i++) {
     const slot = document.createElement("div");
     slot.className = "letter-slot";
+    if (animate) slot.style.animationDelay = (i * 90) + "ms";
     const box = document.createElement("div");
     box.className = "box";
     if (state.finished) {
@@ -897,7 +983,7 @@ function startLetterGiftPromptCycle() {
   stopLetterGiftPromptCycle();
   if (!letterPromptEligible()) { wordAreaMode = "word"; renderBoxes(); return; }
   wordAreaMode = "word";
-  letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
+  letterPromptTimer = setTimeout(showLetterGiftPrompt, 30000);
 }
 
 function stopLetterGiftPromptCycle() {
@@ -909,12 +995,12 @@ function stopLetterGiftPromptCycle() {
 function showLetterGiftPrompt() {
   letterPromptTimer = null;
   if (!letterPromptEligible() || state.display.riddleVisible) {
-    letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
+    letterPromptTimer = setTimeout(showLetterGiftPrompt, 30000);
     return;
   }
   wordAreaMode = "letter_gift_prompt";
   renderBoxes();
-  letterPromptHideTimer = setTimeout(hideLetterGiftPrompt, 5000);
+  letterPromptHideTimer = setTimeout(hideLetterGiftPrompt, 3000);
 }
 
 function hideLetterGiftPrompt() {
@@ -922,7 +1008,7 @@ function hideLetterGiftPrompt() {
   wordAreaMode = "word";
   renderBoxes();
   if (letterPromptEligible() && !state.display.riddleVisible) {
-    letterPromptTimer = setTimeout(showLetterGiftPrompt, 15000);
+    letterPromptTimer = setTimeout(showLetterGiftPrompt, 30000);
   }
 }
 
@@ -932,8 +1018,18 @@ function renderTapBar() {
   const total = state.tapMetaTotal || 0;
   const cur = Math.max(0, Math.min(total, state.tapMetaCurrent || 0));
   const pct = total > 0 ? (cur / total) * 100 : 0;
-  fill.style.height = pct + "%";
+  fill.style.width = pct + "%";
   fill.classList.toggle("full", state.tapMetaReady || pct >= 100);
+
+  const metaCard = document.getElementById("tapMetaCard");
+  if (metaCard) metaCard.style.display = state.currentGameId ? "block" : "none";
+
+  const values = document.getElementById("tapMetaValues");
+  if (values && total > 0) {
+    values.textContent = `${Math.round(cur)} / ${Math.round(total)}`;
+  } else if (values) {
+    values.textContent = "";
+  }
 }
 
 function onTapMetaReached(msg) {
@@ -961,6 +1057,17 @@ function onTapMetaReached(msg) {
 let guessHighlightQueue = [];
 let guessHighlightShowing = false;
 
+function renderGameOver(winner, html) {
+  const banner = document.getElementById("gameOverBanner");
+  const name = document.getElementById("winnerName");
+  if (banner) {
+    banner.classList.remove("no-winner", "has-winner");
+    banner.classList.add(winner === "Ninguém" ? "no-winner" : "has-winner");
+    banner.style.display = "block";
+  }
+  if (name) name.innerHTML = html;
+}
+
 const GUESS_TOP_MS = 600;   // tempo destacado no topo
 const GUESS_FLIP_MS = 300;  // duracao do deslize para a posicao
 const GUESS_GAP_MS = 50;    // intervalo antes do proximo
@@ -982,11 +1089,10 @@ function processGuessHighlightQueue() {
     state.secretWord = msg.secret_word;
     state.secretLength = (msg.secret_word || "").length;
     state.postGameSummary = msg.post_game_summary || null;
-    document.getElementById("gameOverBanner").style.display = "block";
     if (msg.winner === "Ninguém") {
-      document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
+      renderGameOver("Ninguém", `<span class="end-icon">✖</span> Partida encerrada sem vencedor`);
     } else {
-      document.getElementById("winnerName").innerHTML = `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`;
+      renderGameOver(msg.winner, `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`);
     }
     renderBoxes();
     refreshRanking();
@@ -1190,10 +1296,10 @@ const RANK_MODES = ["round", "live", "weekly", "hidden"];
 let rankingMode = "live";
 
 function rankingModeLabel(mode) {
-  if (mode === "weekly") return "RANKING SEMANAL ▸";
-  if (mode === "live") return "RANKING DA LIVE ▸";
-  if (mode === "hidden") return "RANKING ▸";
-  return "MAIS PALPITES ▸";
+  if (mode === "weekly") return "RANKING SEMANAL";
+  if (mode === "live") return "RANKING DA LIVE";
+  if (mode === "hidden") return "RANKING";
+  return "MAIS PALPITES";
 }
 
 function setRankingMode(view) {
@@ -1236,7 +1342,11 @@ function cycleRankingMode() {
 
 function refreshRanking() {
   const titleEl = document.getElementById("rankTitle");
-  if (titleEl) titleEl.textContent = rankingModeLabel(rankingMode);
+  if (titleEl) {
+    const label = titleEl.querySelector(".ranking-label");
+    if (label) label.textContent = rankingModeLabel(rankingMode);
+    else titleEl.textContent = rankingModeLabel(rankingMode);
+  }
   applyRankingVisibility();
   if (rankingMode === "weekly") fetchWinners();
   else if (rankingMode === "live") fetchLiveRanking();
@@ -1410,16 +1520,63 @@ function showNotification(text, color) {
   setTimeout(() => { el.remove(); }, 4000);
 }
 
-function showStartBar(msg) {
-  document.getElementById("startBar").style.display = "block";
-  const status = document.getElementById("startStatus");
-  if (status) {
-    status.textContent = msg || "";
+function rulePrefixToken() {
+  const s = (state.ttsSettings && state.ttsSettings.command_prefix) || "#";
+  return s === "" ? "" : String(s);
+}
+
+function orientationMessages() {
+  const p = rulePrefixToken();
+  const hasP = p !== "";
+  if (hasP) {
+    return [
+      `Envie <b>palavra única</b>, sem espaços, para participar`,
+      `Envie <b>${p}palavra</b> no chat para palpitar`,
+      `Marque quem chutou: <b>${p}palavra @usuario</b>`,
+      `Tente também usando emojis: <b>💜palavra💜</b>`,
+    ];
   }
+  return [
+    `Envie <b>palavra única</b>, sem espaços, para participar`,
+    `Envie sua <b>palavra</b> no chat para palpitar`,
+    `Marque quem chutou: <b>palavra @usuario</b>`,
+    `Tente também usando emojis: <b>💜palavra💜</b>`,
+  ];
+}
+
+let orientationInterval = null;
+let orientationIdx = 0;
+
+function startOrientationCycle() {
+  stopOrientationCycle();
+  const msgs = orientationMessages();
+  orientationIdx = 0;
+  setStartBarText(msgs[0]);
+  orientationInterval = setInterval(() => {
+    const list = orientationMessages();
+    orientationIdx = (orientationIdx + 1) % list.length;
+    setStartBarText(list[orientationIdx]);
+  }, 8000);
+}
+
+function stopOrientationCycle() {
+  if (orientationInterval) { clearInterval(orientationInterval); orientationInterval = null; }
+}
+
+function setStartBarText(html) {
+  const startBar = document.getElementById("startBar");
+  const status = document.getElementById("startStatus");
+  if (startBar) startBar.style.display = "block";
+  if (status) status.innerHTML = html || "";
+}
+
+function showStartBar(msg) {
+  stopOrientationCycle();
+  setStartBarText(msg);
 }
 
 function hideStartBar() {
-  document.getElementById("startBar").style.display = "none";
+  startOrientationCycle();
 }
 
 async function loadGameState() {
@@ -1470,13 +1627,12 @@ async function loadGameState() {
 
       if (gs.finished && gs.winner) {
         state.postGameSummary = gs.post_game_summary || null;
-        document.getElementById("gameOverBanner").style.display = "block";
         if (gs.winner === "Ninguém") {
-          document.getElementById("winnerName").innerHTML = `<span>❌ Partida encerrada sem vencedor!</span>`;
+          renderGameOver("Ninguém", `<span class="end-icon">✖</span> Partida encerrada sem vencedor`);
         } else {
           const winAvatar = gs.guesses && gs.guesses.find(g => g.word === gs.secret_word);
           const avUrl = winAvatar ? (winAvatar.avatar || '') : '';
-          document.getElementById("winnerName").innerHTML = `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`;
+          renderGameOver(gs.winner, `<img src="${avUrl}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${gs.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`);
         }
         showStartBar("Jogo finalizado! Aguardando a próxima partida...");
       } else {
@@ -1491,6 +1647,8 @@ async function loadGameState() {
       startLetterGiftPromptCycle();
     } else if (gs.python_connected) {
       showStartBar("Live conectada! Aguardando o streamer iniciar a partida.");
+    } else {
+      startOrientationCycle();
     }
   } catch (e) {}
 }
@@ -1518,7 +1676,6 @@ document.addEventListener("visibilitychange", () => {
     <div class="dica-badge">DICA ATIVADA</div>
     <img class="dica-gift-image" id="dicaGiftImage" src="" alt="Gift">
     <div class="dica-user" id="dicaUser"></div>
-    <div class="dica-word-label">Dica</div>
     <div class="dica-word" id="dicaWord"></div>
     <div class="dica-countdown"><div class="dica-countdown-bar"></div></div>
   </div>

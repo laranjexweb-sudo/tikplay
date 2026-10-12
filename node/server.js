@@ -190,9 +190,9 @@ function updateGameState(tenant, msg) {
         first_letter_revealed: !!msg.first_letter_revealed,
         current_riddle: null,
         display: { riddle_visible: false, ranking_view: (gs && gs.display && gs.display.ranking_view) || "live" },
-        tap_meta_current: (gs && gs.tap_meta_current) || 0,
-        tap_meta_total: (gs && gs.tap_meta_total) || 1000,
-        tap_meta_ready: !!(gs && gs.tap_meta_ready),
+        tap_meta_current: 0,
+        tap_meta_total: msg.tap_meta_total || 1000,
+        tap_meta_ready: false,
         settings: (gs && gs.settings) || { ...DEFAULT_SETTINGS },
       };
       break;
@@ -1703,6 +1703,46 @@ app.get("/api/tres/weekly", auth.requireAuth, (req, res) => {
   res.json({ success: true, weekly: db.getTresWeekly(req.user.id, 10) });
 });
 
+// Testes VISUAIS do 3 Dicas — efeitos só na tela (não altera regras/pontuação/ranking)
+app.post("/api/tres/test", auth.requireAuth, (req, res) => {
+  const tenant = getTenant(req.user.id);
+  const action = String((req.body && req.body.action) || "").trim();
+  const nickname = String((req.body && req.body.nickname) || "Streamer");
+  const avatar = String((req.body && req.body.avatar) || "");
+  const payload = { type: "tres_test", action, nickname, avatar, user: "streamer" };
+
+  if (action === "dica") {
+    payload.stage = Math.max(1, Math.min(3, parseInt((req.body && req.body.stage) || 1, 10) || 1));
+  } else if (action === "presente") {
+    payload.kind = (req.body && req.body.kind) === "letter" ? "letter" : "size";
+    payload.len = Math.max(3, parseInt((req.body && req.body.len) || 7, 10) || 7);
+    payload.letter = String((req.body && req.body.letter) || "A").charAt(0);
+  } else if (action === "passe" || action === "apoiador") {
+    /* entrou como apoiador */
+  } else if (action === "vencedor") {
+    payload.pontos = Math.max(1, parseInt((req.body && req.body.pontos) || 30, 10) || 30);
+    payload.multiplicador = !!(req.body && req.body.multiplicador);
+    payload.stage = Math.max(1, Math.min(3, parseInt((req.body && req.body.stage) || 1, 10) || 1));
+    payload.palavra = String((req.body && req.body.palavra) || "PALAVRA");
+  } else if (action === "timeout") {
+    payload.palavra = String((req.body && req.body.palavra) || "Ninguém acertou");
+  } else if (action === "ranking") {
+    const fake = [
+      { user: "top1", nickname: "Top 1", avatar: "", pontos: 240 },
+      { user: "top2", nickname: "Top 2", avatar: "", pontos: 180 },
+      { user: "top3", nickname: "Top 3", avatar: "", pontos: 150 },
+      { user: "top4", nickname: "Top 4", avatar: "", pontos: 95 },
+      { user: "top5", nickname: "Top 5", avatar: "", pontos: 60 },
+    ];
+    payload.weekly = fake;
+  } else {
+    return res.json({ success: false, error: "Ação de teste inválida" });
+  }
+
+  broadcastToClients(tenant.browserClients, payload);
+  res.json({ success: true });
+});
+
 // ---------------- Bichinho Virtual (V-Pet) ----------------
 
 function vpetTenantId(req) {
@@ -1823,6 +1863,14 @@ app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
     case "close_winner":
     case "clear_screen":
       // Reservado para futuras acoes visuais
+      break;
+    case "show_postgame":
+      gs.display.postgame_visible = true;
+      payload.postgame_visible = true;
+      break;
+    case "close_postgame":
+      gs.display.postgame_visible = false;
+      payload.postgame_visible = false;
       break;
     default:
       return res.json({ success: false, error: "Action desconhecida: " + action });
