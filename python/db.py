@@ -122,6 +122,15 @@ def init_db():
       usou_multiplicador INTEGER DEFAULT 0,
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS palavra_index_cache (
+      alvo TEXT PRIMARY KEY,
+      pool_version TEXT NOT NULL,
+      method_version TEXT NOT NULL,
+      all_scored TEXT NOT NULL,
+      sims TEXT NOT NULL,
+      hint_pool TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
     """)
     conn.commit()
     try:
@@ -444,6 +453,72 @@ def load_banned_words() -> set:
     finally:
         conn.close()
     return {_norm(r[0]) for r in rows if r and r[0]}
+
+
+_CACHE_SCHEMA_READY = False
+
+
+def _ensure_palavra_cache_table(conn):
+    global _CACHE_SCHEMA_READY
+    if not _CACHE_SCHEMA_READY:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS palavra_index_cache ("
+            "alvo TEXT PRIMARY KEY, pool_version TEXT NOT NULL, method_version TEXT NOT NULL, "
+            "all_scored TEXT NOT NULL, sims TEXT NOT NULL, hint_pool TEXT NOT NULL, "
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        )
+        conn.commit()
+        _CACHE_SCHEMA_READY = True
+
+
+def get_palavra_index_cache(alvo, pool_version, method_version):
+    """Cache persistente do índice de proximidade da Palavra Secreta.
+
+    Chave = palavra secreta normalizada + versão do words.json + versão do método/modelo.
+    Retorna dict {all_scored, sims, hint_pool} ou None.
+    """
+    conn = _conn()
+    try:
+        _ensure_palavra_cache_table(conn)
+        row = conn.execute(
+            "SELECT all_scored, sims, hint_pool FROM palavra_index_cache "
+            "WHERE alvo=? AND pool_version=? AND method_version=?",
+            (alvo, pool_version, method_version),
+        ).fetchone()
+    except Exception:
+        return None
+    finally:
+        conn.close()
+    if not row:
+        return None
+    try:
+        return {
+            "all_scored": json.loads(row[0]),
+            "sims": json.loads(row[1]),
+            "hint_pool": json.loads(row[2]),
+        }
+    except Exception:
+        return None
+
+
+def save_palavra_index_cache(alvo, pool_version, method_version, all_scored, sims, hint_pool):
+    conn = _conn()
+    try:
+        _ensure_palavra_cache_table(conn)
+        conn.execute(
+            "INSERT INTO palavra_index_cache (alvo, pool_version, method_version, all_scored, sims, hint_pool) "
+            "VALUES (?,?,?,?,?,?) "
+            "ON CONFLICT(alvo) DO UPDATE SET pool_version=excluded.pool_version, "
+            "method_version=excluded.method_version, all_scored=excluded.all_scored, "
+            "sims=excluded.sims, hint_pool=excluded.hint_pool, created_at=CURRENT_TIMESTAMP",
+            (alvo, pool_version, method_version,
+             json.dumps(all_scored, ensure_ascii=False),
+             json.dumps(sims),
+             json.dumps(hint_pool, ensure_ascii=False)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_tres_weekly(tenant_id, limit=10):

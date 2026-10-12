@@ -219,6 +219,11 @@ function handleMessage(msg) {
       hideStartBar();
       break;
 
+    case "game_preparing":
+      document.getElementById("statusBadge").textContent = "⏳ Preparando próxima partida…";
+      document.getElementById("statusBadge").style.color = "#ffb84d";
+      break;
+
     case "gift_config_updated":
       // We only care about active_gift changes, which come in other events.
       break;

@@ -5,6 +5,7 @@ Sem mudanca de comportamento. Dependencias: similarity.nlp, db, service_common
 """
 import asyncio
 import bisect
+import hashlib
 import json
 import os
 import random
@@ -25,6 +26,22 @@ _PYROOT = os.path.dirname(_HEREDIR)  # python/
 
 DEFAULT_HISTORY_PATH = os.path.join(_PYROOT, "..", "node", "public", "history.json")
 DEFAULT_GIFT_TAGS_PATH = os.path.join(_PYROOT, "..", "node", "gift-tags.json")
+
+
+# Versão do método/modelo de similaridade: subir quando mudar o cálculo
+# (ex.: troca do spaCy, fórmula de rank, pool de palavras) para invalidar o cache.
+METHOD_VERSION = "sim-v1"
+
+
+def _pool_signature() -> str:
+    """Assinatura do words.json: qualquer mudança no pool invalida o cache do índice."""
+    path = os.path.join(_PYROOT, "words.json")
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        return hashlib.md5(data).hexdigest()
+    except Exception:
+        return "desconhecido"
 
 
 
@@ -193,6 +210,7 @@ class JogoContexto:
         self.recent_active_gifts = []
         self._load_word_pool()
         self._load_history()
+        self._pool_ready = True
         # Cache local deste objeto (usa o cache global por palavra)
         self._secret_index_key = None
 
@@ -208,6 +226,7 @@ class JogoContexto:
         path = os.path.join(_PYROOT, "words.json")
         with open(path, encoding="utf-8") as f:
             self.word_pool = json.load(f)
+        self._pool_version = _pool_signature()
         self.norm_to_word = {strip_accents(w): w for w in self.word_pool}
         try:
             self.banned_words = db.load_banned_words()
@@ -245,22 +264,36 @@ class JogoContexto:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _build_hint_pool(self):
-        """Constrói (ou reutiliza do cache) o índice de proximidade para a palavra secreta."""
+        """Constrói (ou reutiliza do cache de memória/SQLite) o índice de proximidade
+        da palavra secreta.
+
+        Ordem: cache em memória (`_INDEX_CACHE`) → cache persistente no SQLite
+        (`data.db`, chave = palavra + versão do pool + versão do método) → cálculo
+        spaCy (uma única vez por palavra, gravado no SQLite).
+        """
         key = strip_accents(self.secret_word)
-        cached = _INDEX_CACHE.get(key)
-        if cached:
-            self.all_scored = cached["all_scored"]
-            self.all_scored_sims = cached["all_scored_sims"]
-            self._all_scored_neg_sims = cached["neg_sims"]
-            self._word_index = cached["word_index"]
-            self.hint_pool = cached["hint_pool"]
+        cache = _INDEX_CACHE.get(key)
+        if cache is None:
+            # Cache persistente: compartilhado entre restarts do daemon/máquinas.
+            try:
+                cache = db.get_palavra_index_cache(key, self._pool_version, METHOD_VERSION)
+            except Exception:
+                cache = None
+            if cache:
+                _INDEX_CACHE[key] = cache
+        if cache is not None:
+            self.all_scored = cache["all_scored"]
+            self.all_scored_sims = cache["sims"]
+            self._all_scored_neg_sims = cache.get("neg_sims") or [-s for s in cache["sims"]]
+            self._word_index = cache.get("word_index") or {strip_accents(w): i for i, w in enumerate(self.all_scored)}
+            self.hint_pool = cache["hint_pool"]
             self._secret_index_key = key
             return
 
         secret_doc = nlp(self.secret_word)
         scored = []
         for word in self.word_pool:
-            if strip_accents(word) == strip_accents(self.secret_word):
+            if strip_accents(word) == key:
                 continue
             doc = nlp(word)
             if doc.has_vector and secret_doc.has_vector:
@@ -287,6 +320,14 @@ class JogoContexto:
             "word_index": self._word_index,
             "hint_pool": self.hint_pool,
         }
+        # Guarda no SQLite (entre restarts): custo único por palavra.
+        try:
+            db.save_palavra_index_cache(
+                key, self._pool_version, METHOD_VERSION,
+                self.all_scored, self.all_scored_sims, self.hint_pool,
+            )
+        except Exception:
+            pass
 
     def _resolve_alias(self, word: str) -> str:
         """Resolve gíria/variante para a palavra canônica (se existir no pool)."""
@@ -336,7 +377,7 @@ class JogoContexto:
         pos = bisect.bisect_left(self._all_scored_neg_sims, -best_sim)
         return pos + 2
 
-    def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None, letter_gift: str = None) -> str:
+    def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None, letter_gift: str = None, build_pool: bool = True) -> str:
         # Relê as palavras banidas a cada rodada (mudanças do admin valem na próxima)
         try:
             self.banned_words = db.load_banned_words()
@@ -369,7 +410,10 @@ class JogoContexto:
         self.winner = None
         self.winner_nickname = None
         self.winner_avatar = None
-        self._build_hint_pool()
+        self._pool_ready = build_pool
+        if build_pool:
+            self._build_hint_pool()
+            self._pool_ready = bool(self.all_scored and self.hint_pool)
         self._save_history()
         return self.secret_word
 

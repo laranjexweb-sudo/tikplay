@@ -221,6 +221,7 @@ class GameSession:
         self.tap_meta_total = 1000
         self.tap_meta_ready = False
         self._tap_meta_cooldown_until = 0
+        self._preparing = False
         self.settings = dict(DEFAULT_SETTINGS)
         try:
             db_settings = db.get_tenant_settings(tenant_id)
@@ -686,12 +687,26 @@ class GameSession:
         return palavra, dicas
 
     async def start_game(self, hint_gifts=None, riddle_gifts=None, size_gift=None, letter_gift=None):
-        self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift)
+        self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift, build_pool=False)
         # Meta de tap: zera a cada partida e aplica o valor configurado
         self.tap_meta_current = 0
         self.tap_meta_total = int(self.settings.get("tap_meta", 1000) or 1000)
         self.tap_meta_ready = False
         self._tap_meta_cooldown_until = 0
+        # Índice de proximidade: normalmente instantâneo (cache), mas a 1ª vez de uma
+        # palavra nunca vista calcula similaridade do pool (~10-16s). Roda em thread
+        # para NÃO travar a live; o jogo só é liberado quando o ranking fica pronto.
+        self._preparing = True
+        emit(self.tenant_id, "log", "[Jogo] Preparando próxima partida…")
+        emit(self.tenant_id, "game", {"type": "game_preparing"})
+        try:
+            await asyncio.to_thread(self.game._build_hint_pool)
+        except Exception:
+            pass
+        self.game._pool_ready = bool(self.game.all_scored and self.game.hint_pool)
+        if not self.game._pool_ready:
+            emit(self.tenant_id, "log", "[Jogo] [!] Não foi possível preparar o ranking de dicas — usando fallback simples", game="palavra", level="err")
+        self._preparing = False
         active_gift = self.game.get_active_gift()
         emit(self.tenant_id, "log", f"[Jogo] Palavra secreta: {self.game.secret_word}")
         prefix = self._command_prefix()
@@ -862,6 +877,9 @@ class GameSession:
 
         if not self.game.secret_word or self.game.finished:
             self._throttled_log("palavra_nopartida", "[Palavra] comentário ignorado: jogo sem partida ativa ou finalizado", game="palavra", level="info", secs=2.0)
+            return
+        if self._preparing:
+            self._throttled_log("palavra_preparing", "[Palavra] Preparando próxima partida… palpites aguardam", game="palavra", level="warn", secs=3.0)
             return
         prefix = self._command_prefix()
         if prefix and not raw.startswith(prefix):
@@ -1133,6 +1151,9 @@ class GameSession:
         """
         if not self.game.secret_word or self.game.finished:
             return
+        if self._preparing:
+            self._throttled_log("reward_preparing", "[Palavra] Presente aguardando preparação da partida…", game="palavra", level="warn", secs=3.0)
+            return
         if choice is None:
             pct_dica = int(self.settings.get("pct_dica", 70))
             pct_charada = int(self.settings.get("pct_charada", 30))
@@ -1284,6 +1305,9 @@ class GameSession:
         if not self.game.secret_word or self.game.finished:
             emit(self.tenant_id, "log", "[Manual] Nenhuma partida ativa para dar dica")
             return
+        if self._preparing:
+            emit(self.tenant_id, "log", "[Manual] Preparando próxima partida… aguarde a liberação")
+            return
         best_rank = 1000
         if self.game.guesses:
             best_rank = min(g["rank"] for g in self.game.guesses)
@@ -1329,6 +1353,9 @@ class GameSession:
     async def manual_riddle(self):
         if not self.game.secret_word or self.game.finished:
             emit(self.tenant_id, "log", "[Manual] Nenhuma partida ativa para gerar charada")
+            return
+        if self._preparing:
+            emit(self.tenant_id, "log", "[Manual] Preparando próxima partida… aguarde a liberação")
             return
         best_rank = 1000
         if self.game.guesses:
