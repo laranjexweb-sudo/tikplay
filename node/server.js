@@ -3,7 +3,7 @@ const express = require("express");
 const http = require("http");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog } = require("./lib/ws");
+const { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog, registerLogPersister } = require("./lib/ws");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -11,6 +11,19 @@ const multer = require("multer");
 
 const db = require("./db");
 const auth = require("./auth");
+
+const logstore = require("./lib/logstore");
+
+// Persiste cada log no ponto único de entrega (daemon/servidor), mantendo o
+// contrato {type:"log", text, game, level} + metadados estáveis aditivos (id, ts, category).
+registerLogPersister((tenantId, item) => {
+  const entry = logstore.append(tenantId, item);
+  logstore.maybePrune();
+  return entry;
+});
+try {
+  db.pruneLogEntries();
+} catch (e) {}
 
 const HTTP_PORT = process.env.PORT || 3100;
 const defaultPythonPath = "C:\\Users\\djlar\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
@@ -1172,6 +1185,21 @@ app.post("/api/play-riddle", auth.requireAuth, (req, res) => {
   }
   broadcastToClients(tenant.browserClients, { type: "riddle_play" });
   res.json({ success: true });
+});
+
+// ---------------- Histórico de logs (recuperação paginada) ----------------
+
+app.get("/api/logs", auth.requireAuth, (req, res) => {
+  const user = db.getUserById(req.user.id);
+  if (!user || user.status !== "active") {
+    return res.status(401).json({ success: false, error: "Conta invalida" });
+  }
+  // Tenant/streamer SEMPRE derivado da identidade autenticada; nunca do cliente.
+  const before = /^\d+$/.test(String(req.query.before || "")) ? Number(req.query.before) : undefined;
+  const since = /^\d+$/.test(String(req.query.since || "")) ? Number(req.query.since) : undefined;
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), db.LOG_PAGE_MAX);
+  const logs = logstore.query({ tenantId: req.user.id, before, since, limit });
+  res.json({ success: true, logs, limit, has_more: logs.length >= limit });
 });
 
 app.post("/api/game/display-action", auth.requireAuth, (req, res) => {

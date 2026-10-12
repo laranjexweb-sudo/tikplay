@@ -63,9 +63,32 @@ function broadcastToClients(clients, msg) {
   }
 }
 
-function broadcastLog(tenant, item) {
-  // Aceita string (legado) ou objeto estruturado {text, game, level}.
-  broadcastToClients(tenant.logClients, { type: "log", ...(typeof item === "string" ? { text: item } : item || {}) });
+let logPersister = null;
+
+// Hooks opcionais para persistir logs no ponto único de entrega, sem mudar o contrato.
+function registerLogPersister(fn) {
+  logPersister = fn;
 }
 
-module.exports = { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog };
+function broadcastLog(tenant, item) {
+  // Aceita string (legado) ou objeto estruturado {text, game, level}.
+  const base = (typeof item === "string" ? { text: item } : (item || {})) || {};
+  const payload = { type: "log" };
+  let meta = null;
+  if (logPersister) {
+    try {
+      meta = logPersister(tenant.id, base) || null;
+    } catch {
+      meta = null;
+    }
+  }
+  payload.text = (meta && meta.message != null) ? meta.message : (base.text || "");
+  payload.game = (meta && meta.game != null) ? meta.game : (base.game || "");
+  payload.level = (meta && meta.level != null) ? meta.level : (base.level || "");
+  if (meta && meta.id != null) payload.id = meta.id;
+  if (meta && meta.ts != null) payload.ts = meta.ts;
+  if (meta && meta.category) payload.category = meta.category;
+  broadcastToClients(tenant.logClients, payload);
+}
+
+module.exports = { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog, registerLogPersister };

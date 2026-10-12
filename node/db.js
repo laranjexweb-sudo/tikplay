@@ -71,6 +71,20 @@ try {
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
 db.exec(`
+CREATE TABLE IF NOT EXISTS log_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  session_id TEXT,
+  ts INTEGER NOT NULL,
+  category TEXT,
+  level TEXT,
+  game TEXT,
+  message TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_id ON log_entries(tenant_id, id);
+CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_ts ON log_entries(tenant_id, ts);
+`);
+db.exec(`
 CREATE TABLE IF NOT EXISTS gifts (
   gid INTEGER PRIMARY KEY AUTOINCREMENT,
   id TEXT UNIQUE,
@@ -578,6 +592,84 @@ function saveTenantHistory(tenantId, last_id, played_words) {
   `).run(tenantId, last_id, JSON.stringify(played_words || []));
 }
 
+// ---------------- Logs persistidos (histórico por streamer) ----------------
+
+// Retenção por idade e limite de volume por tenant (política de privacidade/operação).
+const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;   // 7 dias
+const LOG_MAX_ROWS_PER_TENANT = 20000;              // teto duro por streamer
+const LOG_PAGE_MAX = 200;                           // página máxima exposta
+
+function appendLogEntry(tenantId, sessionId, entry) {
+  const stmt = db.prepare(`
+    INSERT INTO log_entries (tenant_id, session_id, ts, category, level, game, message)
+    VALUES (?,?,?,?,?,?,?)
+  `);
+  const r = stmt.run(tenantId, sessionId || null, entry.ts, entry.category || null, entry.level || null, entry.game || null, entry.message || "");
+  return {
+    id: Number(r.lastInsertRowid),
+    ts: entry.ts,
+    category: entry.category || null,
+    level: entry.level || null,
+    game: entry.game || null,
+    message: entry.message || "",
+  };
+}
+
+function getLogEntries({ tenantId, before, since, limit, game, level }) {
+  const take = Math.min(Math.max(parseInt(limit, 10) || 100, 1), LOG_PAGE_MAX);
+  const params = [];
+  let where = "WHERE tenant_id = ?";
+  params.push(tenantId);
+  if (since) {
+    params.push(Number(since));
+    where += " AND ts >= ?";
+  }
+  if (before) {
+    params.push(Number(before));
+    where += " AND id < ?";
+  }
+  if (game) {
+    params.push(String(game).slice(0, 32));
+    where += " AND game = ?";
+  }
+  if (level) {
+    params.push(String(level).slice(0, 16));
+    where += " AND level = ?";
+  }
+  params.push(take);
+  const rows = db.prepare(`
+    SELECT id, tenant_id, ts, category, level, game, message
+    FROM log_entries ${where}
+    ORDER BY id DESC
+    LIMIT ?
+  `).all(...params);
+  return rows.map((r) => ({
+    id: r.id,
+    tenant_id: r.tenant_id,
+    ts: r.ts,
+    timestamp: new Date(r.ts).toISOString(),
+    category: r.category || null,
+    level: r.level || null,
+    game: r.game || null,
+    message: r.message || "",
+    text: r.message || "",
+  }));
+}
+
+function pruneLogEntries() {
+  // Por idade (global) e por teto de volume (por tenant), mantendo os mais recentes.
+  const cutoff = Date.now() - LOG_RETENTION_MS;
+  db.prepare("DELETE FROM log_entries WHERE ts < ?").run(cutoff);
+  const tenants = db.prepare("SELECT DISTINCT tenant_id FROM log_entries").all();
+  for (const t of tenants) {
+    db.prepare(`
+      DELETE FROM log_entries
+      WHERE tenant_id = ?
+        AND id NOT IN (SELECT id FROM log_entries WHERE tenant_id = ? ORDER BY id DESC LIMIT ?)
+    `).run(t.tenant_id, t.tenant_id, LOG_MAX_ROWS_PER_TENANT);
+  }
+}
+
 function getGames(tenantId, limit) {
   const rows = db.prepare(
     `SELECT game_id, secret_word, winner, winner_nickname, winner_avatar, total_guesses, played_at
@@ -1020,6 +1112,12 @@ module.exports = {
   saveSoundAlert,
   getTenantHistory,
   saveTenantHistory,
+  appendLogEntry,
+  getLogEntries,
+  pruneLogEntries,
+  LOG_RETENTION_MS,
+  LOG_MAX_ROWS_PER_TENANT,
+  LOG_PAGE_MAX,
   getGames,
   getGamesPaged,
   getWeeklyWins,
