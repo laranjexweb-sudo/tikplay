@@ -436,6 +436,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Cores de resultado corrigidas: vitória em azul/verde e encerramento sem vencedor em vermelho, preservando dimensões e estados.
+
 - 2026-10-12 — Segundo teste de paleta: grafite neutro sem matiz azul, fundo #121212 e cards #292929, mantendo medidas. Primeira paleta salva em `docs/layout-backups/2026-10-12-contraste-01/palette-01-azulada.css`.
 
 - 2026-10-12 — Teste reversível de paleta da Palavra Secreta: fundo quase preto, cards grafite azulado e texto secundário mais claro, sem mudanças de dimensões. Override isolado em `ui/secret-word-palette.css`; backup em `docs/layout-backups/2026-10-12-contraste-01`.
