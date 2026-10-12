@@ -164,8 +164,13 @@ Tabela `gift_meta` (single-row): `id INTEGER PK CHECK(id=1)`, `last_sync INTEGER
 - [x] **Fase 3** — Painel: seletor consome `/api/gifts` (ID como valor quando sincronizado), busca por
   nome/PT/ID, badge "indisponível", 💎 no autocomplete, filtro por valor (min/max), botão
   "Sincronizar agora" + última sync + refresh via WS `gifts_synced`. `normalizeHintGifts` aceita ID ou nome.
-- [ ] **Fase 4** — Migração/backfill das configs existentes (nomes → IDs) + regenerar derivados.
-- [ ] **Fase 5** — Validação por jogo + limpeza (fallback pode virar definitivo).
+- [x] **Fase 4** — Migração one-shot: `python/migrate_gift_configs.py` (shape-agnóstico) cobre
+  `tenant_gift_config` (hint/riddle/size/letter/tres/sound_alerts) e `duelo_config`
+  (gifts + settings, incluindo `{side: ...}`/`special_attacks`); preenche apenas quando há ID
+  real (senão preserva nome); regenera derivados. (Validado: sem ID → 0 mudanças; com ID → converte.)
+- [x] **Fase 5** — Validação offline do fluxo (schema, seed, upsert/diff, match ID-first, migração,
+  endpoints, JS do painel) concluída. **Pendente:** validação com LIVE real (sync `/gift/list/`,
+  gifts reais em partida) e só então considerar remover o fallback por nome.
 
 ---
 

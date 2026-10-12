@@ -24,10 +24,6 @@
     "diamond_count": 1
   },
   {
-    "name": "coldy",
-    "diamond_count": 1
-  },
-  {
     "name": "Community Heart",
     "diamond_count": 1
   },
@@ -112,10 +108,6 @@
     "diamond_count": 1
   },
   {
-    "name": "umbrella",
-    "diamond_count": 1
-  },
-  {
     "name": "White Rose",
     "diamond_count": 1
   },
@@ -133,6 +125,14 @@
   },
   {
     "name": "You're awesome",
+    "diamond_count": 1
+  },
+  {
+    "name": "coldy",
+    "diamond_count": 1
+  },
+  {
+    "name": "umbrella",
     "diamond_count": 1
   },
   {
@@ -212,11 +212,11 @@
     "diamond_count": 10
   },
   {
-    "name": "League Ball",
+    "name": "LIVE Ranking Ticket",
     "diamond_count": 10
   },
   {
-    "name": "LIVE Ranking Ticket",
+    "name": "League Ball",
     "diamond_count": 10
   },
   {
@@ -688,15 +688,15 @@
     "diamond_count": 299
   },
   {
-    "name": "Labor Power",
-    "diamond_count": 299
-  },
-  {
     "name": "LIVE Ranking Crown",
     "diamond_count": 299
   },
   {
     "name": "LIVE Ranking Headband",
+    "diamond_count": 299
+  },
+  {
+    "name": "Labor Power",
     "diamond_count": 299
   },
   {
@@ -1652,11 +1652,11 @@
     "diamond_count": 2999
   },
   {
-    "name": "Level-up Spotlight",
+    "name": "LIVE Ranking Medal",
     "diamond_count": 2999
   },
   {
-    "name": "LIVE Ranking Medal",
+    "name": "Level-up Spotlight",
     "diamond_count": 2999
   },
   {
