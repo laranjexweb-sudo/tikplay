@@ -1229,7 +1229,7 @@ class GameSession:
 
         # 3 PONTINHOS: presente revela tamanho/letra, faz palpite VIP ou marca apoiador
         if self.tres.active and not self.tres.finished:
-            self.tres.process_gift(user, nickname, avatar, gift_name, gift_id=None, repeat=repeat_count)
+            self.tres.process_gift(user, nickname, avatar, gift_name, gift_id=gift_id, repeat=repeat_count)
 
         # PASSE LIVRE: gift ingresso (ticket) libera o usuário para palpitar no 3 Pontinhos
         ticket = (self.tres.gift_config or {}).get("ticket") or ""
@@ -1285,7 +1285,7 @@ class GameSession:
             return
 
         # Presente de tamanho: revela o nº de letras da palavra secreta
-        size_res = self.game.process_gift(user, gift_name, int(diamond_count or 0), nickname=nickname, avatar=avatar)
+        size_res = self.game.process_gift(user, gift_name, int(diamond_count or 0), nickname=nickname, avatar=avatar, gift_id=gift_id)
         if size_res and size_res.get("size_revealed"):
             emit(self.tenant_id, "game", {
                 "type": "size_revealed",

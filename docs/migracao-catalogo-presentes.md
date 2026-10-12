@@ -158,7 +158,10 @@ Tabela `gift_meta` (single-row): `id INTEGER PK CHECK(id=1)`, `last_sync INTEGER
 
 - [x] **Fase 1** — Modelo de dados + sincronizador + endpoints (`gifts`/`gift_meta`, `sync_gifts.py`,
   `/api/gifts`, `/api/gifts/sync`, comando `sync_gifts`). *(configs/matching ainda por nome)*
-- [ ] **Fase 2** — Resolver ID-first nos motores (Palavra Secreta, 3 Dicas, Duelo) + repasse de `gift_id`.
+- [x] **Fase 2** — Resolver ID-first nos motores: `JogoContexto.process_gift`/`process_riddle_gift`,
+  `TresPontinhos.process_gift`/`_gift_matches` + repasse de `gift_id` em `service.py:1286`/`:1230`.
+  Fallback por nome (EN/PT) preservado; `duelo.py` já era ID-first (validado).
+- [ ] **Fase 3** — Painel: seletor ID-first, busca/filtro, botão "Sincronizar agora", badge indisponível.
 - [ ] **Fase 3** — Painel: seletor ID-first, busca/filtro, botão "Sincronizar agora", badge indisponível.
 - [ ] **Fase 4** — Migração/backfill das configs existentes (nomes → IDs) + regenerar derivados.
 - [ ] **Fase 5** — Validação por jogo + limpeza (fallback pode virar definitivo).

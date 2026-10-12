@@ -10,6 +10,27 @@ from datetime import datetime
 from similarity import nlp
 import db
 
+# Catálogo de gifts sincronizado (ID-first). Carregado de forma preguiçosa (DB).
+try:
+    from gifts_catalog import GiftCatalog
+except Exception:
+    GiftCatalog = None
+
+_gift_catalog_obj = None
+
+
+def _gift_catalog():
+    """Retorna o GiftCatalog cacheado, ou None se indisponível."""
+    global _gift_catalog_obj
+    if GiftCatalog is None:
+        return None
+    if _gift_catalog_obj is None:
+        try:
+            _gift_catalog_obj = GiftCatalog()
+        except Exception:
+            _gift_catalog_obj = False
+    return _gift_catalog_obj if _gift_catalog_obj is not False else None
+
 
 DEFAULT_HISTORY_PATH = os.path.join(os.path.dirname(__file__), "..", "node", "public", "history.json")
 DEFAULT_GIFT_TAGS_PATH = os.path.join(os.path.dirname(__file__), "..", "node", "gift-tags.json")
@@ -411,7 +432,7 @@ class JogoContexto:
             result.append(w)
         return result
 
-    def process_riddle_gift(self, user: str, gift_name: str, force: bool = False) -> dict:
+    def process_riddle_gift(self, user: str, gift_name: str, force: bool = False, gift_id: str = None) -> dict:
         if self.finished or not self.secret_word:
             return None
 
@@ -427,11 +448,7 @@ class JogoContexto:
             if not self.riddle_gifts:
                 return None
             expected_gift = self.riddle_gifts[0]
-            norm_incoming = strip_accents(gift_name.strip().lower())
-            norm_expected_en = strip_accents(expected_gift.strip().lower())
-            norm_expected_pt = strip_accents(GIFT_PT_MAP.get(expected_gift.strip().lower(), "").lower())
-
-            if norm_incoming not in (norm_expected_en, norm_expected_pt) and (not norm_expected_pt or norm_incoming != norm_expected_pt):
+            if not self._gift_ref_match(gift_id, gift_name, expected_gift):
                 return None
 
         # Advance stage
@@ -505,14 +522,22 @@ class JogoContexto:
                 break
         return aliases
 
-    def process_gift(self, user: str, gift_name: str, diamond_count: int = 0, nickname: str = None, avatar: str = None) -> dict:
+    def _gift_ref_match(self, incoming_id, incoming_name: str, ref: str) -> bool:
+        """Match de gift ID-first (catálogo) com fallback por nome EN/PT."""
+        cat = _gift_catalog()
+        if cat is not None and incoming_id and ref:
+            row = cat.resolve_ref(ref)
+            if row and row.get("id"):
+                return str(incoming_id).strip() == str(row["id"])
+        return bool(incoming_name) and strip_accents(incoming_name.strip().lower()) in self._gift_aliases(ref)
+
+    def process_gift(self, user: str, gift_name: str, diamond_count: int = 0, nickname: str = None, avatar: str = None, gift_id: str = None) -> dict:
         if self.finished or not self.secret_word:
             return None
 
         # Presente de tamanho: revela o nº de letras da palavra secreta
         if self.size_gift and not self.size_revealed:
-            norm_in = strip_accents(gift_name.strip().lower())
-            if norm_in in self._gift_aliases(self.size_gift):
+            if self._gift_ref_match(gift_id, gift_name, self.size_gift):
                 self.size_revealed = True
                 return {
                     "user": user,
@@ -525,8 +550,7 @@ class JogoContexto:
 
         # Presente de primeira letra: revela a 1ª letra (exige tamanho visível, 1x)
         if self.letter_gift and not self.first_letter_revealed and (self.size_revealed or not self.size_gift):
-            norm_in = strip_accents(gift_name.strip().lower())
-            if norm_in in self._gift_aliases(self.letter_gift):
+            if self._gift_ref_match(gift_id, gift_name, self.letter_gift):
                 self.first_letter_revealed = True
                 return {
                     "user": user,
@@ -541,10 +565,7 @@ class JogoContexto:
         norm_incoming = strip_accents(gift_name.strip().lower())
         matched_gift = None
         for hg in self.hint_gifts:
-            hg_lower = hg.strip().lower()
-            norm_en = strip_accents(hg_lower)
-            norm_pt = strip_accents(GIFT_PT_MAP.get(hg_lower, "").lower())
-            if norm_incoming in (norm_en, norm_pt) or (norm_pt and norm_incoming == norm_pt):
+            if self._gift_ref_match(gift_id, gift_name, hg):
                 matched_gift = hg
                 break
 
@@ -2050,8 +2071,13 @@ class TresPontinhos:
                 break
         return aliases
 
-    def _gift_matches(self, incoming_norm: str, configured: str) -> bool:
-        """Match de gift aceitando nome EN ou PT (padrão Palavra Secreta)."""
+    def _gift_matches(self, incoming_norm: str, configured: str, incoming_id: str = None) -> bool:
+        """Match de gift ID-first (catálogo) com fallback por nome EN ou PT."""
+        cat = _gift_catalog()
+        if cat is not None and incoming_id and configured:
+            row = cat.resolve_ref(configured)
+            if row and row.get("id"):
+                return str(incoming_id).strip() == str(row["id"])
         return bool(configured) and incoming_norm in self._gift_aliases(configured)
 
     def process_gift(self, user, nickname, avatar, gift_name, gift_id=None, repeat=1):
@@ -2065,15 +2091,15 @@ class TresPontinhos:
             self._emit("tres_supporter", {"user": user, "nickname": nickname or user, "avatar": avatar or ""})
         n = self._norm(gift_name)
         cfg = self.gift_config
-        if self._gift_matches(n, cfg.get("size")) and not self.size_revealed:
+        if self._gift_matches(n, cfg.get("size"), gift_id) and not self.size_revealed:
             self.size_revealed = True
             self._emit("tres_reveal_size", {"user": user, "nickname": nickname or user, "len": len(self.palavra)})
             self._emit_log(f"[3 Dicas] @{user} revelou o TAMANHO ({len(self.palavra)} letras)")
-        elif self._gift_matches(n, cfg.get("letter")) and self.size_revealed and not self.first_letter_revealed:
+        elif self._gift_matches(n, cfg.get("letter"), gift_id) and self.size_revealed and not self.first_letter_revealed:
             self.first_letter_revealed = True
             self._emit("tres_reveal_letter", {"user": user, "nickname": nickname or user, "letter": self.palavra[0] if self.palavra else "", "palavra_len": len(self.palavra)})
             self._emit_log(f"[3 Dicas] @{user} revelou a PRIMEIRA LETRA")
-        elif self._gift_matches(n, cfg.get("letter")) and not self.size_revealed:
+        elif self._gift_matches(n, cfg.get("letter"), gift_id) and not self.size_revealed:
             self._emit_log(f"[3 Dicas] @{user} enviou o presente da 1ª letra, mas o TAMANHO ainda não foi revelado")
 
     # -------------------------------------------------------------
