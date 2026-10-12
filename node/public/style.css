@@ -1499,6 +1499,7 @@ body {
   align-self: center;
 }
 .compact .guess-nickname {
+  font-weight: 600;
   font-size: 0.85em;
   color: #8A97AD;
   max-width: 38%;
@@ -2505,4 +2506,130 @@ body {
     height: 40px;
     font-size: 1.3em;
   }
+}
+
+/* Leitura do painel lateral no OBS, preservando as classes e estados do jogo. */
+@media (min-width: 641px) {
+  .compact .game-layout {
+    grid-template-columns: var(--tp-overlay-side-width) minmax(0, 1fr);
+  }
+}
+.compact .gl-side { min-width: 0; }
+.compact .gl-side .roulette-card,
+.compact .gl-side .meta-card,
+.compact .gl-side .winners-panel {
+  background: var(--tp-black-2);
+  border-color: var(--tp-black-3);
+  padding: var(--tp-space-3);
+  box-shadow: none;
+}
+.compact .gl-side .roulette-title {
+  font-size: var(--tp-overlay-title-size);
+  color: var(--tp-yellow);
+  letter-spacing: normal;
+  text-shadow: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.compact .gl-side .roulette-sub,
+.compact .gl-side .roulette-info,
+.compact .gl-side .roulette-gift-name {
+  font-size: var(--tp-overlay-label-size);
+  color: var(--tp-text-inverse);
+  line-height: var(--tp-overlay-line-height);
+}
+.compact .gl-side .meta-row,
+.compact .gl-side .winners-panel .panel-title {
+  font-size: var(--tp-overlay-label-size);
+  color: var(--tp-text-inverse);
+  letter-spacing: normal;
+  gap: var(--tp-space-2);
+  line-height: var(--tp-overlay-line-height);
+}
+.compact .gl-side .meta-row { flex-wrap: wrap; }
+.compact .gl-side .meta-label,
+.compact .gl-side .ranking-label {
+  white-space: normal;
+  overflow: visible;
+}
+.compact .gl-side .meta-values {
+  font-size: var(--tp-overlay-label-size);
+  color: var(--tp-yellow);
+  white-space: nowrap;
+}
+.compact .gl-side .winner-entry {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: var(--tp-space-2);
+  padding: var(--tp-space-2);
+}
+.compact .gl-side .winner-entry .winner-avatar {
+  width: var(--tp-overlay-avatar-size);
+  height: var(--tp-overlay-avatar-size);
+}
+.compact .gl-side .winner-entry .winner-name {
+  font-size: var(--tp-overlay-name-size);
+  max-width: none;
+  flex: 1;
+  min-width: 0;
+}
+.compact .gl-side .winner-entry .winner-guesses {
+  font-size: var(--tp-overlay-label-size);
+  color: var(--tp-text-inverse);
+}
+.compact .gl-side .winner-entry.first .winner-name,
+.compact .gl-side .winner-entry.first .winner-guesses {
+  color: var(--tp-yellow);
+}
+
+/* Ranking lateral: pódio identificado pela borda do próprio card. */
+.compact .gl-side .winner-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--tp-space-2);
+  border: var(--tp-overlay-border-width) solid var(--tp-black-3);
+  border-radius: var(--tp-radius-md);
+  margin-bottom: var(--tp-space-2);
+  background: var(--tp-black);
+  box-shadow: none;
+}
+.compact .gl-side .winner-entry .winner-avatar {
+  grid-column: 1;
+  grid-row: 1;
+}
+.compact .gl-side .winner-entry .winner-name {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--tp-text-inverse);
+  line-height: var(--tp-overlay-line-height);
+}
+.compact .gl-side .winner-entry .winner-guesses {
+  grid-column: 3;
+  grid-row: 1;
+  white-space: nowrap;
+  color: var(--tp-text-inverse);
+  line-height: var(--tp-overlay-line-height);
+}
+.compact .gl-side .winner-entry.first { --tp-rank-accent: var(--tp-rank-gold); }
+.compact .gl-side .winner-entry.second { --tp-rank-accent: var(--tp-rank-silver); }
+.compact .gl-side .winner-entry.third { --tp-rank-accent: var(--tp-rank-bronze); }
+.compact .gl-side .winner-entry.first,
+.compact .gl-side .winner-entry.second,
+.compact .gl-side .winner-entry.third {
+  border-color: var(--tp-rank-accent);
+  border-left-width: var(--tp-rank-accent-width);
+}
+
+.compact .gl-side .winner-entry { position: relative; }
+.compact .gl-side .winner-entry.first::before,
+.compact .gl-side .winner-entry.second::before,
+.compact .gl-side .winner-entry.third::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--tp-space-1);
+  bottom: var(--tp-space-1);
+  width: var(--tp-rank-accent-width);
+  background: var(--tp-rank-accent);
+  clip-path: polygon(0 0, 100% 12%, 100% 88%, 0 100%);
 }

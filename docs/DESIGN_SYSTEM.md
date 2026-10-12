@@ -436,6 +436,16 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Refinamento do ranking lateral: foto, nome e vitórias à direita em linha única, com detalhe chanfrado à esquerda no top 3 inspirado na V2 de taps.
+
+- 2026-10-12 — Ranking lateral com avatar, nome e vitórias abaixo; medalha removida e pódio identificado por bordas ouro/prata/bronze nos três primeiros. Ordenação, dados e largura preservados.
+
+- 2026-10-12 — @ dos participantes nos palpites com peso 600 (seminegrito), preservando tamanho e layout.
+
+- 2026-10-12 — Refinamento dos cards laterais da Palavra Secreta: bordas em grafite (`--tp-black-3`) substituem o contorno claro, mantendo tipografia e contraste do conteúdo.
+
+- 2026-10-12 — Ajuste pontual autorizado de legibilidade da Palavra Secreta: coluna lateral de 17rem, títulos/valores de 1rem, nomes de 1.125rem e contraste reforçado; preservados IDs, estados e lógica. Tokens de §3 materializados em `ui/tikplay-theme.css`, sem iniciar a migração geral do tema.
+
 - 2026-10-12 — Inventário/diagnóstico visual completo (§2) + tokens preliminares (§3) + governança (este doc, `REGRAS_DO_PROJETO.md`, `AGENTS.md`).
 - 2026-10-12 — Versionamento: repo guarda-chuva na raiz + `jogo-contexto` como submódulo do TikPlay.
 - 2026-10-12 — Plano de separação estrutural documentado com evidência em `docs/separacao-estrutural.md`

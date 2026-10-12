@@ -1,0 +1,76 @@
+:root {
+  /* Brand */
+  --tp-yellow: #fec90f;         /* amarelo TikPlay (já usado) */
+  --tp-yellow-hover: #edb800;
+  --tp-yellow-soft: #ffdd66;
+
+  --tp-black: #111315;
+  --tp-black-2: #171a1f;
+  --tp-black-3: #22262d;
+
+  /* Background / superfícies */
+  --tp-bg: #fdfaf3;             /* off-white quente (já usado) */
+  --tp-surface: #ffffff;
+  --tp-surface-soft: #f7f5ef;
+  --tp-surface-muted: #ececea;
+
+  /* Ações / semânticas */
+  --tp-green: #3ddc84;
+  --tp-green-hover: #2fc473;
+  --tp-red: #ff6b6b;
+  --tp-red-hover: #ef5555;
+  --tp-blue: #5b8cff;
+  --tp-blue-hover: #4777ec;
+  --tp-orange: #ff9f32;
+  --tp-purple: #8b5cf6;
+  --tp-pink: #ff5f9e;
+
+  /* Texto */
+  --tp-text: #111315;
+  --tp-text-soft: #555b66;
+  --tp-text-muted: #818793;
+  --tp-text-inverse: #ffffff;
+
+  /* Bordas */
+  --tp-border: #111315;
+  --tp-border-soft: #c9ccd1;
+
+  /* Status */
+  --tp-success: var(--tp-green);
+  --tp-warning: var(--tp-yellow);
+  --tp-danger: var(--tp-red);
+  --tp-info: var(--tp-blue);
+
+  /* Raio */
+  --tp-radius-xs: 5px;
+  --tp-radius-sm: 8px;
+  --tp-radius-md: 12px;
+  --tp-radius-lg: 16px;
+
+  /* Sombra (neo-brutalista: offset duro) */
+  --tp-shadow-card: 3px 4px 0 rgba(17, 19, 21, 0.95);
+  --tp-shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Espaçamento */
+  --tp-space-1: 4px;  --tp-space-2: 8px;  --tp-space-3: 12px;
+  --tp-space-4: 16px; --tp-space-5: 20px; --tp-space-6: 24px; --tp-space-8: 32px;
+
+  /* Z-index centralizado */
+  --z-base: 1; --z-sticky: 20; --z-dropdown: 100; --z-modal: 500; --z-toast: 1000;
+
+  /* Tipografia */
+  --tp-font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --tp-font-display: 'Inter', 'Segoe UI', system-ui, sans-serif; /* pode receber fonte arcade depois */
+  /* Palavra Secreta: leitura na transmissão reduzida. */
+  --tp-rank-gold: var(--tp-yellow);
+  --tp-rank-silver: var(--tp-border-soft);
+  --tp-rank-bronze: var(--tp-orange);
+  --tp-rank-accent-width: 0.25rem;
+  --tp-overlay-side-width: 17rem;
+  --tp-overlay-title-size: 1.125rem;
+  --tp-overlay-label-size: 1rem;
+  --tp-overlay-name-size: 1.125rem;
+  --tp-overlay-avatar-size: 2rem;
+  --tp-overlay-line-height: 1.25;
+  --tp-overlay-border-width: 0.125rem;
+}

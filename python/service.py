@@ -27,9 +27,6 @@ PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.
 
 _gifts_sync_running = False
 
-# Intervalo mínimo entre sínteses de narração (evita rate-limit do Edge e spam).
-NARRATE_GAP_S = 2.0
-
 
 from service_common import DEFAULT_SETTINGS, normalize_settings, get_rank_color, emit
 
@@ -234,8 +231,6 @@ class GameSession:
             "chat_narr_enabled": False,
             "chat_narr_mode": "all",
         }
-        self._narrate_queue = asyncio.Queue()
-        self._narrate_loop_task = None
 
     @staticmethod
     def _is_follower(meta) -> bool:
@@ -281,12 +276,6 @@ class GameSession:
             checks.append(label)
         return (True, ",".join(checks))
 
-    def _gtts_slow(self) -> bool:
-        try:
-            return float(self.settings.get("tts_rate") or 1.0) < 1.0
-        except (TypeError, ValueError):
-            return False
-
     def _rate_value(self) -> float:
         try:
             return float(self.settings.get("tts_rate") or 1.0)
@@ -294,43 +283,18 @@ class GameSession:
             return 1.0
 
     async def _tts_url(self, text: str) -> str:
-        """Gera audio da charada/narração com o motor configurado e retorna a URL publica."""
+        """Gera áudio da charada com o motor Edge e retorna a URL pública (Edge-only)."""
         if not text:
             return None
-        voice_key = self.settings.get("tts_voice") or ""
+        voice_key = str(self.settings.get("tts_voice") or tts.VOICE_EDGE_ANTONIO)
         audio_dir = os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id))
         try:
-            if voice_key == tts.VOICE_PIPER_FABER:
-                if not tts.piper_available():
-                    return None
-                audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, self._rate_value())
-            elif voice_key == tts.VOICE_GTTAS:
-                if not tts.gtts_available():
-                    return None
-                audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, self._gtts_slow())
-            elif voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA):
-                # Edge: sem gate de disponibilidade — o synthesize decide (igual ao teste;
-                # o flag de import pode ficar False mas o edge funciona em runtime).
-                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
-                if not audio_path and tts.piper_available():
-                    # Fallback local (sem rate-limit) quando o Edge falhar (intermitente)
-                    audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, self._rate_value())
-                    if audio_path:
-                        self._throttled_log("tts_fb", f"[TTS] fallback local (piper) — edge falhou: '{text[:30]}'", game="tts", level="warn", secs=10.0)
-                if not audio_path and tts.gtts_available():
-                    audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, False)
-                    if audio_path:
-                        self._throttled_log("tts_fb2", f"[TTS] fallback gTTS — edge/piper falharam: '{text[:30]}'", game="tts", level="warn", secs=10.0)
-            elif voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX):
-                if not tts.kokoro_available():
-                    return None
-                audio_path = await asyncio.to_thread(tts.synthesize_kokoro, text, audio_dir, voice_key, self._rate_value())
-            else:
-                return None
+            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
         except Exception as e:
             self._throttled_log("tts_err", f"[TTS] erro ao sintetizar '{voice_key}': {type(e).__name__}: {e}", game="tts", level="err")
             return None
         if not audio_path:
+            self._throttled_log("tts_noaudio", f"[TTS] sem áudio (Edge falhou) para: '{text[:40]}'", game="tts", level="warn", secs=5.0)
             return None
         return f"/tts-audio/{self.tenant_id}/{os.path.basename(audio_path)}"
 
@@ -349,72 +313,6 @@ class GameSession:
         last[key] = now
         self._log_last = last
         emit(self.tenant_id, "log", {"text": text, "game": game, "level": level})
-
-    def _queue_narration(self, raw: str):
-        """Enfileira/envia a narração do bate-papo conforme as preferências.
-
-        Filtro INDEPENDENTE do jogo: usa chat_narr_mode (all/exclude/only)
-        + chat_narr_char (caractere manual). Não depende do command_prefix.
-        """
-        if not self.settings.get("chat_narr_enabled"):
-            self._throttled_log("narr_off", "[Narração] DESATIVADA (chat_narr_enabled=off) — ative em 'Leitura de Chat'", game="tts", level="warn", secs=6.0)
-            return
-        mode = self.settings.get("chat_narr_mode") or "all"
-        char = str(self.settings.get("chat_narr_char") or "#")
-        starts = bool(char) and raw.startswith(char)
-        if mode == "exclude" and starts:
-            return
-        if mode == "only" and not starts:
-            return
-        text = raw[len(char):].strip() if starts else raw.strip()
-        if "@" in text:
-            text = text.split("@", 1)[0].strip()
-        text = tts.clean_text(text)
-        if not text or len(text) < 2:
-            return
-        voice_key = self.settings.get("tts_voice")
-        server_engine = (voice_key == tts.VOICE_GTTAS and tts.gtts_available()) or \
-                        (voice_key == tts.VOICE_PIPER_FABER and tts.piper_available()) or \
-                        (voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA) and tts.edge_available()) or \
-                        (voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX) and tts.kokoro_available())
-        now = time.time()
-        if now - getattr(self, "_narrate_emit_last", 0) < NARRATE_GAP_S:
-            # Coalesce mensagens rápidas: guarda só a mais recente (evita rate-limit do Edge e spam)
-            self._narrate_next = {"text": text, "ts": now}
-            self._throttled_log("narr_gap", "[TTS] narração agrupada (intervalo mínimo)", game="tts", level="info", secs=5.0)
-            return
-        self._narrate_emit_last = now
-        if server_engine:
-            self._narrate_queue.put_nowait(text)
-            self._throttled_log("narr_enq", f"[TTS] narração enfileirada: '{text[:60]}'", game="tts", level="info", secs=6.0)
-        else:
-            emit(self.tenant_id, "narrate", {"text": text})
-            self._throttled_log("narr_fb", f"[TTS] narração via navegador (texto): '{text[:60]}'", game="tts", level="info", secs=6.0)
-
-    async def _narrate_loop(self):
-        while True:
-            text = await self._narrate_queue.get()
-            try:
-                audio_url = await self._tts_url(text)
-                if not audio_url:
-                    # Edge pode falhar de forma intermitente: tenta mais uma vez
-                    await asyncio.sleep(0.4)
-                    audio_url = await self._tts_url(text)
-                if audio_url:
-                    self._narrate_emit_last = time.time()
-                    emit(self.tenant_id, "narrate", {"url": audio_url})
-                else:
-                    self._throttled_log("narr_turl", f"[TTS] narração sem áudio (motor falhou) para: '{text[:40]}'", game="tts", level="warn", secs=5.0)
-            except Exception as e:
-                self._throttled_log("narr_exc", f"[TTS] erro ao narrar: {type(e).__name__}: {e}", game="tts", level="err", secs=5.0)
-            finally:
-                # Gap mínimo entre sínteses (rate-limit do Edge) e repõe a mensagem agrupada
-                await asyncio.sleep(NARRATE_GAP_S)
-                nxt = getattr(self, "_narrate_next", None)
-                if nxt:
-                    self._narrate_next = None
-                    self._narrate_emit_last = nxt["ts"]
-                    self._narrate_queue.put_nowait(nxt["text"])
 
     def _stable_uid(self, user, user_meta=None):
         try:
@@ -615,9 +513,6 @@ class GameSession:
             emit(self.tenant_id, "log", payload)
         else:
             emit(self.tenant_id, "game", {"type": type_, **payload})
-            # Gera o áudio da dica para o botão de play (sem narração automática)
-            if type_ == "tres_dica" and payload.get("dica"):
-                asyncio.ensure_future(self._narrate_tres_dica(payload.get("stage", 0), payload["dica"]))
 
     def _emit_duelo(self, type_, payload):
         """Encaminha eventos do Duelo 1x1 para o node (game/browser)."""
@@ -717,21 +612,6 @@ class GameSession:
             raise
         finally:
             self._duelo_round_result_task = None
-
-    async def _narrate_tres_dica(self, stage, dica_text):
-        """Gera o áudio TTS da dica revelada e envia a URL para o botão de play."""
-        try:
-            if not self.settings.get("tts_voice"):
-                return
-            audio_url = await self._tts_url(dica_text)
-            if audio_url:
-                emit(self.tenant_id, "game", {
-                    "type": "tres_narrate",
-                    "stage": stage,
-                    "url": audio_url,
-                })
-        except Exception:
-            pass
 
     def _emit_tres_weekly_refresh(self):
         """Emite o ranking semanal atualizado após um acerto."""
@@ -898,8 +778,6 @@ class GameSession:
             "avatar": avatar or "",
             "text": text,
         })
-        if raw:
-            self._queue_narration(raw)
         self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
 
         # ---------------------------------------------------------
@@ -1638,7 +1516,6 @@ class GameSession:
         handler_task = asyncio.create_task(self.handler.run())
         cmd_task = asyncio.create_task(self._command_loop())
         self._likes_loop_task = asyncio.create_task(self._likes_loop())
-        self._narrate_loop_task = asyncio.create_task(self._narrate_loop())
         self._vpet_task = asyncio.create_task(self.vpet.run())
         try:
             await asyncio.wait({handler_task, cmd_task}, return_when=asyncio.FIRST_COMPLETED)
@@ -1659,7 +1536,7 @@ class GameSession:
                 except (Exception, asyncio.CancelledError):
                     pass
                 self._vpet_task = None
-            for loop_task in (self._likes_loop_task, self._narrate_loop_task):
+            for loop_task in (self._likes_loop_task,):
                 if loop_task:
                     loop_task.cancel()
                     try:
@@ -1864,22 +1741,15 @@ async def process_commands(queue):
             rate = cmd.get("rate")
             if not isinstance(rate, (int, float)):
                 rate = 1.0
-            voice_key = str(cmd.get("voice") or tts.VOICE_GTTAS)
+            voice_key = str(cmd.get("voice") or tts.VOICE_EDGE_ANTONIO)
             emit(tid, "log", {"text": f"[TTS] teste de voz '{voice_key}' (rate {rate})", "game": "tts", "level": "info"})
             audio_dir = os.path.join(TTS_AUDIO_ROOT, str(tid))
-            if voice_key == tts.VOICE_PIPER_FABER:
-                audio_path = await asyncio.to_thread(tts.synthesize_piper, text, audio_dir, float(rate))
-            elif voice_key in (tts.VOICE_EDGE_ANTONIO, tts.VOICE_EDGE_FRANCISCA):
-                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, float(rate))
-            elif voice_key in (tts.VOICE_KOKORO_DORA, tts.VOICE_KOKORO_ALEX):
-                audio_path = await asyncio.to_thread(tts.synthesize_kokoro, text, audio_dir, voice_key, float(rate))
-            else:
-                audio_path = await asyncio.to_thread(tts.synthesize_gtts, text, audio_dir, float(rate) < 1.0)
+            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, float(rate))
             if audio_path:
                 emit(tid, "tts_test_ready", f"/tts-audio/{tid}/{os.path.basename(audio_path)}")
                 emit(tid, "log", {"text": f"[TTS] áudio de teste gerado: /tts-audio/{tid}/{os.path.basename(audio_path)}", "game": "tts", "level": "ok"})
             else:
-                emit(tid, "log", {"text": "[TTS] Falha ao gerar áudio de teste (motor indisponível)", "game": "tts", "level": "err"})
+                emit(tid, "log", {"text": "[TTS] Falha ao gerar áudio de teste (edge indisponível)", "game": "tts", "level": "err"})
 
     for tid in list(sessions.keys()):
         await stop_session_task(tid)

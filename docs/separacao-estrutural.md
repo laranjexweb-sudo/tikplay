@@ -128,3 +128,11 @@
 - **C1 (Gift ID-first):** `jogos/palavra.get_active_gift()`/`record_active_gift_shown`/`is_gift_recently_active` agora trabalham com **nome canônico** (resolve ID→catálogo); `service.on_gift` usa `_gift_ref_match(gift_id, gift_name, active_gift)` (ID **ou** nome) e os logs exibem o nome, não o ID. Elimina o "exigido é 5655".
 - **C2 (Áudio/playback):** painel `playTikPlayAudio(url, game, diag)` com **unlock de autoplay** no 1º gesto; aplicado em `tts_test_ready`, `chat_narrate.url` e **`riddle_ready.audio_url`** (autoplay da charada); `playNarrateItem` loga falhas (`[Áudio] ERRO …`) no filtro Áudio/TTS.
 - **C3 (Overlap):** `_stop_other_chat_games()` desativa 3 Dicas/Bichinho/Caça ao iniciar outro jogo de captura; `new_game`/`caca_start`/`tres_start`/`vpet_start` também finalizam a Palavra ao trocar de jogo.
+
+## 13. Narração — refactor Edge-only (2026-10-12)
+
+- `python/tts.py` reescrito (**somente Edge**): removidos gTTS/Piper/Kokoro; mantidos `clean_text`, `_hash`, `_cleanup`, `synthesize_edge` (com retry) e `voices()` = `[edge_antonio, edge_francisca]`. Dependência única: `edge-tts`.
+- `python/service.py`: `_tts_url` **só Edge** (default `edge_antonio`); **removida a narração de chat** (`_queue_narration`, `_narrate_queue`/`_narrate_loop`, `chat_narr_*`) e `_narrate_tres_dica`; `tts_test` só Edge.
+- `node/server.js`: `TTS_VOICES` = `[edge_antonio, edge_francisca]`.
+- Painel: seletor de voz **só Edge**; removidas opções antigas, vozes de navegador, `enqueueNarrate`/`chat_narrate`/`NARRATE_GAP`; `testPanelVoice` só servidor.
+- **Resultado:** narração por voz existe **somente para a Charada (Palavra Secreta)**; o chat não é mais narrado.

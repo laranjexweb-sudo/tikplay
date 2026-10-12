@@ -1266,12 +1266,8 @@ app.post("/api/settings", auth.requireAuth, (req, res) => {
 // ---------------- TTS (voz do servidor) ----------------
 
 const TTS_VOICES = [
-  { key: "gtts", label: "Google (gTTS) — servidor" },
-  { key: "piper_faber", label: "Piper — Faber (servidor)" },
   { key: "edge_antonio", label: "Edge — Antonio (servidor)" },
   { key: "edge_francisca", label: "Edge — Francisca (servidor)" },
-  { key: "kokoro_pf_dora", label: "Kokoro — Dora (Feminina) — servidor" },
-  { key: "kokoro_pm_alex", label: "Kokoro — Alex (Masculina) — servidor" },
 ];
 
 app.get("/api/tts/voices", auth.requireAuth, (req, res) => {

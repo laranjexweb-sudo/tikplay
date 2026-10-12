@@ -347,26 +347,8 @@
           <h2>Narração de Chat e Áudio da Charada</h2>
 
           <div class="mb-3 p-2 bg-light border border-dark rounded">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="chkNarr" onchange="onSettingsChanged()">
-              <label class="form-check-label" for="chkNarr"><strong>Narração de Chat</strong> (ler o bate-papo em voz alta, com a voz da charada)</label>
-            </div>
-            <div class="row g-2 mt-2 align-items-end">
-              <div class="col-7">
-                <label class="form-label mb-0" for="narrMode">O que narrar</label>
-                <select class="form-select form-select-sm" id="narrMode" onchange="onSettingsChanged()">
-                  <option value="all">Tudo</option>
-                  <option value="exclude">Não falar frases que começam com o caractere</option>
-                  <option value="only">Só falar frases que começam com o caractere</option>
-                </select>
-              </div>
-              <div class="col-5">
-                <label class="form-label mb-0" for="narrChar">Caractere do filtro</label>
-                <input type="text" class="form-control form-control-sm" id="narrChar" maxlength="1" value="#" oninput="onSettingsChanged()">
-              </div>
-            </div>
-            <div class="text-secondary" style="font-size:0.72rem;margin-top:4px">
-              Independente do caractere do jogo. Ao narrar, o caractere é removido da frase.
+            <div class="text-secondary" style="font-size:0.85rem">
+              Narração por voz: <strong>somente a Charada (Palavra Secreta)</strong> usa áudio (motor Edge). O chat não é mais narrado.
             </div>
           </div>
 
@@ -1305,12 +1287,6 @@ function connectLogs() {
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
       playTikPlayAudio(msg.url, "tts", true);
-    } else if (msg.type === "chat_narrate") {
-      if (msg.url) {
-        enqueueNarrate({ url: msg.url });
-      } else if (msg.text) {
-        enqueueNarrate({ text: msg.text });
-      }
     } else if (msg.type === "gift_event") {
       playGiftSound(msg.gift, msg.repeat_count);
     } else if (msg.type === "sound_alerts_updated") {
@@ -2730,9 +2706,6 @@ const ttsRateLabel = document.getElementById("ttsRateLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
 const btnSaveSettings = document.getElementById("btnSaveSettings");
 const btnSaveSettingsGames = document.getElementById("btnSaveSettingsGames");
-const chkNarr = document.getElementById("chkNarr");
-const narrMode = document.getElementById("narrMode");
-const narrChar = document.getElementById("narrChar");
 let currentTtsVoice = "";
 
 // Gift translation dictionary (EN -> PT-BR)
@@ -3287,9 +3260,6 @@ function applySettingsUI(settings) {
   ttsRateInput.value = rate;
   if (ttsRateLabel) ttsRateLabel.textContent = `${rate.toFixed(1).replace(/\.0$/, "")}x`;
   currentTtsVoice = s.tts_voice || "";
-  chkNarr.checked = !!s.chat_narr_enabled;
-  narrMode.value = s.chat_narr_mode === "no_guesses" ? "exclude" : (["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all");
-  if (narrChar) narrChar.value = (s.chat_narr_char === undefined || s.chat_narr_char === null || s.chat_narr_char === "") ? "#" : s.chat_narr_char;
   const autoRoundEl = document.getElementById("autoRound");
   if (autoRoundEl) autoRoundEl.checked = !!s.auto_round;
   const autoRoundPauseEl = document.getElementById("autoRoundPause");
@@ -3320,9 +3290,6 @@ async function pushLiveTtsRate() {
       tts_rate: parseFloat(ttsRateInput.value) || 1,
       pct_dica: parseInt(pctDicaInput.value, 10) || 70,
       tts_voice: currentTtsVoice,
-      chat_narr_enabled: chkNarr.checked,
-      chat_narr_mode: narrMode.value === "no_guesses" ? "exclude" : narrMode.value,
-      chat_narr_char: narrChar ? (narrChar.value || "#") : "#",
     };
     const data = await apiFetch("/api/settings", {
       method: "POST",
@@ -3349,23 +3316,12 @@ function loadPanelVoices() {
 function refreshPanelVoices() {
   if (!ttsVoiceSelect) return;
   const current = (currentTtsVoice || "").trim();
-  let options = '<option value="gtts"' + (current === "gtts" ? " selected" : "") + '>🗣️ Google (gTTS) — servidor</option>';
-  options += '<option value="piper_faber"' + (current === "piper_faber" ? " selected" : "") + '>🧑‍🏫 Piper — Faber (servidor)</option>';
-  options += '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>💙 Edge — Antonio (servidor)</option>';
+  let options = '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>💙 Edge — Antonio (servidor)</option>';
   options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>💜 Edge — Francisca (servidor)</option>';
-  options += '<option value="kokoro_pf_dora"' + (current === "kokoro_pf_dora" ? " selected" : "") + '>👩‍🦰 Kokoro — Dora (Feminina) — servidor</option>';
-  options += '<option value="kokoro_pm_alex"' + (current === "kokoro_pm_alex" ? " selected" : "") + '>👨 Kokoro — Alex (Masculina) — servidor</option>';
-  options += '<option value=""' + (current === "" ? " selected" : "") + '>🎙️ Auto (melhor pt-BR)</option>';
-  if (panelVoicesCache.length) {
-    options += panelVoicesCache.map(v => {
-      const val = `${v.name}|${v.lang}`;
-      return `<option value="${val}" ${v.name === current ? "selected" : ""}>${v.name} (${v.lang})</option>`;
-    }).join("");
-  }
   ttsVoiceSelect.innerHTML = options;
 }
 
-const SERVER_VOICES = ["gtts", "piper_faber", "edge_antonio", "edge_francisca", "kokoro_pf_dora", "kokoro_pm_alex"];
+const SERVER_VOICES = ["edge_antonio", "edge_francisca"];
 
 function onPanelVoicePick(value) {
   if (SERVER_VOICES.includes(value)) {
@@ -3379,86 +3335,12 @@ function onPanelVoicePick(value) {
 }
 
 function testPanelVoice() {
-  if (SERVER_VOICES.includes(currentTtsVoice)) {
-    const rate = parseFloat(ttsRateInput.value) || 1;
-    apiFetch("/api/tts/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rate, voice: currentTtsVoice }),
-    }).catch(() => {});
-    return;
-  }
-  if (!('speechSynthesis' in window)) return;
-  const voiceName = (currentTtsVoice || "").trim();
   const rate = parseFloat(ttsRateInput.value) || 1;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance("Olá! Esta é a voz da narração das charadas do TikPlay.");
-  u.lang = "pt-BR";
-  u.rate = rate;
-  u.pitch = 1.0;
-  let voice = null;
-  if (voiceName) {
-    voice = panelVoicesCache.find(v => (v.name || "").toLowerCase().includes(voiceName.toLowerCase())) ||
-            panelVoicesCache.find(v => (v.lang || "").toLowerCase().includes(voiceName.toLowerCase()));
-  }
-  if (!voice) voice = panelVoicesCache.find(v => (v.lang || "").toLowerCase().startsWith("pt"));
-  if (voice) u.voice = voice;
-  window.speechSynthesis.speak(u);
-}
-
-let narrateQueue = [];
-let narrating = false;
-
-function enqueueNarrate(item) {
-  narrateQueue.push(item);
-  processNarrateQueue();
-}
-
-const NARRATE_GAP_MS = 350;
-
-function processNarrateQueue() {
-  if (narrating || !narrateQueue.length) return;
-  const item = narrateQueue.shift();
-  narrating = true;
-  playNarrateItem(item).finally(() => {
-    setTimeout(() => {
-      narrating = false;
-      processNarrateQueue();
-    }, NARRATE_GAP_MS);
-  });
-}
-
-function playNarrateItem(item) {
-  return new Promise((resolve) => {
-    if (item && item.url) {
-      unlockAudio();
-      const a = new Audio(item.url);
-      a.preload = "auto";
-      a.currentTime = 0;
-      a.onended = () => resolve();
-      a.onerror = () => { addLog({ text: `[Áudio] ERRO (narração load) ${item.url}`, game: "tts", level: "err" }); resolve(); };
-      const p = a.play();
-      if (p && p.catch) p.catch((e) => { addLog({ text: `[Áudio] ERRO (narração play ${(e && e.name) || e})`, game: "tts", level: "warn" }); resolve(); });
-    } else if (item && item.text && 'speechSynthesis' in window) {
-      const u = new SpeechSynthesisUtterance(item.text);
-      u.lang = "pt-BR";
-      u.rate = parseFloat(ttsRateInput.value) || 1;
-      u.pitch = 1.0;
-      const voiceName = (currentTtsVoice || "").trim();
-      let voice = null;
-      if (voiceName) {
-        voice = panelVoicesCache.find(v => (v.name || "").toLowerCase().includes(voiceName.toLowerCase())) ||
-                panelVoicesCache.find(v => (v.lang || "").toLowerCase().includes(voiceName.toLowerCase()));
-      }
-      if (!voice) voice = panelVoicesCache.find(v => (v.lang || "").toLowerCase().startsWith("pt"));
-      if (voice) u.voice = voice;
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
-      window.speechSynthesis.speak(u);
-    } else {
-      resolve();
-    }
-  });
+  apiFetch("/api/tts/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rate, voice: currentTtsVoice }),
+  }).catch(() => {});
 }
 
 async function loadSettings() {
@@ -3492,9 +3374,6 @@ function isSettingsDirty() {
     dica !== (savedSettings.pct_dica || 70) ||
     Math.abs(rate - (savedSettings.tts_rate || 1)) > 0.001 ||
     (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
-    chkNarr.checked !== !!savedSettings.chat_narr_enabled ||
-    narrMode.value !== (savedSettings.chat_narr_mode || "all") ||
-    (narrChar ? (narrChar.value || "#") : "#") !== (savedSettings.chat_narr_char || "#") ||
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
     Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
     Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000) ||
@@ -3526,9 +3405,6 @@ async function saveSettings() {
     pct_dica: Math.max(0, Math.min(100, parseInt(pctDicaInput.value, 10) || 0)),
     tts_rate: parseFloat(ttsRateInput.value) || 1,
     tts_voice: currentTtsVoice,
-    chat_narr_enabled: chkNarr.checked,
-    chat_narr_mode: narrMode.value === "no_guesses" ? "exclude" : narrMode.value,
-    chat_narr_char: narrChar ? (narrChar.value || "#") : "#",
     auto_round: document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false,
     auto_round_pause: Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) || 20,
     tap_meta: Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) || 1000,
