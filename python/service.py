@@ -1119,12 +1119,8 @@ class GameSession:
             emit(self.tenant_id, "log", "[Gift] Nenhum presente ativo configurado")
             return
 
-        norm_incoming = strip_accents(gift_name.strip().lower())
-        active_gift_lower = active_gift.strip().lower()
-        norm_en = strip_accents(active_gift_lower)
-        norm_pt = strip_accents(GIFT_PT_MAP.get(active_gift_lower, "").lower())
-
-        is_active = (norm_incoming in (norm_en, norm_pt)) or (norm_pt and norm_incoming == norm_pt)
+        # Match ID-first (catálogo) com fallback por nome/PT — aceita tanto o ID quanto o nome.
+        is_active = bool(self.game._gift_ref_match(gift_id, gift_name, active_gift))
         is_final_boss = bool(getattr(self.game, "is_final_boss", False))
         if is_final_boss:
             if not is_active:
@@ -1309,6 +1305,19 @@ class GameSession:
             emit(self.tenant_id, "game", payload)
             emit(self.tenant_id, "log", f"[FIM] Partida encerrada manualmente pelo streamer. Palavra: {self.game.secret_word}")
 
+    def _stop_other_chat_games(self, keep=None):
+        """Garante captura única de chat: desativa os demais jogos de captura (3 Dicas/Bichinho/Caça)."""
+        for name in ("tres", "vpet", "caca"):
+            if name == keep:
+                continue
+            eng = getattr(self, name, None)
+            if eng and getattr(eng, "active", False):
+                try:
+                    eng.stop()
+                except Exception:
+                    pass
+                self._throttled_log("stop_" + name, f"[Chat] captura única: {name} encerrado ao iniciar outro jogo", game=name, level="info")
+
     def _schedule_auto_next_game(self):
         """Agenda o auto-início da próxima partida da Palavra Secreta (se habilitado)."""
         if not self.settings.get("auto_round"):
@@ -1457,6 +1466,7 @@ class GameSession:
             cmd = await self.queue.get()
             c = cmd.get("cmd")
             if c == "new_game":
+                self._stop_other_chat_games()
                 await self.start_game(
                     hint_gifts=cmd.get("hint_gifts"),
                     riddle_gifts=cmd.get("riddle_gifts"),
@@ -1470,6 +1480,8 @@ class GameSession:
             elif c == "manual_riddle":
                 await self.manual_riddle()
             elif c == "caca_start":
+                await self.end_game()
+                self._stop_other_chat_games(keep="caca")
                 self.caca.start(word_pool=self.game.word_pool, count=int(cmd.get("count") or 10))
                 emit(self.tenant_id, "game", {"type": "caca_state", **self.caca.state(public=False)})
                 emit(self.tenant_id, "log", f"[CacaPalavras] Grade gerada com {len(self.caca.words)} palavras")
@@ -1545,6 +1557,8 @@ class GameSession:
                     self._mark_tres_played(palavra)
                     if not dicas or len(dicas) < 3:
                         dicas = await generate_tres_dicas(palavra)
+                    await self.end_game()
+                    self._stop_other_chat_games(keep="tres")
                     self.tres.start(palavra, dicas)
                     emit(self.tenant_id, "game", {"type": "tres_weekly", "weekly": db.get_tres_weekly(self.tenant_id, 10)})
                 else:
@@ -1565,6 +1579,8 @@ class GameSession:
                 self.tres.set_gift_config(cmd.get("config") or {})
                 emit(self.tenant_id, "log", "[3 Dicas] Configuração de presentes atualizada")
             elif c == "vpet_start":
+                await self.end_game()
+                self._stop_other_chat_games(keep="vpet")
                 self.vpet.start()
                 emit(self.tenant_id, "game", {"type": "vpet_state", **self.vpet.public_state()})
             elif c == "vpet_stop":

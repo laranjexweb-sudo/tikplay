@@ -1280,6 +1280,7 @@ function connectLogs() {
       if (el) el.textContent = msg.word || "-";
     } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
       renderPanelRiddle(msg.text, msg.stage);
+      if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
       const replay = document.getElementById("btnReplayRiddle");
       if (replay) replay.disabled = false;
     } else if (msg.type === "roulette_drop" && msg.reward_type === "riddle_started") {
@@ -1303,8 +1304,7 @@ function connectLogs() {
       setPostGameButtonsEnabled(!!(msg.post_game_summary && msg.post_game_summary.palavras));
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
-      const a = new Audio(msg.url);
-      a.play().catch(() => {});
+      playTikPlayAudio(msg.url, "tts", true);
     } else if (msg.type === "chat_narrate") {
       if (msg.url) {
         enqueueNarrate({ url: msg.url });
@@ -2465,6 +2465,32 @@ function addLog(item) {
   area.scrollTop = area.scrollHeight;
 }
 
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try {
+    const a = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAABAAAAA");
+    a.volume = 0.0001;
+    a.play().catch(() => {});
+  } catch (e) {}
+}
+["pointerdown", "keydown", "touchstart", "click"].forEach((ev) =>
+  window.addEventListener(ev, unlockAudio, { passive: true })
+);
+
+function playTikPlayAudio(url, game, diag) {
+  if (!url) return;
+  unlockAudio();
+  const a = new Audio(url);
+  a.preload = "auto";
+  a.onerror = () => addLog({ text: `[Áudio] ERRO (load) ${url}`, game: game || "tts", level: "err" });
+  const p = a.play();
+  if (p && p.catch) p.catch((e) => addLog({ text: `[Áudio] ERRO (play ${(e && e.name) || e}) ${url}`, game: game || "tts", level: "warn" }));
+  else if (diag) addLog({ text: `[Áudio] tocando ${url}`, game: game || "tts", level: "ok" });
+  return a;
+}
+
 function copyAllLogs() {
   const area = document.getElementById("logArea");
   const lines = Array.from(area.querySelectorAll(".log-line"));
@@ -3405,13 +3431,14 @@ function processNarrateQueue() {
 function playNarrateItem(item) {
   return new Promise((resolve) => {
     if (item && item.url) {
+      unlockAudio();
       const a = new Audio(item.url);
       a.preload = "auto";
       a.currentTime = 0;
       a.onended = () => resolve();
-      a.onerror = () => resolve();
+      a.onerror = () => { addLog({ text: `[Áudio] ERRO (narração load) ${item.url}`, game: "tts", level: "err" }); resolve(); };
       const p = a.play();
-      if (p && p.catch) p.catch(() => resolve());
+      if (p && p.catch) p.catch((e) => { addLog({ text: `[Áudio] ERRO (narração play ${(e && e.name) || e})`, game: "tts", level: "warn" }); resolve(); });
     } else if (item && item.text && 'speechSynthesis' in window) {
       const u = new SpeechSynthesisUtterance(item.text);
       u.lang = "pt-BR";

@@ -122,3 +122,9 @@
 - TTS: `_tts_url` loga "voz indisponível" (game=tts); `tts_test` loga início/ok/erro.
 
 **Pendente:** usar os logs para corrigir (TTS mudo; overlap 3 Dicas×Palavra/prefixo) e **L3** mini-log por jogo + indicadores.
+
+## 12. Correções C1–C3 (2026-10-12)
+
+- **C1 (Gift ID-first):** `jogos/palavra.get_active_gift()`/`record_active_gift_shown`/`is_gift_recently_active` agora trabalham com **nome canônico** (resolve ID→catálogo); `service.on_gift` usa `_gift_ref_match(gift_id, gift_name, active_gift)` (ID **ou** nome) e os logs exibem o nome, não o ID. Elimina o "exigido é 5655".
+- **C2 (Áudio/playback):** painel `playTikPlayAudio(url, game, diag)` com **unlock de autoplay** no 1º gesto; aplicado em `tts_test_ready`, `chat_narrate.url` e **`riddle_ready.audio_url`** (autoplay da charada); `playNarrateItem` loga falhas (`[Áudio] ERRO …`) no filtro Áudio/TTS.
+- **C3 (Overlap):** `_stop_other_chat_games()` desativa 3 Dicas/Bichinho/Caça ao iniciar outro jogo de captura; `new_game`/`caca_start`/`tres_start`/`vpet_start` também finalizam a Palavra ao trocar de jogo.

@@ -687,6 +687,18 @@ class JogoContexto:
         }
 
 
+    def _canon_gift_name(self, ref):
+        """Resolve ID do TikTok para o nome canônico do catálogo (fallback mantém o valor)."""
+        if not ref:
+            return ref
+        try:
+            row = get_catalog().resolve_ref(ref)
+            if row and row.get("name"):
+                return str(row["name"])
+        except Exception:
+            pass
+        return ref
+
     def get_active_gift(self) -> str:
         if self.finished or not self.secret_word:
             return None
@@ -694,16 +706,17 @@ class JogoContexto:
         # 1. Check riddle gifts for final boss
         final_boss_gift = self.riddle_gifts[0] if self.riddle_gifts else (self.hint_gifts[-1] if self.hint_gifts else "TikTok")
 
-        # 2. Sort configured hint_gifts by diamond value
+        # 2. Sort configured hint_gifts por valor (catálogo aceita ID ou nome)
         available_gifts = []
         for g in self.hint_gifts:
-            g_lower = g.lower()
-            price = 1
-            for tag in self._gift_tags:
-                if tag["name"].lower() == g_lower:
-                    price = tag["diamond_count"]
-                    break
-            available_gifts.append((g, price))
+            price = self._catalog_diamond(g)
+            if price is None:
+                g_lower = g.lower()
+                for tag in self._gift_tags:
+                    if tag["name"].lower() == g_lower:
+                        price = tag["diamond_count"]
+                        break
+            available_gifts.append((g, price if price is not None else 1))
 
         available_gifts.sort(key=lambda x: x[1])  # sort by price ascending
         if not available_gifts:
@@ -720,8 +733,9 @@ class JogoContexto:
         if best_rank <= 3:
             self.is_final_boss = True
             self.tension_score = 100
-            self.record_active_gift_shown(final_boss_gift)
-            return final_boss_gift
+            fb = self._canon_gift_name(final_boss_gift)
+            self.record_active_gift_shown(fb)
+            return fb
         else:
             self.is_final_boss = False
 
@@ -736,7 +750,7 @@ class JogoContexto:
 
         # Map dynamic gift index
         gift_idx = min(int((score / 100.0) * num_gifts), num_gifts - 1)
-        active = available_gifts[gift_idx][0]
+        active = self._canon_gift_name(available_gifts[gift_idx][0])
         self.record_active_gift_shown(active)
         return active
 
@@ -745,17 +759,17 @@ class JogoContexto:
             return
         now = time.time()
         self.recent_active_gifts = [e for e in self.recent_active_gifts if now - e["ts"] <= 30]
-        self.recent_active_gifts.append({"gift": gift, "ts": now})
+        self.recent_active_gifts.append({"gift": self._canon_gift_name(gift), "ts": now})
 
     def is_gift_recently_active(self, gift: str, window: float = 5.0) -> bool:
         if not gift:
             return False
-        norm_incoming = strip_accents(gift.strip().lower())
+        norm_incoming = strip_accents(self._canon_gift_name(gift).strip().lower())
         now = time.time()
         for e in self.recent_active_gifts:
             if now - e["ts"] > window:
                 continue
-            ex = e["gift"].strip().lower()
+            ex = self._canon_gift_name(e["gift"]).strip().lower()
             norm_en = strip_accents(ex)
             norm_pt = strip_accents(GIFT_PT_MAP.get(ex, "").lower())
             if norm_incoming in (norm_en, norm_pt) or (norm_pt and norm_incoming == norm_pt):
