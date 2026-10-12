@@ -203,13 +203,19 @@ def regenerate_derived_files():
     conn = _conn()
     try:
         rows = conn.execute(
-            "SELECT name, diamond_count, icon_local FROM gifts "
+            "SELECT id, name, diamond_count, icon_local FROM gifts "
             "WHERE status = 'active' AND name <> '' ORDER BY diamond_count, name"
         ).fetchall()
     finally:
         conn.close()
     tags = [{"name": r["name"], "diamond_count": int(r["diamond_count"] or 0)} for r in rows]
-    image_map = {r["name"]: r["icon_local"] for r in rows if r["icon_local"]}
+    image_map = {}
+    for r in rows:
+        if r["icon_local"]:
+            if r["name"]:
+                image_map[r["name"]] = r["icon_local"]
+            if r["id"]:
+                image_map[r["id"]] = r["icon_local"]
     try:
         with open(GIFT_TAGS_PATH, "w", encoding="utf-8") as fh:
             json.dump(tags, fh, indent=2, ensure_ascii=False)

@@ -106,10 +106,12 @@ class Migrator:
         """Shape-agnóstico: percorre listas/dicts e preenche gift_id vazio apenas quando
         o catálogo resolve o gift_name para um ID real (não preenche com o próprio nome)."""
         if isinstance(node, dict):
-            if "gift_name" in node and not node.get("gift_id"):
+            if "gift_name" in node:
                 name = str(node.get("gift_name") or "").strip()
+                gid = str(node.get("gift_id") or "").strip()
                 res = self._resolve(name)
-                if res and res != name:
+                # normaliza gift_id textual (ex.: duelo "White Rose") para o id real do TikTok
+                if res and res != name and (not gid or gid == name):
                     node["gift_id"] = res
                     return True
                 return False

@@ -973,9 +973,13 @@ function getGiftTagsDerived() {
 }
 
 function getGiftImageMapDerived() {
-  const rows = db.prepare("SELECT name, icon_local FROM gifts WHERE status = 'active' AND icon_local <> '' AND name <> ''").all();
+  // Mapa composto: `name -> arquivo` e `id -> arquivo` (páginas públicas podem receber ID ou nome).
+  const rows = db.prepare("SELECT id, name, icon_local FROM gifts WHERE status = 'active' AND icon_local <> '' AND name <> ''").all();
   const out = {};
-  for (const r of rows) out[r.name] = r.icon_local;
+  for (const r of rows) {
+    if (r.name) out[r.name] = r.icon_local;
+    if (r.id) out[r.id] = r.icon_local;
+  }
   return out;
 }
 
