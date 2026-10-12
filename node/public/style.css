@@ -2651,3 +2651,17 @@ body {
 .compact .gl-side .winners-panel {
   padding: var(--tp-space-2);
 }
+
+/* Linha reservada para novidades: a lista permanece no mesmo lugar. */
+.compact .guess-incoming-slot {
+  height: var(--tp-guess-row-height);
+  margin-bottom: var(--tp-guess-slot-gap);
+  position: relative;
+  overflow: hidden;
+}
+.compact .guess-incoming-slot .guess-row { height: 100%; }
+.compact .guess-incoming-slot .guess-duplicate-exit {
+  transform: translateX(100%);
+  opacity: 0;
+  transition: transform var(--tp-guess-motion) ease-in, opacity var(--tp-guess-motion) ease-in;
+}

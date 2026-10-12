@@ -62,6 +62,9 @@
   --tp-font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --tp-font-display: 'Inter', 'Segoe UI', system-ui, sans-serif; /* pode receber fonte arcade depois */
   /* Palavra Secreta: leitura na transmissão reduzida. */
+  --tp-guess-row-height: 2.375rem;
+  --tp-guess-slot-gap: 0.1875rem;
+  --tp-guess-motion: 300ms;
   --tp-rank-gold: var(--tp-yellow);
   --tp-rank-silver: var(--tp-border-soft);
   --tp-rank-bronze: var(--tp-orange);

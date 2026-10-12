@@ -436,6 +436,16 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — Slot de próximo palpite ocultado ao renderizar resultado final e reativado no início da nova partida.
+
+- 2026-10-12 — Movimento de saída do palpite repetido aplicado diretamente ao card: desliza 110% para a direita em 550 ms, dentro do recorte do slot.
+
+- 2026-10-12 — Saída de palpite repetido desliza para a direita com fade, recortada pelo espaço reservado para respeitar suas margens.
+
+- 2026-10-12 — Slot de palpite identificado como PRÓXIMO PALPITE; animação local limitada ao slot, sem escala ou deslocamento lateral, usando fade para entrada e saída.
+
+- 2026-10-12 — Linha fixa reservada para novos palpites; repetidos recebem etiqueta REPETIDA e saem pela direita sem inserir outra palavra. Novos mantêm animação para a posição ordenada.
+
 - 2026-10-12 — Cores de resultado corrigidas: vitória em azul/verde e encerramento sem vencedor em vermelho, preservando dimensões e estados.
 
 - 2026-10-12 — Segundo teste de paleta: grafite neutro sem matiz azul, fundo #121212 e cards #292929, mantendo medidas. Primeira paleta salva em `docs/layout-backups/2026-10-12-contraste-01/palette-01-azulada.css`.
