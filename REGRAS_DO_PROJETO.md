@@ -64,4 +64,27 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - **Modelo SpaCy**: Utiliza o modelo `pt_core_news_lg` para calcular a similaridade semântica por vetores entre palpites e a palavra secreta.
 
 ---
+
+## 5. Design System / Tema Oficial TikPlay (visual)
+
+Toda alteração **visual** (Painel Streamer, Super Admin, overlays e jogos) deve seguir o
+documento **`docs/DESIGN_SYSTEM.md`** (documento vivo com diagnóstico, tokens, componentes e
+o checklist de progresso).
+
+Regras obrigatórias:
+
+- **Antes de codar visual**, consultar `docs/DESIGN_SYSTEM.md` (§2 Diagnóstico e §10 Status).
+- Usar **apenas tokens** de `ui/tikplay-theme.css` (proibido hex/px solto no CSS novo).
+- Usar **apenas componentes** `.tp-*` (proibido criar botão/card/tabela por página).
+- Identidade oficial: **PRETO + OFF-WHITE + AMARELO TikPlay** (`#111315`, `#fdfaf3`, `#fec90f`),
+  com verde=positivo, vermelho/coral=destrutivo, azul=informação. Não trocar a paleta.
+- Cada jogo pode ter **acento próprio** (Duelo azul/vermelho etc.) via override de escopo,
+  sem sair da plataforma.
+- **Preservar** IDs, classes usadas por JS, rotas, eventos, WebSockets, OBS, ranking, API,
+  auth e permissões. Trocar classe só depois de atualizar **todas** as referências no JS.
+- Ordem de implementação: tokens → componentes → header/nav → layout do Painel (LOG fixo à
+  esquerda) → Duelo → demais jogos → Super Admin → limpeza (ver §9 do doc).
+- Ao concluir uma etapa, atualizar o **Status/Progresso** em `docs/DESIGN_SYSTEM.md`.
+
+---
 *Documento exportado automaticamente para referência e governança do projeto.*

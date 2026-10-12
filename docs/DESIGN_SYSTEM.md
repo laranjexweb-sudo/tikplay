@@ -1,0 +1,463 @@
+# TikPlay — Design System Oficial (tema reutilizável)
+
+> **Documento vivo.** Toda alteração visual do TikPlay (Painel Streamer, Super Admin,
+> overlays e jogos) deve seguir este documento. Antes de codar visual, leia a seção
+> **Status / Progresso** para saber o que já foi feito e o que falta.
+
+- **Última atualização:** 2026-10-12
+- **Escopo:** Node `node/public/*` (HTML/CSS/JS embutido) + `node/public/style.css`
+- **Regra de ouro:** refatoração **visual e estrutural de CSS/componentes**. Não alterar
+  lógica de jogo, rotas, IDs, eventos, WebSockets, APIs, banco, auth, permissões, OBS,
+  ranking nem nomes de eventos (ver `REGRAS_DO_PROJETO.md`).
+
+---
+
+## 0. COMO USAR ESTE DOCUMENTO
+
+1. **Antes** de mexer no visual, leia **§2 Diagnóstico** e **§10 Status/Progresso**.
+2. Use **somente** tokens de **§3** (nada de hex solto no CSS novo).
+3. Use **somente** componentes de **§4** (nada de botão/card “inventado” por página).
+4. Siga a ordem de implementação de **§9** (não refatorar tudo de uma vez).
+5. Ao concluir uma etapa, marque o checkbox em **§10** e atualize a data no topo.
+6. Se uma mudança estrutural exigir alteração funcional, **pare e documente** aqui antes.
+
+---
+
+## 1. Identidade visual
+
+Mistura coerente de **console de streaming + arcade + painel SaaS + ferramenta de produção
+de live**. Precisa ser imediatamente reconhecível como **TikPlay**.
+
+Base: **PRETO + OFF-WHITE + AMARELO TIKPLAY**. Cores semânticas:
+
+| Cor | Uso |
+|---|---|
+| 🟡 Amarelo | TikPlay / seleção / ação principal / atenção |
+| 🟢 Verde | ativo / iniciar / sucesso |
+| 🔴 Vermelho/coral | parar / excluir / perigo |
+| 🔵 Azul | informação / lado azul / ferramenta |
+| ⚫ Preto/grafite | navegação / contraste |
+
+Características: fundo claro levemente quente, contornos pretos, cards bem definidos,
+cantos arredondados, tipografia forte nos títulos, ícones simples, sombras discretas,
+interface compacta mas legível.
+
+**Evitar:** excesso de gradientes, glassmorphism, transparências exageradas, neon genérico
+futurista, sombras gigantes, visual Bootstrap/Material padrão, bordas finas, minimalismo excessivo.
+
+> ⚠️ **Divergência conhecida:** hoje o **Painel/SaaS** já é claro (`#fdfaf3`, bordas pretas,
+> amarelo `#fec90f`), enquanto as **telas de jogo** são escuras (`#0F111A`/`#000`, roxo
+> `#8B5CF6`, âmbar `#FBBF24`). O Design System **promove a identidade do Painel** a oficial e
+> migra os jogos progressivamente, preservando acentos próprios por jogo (§7). Não substituir
+> a identidade por outra paleta.
+
+---
+
+## 2. Diagnóstico (inventário executado em 2026-10-12)
+
+### 2.1 Estrutura atual dos arquivos visuais
+
+Todo o front vive em `node/public/` (estáticos servidos pelo `server.js`). **Não há `<script src>`
+externo** — todo o JS é embutido. Fontes: `Inter` (Google Fonts) em alguns arquivos; Bootstrap
+vem de `/vendor/brite/bootstrap.min.css`.
+
+| Arquivo | Bytes | `<style>` inline | `style=` inline | `<link>` | Observação |
+|---|---:|---:|---:|---:|---|
+| `control-panel.html` | 232.506 | 20.556 B | **148** | bootstrap | Painel Streamer — maior dor |
+| `duelo.html` | 114.970 | 29.769 B | 10 | — | tela mais completa (referência) |
+| `web-game.html` | 59.789 | 583 B | 24 | `style.css` | único que usa o CSS global |
+| `tres-pontinhos.html` | 52.690 | 22.169 B | 5 | — | |
+| `bichinho.html` | 25.704 | 4.222 B | 0 | — | |
+| `batalha.html` | 24.649 | 11.714 B | 2 | — | |
+| `admin.html` | 23.111 | 823 B | 34 | bootstrap | Super Admin |
+| `caca-palavra.html` | 19.316 | 6.861 B | 7 | — | |
+| `docs.html` | 16.415 | 4.760 B | 0 | — | já tem `:root` próprio |
+| `bichinho-overlay.html` | 14.662 | 2.123 B | 3 | — | overlay OBS |
+| `login.html` | 8.104 | 1.751 B | 2 | bootstrap | |
+| `obs-ranking.html` | 4.625 | 1.719 B | 0 | Inter | overlay OBS |
+| **`style.css`** | **57.122** | — | — | — | tema escuro do web-game, ~50 seções |
+
+Referência de overlays OBS: `obs-overlay.html` (Palavra Secreta), `bichinho-overlay.html`,
+`obs-ranking.html`.
+
+### 2.2 Arquivos CSS envolvidos
+
+- **Global:** `node/public/style.css` (57 KB) — na prática serve **só** `web-game.html`.
+- **Inline por página:** os 12 HTMLs acima (≈95 KB de CSS repartido, sem tokens, sem reuso).
+- **Framework:** Bootstrap (`/vendor/brite/bootstrap.min.css`) usado em `control-panel`,
+  `admin` e `login`.
+- **Tokens existentes:** apenas `docs.html` (`:root { --bg:#fdfaf3; --ink:#111; --accent:#fec90f; ... }`)
+  e `#tab-duelo` em `control-panel.html` (`--duelo-gap`, `--duelo-radius`, `--duelo-border`…).
+
+### 2.3 O que é global hoje (de fato)
+
+- `style.css`: classes do jogo Palavra Secreta (`.guess-*`, `.secret-display`, `.dica-overlay`,
+  `.pg-modal-*`, `.roulette-*`, `.meta-*`) — **não** é um CSS de plataforma, é de um jogo.
+- Bootstrap: grid/form/table usados por Painel e Admin.
+- Não existe CSS de header/navegação/botão/card compartilhado de verdade.
+
+### 2.4 O que é específico de cada jogo
+
+Cada tela de jogo carrega seu próprio `<style>` (web-game usa `style.css`; os demais, inline):
+Duelo (30 KB), 3 Dicas (22 KB), Palavra Secreta (57 KB via `style.css`), Batalha (12 KB),
+Caça Palavras (7 KB), Bichinho (4 KB + overlay 2 KB).
+
+### 2.5 Principais duplicações encontradas
+
+**Cores** (ocorrências nos HTMLs + `style.css`):
+
+```
+#000 (138)  #fff (85)  #9ca3af (27)  #fbbf24 (25)  #a78bfa (24)  #ff6b6b (18)
+#fec90f (13)  #34d399 (12)  #8b5cf6 (11)  #1c1e26 (10)  #ef4444 (10)  #5bc0ff (9)
+#ffd200 (9)  #e5e7eb (9)  #ffd700 (9)  #10b981 (7)  #3b82f6 (6)  #f97316 (6) …
+```
+
+> Há **dezenas** de tons quase iguais (4 amarelos, 5 verdes, 4 vermelhos, 3 azuis) — todos
+> candidatos a 1 token cada.
+
+**Componentes repetidos (de-facto, sem sistema):**
+
+- Botões: `.btn` + `.btn-nb` (72×) e variantes `.btn-dark/.btn-danger/.btn-success/.btn-primary/.btn-sm/.btn-tiny`,
+  além de `.duelo-btn` + modificadores `--primary/--danger/--warning/--neutral/--small/--success` (63×).
+  **Dois sistemas de botão convivendo.**
+- Cards: `.nb-card` (43×), `.duelo-team`, `.meta-card`, `.winner-card`, `.rk-card`, `.tm-card`.
+- Títulos de seção: `.duelo-section-title`, `.panel-title`.
+- Um mini-tema já existe em `docs.html` (`--bg/--ink/--accent/--green/--red/--blue`).
+
+**Estilos inline:** `control-panel.html` tem **148** `style="..."` — a maior frente de dívida.
+
+### 2.6 Arquivos que pretende CRIAR
+
+```
+node/public/ui/            # Design System global (servido via /ui/*)
+├── tikplay-theme.css      # APENAS tokens + fundamentos (:root, tipografia, reset)
+├── tikplay-layout.css     # header, shell do painel, grid, overflow/scroll
+├── tikplay-components.css # card, badge, tabs, toolbar, section, divider, modal, toast
+├── tikplay-buttons.css    # .tp-btn + variantes semânticas
+├── tikplay-forms.css      # input, select, checkbox, range, label, focus
+├── tikplay-tables.css     # .tp-table
+└── tikplay-responsive.css # breakpoints
+node/public/shared/        # partes reutilizáveis (quando extrair HTML/JS)
+node/public/games/<jogo>/  # assets/css/js por jogo (fase futura, ver §8)
+```
+
+### 2.7 Arquivos que pretende ALTERAR
+
+- `node/public/control-panel.html` (Painel Streamer) — **alvo principal**, Etapa 5+.
+- `node/public/admin.html` (Super Admin) — Etapa 7.
+- `node/public/web-game.html` + `style.css` — Etapa 6.
+- `node/public/duelo.html` — **primeiro jogo**, Etapa 5.
+- `node/public/{batalha,caca-palavra,bichinho,bichinho-overlay,tres-pontinhos,obs-ranking,obs-overlay,login,docs}.html` — Etapa 6/8.
+- `node/server.js` — **só** para adicionar o static `/ui` (e `/games`), sem tocar em rotas.
+
+### 2.8 Riscos de quebra
+
+| Risco | Mitigação |
+|---|---|
+| JS depende de classes/IDs (querySelector/classList/dataset) | Não renomear classe usada por JS. Ao trocar, atualizar **todas** as referências. Adicionar classe `tp-*` **ao lado** da antiga antes de remover. |
+| Bootstrap sobrescrito por tema | Carregar `ui/*` **depois** do Bootstrap; não reescrever grid/JS do Bootstrap. |
+| Duplicação de eventos (ver `PLANO_MELHORIAS.md` C-02) | Não tocar nessa área; refactor é só visual. |
+| `style.css` serve só 1 tela mas é “global” | Migrar para `games/secret-word` sem renomear classes usadas pelo JS. |
+| Perda de identidade por jogo | Manter acentos por jogo via override local (§7). |
+| Sem git no projeto | **Fazer backup/`git init` antes da Etapa 1.** |
+
+### 2.9 Plano de migração (resumo)
+
+Tokens → componentes → header/nav → layout do Painel (log fixo à esquerda) → Duelo →
+demais jogos → Super Admin → limpeza do CSS legado. Detalhe e checkboxes em **§9/§10**.
+
+---
+
+## 3. Tokens (fonte única de verdade)
+
+Valores **reconciliados com o que já existe** (Painel usa `#fdfaf3`/`#111`/`#fec90f`).
+Ajustes finos permitidos, mas centralizados em `ui/tikplay-theme.css`.
+
+```css
+:root {
+  /* Brand */
+  --tp-yellow: #fec90f;         /* amarelo TikPlay (já usado) */
+  --tp-yellow-hover: #edb800;
+  --tp-yellow-soft: #ffdd66;
+
+  --tp-black: #111315;
+  --tp-black-2: #171a1f;
+  --tp-black-3: #22262d;
+
+  /* Background / superfícies */
+  --tp-bg: #fdfaf3;             /* off-white quente (já usado) */
+  --tp-surface: #ffffff;
+  --tp-surface-soft: #f7f5ef;
+  --tp-surface-muted: #ececea;
+
+  /* Ações / semânticas */
+  --tp-green: #3ddc84;
+  --tp-green-hover: #2fc473;
+  --tp-red: #ff6b6b;
+  --tp-red-hover: #ef5555;
+  --tp-blue: #5b8cff;
+  --tp-blue-hover: #4777ec;
+  --tp-orange: #ff9f32;
+  --tp-purple: #8b5cf6;
+  --tp-pink: #ff5f9e;
+
+  /* Texto */
+  --tp-text: #111315;
+  --tp-text-soft: #555b66;
+  --tp-text-muted: #818793;
+  --tp-text-inverse: #ffffff;
+
+  /* Bordas */
+  --tp-border: #111315;
+  --tp-border-soft: #c9ccd1;
+
+  /* Status */
+  --tp-success: var(--tp-green);
+  --tp-warning: var(--tp-yellow);
+  --tp-danger: var(--tp-red);
+  --tp-info: var(--tp-blue);
+
+  /* Raio */
+  --tp-radius-xs: 5px;
+  --tp-radius-sm: 8px;
+  --tp-radius-md: 12px;
+  --tp-radius-lg: 16px;
+
+  /* Sombra (neo-brutalista: offset duro) */
+  --tp-shadow-card: 3px 4px 0 rgba(17, 19, 21, 0.95);
+  --tp-shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Espaçamento */
+  --tp-space-1: 4px;  --tp-space-2: 8px;  --tp-space-3: 12px;
+  --tp-space-4: 16px; --tp-space-5: 20px; --tp-space-6: 24px; --tp-space-8: 32px;
+
+  /* Z-index centralizado */
+  --z-base: 1; --z-sticky: 20; --z-dropdown: 100; --z-modal: 500; --z-toast: 1000;
+
+  /* Tipografia */
+  --tp-font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --tp-font-display: 'Inter', 'Segoe UI', system-ui, sans-serif; /* pode receber fonte arcade depois */
+}
+```
+
+### Tipografia
+
+- **Interface** (`--tp-font-ui`): labels, campos, tabelas, logs, descrições.
+- **Display / títulos** (`--tp-font-display`): seções, menus, botões importantes, títulos de jogos.
+- Títulos: `font-weight: 800; letter-spacing: .03em;` · **uppercase** reservado a títulos/navegação.
+- Evitar textos longos muito espaçados.
+
+---
+
+## 4. Componentes base
+
+Prefixo único **`tp-`**. Tabela de componentes obrigatórios:
+
+```
+.tp-card  .tp-card-header  .tp-card-title  .tp-card-desc  .tp-divider
+.tp-btn  .tp-btn-primary  .tp-btn-success  .tp-btn-danger  .tp-btn-dark  .tp-btn-neutral
+.tp-input  .tp-select  .tp-checkbox  .tp-range  .tp-label
+.tp-badge  .tp-badge-success  .tp-badge-danger  .tp-badge-warning  .tp-badge-info
+.tp-table  .tp-toolbar  .tp-section
+.tp-tabs  .tp-tab          # navegação horizontal de jogos
+.tp-modal  .tp-toast
+```
+
+**Card** (elemento central da identidade):
+
+```css
+.tp-card {
+  background: var(--tp-surface);
+  border: 2px solid var(--tp-border);
+  border-radius: var(--tp-radius-md);
+  padding: var(--tp-space-4);   /* 16px */
+  display: flex; flex-direction: column; gap: var(--tp-space-3); /* 12px */
+}
+.tp-card--raised { box-shadow: var(--tp-shadow-card); }
+```
+
+Estrutura interna do card: `título + ícone` → `descrição (opcional)` → `divisor` → `conteúdo`.
+Não aplicar sombra forte em todos os elementos (usar `.tp-card--raised` só nos importantes).
+
+**Botões** — mesma altura/raio/borda, ícone alinhado, estados hover/active/disabled/focus-visible:
+
+```css
+.tp-btn {
+  min-height: 36px; padding: 0 14px;
+  border: 2px solid var(--tp-border);
+  border-radius: var(--tp-radius-sm);
+  font-weight: 700; font-family: var(--tp-font-ui);
+  transition: 120ms ease; cursor: pointer;
+}
+```
+
+Semântica: **amarelo** principal/seleção · **verde** iniciar/ativar/sucesso · **vermelho**
+parar/excluir/perigo · **preto** secundário importante · **cinza/branco** neutro.
+
+**Campos**:
+
+```css
+.tp-input, .tp-select {
+  height: 34px; padding: 0 10px;
+  border: 2px solid var(--tp-border);
+  border-radius: 7px; background: #fff;
+}
+.tp-input:focus-visible, .tp-select:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(254, 201, 15, .25);
+}
+```
+
+**Compatibilidade:** ao introduzir `.tp-*`, manter as classes antigas (`btn btn-nb`,
+`duelo-btn`, `nb-card`) ativas **durante** a migração e só remover após confirmar que o JS
+não as usa (Etapa 8).
+
+---
+
+## 5. Header global e navegação
+
+**Header** compartilhado, compacto (**64–72px**): `Logo TikPlay` à esquerda; à direita
+`usuário · tipo da conta · sala · admin · ajuda · sair`.
+
+**Navegação dos jogos** (Painel Streamer) — horizontal, um único componente `.tp-game-tab`
+(nunca um botão diferente por jogo):
+
+```
+Conectar Live | Leitura de Chat | Alertas Sonoros | Palavra Secreta | Batalha |
+Caça Palavras | Bichinho | 3 Dicas | Duelo 1x1
+```
+
+Barra: fundo preto/grafite, texto branco, divisores sutis, ícones, hover, **aba ativa amarela**.
+
+---
+
+## 6. Layout do Painel Streamer (obrigatório)
+
+```
+┌───────────────┬──────────────────────────────────┐
+│               │ HEADER                           │
+│               ├──────────────────────────────────┤
+│     LOG       │ NAVEGAÇÃO DOS JOGOS             │
+│     25%       ├──────────────────────────────────┤
+│               │ CONTEÚDO DO JOGO                │
+└───────────────┴──────────────────────────────────┘
+```
+
+- Log **à esquerda**, largura `clamp(300px, 25vw, 430px)`.
+- Log **não acompanha** o scroll do conteúdo do jogo:
+  ```css
+  position: sticky; top: var(--tp-space-3); height: calc(100vh - var(--tp-space-6));
+  ```
+  (ou solução equivalente à estrutura real). Só a lista interna de mensagens rola (`overflow-y:auto`).
+- O lado direito (conteúdo do jogo) é a única coluna que rola a página.
+
+### Visual do log (console TikPlay)
+
+- Fundo `#10151c`, fonte monoespaçada.
+- Cores: timestamp azul-claro · `[OK]` verde · `[WARN]` amarelo · `[ERR]` vermelho ·
+  sistema azul/ciano · evento de jogo coral · texto comum branco/cinza.
+- Header fixo: `LOGS  V75` + botões `[Copiar Logs] [Limpar]`. Header não rola; só as mensagens.
+
+---
+
+## 7. Área de cada jogo (esqueleto comum)
+
+```
+game/
+├── header      # título + status
+├── status      # modo, cenário
+├── controls    # [Ativar] [Desativar] [Reiniciar] [Salvar]
+├── settings    # configurações do jogo
+├── assets      # presentes/imagens
+└── advanced    # opções avançadas
+```
+
+Evitar uma única caixa gigantesca. Sub-navegação **opcional** (reutilizável, sobretudo no Duelo):
+`Presets | Assets | Áudios | Cenas | Regras` — criar **só a estrutura visual** primeiro.
+
+**Tema por jogo:** cada jogo pode ter acento próprio sem sair da plataforma —
+Duelo (azul/vermelho), Palavra Secreta (efeito tecnológico), 3 Dicas (particular). Prefira
+sobrescrever tokens (`--tp-accent`) no escopo do jogo a redeclarar cores soltas.
+
+---
+
+## 8. Estrutura de arquivos alvo
+
+```text
+node/public/
+├── ui/                        # Design System global (ETAPA 1–2)
+│   ├── tikplay-theme.css      # tokens + fundamentos
+│   ├── tikplay-layout.css
+│   ├── tikplay-components.css
+│   ├── tikplay-buttons.css
+│   ├── tikplay-forms.css
+│   ├── tikplay-tables.css
+│   └── tikplay-responsive.css
+├── shared/                    # header, navigacao, log-panel, modal, toast
+└── games/
+    ├── secret-word/  { index, game.js, game.css, config.js, assets/ }
+    ├── three-hints/  { index, game.js, game.css, config.js, assets/ }
+    ├── duel/         { index, game.js, game.css, config.js,
+    │                   assets/{ characters/ scenes/ effects/ audio/ gifts/ } }
+    ├── battle/  pet/  word-search/  ...
+```
+
+> **Não mover arquivos só para cumprir a estrutura se isso quebrar imports/rotas.**
+> Primeiro inventário (§2) e migração segura, arquivo por arquivo, preservando os nomes
+> usados pelo JS e as rotas do `server.js`.
+
+---
+
+## 9. Etapas de implementação (ordem obrigatória)
+
+1. **ETAPA 1 — Tokens.** Criar `ui/tikplay-theme.css` (só tokens/fundamentos). Sem alterar telas.
+2. **ETAPA 2 — Componentes globais.** `buttons/forms/tables/components` (`tp-*`).
+3. **ETAPA 3 — Header + navegação global.**
+4. **ETAPA 4 — Layout do Painel Streamer.** Implementar **LOG fixo à esquerda** (§6).
+5. **ETAPA 5 — Aplicar ao Duelo 1x1** (tela mais completa, serve de referência).
+6. **ETAPA 6 — Adaptar os outros jogos** progressivamente.
+7. **ETAPA 7 — Aplicar ao Super Admin** (`admin.html`).
+8. **ETAPA 8 — Remover CSS legado** que deixou de ser necessário.
+
+> Critérios por etapa seguem §1–§8. Só avançar de etapa com a anterior validada.
+
+---
+
+## 10. Status / Progresso
+
+- [ ] **Fase 0** — Backup / `git init` antes de qualquer alteração
+- [ ] **ETAPA 1** — Tokens (`ui/tikplay-theme.css`)
+- [ ] **ETAPA 2** — Componentes globais
+- [ ] **ETAPA 3** — Header + navegação
+- [ ] **ETAPA 4** — Layout Painel + LOG fixo à esquerda
+- [ ] **ETAPA 5** — Duelo 1x1
+- [ ] **ETAPA 6** — Demais jogos (Batalha, Caça Palavras, Bichinho, 3 Dicas, Palavra Secreta)
+- [ ] **ETAPA 7** — Super Admin
+- [ ] **ETAPA 8** — Limpeza do CSS legado
+
+**Concluído:**
+
+- 2026-10-12 — Inventário/diagnóstico visual completo (§2) + tokens preliminares (§3) + governança (este doc, `REGRAS_DO_PROJETO.md`, `AGENTS.md`).
+
+### Acompanhamento por arquivo
+
+| Arquivo | Tokens | Componentes | Layout | Concluído |
+|---|---|---|---|---|
+| `ui/tikplay-theme.css` | — | — | — | não criado |
+| `control-panel.html` | não | não | não | não |
+| `duelo.html` | não | não | não | não |
+| `admin.html` | não | não | não | não |
+| `web-game.html` + `style.css` | não | não | não | não |
+
+---
+
+## 11. Regras rígidas (checklist de PR visual)
+
+- [ ] Nenhum hex/px “solto”: usa token.
+- [ ] Nenhum botão/card novo fora dos `tp-*`.
+- [ ] IDs, classes usadas por JS, rotas, eventos e nomes de evento **preservados**.
+- [ ] `focus-visible` presente; nada de remover outline sem substituto.
+- [ ] `aria-label` em botões só-ícone.
+- [ ] `z-index` só via `--z-*`.
+- [ ] Sem `!important` novo desnecessário.
+- [ ] Sem animação constante em controles administrativos (microinterações discretas: `translateY(-1px)` hover, `translateY(1px)` active, `transition:120ms ease`).
+- [ ] Bootstrap carregado antes de `ui/*`.
