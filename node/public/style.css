@@ -2633,3 +2633,21 @@ body {
   background: var(--tp-rank-accent);
   clip-path: polygon(0 0, 100% 12%, 100% 88%, 0 100%);
 }
+
+/* Mais participantes visíveis: cards compactos em uma única linha. */
+.compact .gl-side .winner-entry {
+  padding: var(--tp-space-1) var(--tp-space-2);
+  margin-bottom: var(--tp-space-1);
+  border-radius: var(--tp-radius-sm);
+}
+.compact .gl-side .winner-entry:last-child { margin-bottom: 0; }
+.compact .gl-side .winner-entry .winner-avatar {
+  width: var(--tp-space-6);
+  height: var(--tp-space-6);
+}
+.compact .gl-side .winner-entry .winner-name {
+  font-size: var(--tp-overlay-label-size);
+}
+.compact .gl-side .winners-panel {
+  padding: var(--tp-space-2);
+}

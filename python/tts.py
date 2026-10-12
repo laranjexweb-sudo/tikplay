@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import os
 import re
+import threading
 import time
 
 EDGE_AVAILABLE = False
@@ -28,6 +29,8 @@ EDGE_VOICE_MAP = {
     VOICE_EDGE_ANTONIO: "pt-BR-AntonioNeural",
     VOICE_EDGE_FRANCISCA: "pt-BR-FranciscaNeural",
 }
+
+_EDGE_LOCK = threading.Lock()
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts_models")
 
@@ -83,7 +86,11 @@ def _edge_rate_str(rate: float) -> str:
 
 
 def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
-    """Gera um MP3 com as vozes Edge (Microsoft). Retorna o caminho ou None."""
+    """Gera um MP3 com as vozes Edge (Microsoft). Retorna o caminho ou None.
+
+    Serializa as chamadas (uma por vez) e tenta varias vezes com backoff,
+    porem o Edge e flaky em rajadas.
+    """
     text = clean_text(text)
     if not EDGE_AVAILABLE or not text:
         return None
@@ -97,18 +104,18 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
         return out_path
     try:
         _last_err = None
-        for attempt in range(3):
+        for attempt in range(4):
             try:
-                async def _run():
-                    c = edge_tts.Communicate(text, ms_voice, rate=_edge_rate_str(rate))
-                    await c.save(out_path)
-                asyncio.run(_run())
+                with _EDGE_LOCK:
+                    async def _run():
+                        c = edge_tts.Communicate(text, ms_voice, rate=_edge_rate_str(rate))
+                        await c.save(out_path)
+                    asyncio.run(_run())
                 break
             except Exception as e:
                 _last_err = e
                 _cleanup(out_path)
-                if attempt < 2:
-                    time.sleep(0.6)
+                time.sleep(0.8 * (attempt + 1))
         else:
             raise _last_err
     except Exception:

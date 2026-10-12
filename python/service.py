@@ -290,6 +290,10 @@ class GameSession:
         audio_dir = os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id))
         try:
             audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
+            if not audio_path:
+                # Edge e flaky: tenta mais uma vez (1ª falha pode ser transitoria)
+                await asyncio.sleep(0.8)
+                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
         except Exception as e:
             self._throttled_log("tts_err", f"[TTS] erro ao sintetizar '{voice_key}': {type(e).__name__}: {e}", game="tts", level="err")
             return None
