@@ -2364,6 +2364,10 @@
     "diamond_count": 5000
   },
   {
+    "name": "Desert Wolf",
+    "diamond_count": 5000
+  },
+  {
     "name": "Diamond Gun",
     "diamond_count": 5000
   },
@@ -2398,10 +2402,6 @@
   {
     "name": "Fluffy Buddies",
     "diamond_count": 5388
-  },
-  {
-    "name": "Desert Wolf",
-    "diamond_count": 5500
   },
   {
     "name": "Wolf",

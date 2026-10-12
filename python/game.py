@@ -531,6 +531,18 @@ class JogoContexto:
                 return str(incoming_id).strip() == str(row["id"])
         return bool(incoming_name) and strip_accents(incoming_name.strip().lower()) in self._gift_aliases(ref)
 
+    def _catalog_diamond(self, ref: str):
+        """Valor (diamantes) de um gift configurado (ID ou nome) via catálogo."""
+        cat = _gift_catalog()
+        if cat is not None and ref:
+            row = cat.resolve_ref(ref)
+            if row and row.get("diamond_count") is not None:
+                try:
+                    return int(row["diamond_count"] or 0)
+                except (TypeError, ValueError):
+                    return None
+        return None
+
     def process_gift(self, user: str, gift_name: str, diamond_count: int = 0, nickname: str = None, avatar: str = None, gift_id: str = None) -> dict:
         if self.finished or not self.secret_word:
             return None
@@ -577,11 +589,15 @@ class JogoContexto:
 
         gift_diamonds = []
         for g in self.hint_gifts:
-            g_lower = g.lower()
-            for tag in self._gift_tags:
-                if tag["name"].lower() == g_lower:
-                    gift_diamonds.append(tag["diamond_count"])
-                    break
+            d = self._catalog_diamond(g)
+            if d is None:
+                g_lower = str(g).lower()
+                for tag in self._gift_tags:
+                    if tag["name"].lower() == g_lower:
+                        d = tag["diamond_count"]
+                        break
+            if d is not None:
+                gift_diamonds.append(d)
 
         if not gift_diamonds:
             return {"user": user, "gift": gift_name, "hint": None, "rank": None}
