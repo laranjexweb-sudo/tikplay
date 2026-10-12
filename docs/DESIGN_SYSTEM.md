@@ -438,6 +438,8 @@ node/public/
 
 - 2026-10-12 — Inventário/diagnóstico visual completo (§2) + tokens preliminares (§3) + governança (este doc, `REGRAS_DO_PROJETO.md`, `AGENTS.md`).
 - 2026-10-12 — Versionamento: repo guarda-chuva na raiz + `jogo-contexto` como submódulo do TikPlay.
+- 2026-10-12 — Plano de separação estrutural documentado com evidência em `docs/separacao-estrutural.md`
+  (Fase A-1 iniciada: utilitários Python extraídos p/ `service_common.py`).
 
 ### Acompanhamento por arquivo
 
