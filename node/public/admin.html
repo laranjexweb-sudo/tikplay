@@ -21,12 +21,26 @@
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css">
 
 </head>
 <body class="tp-super-admin">
+<aside class="tp-admin-sidebar">
+  <a class="tp-admin-logo" href="/admin">Tik<span>Play</span></a>
+  <span class="tp-admin-caption">ADMINISTRAÇÃO</span>
+  <nav class="tp-admin-nav" aria-label="Seções do Super Admin">
+    <a href="#adminDashboard">Dashboard</a>
+    <a href="#adminAccounts">Contas e permissões</a>
+    <a href="#adminInvites">Convites</a>
+    <a href="#adminRules">Regras globais</a>
+    <a href="#adminOperations">Operação local</a>
+  </nav>
+  <a class="tp-admin-back" href="/painel">Painel do streamer &#8599;</a>
+</aside>
+<main class="tp-admin-main">
 <div class="nb-card tp-card mb-3 d-flex justify-content-between align-items-center tp-admin-header">
   <div>
-    <div class="tp-admin-brand"><strong>SUPER ADMIN</strong><span>Administração SaaS do TikPlay</span></div>
+    <div class="tp-admin-brand"><span>WORKSPACE / SUPER ADMIN</span><strong id="adminPageTitle">Contas e permissões</strong></div>
   </div>
   <div class="d-flex gap-2">
     <button class="btn btn-nb btn-success" onclick="location.href='/painel'">Painel do streamer</button>
@@ -34,12 +48,24 @@
   </div>
 </div>
 
-<nav class="tp-admin-nav" aria-label="Seções do Super Admin">
-  <a href="#adminRules">Regras globais</a>
-  <a href="#adminInvites">Convites</a>
-  <a href="#adminAccounts">Contas e permissões</a>
-  <a href="#adminOperations">Operação local</a>
-</nav>
+<section class="tp-admin-section" id="adminDashboard" aria-labelledby="dashboardHeading">
+  <div class="tp-admin-dashboard-heading"><div><h2 id="dashboardHeading">Atividade ao vivo</h2><span id="dashboardUpdated" class="text-secondary">Aguardando dados</span></div><button type="button" class="btn btn-nb btn-dark" id="dashboardRefresh">Atualizar</button></div>
+  <p id="dashboardMessage" class="text-secondary" role="status" aria-live="polite"></p>
+  <div class="tp-dashboard-metrics">
+    <article class="tp-card"><span>Clientes online</span><strong id="dashboardOnline">—</strong><small id="dashboardOnlineCoverage">Indisponível</small></article>
+    <article class="tp-card"><span>Lives conectadas</span><strong id="dashboardLives">—</strong><small id="dashboardLivesCoverage">Indisponível</small></article>
+    <article class="tp-card"><span>Partidas em andamento</span><strong id="dashboardGames">—</strong><small id="dashboardGamesCoverage">Indisponível</small></article>
+  </div>
+  <div class="tp-dashboard-games"><h2>Uso por jogo</h2><div id="dashboardGameList" class="tp-dashboard-game-list"><p class="text-secondary">Dados de uso indisponíveis.</p></div></div>
+  <div class="tp-admin-dashboard-heading"><h2>Atividade dos clientes</h2><label class="tp-dashboard-search" for="dashboardSearch">Buscar cliente<input id="dashboardSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label></div>
+  <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="7">Carregando contas…</td></tr></tbody></table></div>
+</section>
+<div class="tp-admin-metrics" aria-label="Resumo de contas">
+  <div><span>Total de contas</span><strong id="metricTotal">—</strong></div>
+  <div><span>Contas ativas</span><strong id="metricActive">—</strong></div>
+  <div><span>Planos Pro</span><strong id="metricPro">—</strong></div>
+  <div><span>Contas desativadas</span><strong id="metricDisabled">—</strong></div>
+</div>
 <div class="nb-card tp-card mb-3 tp-admin-section" id="adminRules">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="m-0">Palavras Banidas <span id="bannedCount" class="badge text-bg-dark"></span></h2>
@@ -81,10 +107,16 @@
 
 <div class="nb-card tp-card tp-admin-section" id="adminAccounts">
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="m-0">Usuarios <span id="userCount" class="badge text-bg-dark"></span></h2>
+    <h2 class="m-0">Clientes <span id="userCount" class="badge text-bg-dark"></span></h2>
     <button class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar Conta</button>
   </div>
 
+  <div class="tp-admin-toolbar">
+    <label for="adminSearch">Buscar cliente<input id="adminSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label>
+    <label for="adminStatusFilter">Conta<select id="adminStatusFilter" class="form-select"><option value="">Todas</option><option value="active">Ativas</option><option value="disabled">Desativadas</option></select></label>
+    <button type="button" class="btn btn-nb btn-dark" id="adminRefresh">Atualizar</button>
+    <span id="adminLoadMsg" role="status" aria-live="polite"></span>
+  </div>
   <div id="userFormCard" class="mb-3 p-3 bg-light border border-dark rounded" style="display:none">
     <div id="userFormTitle" style="font-weight:800;margin-bottom:8px">Nova conta</div>
     <div class="row g-2">
@@ -137,6 +169,7 @@
           <th>Plano</th>
           <th>TikTok</th>
           <th>Sala</th>
+          <th>Uso atual</th>
           <th>Conta criada</th>
           <th>Acoes</th>
         </tr>
@@ -178,7 +211,21 @@
   </div>
 </div>
 
+</main>
 <script>
+function selectAdminSection() {
+  const links = [...document.querySelectorAll('.tp-admin-nav a')];
+  const selected = links.find(link => link.hash === location.hash) || links[0];
+  for (const section of document.querySelectorAll('.tp-admin-section')) section.hidden = '#' + section.id !== selected.hash;
+  for (const link of links) {
+    if (link === selected) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  document.getElementById('adminPageTitle').textContent = selected.textContent;
+  document.querySelector('.tp-admin-metrics').hidden = selected.hash !== '#adminAccounts';
+}
+window.addEventListener('hashchange', selectAdminSection);
+selectAdminSection();
 const token = localStorage.getItem("token");
 if (!token) location.href = "/login";
 
@@ -379,13 +426,83 @@ async function saveBannedWords() {
 }
 
 async function loadUsers() {
+  const message = document.getElementById('adminLoadMsg');
+  message.textContent = 'Carregando…';
+  document.getElementById('dashboardMessage').textContent = 'Carregando…';
+  try {
   const data = await apiFetch("/api/admin/users");
-  if (!data.success) return;
+  if (!data.success) throw new Error('Não foi possível carregar as contas.');
   usersData = data.users;
   document.getElementById("userCount").textContent = usersData.length;
+  document.getElementById('metricTotal').textContent = usersData.length;
+  document.getElementById('metricActive').textContent = usersData.filter(u => u.status === 'active').length;
+  document.getElementById('metricDisabled').textContent = usersData.filter(u => u.status === 'disabled').length;
+  document.getElementById('metricPro').textContent = usersData.filter(u => String(u.plan).startsWith('pro_')).length;
+  renderAdminUsers();
+  renderAdminDashboard();
+  document.getElementById('dashboardUpdated').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+  message.textContent = '';
+  } catch (error) { message.textContent = error.message; document.getElementById('dashboardMessage').textContent = error.message; if (!usersData.length) document.getElementById('dashboardActivity').innerHTML = '<tr><td colspan="7">Não foi possível carregar a atividade dos clientes.</td></tr>'; }
+}
+
+function renderAdminDashboard() {
+  const clients = usersData.filter(u => u.role !== 'admin');
+  const metrics = [
+    ['Online', a => typeof a.panel_online === 'boolean', a => a.panel_online],
+    ['Lives', a => ['connected','disconnected','connecting','reconnecting','offline'].includes(a.tiktok_status), a => a.tiktok_status === 'connected'],
+    ['Games', a => ['running','paused','finished','idle'].includes(a.game_status), a => a.game_status === 'running']
+  ];
+  for (const [key, known, active] of metrics) {
+    const measured = clients.filter(u => known(u.activity || {}));
+    document.getElementById('dashboard' + key).textContent = measured.length ? measured.filter(u => active(u.activity)).length : (clients.length ? '—' : '0');
+    document.getElementById('dashboard' + key + 'Coverage').textContent = clients.length ? (measured.length ? `${measured.length} de ${clients.length} clientes com dados` : 'Indisponível') : 'Nenhum cliente cadastrado';
+  }
+  const games = new Map();
+  for (const u of clients) {
+    const a = u.activity || {};
+    if (a.game_status === 'running' && a.game_name) games.set(String(a.game_name), (games.get(String(a.game_name)) || 0) + 1);
+  }
+  const measuredGames = clients.some(u => ['running','paused','finished','idle'].includes((u.activity || {}).game_status));
+  document.getElementById('dashboardGameList').innerHTML = games.size ? [...games].sort((a,b) => b[1]-a[1]).map(([name,count]) => `<article class="tp-card"><span>${esc(name)}</span><strong>${count}</strong><small>Em andamento</small></article>`).join('') : `<p class="text-secondary">${!clients.length ? 'Nenhum cliente cadastrado.' : measuredGames ? 'Nenhuma partida identificada nos dados disponíveis.' : 'Dados de uso indisponíveis.'}</p>`;
+  const query = document.getElementById('dashboardSearch').value.trim().toLocaleLowerCase('pt-BR');
+  const filtered = clients.filter(u => [u.name,u.email,u.tiktok_username].some(v => String(v || '').toLocaleLowerCase('pt-BR').includes(query)));
+  const body = document.getElementById('dashboardActivity');
+  body.innerHTML = '';
+  for (const u of filtered) {
+    const usage = document.createElement('div');
+    usage.innerHTML = renderAdminUsage(u.activity);
+    const values = [...usage.querySelectorAll('dd')].map(el => esc(el.textContent));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong>${esc(u.name)}</strong><small class="tp-dashboard-email">${esc(u.email)}</small></td><td>${esc(u.tiktok_username) || '—'}</td>${values.map(value => `<td>${value}</td>`).join('')}<td><button class="btn btn-nb btn-dark" type="button">Ver conta</button></td>`;
+    tr.querySelector('button').addEventListener('click', () => { location.hash = 'adminAccounts'; document.getElementById('adminSearch').value = String(u.email || u.name || ''); document.getElementById('adminStatusFilter').value = ''; renderAdminUsers(); });
+    body.appendChild(tr);
+  }
+  if (!filtered.length) body.innerHTML = '<tr><td colspan="7">' + (clients.length ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.') + '</td></tr>';
+  document.getElementById('dashboardMessage').textContent = clients.some(u => !u.activity || metrics.some(([,known]) => !known(u.activity))) ? 'Dados de atividade incompletos. Os totais consideram apenas clientes com dados disponíveis.' : '';
+}
+
+// Optional frontend contract; absent telemetry must not imply offline.
+function renderAdminUsage(activity) {
+  const a = activity || {};
+  const states = { connected: 'Conectado', disconnected: 'Desconectado', reconnecting: 'Reconectando', connecting: 'Conectando', offline: 'Offline' };
+  const gameStates = { running: 'Em andamento', paused: 'Pausado', finished: 'Encerrado', idle: 'Sem partida' };
+  const timestamp = typeof a.last_activity_at === 'string' ? new Date(a.last_activity_at) : null;
+  const values = [
+    ['Painel', typeof a.panel_online === 'boolean' ? (a.panel_online ? 'Online' : 'Offline') : 'Indisponível'],
+    ['TikTok', Object.hasOwn(states, a.tiktok_status) ? states[a.tiktok_status] : 'Indisponível'],
+    ['Jogo atual', a.game_name ? String(a.game_name) + (Object.hasOwn(gameStates, a.game_status) ? ' · ' + gameStates[a.game_status] : '') : (a.game_status === 'idle' ? 'Sem partida' : 'Indisponível')],
+    ['Última atividade', timestamp && Number.isFinite(timestamp.getTime()) ? timestamp.toLocaleString('pt-BR') : 'Indisponível']
+  ];
+  return '<dl class="tp-admin-usage">' + values.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('') + '</dl>';
+}
+
+function renderAdminUsers() {
+  const query = document.getElementById('adminSearch').value.trim().toLocaleLowerCase('pt-BR');
+  const status = document.getElementById('adminStatusFilter').value;
+  const filtered = usersData.filter(u => (!status || u.status === status) && [u.name, u.email, u.tiktok_username].some(value => String(value || '').toLocaleLowerCase('pt-BR').includes(query)));
   const tbody = document.getElementById("userTable");
   tbody.innerHTML = "";
-  for (const u of usersData) {
+  for (const u of filtered) {
     const tr = document.createElement("tr");
     const statusClass = u.status === "active" ? "text-bg-success" : "text-bg-danger";
     const statusLabel = u.status === "active" ? "ativo" : "desativado";
@@ -399,6 +516,7 @@ async function loadUsers() {
       <td>${esc(u.plan)}</td>
       <td>${esc(u.tiktok_username) || "-"}</td>
       <td><code>${esc(u.room_code)}</code></td>
+      <td>${renderAdminUsage(u.activity)}</td>
       <td>${esc(u.created_at)}</td>
       <td class="d-flex gap-2 flex-wrap">
         <button class="btn btn-nb ${u.status === "active" ? "btn-danger" : "btn-success"}" onclick="toggleStatus(${u.id}, '${u.status === "active" ? "disabled" : "active"}')">${toggleLabel}</button>
@@ -407,6 +525,14 @@ async function loadUsers() {
       </td>
     `;
     tbody.appendChild(tr);
+  }
+  if (!filtered.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 11;
+    cell.textContent = 'Nenhuma conta encontrada.';
+    row.appendChild(cell);
+    tbody.appendChild(row);
   }
 }
 
@@ -618,6 +744,11 @@ async function pollContextos() {
   }
 }
 
+document.getElementById('adminSearch').addEventListener('input', renderAdminUsers);
+document.getElementById('dashboardSearch').addEventListener('input', renderAdminDashboard);
+document.getElementById('dashboardRefresh').addEventListener('click', loadUsers);
+document.getElementById('adminStatusFilter').addEventListener('change', renderAdminUsers);
+document.getElementById('adminRefresh').addEventListener('click', loadUsers);
 document.getElementById("bannedWordsInput").disabled = true;
 document.getElementById("bannedWordsInput").addEventListener("input", () => { if(!bannedHydrated) return; bannedPending = true; document.getElementById("bannedMsg").textContent = "Alteração pendente…"; clearTimeout(bannedTimer); bannedTimer = setTimeout(saveBannedWords, 600); });
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);

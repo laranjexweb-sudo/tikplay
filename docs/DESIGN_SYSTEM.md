@@ -580,3 +580,9 @@ node/public/
 - 2026-10-13: Switch Modo Boss no bloco Palavra Secreta, seguindo controles existentes; hidratação, detecção de alteração e salvamento automático via boss_mode.
 
 - 2026-10-13: Usuário TikTok bloqueado ao solicitar conexão; bloqueio preservado em tentativa/erro e refresh da aba, liberado somente por desconexão confirmada.
+
+- 2026-10-13: Super Admin adota, por solicitação explícita do usuário, o tema escuro/ciano de `Site/styles.css`, isolado em `ui/tikplay-admin-site.css`. Navegação por seções, resumo de contas, busca/filtro e quatro indicadores de uso preparados para o backend. Contrato em `admin-status-frontend.md`; validação desktop/mobile com dados simulados, sem alterações de backend.
+
+- 2026-10-13: Contraste das tabelas do Super Admin reforçado: cabeçalho destacado, linhas alternadas mais claras, divisórias visíveis, texto claro, hover e badges de status com fundo/borda semânticos. Indicadores de uso ampliados para leitura.
+
+- 2026-10-13: Dashboard como seção inicial do Admin, com clientes online, lives conectadas, partidas em andamento, uso por jogo e atividade dos clientes. Atualização manual, busca e acesso à conta; dados ausentes não inferem offline. Frontend validado com API simulada em desktop/mobile; histórico depende do backend.
