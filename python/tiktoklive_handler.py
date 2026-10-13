@@ -10,6 +10,7 @@ from TikTokLive.events import (
     GiftEvent,
     LikeEvent,
     JoinEvent,
+    ShareEvent,
 )
 
 
@@ -21,13 +22,14 @@ class TikTokLiveHandler:
     pois o TikTokLive nao exige chave.
     """
 
-    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None):
+    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
         self.on_gift_cb = on_gift
         self.on_like_cb = on_like
         self.on_join_cb = on_join
+        self.on_share_cb = on_share
         self.log_cb = None
         self._room_id = None
         self._connected = False
@@ -169,6 +171,13 @@ class TikTokLiveHandler:
             user_meta=self._user_meta(user),
         )
 
+    async def _on_share(self, event):
+        if self.on_share_cb and not self._is_backlog(event):
+            user = getattr(event, "user", None)
+            if user is not None:
+                await self.on_share_cb(user=self._display_name(user), nickname=self._nickname(user),
+                                       avatar=self._avatar(user), user_meta=self._user_meta(user))
+
     async def _on_like(self, event: LikeEvent):
         if not self.on_like_cb:
             return
@@ -231,6 +240,7 @@ class TikTokLiveHandler:
             client.add_listener(ConnectEvent, self._on_connect)
             client.add_listener(DisconnectEvent, self._on_disconnect)
             client.add_listener(CommentEvent, self._on_comment)
+            client.add_listener(ShareEvent, self._on_share)
             client.add_listener(GiftEvent, self._on_gift)
             client.add_listener(LikeEvent, self._on_like)
             client.add_listener(JoinEvent, self._on_join)

@@ -210,6 +210,7 @@ class GameSession:
             on_comment=self.on_comment,
             on_gift=self.on_gift,
             on_like=self.on_like,
+            on_share=self.on_share,
             on_join=self.on_member,
         )
         self.handler._emit_status = self.emit_status
@@ -411,6 +412,11 @@ class GameSession:
                     })
         except Exception as e:
             emit(self.tenant_id, "log", f"[Duelo] Erro ao registrar equipe: {e}")
+
+    async def on_share(self, user, nickname, avatar, user_meta=None):
+        allowed, _ = self._check_access(user_meta)
+        if allowed:
+            self.corda.share(self._stable_uid(user, user_meta), user, nickname, avatar)
 
     async def on_like(self, user, nickname, avatar, like_count, user_meta=None):
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
@@ -857,6 +863,7 @@ class GameSession:
         allowed, _ = self._check_access(user_meta)
         if allowed:
             self.corda.join(self._stable_uid(user, user_meta), raw, user, nickname, avatar)
+            self.corda.comment(self._stable_uid(user, user_meta), raw)
         self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
 
         # ---------------------------------------------------------
@@ -1054,7 +1061,7 @@ class GameSession:
         allowed, _ = self._check_access(user_meta)
         if allowed:
             self.corda.gift(gift_id, gift_name, diamond_count, repeat_count,
-                            self._stable_uid(user, user_meta))
+                            self._stable_uid(user, user_meta), user, nickname, avatar)
 
         # DUELO 1x1: presente cadastrado dispara golpe/escudo (módulo isolado, retrocompatível)
         duelo_would_match = False
@@ -1516,6 +1523,8 @@ class GameSession:
             elif c == "corda_stop":
                 self.corda.stop()
                 emit(self.tenant_id, "log", "[CORDA] Jogo parado")
+            elif c == "corda_target":
+                self.corda.update_target(cmd.get("tap_target"))
             elif c == "corda_test":
                 self.corda.add_force(cmd.get("side"), cmd.get("force", 25), "test", "streamer")
             elif c == "duelo_start":
@@ -1795,7 +1804,7 @@ async def process_commands(queue):
             else:
                 emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
 
-        elif c in ("corda_start", "corda_stop", "corda_new_match", "corda_test", "duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
+        elif c in ("corda_start", "corda_stop", "corda_new_match", "corda_test", "corda_target", "duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)

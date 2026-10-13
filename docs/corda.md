@@ -88,3 +88,19 @@ Presentes habilitados aparecem por equipe em caixas próprias, com nomes traduzi
 ## Áudio
 
 Arquivos fornecidos em cabo-de-guerra copiados sem alteração para node/public/corda-audio (trilha, movimento, pressao, win). O painel possui formulário Áudio e música: trilha desligada por padrão, volume 50%; efeitos ligados por padrão, volume 70%. Salvamento pelo endpoint de apresentação existente /api/corda/layout, propagado por WebSocket sem resetar a rodada. A trilha fica em loop durante a partida e para na vitória final/parada. Efeitos tocam uma vez por entrada de estado: movimento (>2 unidades ou força pendente), pressão (>50), vitória (resultado com vencedor). Troca de rodada limpa efeitos. O painel não reproduz som para evitar duplicação com a tela pública. Navegador com autoplay bloqueado apresenta Ativar áudio. Teste com objetos de áudio simulados confirmou contagem única por transição, volume e parada.
+
+## Preparação e participação — 13/10/2026
+
+O painel usa contagem inicial de 10s e contagem entre rodadas de 3s, configuráveis (0 desliga). Participantes entram durante a preparação; pontos e tempo da rodada começam depois. Membros permanecem entre rodadas.
+
+Comentários de participantes somam 1 à barra por padrão, com intervalo de 2s por usuário. Comentários contendo termos dos dois times não pontuam. Não multiplicam pelo bônus de compartilhamento. O comentário de entrada também conta quando recebido na rodada ativa.
+
+Compartilhamentos identificados ficam desativados por padrão. Habilitados, somam 3 à barra, emitem balão de compartilhamento e ativam TAP ×2 por 30s para o usuário; intervalo de 30s por pessoa, sem acumular multiplicadores. Bônus expira ao mudar de rodada. TikTokLive recebe ShareEvent; TikTools aceita evento share com usuário. Validar disponibilidade em live real antes de habilitar. Não há detecção de republicação.
+
+## Meta ajustável ao vivo
+
+O controle Meta de FORÇA da barra altera apenas tap_target durante a partida e persiste para futuras partidas. Na rodada ativa, saldo igual ou maior que a nova meta gera um único puxão pela força configurada e zera a barra. Outros saldos permanecem. Salvar a mesma meta não premia novamente. Durante preparação/resultado a meta muda sem premiar.
+
+## Formato infinito e apresentação de vitória
+
+best_of=0 seleciona rodadas infinitas, encerradas pelo botão Parar. Vitórias são acumuladas sem vencedor final. Melhor de 3/5 apresenta texto luminoso AZUL/VERMELHO GANHOU A RODADA por 2,5s nas vitórias intermediárias; poses, banner e efeito de áudio win completos somente no fim da partida. No infinito, vitória completa em cada rodada.

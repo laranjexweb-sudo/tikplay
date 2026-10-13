@@ -524,3 +524,55 @@ node/public/
 - [ ] Sem `!important` novo desnecessário.
 - [ ] Sem animação constante em controles administrativos (microinterações discretas: `translateY(-1px)` hover, `translateY(1px)` active, `transition:120ms ease`).
 - [ ] Bootstrap carregado antes de `ui/*`.
+
+- 2026-10-13: CORDA destaca a disputa na barra maior com marcador dourado/branco. Curtidas ficam abaixo em barras finas, corações pulsantes e preenchimento gradual com confirmação da meta antes do reinício. Aviso público para aguardar o início; movimento reduzido respeitado.
+
+- 2026-10-13: Barras de TAP do CORDA ampliadas para 8–12px, com contagem e corações maiores para leitura na live.
+
+- 2026-10-13: TAP usa aproximação exponencial independente do FPS; lotes pequenos também animam gradualmente, em vez de terminar em um ou dois quadros.
+
+- 2026-10-13: CORDA remove título e textos de formato/vitórias do placar público; cronômetro maior centralizado entre as equipes. Formato de partida e contadores preservados.
+
+- 2026-10-13: Relógio e contadores CORDA alinhados verticalmente; pontuações maiores em branco sobre fundo escuro com bordas da equipe.
+
+- 2026-10-13: Tela pública e botões demo CORDA em maiúsculas; rótulos de curtidas e incrementos visuais apresentados como ENERGIA.
+
+- 2026-10-13: Menções a disputa/duelo removidas dos status e descrições acessíveis da cena pública CORDA; mensagens de energia e movimento.
+
+- 2026-10-13: TAP público rotulado FORÇA; conclusão mostra equipe e força enviada. Impacto visual disparado por metas e combos superiores a x10 sem modificar a força aplicada.
+
+- 2026-10-13: Cliente CORDA garante impacto visual para corda_pull de origem tap, inclusive quando o serviço ainda em execução envia impulse=false.
+
+- 2026-10-13: Barras de FORÇA com brilho direcional recortado ao preenchimento, avançando rumo à meta (azul à direita, vermelho à esquerda); respeita movimento reduzido.
+
+- 2026-10-13: Aviso ENVIEM FORÇA TIME! no lado da equipe atrás, com pulsação suave. Exibe após 15 pontos de diferença e oculta abaixo de 8 para evitar piscar próximo do empate; somente rodada ativa.
+
+- 2026-10-13: Chamado FORÇA menor em cartão compacto com raio e faixa lateral; aparece por 2s ao entrar em forte pressão (>50), sem repetir enquanto ela persistir. Rearma abaixo de 45.
+
+- 2026-10-13: Chamado de forte pressão recomposto como lettering luminoso em duas linhas, na cor da equipe, acima dos personagens; sem caixa ou emoji, com traço luminoso inferior.
+
+- 2026-10-13: Acabamento do placar CORDA integrado à arena: cantos retos, borda fina, linha superior azul/branco/vermelho e brilho lateral discreto por equipe; contraste dos contadores preservado.
+
+- 2026-10-13: Aviso de espera CORDA alinhado ao acabamento do placar, acima dos personagens; oculto na carga inicial, desconexão, painel e jogo ativo.
+
+- 2026-10-13: Cada foto de presente cadastrado recebe +FORÇA acima, com lettering luminoso na cor da equipe seguindo o chamado +FORÇA TIME!.
+
+- 2026-10-13: Preparação CORDA com contagem e instrução de entrada no aviso existente; campos de participação no painel e balão de compartilhamento identificado.
+
+- 2026-10-13: Preparação com contagem destacada e instrução em dois passos: escolha a equipe no chat (AZUL/VERMELHO coloridos) e curta para enviar força.
+
+- 2026-10-13: Controle independente de meta ao vivo no painel CORDA e status breve META ATUALIZADA na cena.
+
+- 2026-10-13: Campo duplicado de meta removido das regras; ajuste concentrado no cartão independente Meta de FORÇA da barra.
+
+- 2026-10-13: Vitória intermediária em lettering luminoso ascendente por 2,5s; vitória completa reservada ao final em melhor de 3/5 ou a cada rodada no infinito.
+
+- 2026-10-13: Presentes por equipe alternam em slide de 3,5s; cadastro Puxão dispara impacto visual e muda legenda para PUXÃO, preservando força proporcional.
+
+- 2026-10-13: Balão de entrada CORDA com cantos retos, fundo do placar, faixa e brilho da equipe; identidade do participante e chamada de entrada preservadas.
+
+- 2026-10-13: Slide de cada equipe inclui item padrão com coração na cor do time e chamada TAP AUMENTA / FORÇA!, inclusive sem presentes.
+
+- 2026-10-13: Pontos de encaixe da corda nas poses do novo personagem vermelho recalibrados para as mãos em neutro/puxando/pressão; corda permanece desenhada atrás do personagem.
+
+- 2026-10-13: Presentes que disparam impacto sobem balão com foto/nome do remetente e ENVIOU PUXÃO na cor da equipe.

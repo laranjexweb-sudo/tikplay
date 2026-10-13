@@ -58,12 +58,13 @@ async def check_live_status_tiktools(username: str, api_key: str, log_cb=None) -
 
 
 class TikToolsHandler:
-    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None):
+    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
         self.on_gift_cb = on_gift
         self.on_like_cb = on_like
+        self.on_share_cb = on_share
         self.log_cb = None
         self._room_id = None
         self._connected = False
@@ -158,6 +159,11 @@ class TikToolsHandler:
                     prev["repeat_count"] = max(prev["repeat_count"], repeat_count)
                     prev["diamond_count"] = diamond_count
                     prev["ts"] = time.time()
+
+        elif etype == "share":
+            if self.on_share_cb and user:
+                await self.on_share_cb(user=self._display_name(user), nickname=self._nickname(user),
+                                       avatar=self._avatar(user), user_meta=self._user_meta(user))
 
         elif etype == "like":
             like_count = int(data.get("likeCount") or 0)
