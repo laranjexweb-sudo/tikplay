@@ -95,13 +95,13 @@ canvas { display: block; width: 100%; height: 100%; }
 .tp-corda-upper-gifts.red { right: 3%; }
 .tp-corda-upper-gifts.single { grid-template-columns: 1fr; }
 .tp-corda-gift-photo { animation: tpCordaGiftSlide .4s ease-out both; margin: 0; text-align: center; color: var(--tp-text-inverse); font-size: clamp(.55rem,1.8cqw,.85rem); font-weight: 800; }
-.tp-corda-tap-slide strong { display: block; color: var(--tp-text-inverse); font-size: clamp(.65rem,2.4cqw,1.1rem); font-weight: 900; line-height: 1.15; text-shadow: 0 2px 3px var(--tp-black),0 0 12px var(--tp-duelo-blue-light); }
+.tp-corda-tap-slide strong { display: block; color: var(--tp-text-inverse); font-size: clamp(.6rem,2.1cqw,1rem); font-weight: 900; line-height: 1.15; text-shadow: 0 2px 3px var(--tp-black),0 0 12px var(--tp-duelo-blue-light); }
 .tp-corda-upper-gifts.red .tp-corda-tap-slide strong { text-shadow: 0 2px 3px var(--tp-black),0 0 12px var(--tp-duelo-red-light); }
-.tp-corda-tap-slide-heart { display: block; font-size: 11cqw; line-height: 1.3; animation: tpCordaGiftZoom 4s ease-in-out infinite; }
+.tp-corda-tap-slide-heart { display: block; font-size: 9.5cqw; line-height: 1.3; animation: tpCordaGiftZoom 4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .tp-corda-tap-slide-heart { animation: none; } }
 .tp-corda-gift-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; animation: tpCordaGiftZoom 4s ease-in-out infinite; }
-.tp-corda-upper-gifts.single .tp-corda-gift-photo img { width: 14cqw; margin: auto; }
-.tp-corda-gift-photo figcaption { --gift-glow: var(--tp-duelo-blue-light); margin-bottom: var(--tp-space-2); color: var(--tp-text-inverse); font-size: clamp(.7rem,2.8cqw,1.3rem); font-weight: 900; line-height: 1.05; letter-spacing: .02em; white-space: nowrap; text-shadow: 0 2px 3px var(--tp-black),0 0 12px var(--gift-glow),0 0 24px var(--gift-glow); }
+.tp-corda-upper-gifts.single .tp-corda-gift-photo img { width: 12cqw; margin: auto; }
+.tp-corda-gift-photo figcaption { --gift-glow: var(--tp-duelo-blue-light); margin-bottom: var(--tp-space-2); color: var(--tp-text-inverse); font-size: clamp(.65rem,2.5cqw,1.15rem); font-weight: 900; line-height: 1.05; letter-spacing: .02em; white-space: nowrap; text-shadow: 0 2px 3px var(--tp-black),0 0 12px var(--gift-glow),0 0 24px var(--gift-glow); }
 .tp-corda-upper-gifts.red figcaption { --gift-glow: var(--tp-duelo-red-light); }
 @keyframes tpCordaGiftSlide { from { opacity: 0; transform: translateY(1cqw); } to { opacity: 1; transform: translateY(0); } }
 @keyframes tpCordaGiftZoom { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }

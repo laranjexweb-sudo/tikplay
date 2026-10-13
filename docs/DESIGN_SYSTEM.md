@@ -578,3 +578,5 @@ node/public/
 - 2026-10-13: Presentes que disparam impacto sobem balão com foto/nome do remetente e ENVIOU PUXÃO na cor da equipe.
 
 - 2026-10-13: Switch Modo Boss no bloco Palavra Secreta, seguindo controles existentes; hidratação, detecção de alteração e salvamento automático via boss_mode.
+
+- 2026-10-13: Usuário TikTok bloqueado ao solicitar conexão; bloqueio preservado em tentativa/erro e refresh da aba, liberado somente por desconexão confirmada.

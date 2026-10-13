@@ -2384,9 +2384,21 @@ function updatePanelRiddleControls() {
   if (replay) replay.disabled = !(visible && panelRiddleState === "ready");
 }
 
+let liveUserLocked = sessionStorage.getItem('tikplayLiveUserLocked') === '1';
+function lockLiveUser(locked) {
+  liveUserLocked=locked;
+  sessionStorage.setItem('tikplayLiveUserLocked',locked?'1':'0');
+  const field=document.getElementById('username');field.readOnly=locked;
+  field.setAttribute('aria-readonly',String(locked));
+  field.title=locked?'Desconecte a live para alterar o usuário.':'';
+  field.classList.toggle('bg-body-secondary',locked);
+  document.getElementById('btnStop').disabled=!locked;
+}
+lockLiveUser(liveUserLocked);
 function setRunningUI(running) {
+  if(running) lockLiveUser(true);
   document.getElementById("btnConnect").disabled = running;
-  document.getElementById("btnStop").disabled = !running;
+  document.getElementById("btnStop").disabled = !running && !liveUserLocked;
   syncPanelNewGameButton(running ? "connected" : "offline");
   document.getElementById("btnConnect").textContent = running ? "TikTok Live conectada" : "Conectar à TikTok Live";
   document.getElementById("btnStop").textContent = "Desconectar da TikTok Live";
@@ -2404,6 +2416,7 @@ function updateStatus(s) {
   const rateEl = document.getElementById("apiRate");
 
   window.lastStateStr = s.state;
+  if(["connected","connecting","waiting"].includes(s.state)) lockLiveUser(true);
 
   if (s.state === "connected") {
     stateEl.textContent = "Conectado";
@@ -2601,7 +2614,7 @@ async function startGame() {
     return;
   }
 
-  await saveCredentials();
+  lockLiveUser(true);
 
   const btn = document.getElementById("btnConnect");
   btn.disabled = true;
@@ -2610,6 +2623,7 @@ async function startGame() {
   addLog(`[Painel] Solicitando conexão com @${username}...`);
 
   try {
+    await saveCredentials();
     const data = await apiFetch("/start-game", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2639,6 +2653,8 @@ async function stopGame() {
     const data = await apiFetch("/stop-game", { method: "POST" });
     if (data.success) {
       addLog("[Painel] Jogo encerrado");
+      lockLiveUser(false);
+      setRunningUI(false);
     } else {
       addLog(`[Painel] [!] ${data.error}`);
     }
@@ -2646,7 +2662,7 @@ async function stopGame() {
     addLog(`[Painel] [!] Erro de rede: ${err.message}`);
   }
 
-  setRunningUI(false);
+  if(liveUserLocked) {btn.disabled=false;btn.textContent="Desconectar da TikTok Live";}
 }
 
 async function startNewGameFromPanel() {
