@@ -11,6 +11,7 @@ const multer = require("multer");
 
 const db = require("./db");
 const auth = require("./auth");
+const corda = require("./lib/corda");
 
 const logstore = require("./lib/logstore");
 
@@ -49,6 +50,7 @@ const FRIENDLY_PAGES = {
   "/bichinho-overlay": "bichinho-overlay.html",
   "/tres-pontinhos": "tres-pontinhos.html",
   "/duelo": "duelo.html",
+  "/corda": "corda.html",
   "/docs": "docs.html",
 };
 const LEGACY_PAGES = {
@@ -60,7 +62,7 @@ const LEGACY_PAGES = {
 };
 
 app.get("/", (req, res) => res.redirect("/login"));
-const NO_CACHE_ROUTES = new Set(["/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking"]);
+const NO_CACHE_ROUTES = new Set(["/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -368,6 +370,11 @@ function broadcastStatus(tenant, status) {
   } else if (status.state === "offline" || status.state === "disconnected") {
     // Não limpa currentWord: mantém a palavra da rodada em andamento mesmo com queda
     broadcastToClients(tenant.browserClients, { type: "python_disconnected" });
+    if (tenant.cordaState?.active) {
+      daemonSend({ cmd: "corda_stop", tenant_id: tenant.id });
+      tenant.cordaState = { ...tenant.cordaState, active: false, round_active: false, pending_force: 0 };
+      broadcastToClients(tenant.browserClients, tenant.cordaState);
+    }
     // Auto-pause: se o V-Pet está ativo, pausa para não zerar fome/energia offline
     const vs = tenant.vpetState;
     if (vs && vs.active) {
@@ -443,6 +450,11 @@ function handleDaemonMessage(msg) {
       broadcastStatus(tenant, msg.status || {});
     } else if (msg.type === "game") {
       const gameMsg = msg.msg || {};
+      if (gameMsg.type === "corda_state") {
+        if(!tenant.cordaLayout) tenant.cordaLayout=corda.layout(db.getCordaConfig(tenantId));
+        gameMsg.config={...gameMsg.config,...tenant.cordaLayout};
+        tenant.cordaState = gameMsg;
+      }
       if (gameMsg.type === "duelo_state") {
         tenant.dueloState = gameMsg;
       }
@@ -1568,6 +1580,8 @@ function normalizeDueloSettings(raw) {
   return out;
 }
 
+corda.register(app, { db, auth, requireFeature, getTenant, daemonSend, liveOnline, broadcastToClients });
+
 app.get("/api/duelo/config", auth.requireAuth, requireFeature("duelo"), (req, res) => {
   const cfg = db.getDueloConfig(req.user.id);
   res.json({ success: true, gifts: dueloGiftsPayload(cfg.gifts), active: cfg.active, settings: dueloClientSettings(req.user.id, cfg.settings) });
@@ -1769,6 +1783,10 @@ app.post("/stop-game", auth.requireAuth, (req, res) => {
 });
 
 function dueloForceStop(userId) {
+  daemonSend({ cmd: "corda_stop", tenant_id: userId });
+  const cordaTenant = getTenant(userId);
+  cordaTenant.cordaState = corda.initial(db.getCordaConfig(userId));
+  broadcastToClients(cordaTenant.browserClients, cordaTenant.cordaState);
   const cfg = db.getDueloConfig(userId);
   daemonSend({ cmd: "duelo_stop", tenant_id: userId });
   const saved = db.saveDueloConfig(userId, { gifts: cfg.gifts || [], active: false, settings: cfg.settings || {} });
@@ -1846,6 +1864,7 @@ wss.on("connection", (ws, req) => {
     if (tenant.vpetState) {
       ws.send(JSON.stringify({ type: "vpet_state", ...tenant.vpetState }));
     }
+    ws.send(JSON.stringify(tenant.cordaState || corda.initial(db.getCordaConfig(user.id))));
     const dueloCfg = db.getDueloConfig(user.id);
     if (dueloCfg) {
       ws.send(JSON.stringify({ type: "duelo_state", ...(tenant.dueloState || dueloInitialState(dueloCfg)) }));

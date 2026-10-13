@@ -1,0 +1,32 @@
+/* Componentes compartilhados conforme DESIGN_SYSTEM.md. */
+.tp-card { background: var(--tp-surface); border: var(--tp-line) solid var(--tp-border); border-radius: var(--tp-radius-md); padding: var(--tp-space-4); display: flex; flex-direction: column; gap: var(--tp-space-3); }
+.tp-card--raised { box-shadow: var(--tp-shadow-card); }
+.tp-btn { min-height: var(--tp-control-height); padding: var(--tp-space-2) var(--tp-space-4); border: var(--tp-line) solid var(--tp-border); border-radius: var(--tp-radius-sm); font: 700 1rem var(--tp-font-ui); cursor: pointer; background: var(--tp-surface-muted); color: var(--tp-text); }
+.tp-btn-primary { background: var(--tp-yellow); }
+.tp-btn-success { background: var(--tp-green); }
+.tp-btn-danger { background: var(--tp-red); }
+.tp-btn:disabled { opacity: .5; cursor: default; }
+.tp-btn:not(:disabled):hover { filter: brightness(1.05); }
+.tp-btn:focus-visible, .tp-input:focus-visible, .tp-select:focus-visible { outline: var(--tp-line) solid var(--tp-blue); outline-offset: var(--tp-space-1); }
+.tp-input, .tp-select { min-height: var(--tp-control-height); width: 100%; box-sizing: border-box; padding: var(--tp-space-2); border: var(--tp-line) solid var(--tp-border); border-radius: var(--tp-radius-sm); background: var(--tp-surface); color: var(--tp-text); font: inherit; }
+.tp-label { display: flex; flex-direction: column; gap: var(--tp-space-1); font-weight: 700; }
+.tp-actions { display: flex; gap: var(--tp-space-2); flex-wrap: wrap; align-items: center; }
+.tp-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,var(--tp-field-width)),1fr)); gap: var(--tp-space-3); }
+.tp-help { color: var(--tp-text-soft); font-size: .875rem; line-height: 1.5; margin: 0; }
+/* Densidade e hierarquia do painel TikPlay, sem afetar a tela pública. */
+.tp-admin-controls .tp-card { box-shadow: var(--tp-shadow-card); gap: var(--tp-space-2); padding: var(--tp-space-3); }
+.tp-admin-controls .tp-card h1, .tp-admin-controls .tp-card h2 { font: 900 .95rem var(--tp-font-display); text-transform: uppercase; letter-spacing: .05em; margin: 0; padding-bottom: var(--tp-space-2); border-bottom: var(--tp-line) solid var(--tp-border); }
+.tp-admin-controls .tp-card h1 small { font: inherit; }
+.tp-admin-controls .tp-card h3 { font-size: .8125rem; font-weight: 900; margin: var(--tp-space-3) 0 var(--tp-space-2); }
+.tp-admin-controls .tp-btn { font-size: .8125rem; font-weight: 800; padding: var(--tp-space-1) var(--tp-space-3); box-shadow: var(--tp-shadow-button); }
+.tp-admin-controls .tp-btn:disabled { box-shadow: none; }
+.tp-admin-controls .tp-input, .tp-admin-controls .tp-select { font-size: .8125rem; min-height: var(--tp-control-height); padding: var(--tp-space-1) var(--tp-space-2); }
+.tp-admin-controls .tp-label { font-size: .75rem; font-weight: 800; }
+.tp-admin-controls .tp-help { font-size: .75rem; line-height: 1.4; }
+.tp-admin-controls .tp-fields { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.tp-admin-controls fieldset > label:not(.tp-label) { display: flex; align-items: center; gap: var(--tp-space-2); font-size: .75rem; margin-top: var(--tp-space-2); }
+.tp-admin-controls fieldset > .tp-label { margin: var(--tp-space-3) 0; }
+.tp-admin-controls input[type="checkbox"] { accent-color: var(--tp-yellow); }
+.tp-admin-controls :is(button,input,select):focus-visible { outline-color: var(--tp-yellow); }
+@media(max-width: 600px) { .tp-admin-controls .tp-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width: 420px) { .tp-admin-controls .tp-fields { grid-template-columns: 1fr; } }

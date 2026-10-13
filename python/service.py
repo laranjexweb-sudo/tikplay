@@ -16,6 +16,7 @@ except Exception:
 
 from game import JogoContexto, CacaPalavras, VPetEngine, TresPontinhos, strip_accents, GIFT_PT_MAP
 from duelo import DueloEngine
+from corda import CordaEngine
 from batalha import BatalhaEngine
 from tiktools_handler import TikToolsHandler
 from tiktoklive_handler import TikTokLiveHandler
@@ -192,6 +193,8 @@ class GameSession:
         self._vpet_task = None
         self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
         self._tres_task = None
+        self.corda = CordaEngine(emit_cb=self._emit_duelo)
+        self._corda_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
         self._duelo_reset_task = None
         self._duelo_match_task = None
@@ -428,6 +431,7 @@ class GameSession:
             entry["avatar"] = avatar
         self._likes_dirty = True
         self.battle.add_taps(user, nickname, avatar, like_count)
+        self.corda.like(self._stable_uid(user, user_meta), like_count, avatar, user, nickname)
         self._duelo_handle_tap(user, like_count, user_meta, avatar)
         # Meta de tap da Palavra Secreta: durante o Final Boss ela fica CONGELADA
         # (não incrementa nem dispara ações da meta enquanto o Boss estiver ativo).
@@ -562,6 +566,14 @@ class GameSession:
             emit(self.tenant_id, "log", payload)
         else:
             emit(self.tenant_id, "game", {"type": type_, **payload})
+
+    async def _corda_loop(self):
+        try:
+            while True:
+                self.corda.tick()
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            return
 
     def _emit_duelo(self, type_, payload):
         """Encaminha eventos do Duelo 1x1 para o node (game/browser)."""
@@ -842,6 +854,9 @@ class GameSession:
             "avatar": avatar or "",
             "text": text,
         })
+        allowed, _ = self._check_access(user_meta)
+        if allowed:
+            self.corda.join(self._stable_uid(user, user_meta), raw, user, nickname, avatar)
         self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
 
         # ---------------------------------------------------------
@@ -1035,6 +1050,11 @@ class GameSession:
         # BICHINHO VIRTUAL: presente alimenta/choca/ataca o boss (não afeta o fluxo dos jogos)
         if self.vpet.active:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
+
+        allowed, _ = self._check_access(user_meta)
+        if allowed:
+            self.corda.gift(gift_id, gift_name, diamond_count, repeat_count,
+                            self._stable_uid(user, user_meta))
 
         # DUELO 1x1: presente cadastrado dispara golpe/escudo (módulo isolado, retrocompatível)
         duelo_would_match = False
@@ -1490,6 +1510,14 @@ class GameSession:
                 )
                 if w:
                     self._emit_caca_found(w)
+            elif c in ("corda_start", "corda_new_match"):
+                self.corda.start(cmd.get("config") or {})
+                emit(self.tenant_id, "log", "[CORDA] Nova partida iniciada")
+            elif c == "corda_stop":
+                self.corda.stop()
+                emit(self.tenant_id, "log", "[CORDA] Jogo parado")
+            elif c == "corda_test":
+                self.corda.add_force(cmd.get("side"), cmd.get("force", 25), "test", "streamer")
             elif c == "duelo_start":
                 self._cancel_duelo_match_restart()
                 self._cancel_duelo_timed_tasks()
@@ -1593,6 +1621,7 @@ class GameSession:
         cmd_task = asyncio.create_task(self._command_loop())
         self._likes_loop_task = asyncio.create_task(self._likes_loop())
         self._vpet_task = asyncio.create_task(self.vpet.run())
+        self._corda_task = asyncio.create_task(self._corda_loop())
         try:
             await asyncio.wait({handler_task, cmd_task}, return_when=asyncio.FIRST_COMPLETED)
         except asyncio.CancelledError:
@@ -1604,6 +1633,14 @@ class GameSession:
                 await asyncio.wait({handler_task, cmd_task}, timeout=5)
             except asyncio.CancelledError:
                 pass
+            self.corda.stop()
+            if self._corda_task:
+                self._corda_task.cancel()
+                try:
+                    await self._corda_task
+                except asyncio.CancelledError:
+                    pass
+                self._corda_task = None
             self.battle.stop()
             if self._vpet_task:
                 self._vpet_task.cancel()
@@ -1758,7 +1795,7 @@ async def process_commands(queue):
             else:
                 emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
 
-        elif c in ("duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
+        elif c in ("corda_start", "corda_stop", "corda_new_match", "corda_test", "duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)

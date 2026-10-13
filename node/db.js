@@ -332,6 +332,20 @@ function validateInvite(inv) {
   return { ok: true };
 }
 
+// CORDA: regras persistentes por tenant; partidas ativas permanecem efêmeras.
+db.exec(`CREATE TABLE IF NOT EXISTS corda_config (
+  tenant_id INTEGER PRIMARY KEY, config TEXT NOT NULL DEFAULT '{}'
+)`);
+function getCordaConfig(tenantId) {
+  const row = db.prepare("SELECT config FROM corda_config WHERE tenant_id = ?").get(tenantId);
+  try { return JSON.parse(row?.config || '{}'); } catch { return {}; }
+}
+function saveCordaConfig(tenantId, config) {
+  db.prepare(`INSERT INTO corda_config (tenant_id, config) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET config=excluded.config`).run(tenantId, JSON.stringify(config));
+  return getCordaConfig(tenantId);
+}
+
 // ---------------- Duelo 1x1 ----------------
 
 function getDueloConfig(tenantId) {
@@ -1117,6 +1131,8 @@ module.exports = {
   revokeInvite,
   validateInvite,
   registerWithInvite,
+  getCordaConfig,
+  saveCordaConfig,
   getDueloConfig,
   saveDueloConfig,
   getUserByEmail,

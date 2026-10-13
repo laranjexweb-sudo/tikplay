@@ -1,0 +1,75 @@
+// Executar com o servidor de fixture em 3112 e CORDA_TEST_DIR apontando seu diretório.
+const assert = require('node:assert/strict'), fs=require('node:fs'),path=require('node:path');
+const { chromium } = require(process.env.CORDA_PLAYWRIGHT_MODULE || 'playwright');
+const dir=process.env.CORDA_TEST_DIR;
+const credentials=JSON.parse(fs.readFileSync(path.join(dir,'auth.json'),'utf8'));
+const base='http://localhost:'+(process.env.CORDA_TEST_PORT || 3112);
+async function run() {
+  const browser=await chromium.launch({headless:true,channel:'msedge'});
+  const context=await browser.newContext({viewport:{width:1100,height:900}});
+  await context.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
+  await context.addInitScript(token=>localStorage.setItem('token',token),credentials.token);
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const screenshot=async name=>page.screenshot({path:path.join(dir,name+'.png'),fullPage:true});
+  try {
+    await page.goto(base+'/corda?demo=1');await page.waitForFunction(()=>ready);
+    await screenshot('01-neutro');
+    await page.locator('[data-demo-team="flavio"]').click();
+    await page.locator('.tp-corda-join.blue').waitFor();
+    assert.match(await page.locator('.tp-corda-join.blue').textContent(),/TIME AZUL/);
+    await page.waitForTimeout(250);await screenshot('10-entrada-azul');
+    await page.locator('[data-demo-team="lula"]').click();await page.locator('.tp-corda-join.red').waitFor();
+    await page.locator('[data-demo-like="lula"]').click();await page.locator('.tp-corda-face.red').first().waitFor();
+    assert.match(await page.locator('.tp-corda-tap-float.red').textContent(),/\+20 TAP/);
+    await page.waitForTimeout(200);await screenshot('11-curtidas-vermelho');
+    await page.evaluate(()=>{for(let i=0;i<40;i++)showLikeBurst({side:'flavio',user_id:'cap-'+i,delta:100,round_id:state.round_id});});
+    assert.ok(await page.locator('.tp-corda-face.blue').count()<=24);
+    await page.locator('#demoReset').click();assert.equal(await page.locator('.tp-corda-face').count(),0);
+    for(let i=0;i<3;i++)await page.locator('[data-demo="flavio"]').click();
+    await page.waitForFunction(()=>Math.abs(state.position+75)<1e-6);await page.waitForTimeout(300);
+    await screenshot('02-pressao-esquerda');
+    await page.locator('[data-demo="flavio"]').click();await page.waitForTimeout(150);await screenshot('03-puxao-fx');
+    await page.waitForFunction(()=>state.winner==='flavio');await page.waitForTimeout(800);await screenshot('04-vitoria-flavio');
+    await page.locator('#demoReset').click();
+    for(let i=0;i<4;i++)await page.locator('[data-demo="lula"]').click();
+    await page.waitForFunction(()=>state.winner==='lula');await page.waitForTimeout(800);await screenshot('05-vitoria-lula');
+    await page.goto(base+'/corda?control=1');await page.waitForFunction(()=>ready&&hydrated);
+    assert.equal(await page.locator('[data-gift-side="flavio"]').inputValue(),'test-blue');
+    await page.locator('[name="round_time_s"]').fill('240');await page.locator('#save').click();
+    await page.waitForFunction(()=>document.getElementById('notice').textContent==='Regras salvas.');
+    const saved=await page.evaluate(async()=>await api('config'));assert.equal(saved.config.round_time_s,240);assert.equal(saved.config.coin_force,.5);
+    assert.equal(saved.config.gifts.length,2);
+    const publicLink=await page.evaluate(async()=>{
+      const url=new URL(await publicGameURL());return {path:url.pathname,hasRoom:!!url.searchParams.get('room'),hasToken:!!url.searchParams.get('tk')};
+    });
+    assert.deepEqual(publicLink,{path:'/corda',hasRoom:true,hasToken:true});
+    assert.equal(saved.config.show_team_balloons,true);assert.equal(saved.config.show_like_bubbles,true);
+    await screenshot('06-controles');
+    await page.locator('#start').click();await page.waitForFunction(()=>state.active&&state.round_active);
+    assert.equal(await page.locator('#save').isDisabled(),true);
+    await page.locator('[data-test="flavio"]').click();await page.waitForFunction(()=>state.position===-25);
+    await page.reload();await page.waitForFunction(()=>ready&&hydrated&&state.position===-25);
+    const second=await context.newPage();await second.goto(base+'/corda');await second.waitForFunction(()=>ready&&state.position===-25);
+    await page.locator('#stop').click();await page.waitForFunction(()=>!state.active);await second.waitForFunction(()=>!state.active);await second.close();
+    await page.locator('[name="show_team_balloons"]').uncheck();await page.locator('[name="show_like_bubbles"]').uncheck();await page.locator('#save').click();
+    await page.waitForFunction(()=>document.getElementById('notice').textContent==='Regras salvas.');
+    const muted=await page.evaluate(async()=>await api('config'));assert.equal(muted.config.show_team_balloons,false);assert.equal(muted.config.show_like_bubbles,false);
+    await page.locator('#start').click();await page.waitForFunction(()=>state.active&&state.round_active);
+    await page.evaluate(()=>{showTeamJoin({side:'flavio',user_id:'muted',round_id:state.round_id});showLikeBurst({side:'flavio',user_id:'muted',delta:20,round_id:state.round_id});});
+    assert.equal(await page.locator('.tp-corda-join,.tp-corda-face').count(),0);
+    await page.locator('#stop').click();await page.waitForFunction(()=>!state.active);
+    await page.goto(base+'/painel#corda');await page.waitForFunction(()=>document.getElementById('cordaPanel')?.getAttribute('src'));
+    const iframe=page.frameLocator('#cordaPanel');await iframe.locator('#notice').filter({hasText:'Regras carregadas'}).waitFor();
+    await page.frames().find(f=>f.url().includes('/corda?control=1')).waitForFunction(()=>ready);
+    await screenshot('07-painel');
+    await page.goto(base+'/corda?demo=1');await page.setViewportSize({width:375,height:812});await page.waitForFunction(()=>ready);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await screenshot('08-mobile');
+    await page.goto(base+'/corda?control=1');await page.waitForFunction(()=>ready&&hydrated);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await screenshot('09-controles-mobile');
+    assert.deepEqual(errors,[]);
+    console.log('CORDA navegador OK: cena, efeitos, ambas vitórias, salvar regras, motor real via WS, recarga, duas telas sincronizadas, painel e mobile. Screenshots: '+dir);
+  } finally {await browser.close();}
+}
+run().catch(err=>{console.error(err);process.exitCode=1;});

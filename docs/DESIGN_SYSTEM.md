@@ -436,6 +436,36 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-12 — CORDA: áudios fornecidos integrados; trilha em loop com liga/desliga e volume, efeitos por entrada em movimento/pressão/vitória com volume próprio. Ajustes persistentes durante a partida e botão para liberação de autoplay no navegador.
+
+- 2026-10-12 — CORDA: seleção de presentes refinada conforme Duelo: blocos por equipe, busca individual, nome original no campo, tradução + original nas sugestões, foto de 24px, moedas e opção Ativo. Seleção e salvamento verificados no navegador.
+
+- 2026-10-12 — CORDA: seleção de presentes alinhada ao Duelo com busca por nome PT/EN/ID, sugestões com foto e moedas, seleção por clique ou setas/Enter. IDs e persistência preservados.
+
+- 2026-10-12 — CORDA: fotos superiores usam /gift-images/ para os arquivos da biblioteca; texto dos nomes removido da exibição, mantido somente em acessibilidade/tooltip.
+
+- 2026-10-12 — CORDA: caixas inferiores de presentes preservadas e ocultadas; fotos maiores dos presentes configurados posicionadas nas laterais superiores, com zoom suave de 4 segundos e respeito a movimento reduzido.
+
+- 2026-10-12 — CORDA: controles alinhados à densidade do painel TikPlay via variante compartilhada tp-admin-controls: títulos compactos em caixa alta, botões/campos de 13px, cards com sombra e grids responsivos de 3/2/1 colunas. Tela pública preservada.
+
+- 2026-10-12 — CORDA: iframe do painel com altura automática via ResizeObserver/postMessage validado por origem e janela; rolagem interna removida para usar apenas a rolagem do painel, inclusive ao adicionar presentes ou mudar a largura.
+
+- 2026-10-12 — CORDA: prévia da arena oculta no painel; controles usam a largura disponível e links públicos preservados.
+
+- 2026-10-12 — CORDA: banners existentes azul-ganhou.png/vermelho-ganhou.png exibidos no resultado após a queda; ocultados na rodada seguinte, reinício e parada.
+
+- 2026-10-12 — CORDA: balanço suave contínuo durante a disputa (amplitude de 2,5 unidades da cena, ciclo de aproximadamente 7 segundos), somado ao tremor de pressão alta; preservadas pegadas da corda e preferência de movimento reduzido.
+
+- 2026-10-12 — CORDA: nomes visíveis AZUL/VERMELHO; placar com escala padrão de 82%, controles persistentes de X/Y/escala com ajuste durante a partida; presentes por equipe em caixas próprias na tela pública, sem restaurar a faixa inferior de instrução.
+
+- 2026-10-12 — CORDA: faixa inferior de instrução de equipe e contagem de curtidas ocultada a pedido do usuário; elementos e atualizações preservados.
+
+- 2026-10-12 — CORDA: placar reorganizado com cronômetro no cabeçalho, nomes/vitórias por equipe, barras próprias de progresso de TAP e barra central exclusiva para a posição da corda.
+
+- 2026-10-12 — CORDA: placar no estilo escuro/dourado do Duelo 1x1; entrada e troca de equipes pelo chat com balões de nome/avatar; bolhas e +TAP por equipe. Painel com contagem de participantes e opções persistentes de exibição dos dois efeitos. Alteração solicitada pelo usuário; animação existente da disputa preservada.
+
+- 2026-10-12 — CORDA: nova tela de duelo com cenário fixo, deslocamento conjunto, poses e efeito em quem recebe o puxão; controles no painel via iframe isolado. Componentes `tp-*` compartilhados e tokens adicionais. Ampliação funcional autorizada pelo usuário nesta sessão; não altera as mecânicas do Duelo existente. Validação registrada em `docs/corda.md`.
+
 - 2026-10-12 — Palavra Secreta pública: letras em linha única centralizada; largura e fonte reduzidas apenas quando excedem o quadro, com espaçamento adaptativo e altura preservada. Validação de 4 a 20 letras em viewports de 1280, 640, 375 e 320; sem alterações de backend.
 
 - 2026-10-12 — Slot de próximo palpite ocultado ao renderizar resultado final e reativado no início da nova partida.

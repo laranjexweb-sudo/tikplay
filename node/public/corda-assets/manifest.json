@@ -1,0 +1,182 @@
+{
+  "cenario.png": {
+    "size": [
+      1134,
+      1387
+    ],
+    "bounds": [
+      0,
+      0,
+      1134,
+      1387
+    ]
+  },
+  "corda-chao.png": {
+    "size": [
+      1448,
+      1086
+    ],
+    "bounds": [
+      33,
+      506,
+      1413,
+      677
+    ]
+  },
+  "corda-ok.png": {
+    "size": [
+      352,
+      144
+    ],
+    "bounds": [
+      0,
+      63,
+      352,
+      81
+    ]
+  },
+  "flavio-ok/derrotado.png": {
+    "size": [
+      355,
+      444
+    ],
+    "bounds": [
+      3,
+      148,
+      353,
+      344
+    ]
+  },
+  "flavio-ok/neutro.png": {
+    "size": [
+      316,
+      473
+    ],
+    "bounds": [
+      6,
+      26,
+      309,
+      467
+    ]
+  },
+  "flavio-ok/pressao.png": {
+    "size": [
+      344,
+      457
+    ],
+    "bounds": [
+      8,
+      13,
+      342,
+      445
+    ]
+  },
+  "flavio-ok/puxando.png": {
+    "size": [
+      319,
+      479
+    ],
+    "bounds": [
+      7,
+      31,
+      318,
+      445
+    ]
+  },
+  "flavio-ok/recebendo-puxao-fx.png": {
+    "size": [
+      815,
+      612
+    ],
+    "bounds": [
+      82,
+      40,
+      770,
+      573
+    ]
+  },
+  "flavio-ok/vitoria.png": {
+    "size": [
+      278,
+      493
+    ],
+    "bounds": [
+      11,
+      34,
+      272,
+      475
+    ]
+  },
+  "lula-ok/derrotado.png": {
+    "size": [
+      431,
+      522
+    ],
+    "bounds": [
+      15,
+      169,
+      429,
+      367
+    ]
+  },
+  "lula-ok/neutro.png": {
+    "size": [
+      321,
+      480
+    ],
+    "bounds": [
+      21,
+      21,
+      321,
+      464
+    ]
+  },
+  "lula-ok/pressao.png": {
+    "size": [
+      346,
+      460
+    ],
+    "bounds": [
+      6,
+      12,
+      346,
+      455
+    ]
+  },
+  "lula-ok/puxando.png": {
+    "size": [
+      320,
+      480
+    ],
+    "bounds": [
+      8,
+      25,
+      320,
+      455
+    ]
+  },
+  "lula-ok/recebendo-puxao-fx.png": {
+    "size": [
+      815,
+      612
+    ],
+    "bounds": [
+      45,
+      40,
+      733,
+      573
+    ]
+  },
+  "lula-ok/vitoria.png": {
+    "size": [
+      296,
+      525
+    ],
+    "bounds": [
+      10,
+      26,
+      285,
+      500
+    ]
+  }
+}

@@ -1,4 +1,21 @@
 :root {
+  --tp-line: 0.125rem;
+  --tp-shadow-button: .125rem .125rem 0 var(--tp-black);
+  --tp-control-height: 2.25rem;
+  --tp-field-width: 10rem;
+  --tp-corda-preview-width: 30rem;
+  --tp-corda-panel-height: 82rem;
+  --tp-corda-demo-height: 5rem;
+  /* Placar e interações herdados do Duelo 1x1. */
+  --tp-duelo-score-bg: rgba(8, 13, 26, 0.9);
+  --tp-duelo-score-border: #c9a227;
+  --tp-duelo-score-top: #f0c84a;
+  --tp-duelo-blue: #1f6feb;
+  --tp-duelo-blue-light: #5bc0ff;
+  --tp-duelo-red: #c0392b;
+  --tp-duelo-red-light: #ff6b6b;
+  --tp-duelo-balloon-bg: #0d1728;
+  --tp-duelo-effect-shadow: 0 0.125rem 0.5rem rgba(0,0,0,.4);
   /* Brand */
   --tp-yellow: #fec90f;         /* amarelo TikPlay (já usado) */
   --tp-yellow-hover: #edb800;
