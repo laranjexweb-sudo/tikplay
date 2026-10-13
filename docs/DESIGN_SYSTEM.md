@@ -576,3 +576,5 @@ node/public/
 - 2026-10-13: Pontos de encaixe da corda nas poses do novo personagem vermelho recalibrados para as mãos em neutro/puxando/pressão; corda permanece desenhada atrás do personagem.
 
 - 2026-10-13: Presentes que disparam impacto sobem balão com foto/nome do remetente e ENVIOU PUXÃO na cor da equipe.
+
+- 2026-10-13: Switch Modo Boss no bloco Palavra Secreta, seguindo controles existentes; hidratação, detecção de alteração e salvamento automático via boss_mode.

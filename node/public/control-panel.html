@@ -508,6 +508,15 @@
             </div>
             <div class="mt-2">
               <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="bossMode" checked onchange="onSettingsChanged()" aria-describedby="bossModeHelp">
+                <label class="form-check-label" for="bossMode"><strong>Modo Boss</strong></label>
+              </div>
+              <div class="text-secondary" id="bossModeHelp" style="font-size:0.75rem">
+                Ligado: ativa o Final Boss perto da palavra secreta. Desligado: ao chegar entre as 3 primeiras posições, a meta de TAP dobra e as dicas não revelam as posições 1 e 2.
+              </div>
+            </div>
+            <div class="mt-2">
+              <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="riddleAutoNarrate" onchange="onSettingsChanged()">
                 <label class="form-check-label" for="riddleAutoNarrate"><strong>Narrar charada automaticamente</strong></label>
               </div>
@@ -3285,7 +3294,7 @@ function createPreferenceSaver({ statusId, ready = () => true, read, send, commi
 const preferencePost = (path, body) => apiFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function preferenceHydration(scope, loaded, error = "") {
-  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
+  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
   document.querySelectorAll(selectors[scope]).forEach(el => { if (el.matches("input,select,textarea")) el.disabled = !loaded; else el.inert = !loaded; });
   const statusId = {settings:"settingsSaveStatus",gifts:"giftSaveStatus",tres:"tresSaveStatus",duelo:"dueloSaveStatus"}[scope];
   const el = document.getElementById(statusId); if(el) el.textContent = loaded ? "Preferências salvas automaticamente após alterações." : (error || "Carregando preferências…");
@@ -3307,6 +3316,7 @@ function readPanelSettings() {
     auto_round: document.getElementById("autoRound").checked,
     auto_round_pause: Number(document.getElementById("autoRoundPause").value) || 20,
     tap_meta: Number(document.getElementById("tapMeta").value) || 1000,
+    boss_mode: document.getElementById("bossMode").checked,
     riddle_auto_narrate: document.getElementById("riddleAutoNarrate").checked
   };
 }
@@ -3400,6 +3410,7 @@ function applySettingsUI(settings) {
   if (autoRoundPauseEl) autoRoundPauseEl.value = s.auto_round_pause || 20;
   const tapMetaEl = document.getElementById("tapMeta");
   if (tapMetaEl) tapMetaEl.value = s.tap_meta || 1000;
+  document.getElementById("bossMode").checked = s.boss_mode !== false;
   const riddleAutoNarrateEl = document.getElementById("riddleAutoNarrate");
   if (riddleAutoNarrateEl) riddleAutoNarrateEl.checked = s.riddle_auto_narrate !== false;
   settingsDirty = false;
@@ -3493,6 +3504,7 @@ function isSettingsDirty() {
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
     Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
     Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000) ||
+    document.getElementById("bossMode").checked !== (savedSettings.boss_mode !== false) ||
     (document.getElementById("riddleAutoNarrate") ? !!document.getElementById("riddleAutoNarrate").checked : false) !== (savedSettings.riddle_auto_narrate !== false)
   );
 }
