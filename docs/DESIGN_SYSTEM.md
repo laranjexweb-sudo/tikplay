@@ -603,4 +603,8 @@ node/public/
 
 - 2026-10-13: Dashboard como seção inicial do Admin, com clientes online, lives conectadas, partidas em andamento, uso por jogo e atividade dos clientes. Atualização manual, busca e acesso à conta; dados ausentes não inferem offline. Frontend validado com API simulada em desktop/mobile; histórico depende do backend.
 
-- 2026-10-13: Nova sobreposição de curtidas flutuantes, com fundo transparente, corações e avatares animados; eventos reais do ranking atualizam efeitos por participante, prévia demonstrativa disponível no painel.
+- 2026-10-13: Nova sobreposição de curtidas flutuantes, com fundo transparente, corações e avatares animados; evento individual de curtida inclui espectadores fora do ranking e filtros de pontuação, prévia demonstrativa disponível no painel.
+
+- 2026-10-13: Legibilidade do ranking V3 reforçada para cenários de live variáveis, com contorno/sombra escura e reticências em nomes longos; nome completo preservado como título e rótulo acessível.
+
+- 2026-10-13: Painel de Sobreposições organiza as prévias V2/V3 ao lado dos respectivos botões de posição e escala, com orientação para configurar a origem no TikTok Live Studio na resolução de saída da live; ajustes são salvos por streamer e enviados em tempo real às fontes abertas.

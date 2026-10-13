@@ -240,12 +240,21 @@
   }
 </style>
 <style>
-.tp-overlay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--tp-space-4); }
+.tp-overlay-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--tp-space-4); }
+.tp-overlay-row { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:var(--tp-space-4); align-items:stretch; }
 .tp-overlay-card { margin:0; min-width:0; display:flex; flex-direction:column; }
 .tp-overlay-card h3 { font-size:1.1rem; font-weight:900; }
 .tp-overlay-preview { width:100%; max-width:400px; height:220px; padding:var(--tp-space-3); background:var(--tp-surface-soft); border:var(--tp-line) solid var(--tp-border); border-radius:var(--tp-radius-sm); margin-bottom:var(--tp-space-3); }
 .tp-overlay-card .d-flex { margin-top:auto; }
-@media(max-width:850px) { .tp-overlay-grid { grid-template-columns:1fr; } }
+.tp-overlay-controls-card { margin:0; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.tp-overlay-controls-card h3 { font-size:1.1rem; font-weight:900; }
+.tp-overlay-adjust { display:flex; align-items:center; gap:var(--tp-space-4); flex-wrap:wrap; }
+.tp-overlay-dpad { display:grid; grid-template-columns:repeat(3,2.75rem); grid-template-rows:repeat(3,2.5rem); gap:var(--tp-space-1); }
+.tp-overlay-dpad .btn { padding:0; }
+.tp-overlay-adjust-actions { display:flex; gap:var(--tp-space-2); flex-wrap:wrap; align-items:center; }
+.tp-overlay-layout-readout { font-weight:800; color:var(--tp-text); }
+.tp-overlay-layout-readout span { display:inline-block; margin-right:var(--tp-space-3); }
+@media(max-width:850px) { .tp-overlay-row { grid-template-columns:1fr; } }
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
@@ -400,12 +409,21 @@
         <div class="nb-card mb-3">
           <h2>Sobreposições</h2>
           <p class="text-secondary">Ranking de curtidas da live, com fundo transparente para fonte de navegador no OBS ou TikTok Live Studio.</p>
-          <label class="form-label" for="likesOverlayCount">Quantidade de participantes</label>
+          <div class="alert alert-warning" role="note"><strong>Configuração no TikTok Live Studio:</strong> na fonte do navegador, escolha resolução personalizada e informe a mesma resolução de saída configurada para sua live. O posicionamento e a escala abaixo são ajustados nessa tela real.</div>
+          <label class="form-label" for="likesOverlayCount">Quantidade de participantes nos rankings</label>
           <select class="form-select mb-3" id="likesOverlayCount" style="max-width:260px"><option value="1">1 participantes</option><option value="2">2 participantes</option><option value="3">3 participantes</option><option value="4">4 participantes</option><option value="5" selected>5 participantes</option><option value="6">6 participantes</option><option value="7">7 participantes</option><option value="8">8 participantes</option><option value="9">9 participantes</option><option value="10">10 participantes</option></select>
-          <div class="tp-overlay-grid"><div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V2</h3><p class="text-secondary">Lista compacta com acabamento neon.</p><p class="text-secondary">Prévia dos 3 primeiros · dados fictícios</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V2 com dados de exemplo" src="/overlays/likes/v2/overlay.html?demo=1&amp;count=3" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v2',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v2',true)">Copiar link público / OBS</button></div><p id="likesOverlayV2Status" class="text-secondary mt-2" role="status"></p></div>
-          <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V3</h3><p class="text-secondary">Lista neon com molduras de ouro, prata e bronze no pódio.</p><p class="text-secondary">Prévia dos 3 primeiros · dados fictícios</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V3 com dados de exemplo" src="/overlays/likes/v3/overlay.html?demo=1&amp;count=3" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v3',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v3',true)">Copiar link público / OBS</button></div><p id="likesOverlayV3Status" class="text-secondary mt-2" role="status"></p></div>
-          <div class="nb-card tp-overlay-card"><h3>Curtidas flutuantes</h3><p class="text-secondary">Corações e avatares sobem sobre a live, sem fundo.</p><p class="text-secondary">Prévia animada · link usa curtidas reais</p><div class="tp-overlay-preview"><iframe title="Prévia de corações e avatares flutuantes" src="/overlays/likes/fountain/overlay.html?demo=1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('fountain',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('fountain',true)">Copiar link público / OBS</button></div><p id="likesOverlayFountainStatus" class="text-secondary mt-2" role="status"></p></div>
-          </div><p class="text-secondary mt-3">Para os rankings, use uma fonte de 524 × 1060 px e copie o link novamente ao mudar a quantidade. Na sobreposição de curtidas flutuantes, use a resolução da sua live. Os efeitos acompanham as curtidas da sessão atual.</p>
+          <div class="tp-overlay-grid">
+            <div class="tp-overlay-row">
+              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V2</h3><p class="text-secondary">Lista compacta com acabamento neon.</p><p class="text-secondary">Prévia de exemplo</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V2 com dados de exemplo" src="/overlays/likes/v2/overlay.html?demo=1&amp;count=3&amp;rev=layout-controls-1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v2',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v2',true)">Copiar link público / OBS</button></div><p id="likesOverlayV2Status" class="text-secondary mt-2" role="status"></p></div>
+              <section class="nb-card tp-overlay-controls-card" data-overlay-controls="v2" aria-labelledby="likesOverlayV2ControlsTitle"><h3 id="likesOverlayV2ControlsTitle">Controle de posição e escala · V2</h3><p class="text-secondary">Use os botões e acompanhe o resultado na fonte aberta no TikTok Live Studio.</p><div class="tp-overlay-adjust"><div class="tp-overlay-dpad" role="group" aria-label="Mover ranking V2"><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="up" aria-label="Mover ranking V2 para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="left" aria-label="Mover ranking V2 para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="right" aria-label="Mover ranking V2 para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="down" aria-label="Mover ranking V2 para baixo">↓</button><span></span></div><div class="tp-overlay-adjust-actions" role="group" aria-label="Escala V2"><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="down" aria-label="Diminuir escala V2">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="up" aria-label="Aumentar escala V2">+</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-step aria-pressed="false">Passo: 1%</button><button type="button" class="btn btn-nb btn-warning btn-sm" data-overlay-reset>Resetar</button></div></div><p class="tp-overlay-layout-readout mt-3 mb-1" data-overlay-layout-readout aria-live="polite">X: 0% · Y: 0% · Escala: 100%</p><p class="text-secondary mb-0" data-overlay-layout-status role="status" aria-live="polite">Carregando posição salva…</p></section>
+            </div>
+            <div class="tp-overlay-row">
+              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V3</h3><p class="text-secondary">Lista neon com molduras de ouro, prata e bronze no pódio.</p><p class="text-secondary">Prévia de exemplo</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V3 com dados de exemplo" src="/overlays/likes/v3/overlay.html?demo=1&amp;count=3&amp;rev=layout-controls-1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v3',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v3',true)">Copiar link público / OBS</button></div><p id="likesOverlayV3Status" class="text-secondary mt-2" role="status"></p></div>
+              <section class="nb-card tp-overlay-controls-card" data-overlay-controls="v3" aria-labelledby="likesOverlayV3ControlsTitle"><h3 id="likesOverlayV3ControlsTitle">Controle de posição e escala · V3</h3><p class="text-secondary">Use os botões e acompanhe o resultado na fonte aberta no TikTok Live Studio.</p><div class="tp-overlay-adjust"><div class="tp-overlay-dpad" role="group" aria-label="Mover ranking V3"><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="up" aria-label="Mover ranking V3 para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="left" aria-label="Mover ranking V3 para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="right" aria-label="Mover ranking V3 para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="down" aria-label="Mover ranking V3 para baixo">↓</button><span></span></div><div class="tp-overlay-adjust-actions" role="group" aria-label="Escala V3"><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="down" aria-label="Diminuir escala V3">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="up" aria-label="Aumentar escala V3">+</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-step aria-pressed="false">Passo: 1%</button><button type="button" class="btn btn-nb btn-warning btn-sm" data-overlay-reset>Resetar</button></div></div><p class="tp-overlay-layout-readout mt-3 mb-1" data-overlay-layout-readout aria-live="polite">X: 0% · Y: 0% · Escala: 100%</p><p class="text-secondary mb-0" data-overlay-layout-status role="status" aria-live="polite">Carregando posição salva…</p></section>
+            </div>
+            <div class="nb-card tp-overlay-card"><h3>Curtidas flutuantes</h3><p class="text-secondary">Corações e avatares de quem curtir sobem sobre a live, sem filtro de ranking.</p><p class="text-secondary">Prévia animada · link usa curtidas reais</p><div class="tp-overlay-preview"><iframe title="Prévia de corações e avatares flutuantes" src="/overlays/likes/fountain/overlay.html?demo=1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('fountain',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('fountain',true)">Copiar link público / OBS</button></div><p id="likesOverlayFountainStatus" class="text-secondary mt-2" role="status"></p></div>
+          </div>
+          <p class="text-secondary mt-3">Os efeitos de curtidas flutuantes acompanham a resolução de saída da sua live.</p>
         </div>
       </div>
 
@@ -4798,12 +4816,58 @@ async function likesOverlayLink(version,copy) {
     const data=await apiFetch('/api/game/room-link',{method:'POST'});
     if(!data.success)throw Error(data.error || 'Não foi possível gerar o link.');
     const url=new URL('/overlays/likes/'+version+'/overlay.html',location.origin);
-    url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);url.searchParams.set('count',document.getElementById('likesOverlayCount').value);
+    url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);if(version!=='fountain'){url.searchParams.set('count',document.getElementById('likesOverlayCount').value);url.searchParams.set('rev','layout-controls-1');}
     if(copy){await navigator.clipboard.writeText(url.href);status.textContent='Link público copiado. Cole na fonte de navegador.';}
     else if(opened){opened.location.href=url.href;status.textContent='Sobreposição aberta.';}
     else status.textContent='Permita abrir a janela ou use Copiar link público.';
   }catch(err){if(opened)opened.close();status.textContent=err.message;}
 }
+const likesOverlayLayouts={v2:{x:0,y:0,scale:1},v3:{x:0,y:0,scale:1}};
+const likesOverlayLayoutReady={v2:false,v3:false};
+const likesOverlayLayoutTimers={v2:0,v3:0},likesOverlaySaveRevisions={v2:0,v3:0};
+const likesOverlaySaveQueues={v2:Promise.resolve(),v3:Promise.resolve()};
+let likesOverlayNudgeStep=1;
+function paintLikesOverlayLayout(version) {
+  const layout=likesOverlayLayouts[version];
+  const panel=document.querySelector(`[data-overlay-controls="${version}"]`);
+  if(!panel||!layout)return;
+  const readout=panel.querySelector('[data-overlay-layout-readout]');
+  if(readout)readout.textContent=`X: ${layout.x}% · Y: ${layout.y}% · Escala: ${Math.round(layout.scale*100)}%`;
+  const step=panel.querySelector('[data-overlay-step]');
+  if(step){step.textContent=`Passo: ${likesOverlayNudgeStep}%`;step.setAttribute('aria-pressed',String(likesOverlayNudgeStep===5));}
+}
+function setLikesOverlayLayout(version,next,save=true) {
+  const layout=likesOverlayLayouts[version];if(!layout)return;
+  layout.x=Math.round(Math.max(0,Math.min(100,Number(next.x)||0)));
+  layout.y=Math.round(Math.max(0,Math.min(100,Number(next.y)||0)));
+  layout.scale=Math.round(Math.max(.5,Math.min(2,Number(next.scale)||1))*100)/100;
+  paintLikesOverlayLayout(version);
+  if(save&&likesOverlayLayoutReady[version]){const panel=document.querySelector(`[data-overlay-controls="${version}"]`),status=panel.querySelector('[data-overlay-layout-status]');status.textContent='Atualizando a fonte…';const revision=++likesOverlaySaveRevisions[version];clearTimeout(likesOverlayLayoutTimers[version]);likesOverlayLayoutTimers[version]=setTimeout(()=>saveLikesOverlayLayout(version,revision),100);}
+}
+async function saveLikesOverlayLayout(version,revision) {
+  const panel=document.querySelector(`[data-overlay-controls="${version}"]`),status=panel.querySelector('[data-overlay-layout-status]');
+  const snapshot={...likesOverlayLayouts[version]};
+  likesOverlaySaveQueues[version]=likesOverlaySaveQueues[version].catch(()=>{}).then(async()=>{try{const data=await apiFetch(`/api/likes-overlay/layout?version=${version}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:snapshot})});if(!data||!data.success)throw new Error(data&&data.error||'Não foi possível salvar.');if(revision===likesOverlaySaveRevisions[version])status.textContent='Atualizado na fonte e salvo para esta conta.';}
+  catch(error){if(revision===likesOverlaySaveRevisions[version])status.textContent='Falha ao atualizar a fonte: '+error.message;}});
+  return likesOverlaySaveQueues[version];
+}
+async function loadLikesOverlayLayout(version) {
+  const panel=document.querySelector(`[data-overlay-controls="${version}"]`),status=panel.querySelector('[data-overlay-layout-status]');
+  try{const data=await apiFetch(`/api/likes-overlay/layout?version=${version}`);if(!data||!data.success)throw new Error(data&&data.error||'Não foi possível carregar.');setLikesOverlayLayout(version,data.layout||{},false);likesOverlayLayoutReady[version]=true;status.textContent='Clique nas setas para mover e ajuste a escala.';}
+  catch(error){status.textContent='Não foi possível carregar posição: '+error.message;}
+}
+function initLikesOverlayLayout() {
+  for(const panel of document.querySelectorAll('[data-overlay-controls]')){
+    const version=panel.dataset.overlayControls;
+    panel.querySelectorAll('[data-overlay-move]').forEach(button=>button.addEventListener('click',()=>{const step=likesOverlayNudgeStep;const next={...likesOverlayLayouts[version]};if(button.dataset.overlayMove==='left')next.x-=step;if(button.dataset.overlayMove==='right')next.x+=step;if(button.dataset.overlayMove==='up')next.y-=step;if(button.dataset.overlayMove==='down')next.y+=step;setLikesOverlayLayout(version,next);}));
+    panel.querySelector('[data-overlay-scale="down"]').addEventListener('click',()=>setLikesOverlayLayout(version,{...likesOverlayLayouts[version],scale:likesOverlayLayouts[version].scale-.05}));
+    panel.querySelector('[data-overlay-scale="up"]').addEventListener('click',()=>setLikesOverlayLayout(version,{...likesOverlayLayouts[version],scale:likesOverlayLayouts[version].scale+.05}));
+    panel.querySelector('[data-overlay-step]').addEventListener('click',()=>{likesOverlayNudgeStep=likesOverlayNudgeStep===1?5:1;paintLikesOverlayLayout('v2');paintLikesOverlayLayout('v3');});
+    panel.querySelector('[data-overlay-reset]').addEventListener('click',()=>{likesOverlayNudgeStep=1;paintLikesOverlayLayout('v2');paintLikesOverlayLayout('v3');setLikesOverlayLayout(version,{x:0,y:0,scale:1});});
+    paintLikesOverlayLayout(version);
+  }
+}
+initLikesOverlayLayout();
 async function copyRoomLink(path, statusId = "") {
   const status = statusId ? document.getElementById(statusId) : null;
   if (status) status.textContent = "Preparando URL…";
@@ -4829,6 +4893,7 @@ async function copyRoomLink(path, statusId = "") {
   renderSoundAlerts();
   await loadGiftConfig();
   await loadSettings();
+  await Promise.all(['v2','v3'].map(loadLikesOverlayLayout));
   await loadTresConfig();
   loadPanelVoices();
 })();

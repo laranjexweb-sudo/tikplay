@@ -139,3 +139,26 @@ body.demo-preview { width:100%; background:transparent; }
 
 html.overlay-document,html.overlay-document body.overlay,html.overlay-document .ranking { background:transparent; }
 .plain-avatar .avatar-fallback { display:grid; place-items:center; }
+
+/* Preserve name readability over bright or changing livestream scenes. */
+body.overlay .details { width:100%; max-width:100%; min-width:0; grid-template-columns:minmax(0,1fr); }
+body.overlay .name {
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+  color:var(--tp-text-inverse);
+  font-size:clamp(.875rem,3.8vw,1rem);
+  font-weight:800;
+  line-height:var(--tp-overlay-line-height);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  -webkit-text-stroke:.035em var(--tp-black);
+  paint-order:stroke fill;
+  text-shadow:0 .125rem .25rem var(--tp-black),0 0 .45rem var(--tp-black);
+}
+body.overlay .meta,body.overlay .total {
+  color:var(--tp-text-inverse);
+  text-shadow:0 .125rem .25rem var(--tp-black),0 0 .4rem var(--tp-black);
+}

@@ -38,7 +38,9 @@ html.overlay-document, html.overlay-document body, body.fountain-overlay {
   0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.72) rotate(-8deg); }
   10% { opacity: 1; }
   55% { opacity: .92; transform: translate3d(var(--particle-drift), -52svh, 0) scale(1) rotate(7deg); }
-  100% { opacity: 0; transform: translate3d(var(--particle-drift), -112svh, 0) scale(.8) rotate(-10deg); }
+  72% { opacity: .82; transform: translate3d(var(--particle-drift), -70svh, 0) scale(.94) rotate(5deg); }
+  90% { opacity: 0; transform: translate3d(var(--particle-drift), -88svh, 0) scale(.84) rotate(-5deg); }
+  100% { opacity: 0; transform: translate3d(var(--particle-drift), -94svh, 0) scale(.8) rotate(-10deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .fountain-particle { bottom: 0; transform: translateY(-3rem); animation-name: fountain-fade; animation-duration: 1s; }

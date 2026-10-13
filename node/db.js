@@ -72,6 +72,12 @@ try {
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN boss_mode INTEGER DEFAULT 1");
 } catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1}'");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_v2_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1}'");
+} catch {}
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
 db.exec(`
@@ -182,7 +188,9 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   auto_round_pause INTEGER DEFAULT 20,
   riddle_auto_narrate INTEGER DEFAULT 1,
   tap_meta INTEGER DEFAULT 1000,
-  boss_mode INTEGER DEFAULT 1
+  boss_mode INTEGER DEFAULT 1,
+  likes_overlay_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1}',
+  likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1}'
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
   tenant_id INTEGER PRIMARY KEY,
@@ -269,6 +277,23 @@ CREATE TABLE IF NOT EXISTS banned_words (
   word TEXT UNIQUE NOT NULL
 );
 `);
+db.exec(`
+CREATE TABLE IF NOT EXISTS app_schema_migrations (
+  name TEXT PRIMARY KEY,
+  applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+const likesOverlayDefaultMigration = "likes_overlay_default_top_left_v1";
+if (!db.prepare("SELECT 1 FROM app_schema_migrations WHERE name = ?").get(likesOverlayDefaultMigration)) {
+  // A rota de edição ainda não existia quando 50/50 era o default, então esse
+  // literal legado representa o posicionamento inicial incorreto, não uma escolha.
+  db.prepare(`
+    UPDATE tenant_settings
+    SET likes_overlay_layout = '{"x":0,"y":0,"scale":1}'
+    WHERE likes_overlay_layout = '{"x":50,"y":50,"scale":1}'
+  `).run();
+  db.prepare("INSERT INTO app_schema_migrations (name) VALUES (?)").run(likesOverlayDefaultMigration);
+}
 try { db.exec("ALTER TABLE batalha_rounds ADD COLUMN room_id TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE batalha_interactions ADD COLUMN room_id TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE users ADD COLUMN tiktok_engine TEXT NOT NULL DEFAULT 'tiktoklive'"); } catch {}
@@ -526,6 +551,41 @@ function saveTenantSettings(tenantId, s) {
     (s.tap_meta === null || s.tap_meta === undefined) ? 1000 : s.tap_meta,
     s.boss_mode === false ? 0 : 1
   );
+}
+
+const DEFAULT_LIKES_OVERLAY_LAYOUT = Object.freeze({ x: 0, y: 0, scale: 1 });
+
+function likesOverlayLayoutColumn(version) {
+  if (version === "v2") return "likes_overlay_v2_layout";
+  if (version === "v3") return "likes_overlay_layout";
+  throw new RangeError("Unsupported likes overlay version");
+}
+
+function getLikesOverlayLayout(tenantId, version = "v3") {
+  const column = likesOverlayLayoutColumn(version);
+  const row = db.prepare(`SELECT ${column} AS layout_json FROM tenant_settings WHERE tenant_id = ?`).get(tenantId);
+  if (!row || !row.layout_json) return { ...DEFAULT_LIKES_OVERLAY_LAYOUT };
+  try {
+    const layout = JSON.parse(row.layout_json);
+    if (
+      layout && Number.isFinite(layout.x) && layout.x >= 0 && layout.x <= 100 &&
+      Number.isFinite(layout.y) && layout.y >= 0 && layout.y <= 100 &&
+      Number.isFinite(layout.scale) && layout.scale >= 0.5 && layout.scale <= 2
+    ) {
+      return { x: layout.x, y: layout.y, scale: layout.scale };
+    }
+  } catch {}
+  return { ...DEFAULT_LIKES_OVERLAY_LAYOUT };
+}
+
+function saveLikesOverlayLayout(tenantId, version, layout) {
+  const column = likesOverlayLayoutColumn(version);
+  const value = JSON.stringify({ x: layout.x, y: layout.y, scale: layout.scale });
+  db.prepare(`
+    INSERT INTO tenant_settings (tenant_id, ${column}) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET ${column}=excluded.${column}
+  `).run(tenantId, value);
+  return { x: layout.x, y: layout.y, scale: layout.scale };
 }
 
 function getTenantGiftConfig(tenantId) {
@@ -1153,6 +1213,8 @@ module.exports = {
   publicUser,
   getTenantSettings,
   saveTenantSettings,
+  getLikesOverlayLayout,
+  saveLikesOverlayLayout,
   getTenantGiftConfig,
   saveTenantGiftConfig,
   getTresGiftConfig,

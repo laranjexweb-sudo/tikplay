@@ -1,14 +1,10 @@
 const params = new URLSearchParams(location.search);
 const token = params.get('tk') || localStorage.getItem('token');
-const limit = Math.max(1, Math.min(10, Number.parseInt(params.get('count'), 10) || 5));
 const root = document.querySelector('[data-fountain]');
 const demo = params.get('demo') === '1';
 const heartSvg = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 29 3 16C-5 7 7-3 16 6c9-9 21 1 13 10Z"/></svg>';
-const trackedLikes = new Map();
-let hasBaseline = false;
 let closing = false;
 let demoTimer;
-let rankingRevision = 0;
 
 function random(min, max) { return min + Math.random() * (max - min); }
 function addParticle(kind, item, x, options = {}) {
@@ -54,46 +50,17 @@ function burst(item, amount) {
     window.setTimeout(() => addParticle('heart', item, Math.max(4, Math.min(96, x + random(-10, 10)))), index * 90);
   }
 }
-function render(ranking) {
-  const participants = Array.isArray(ranking) ? ranking.slice(0, limit) : [];
-  if (!hasBaseline) {
-    participants.forEach(item => trackedLikes.set(String(item.user || item.nickname || ''), Number(item.likes) || 0));
-    hasBaseline = true;
-    return;
-  }
-  participants.forEach(item => {
-    const key = String(item.user || item.nickname || '');
-    const current = Math.max(0, Number(item.likes) || 0);
-    const previous = trackedLikes.get(key);
-    trackedLikes.set(key, current);
-    if (previous === undefined || current <= previous) return;
-    burst(item, current - previous);
-  });
-}
-async function snapshot() {
-  const revision = rankingRevision;
-  try {
-    const response = await fetch('/api/game-state', {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    });
-    if (!response.ok) return;
-    const data = await response.json();
-    if (revision === rankingRevision) render(data.likes_ranking_all || data.likes_ranking);
-  } catch { /* reconexão WS preserva o overlay sem interromper a animação */ }
-}
 function connect() {
   if (!token) return;
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   const socket = new WebSocket(`${protocol}://${location.host}/browser?token=${encodeURIComponent(token)}`);
-  socket.onopen = snapshot;
   socket.onmessage = event => {
     try {
       const message = JSON.parse(event.data);
-      if (message.type === 'likes_ranking') {
-        rankingRevision += 1;
-        render(message.ranking_all || message.likes_ranking_all || message.ranking);
-      }
+      if (message.type !== 'likes_activity') return;
+      const activity = message.activity || message;
+      const amount = Math.max(1, Number(activity.like_count ?? activity.count) || 1);
+      burst(activity, amount);
     } catch { /* ignora mensagens de outros módulos */ }
   };
   socket.onclose = event => {

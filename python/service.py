@@ -424,6 +424,20 @@ class GameSession:
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
         if self.vpet.active:
             self.vpet.on_like(user, nickname, avatar, like_count)
+        # Atividade visual do overlay inclui todos os espectadores, mesmo quando
+        # filtros de acesso bloqueiam os taps para a pontuação dos jogos.
+        try:
+            activity_count = max(0, int(like_count or 0))
+        except (TypeError, ValueError):
+            activity_count = 0
+        if activity_count > 0:
+            emit(self.tenant_id, "game", {
+                "type": "likes_activity",
+                "user": str(user or ""),
+                "nickname": str(nickname or user or ""),
+                "avatar": str(avatar or ""),
+                "like_count": activity_count,
+            })
         allowed, reason = self._check_access(user_meta)
         if not allowed:
             emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado")
@@ -498,6 +512,7 @@ class GameSession:
             emit(self.tenant_id, "game", {
                 "type": "likes_ranking",
                 "ranking": ranking,
+                "ranking_all": self.build_likes_ranking(10),
                 "tap_meta_current": pub["tap_meta_current"],
                 "tap_meta_total": pub["tap_meta_total"],
                 "tap_meta_ready": pub["tap_meta_ready"],
@@ -817,6 +832,7 @@ class GameSession:
         emit(self.tenant_id, "game", {
             "type": "likes_ranking",
             "ranking": self.build_likes_ranking(5),
+            "ranking_all": self.build_likes_ranking(10),
             "tap_meta_current": pub_tap["tap_meta_current"],
             "tap_meta_total": pub_tap["tap_meta_total"],
             "tap_meta_ready": pub_tap["tap_meta_ready"],
@@ -1898,6 +1914,7 @@ async def process_commands(queue):
                     emit(tid, "game", {
                         "type": "likes_ranking",
                         "ranking": s.build_likes_ranking(5),
+                        "ranking_all": s.build_likes_ranking(10),
                         "tap_meta_current": s_pub["tap_meta_current"],
                         "tap_meta_total": s_pub["tap_meta_total"],
                         "tap_meta_ready": s_pub["tap_meta_ready"],

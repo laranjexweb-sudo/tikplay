@@ -149,6 +149,7 @@ function updateGameState(tenant, msg) {
         tension_score: msg.tension_score || 0,
         is_final_boss: !!msg.is_final_boss,
         likes_ranking: (gs && gs.likes_ranking) || [],
+        likes_ranking_all: (gs && gs.likes_ranking_all) || (gs && gs.likes_ranking) || [],
         size_gift: msg.size_gift || "",
         size_revealed: !!msg.size_revealed,
         letter_gift: msg.letter_gift || "",
@@ -260,6 +261,7 @@ function updateGameState(tenant, msg) {
       break;
     case "likes_ranking":
       gs.likes_ranking = msg.ranking || [];
+      gs.likes_ranking_all = msg.ranking_all || msg.ranking || [];
       gs.tap_meta_current = msg.tap_meta_current;
       gs.tap_meta_total = msg.tap_meta_total;
       gs.tap_meta_ready = !!msg.tap_meta_ready;
@@ -450,6 +452,12 @@ function handleDaemonMessage(msg) {
       broadcastStatus(tenant, msg.status || {});
     } else if (msg.type === "game") {
       const gameMsg = msg.msg || {};
+      if (gameMsg.type === "likes_activity") {
+        // Atividade da fonte de likes é efêmera: entrega apenas aos overlays
+        // autenticados do tenant, sem alterar estado/ranking ou inundar os logs.
+        broadcastToClients(tenant.browserClients, gameMsg);
+        return;
+      }
       if (gameMsg.type === "corda_state") {
         if(!tenant.cordaLayout) tenant.cordaLayout=corda.layout(db.getCordaConfig(tenantId));
         gameMsg.config={...gameMsg.config,...tenant.cordaLayout};
@@ -734,6 +742,54 @@ app.post("/api/settings", auth.requireAuth, (req, res) => {
     res.json({ success: true, settings });
   } catch (e) {
     res.json({ success: false, error: e.message });
+  }
+});
+
+// ---------------- Layout da sobreposição de ranking de curtidas ----------------
+
+function requireActiveLikesOverlayAccount(req, res, next) {
+  const user = db.getUserById(req.user.id);
+  if (!user || user.status !== "active") {
+    return res.status(401).json({ success: false, error: "Conta invalida" });
+  }
+  next();
+}
+
+function requireLikesOverlayVersion(req, res, next) {
+  const version = String(req.query.version || "v3");
+  if (version !== "v2" && version !== "v3") {
+    return res.status(400).json({ success: false, error: "Versao deve ser v2 ou v3" });
+  }
+  req.likesOverlayVersion = version;
+  next();
+}
+
+app.get("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverlayAccount, requireLikesOverlayVersion, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ success: true, version: req.likesOverlayVersion, layout: db.getLikesOverlayLayout(req.user.id, req.likesOverlayVersion) });
+});
+
+app.post("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverlayAccount, requireLikesOverlayVersion, (req, res) => {
+  const layout = req.body && req.body.layout;
+  if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
+    return res.status(400).json({ success: false, error: "Layout invalido" });
+  }
+  const { x, y, scale } = layout;
+  if (
+    !Number.isFinite(x) || x < 0 || x > 100 ||
+    !Number.isFinite(y) || y < 0 || y > 100 ||
+    !Number.isFinite(scale) || scale < 0.5 || scale > 2
+  ) {
+    return res.status(400).json({ success: false, error: "x/y devem estar entre 0 e 100 e scale entre 0.5 e 2" });
+  }
+  try {
+    const version = req.likesOverlayVersion;
+    const saved = db.saveLikesOverlayLayout(req.user.id, version, { x, y, scale });
+    const tenant = getTenant(req.user.id);
+    broadcastToClients(tenant.browserClients, { type: "likes_overlay_layout", version, layout: saved });
+    res.json({ success: true, version, layout: saved });
+  } catch (e) {
+    res.status(500).json({ success: false, error: "Falha ao salvar layout" });
   }
 });
 
