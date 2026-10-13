@@ -1,0 +1,47 @@
+:root { color-scheme: dark; font-family: var(--tp-font-ui); }
+html.overlay-document, html.overlay-document body, body.fountain-overlay {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.fountain-overlay { position: relative; pointer-events: none; }
+.fountain { position: fixed; inset: 0; overflow: hidden; pointer-events: none; isolation: isolate; }
+.fountain-particle {
+  position: absolute;
+  bottom: -3rem;
+  left: var(--particle-x);
+  width: var(--particle-size);
+  height: var(--particle-size);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: fountain-rise var(--particle-duration) cubic-bezier(.18,.62,.34,1) forwards;
+}
+.fountain-heart { color: var(--particle-color, var(--tp-pink)); filter: drop-shadow(0 .125rem .25rem var(--tp-black)); }
+.fountain-heart svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.fountain-avatar {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: var(--tp-line) solid var(--tp-text-inverse);
+  border-radius: 50%;
+  background: var(--tp-purple);
+  box-shadow: var(--tp-shadow-soft);
+  color: var(--tp-text-inverse);
+  font-size: .9rem;
+  font-weight: 800;
+}
+.fountain-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+@keyframes fountain-rise {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.72) rotate(-8deg); }
+  10% { opacity: 1; }
+  55% { opacity: .92; transform: translate3d(var(--particle-drift), -52svh, 0) scale(1) rotate(7deg); }
+  100% { opacity: 0; transform: translate3d(var(--particle-drift), -112svh, 0) scale(.8) rotate(-10deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fountain-particle { bottom: 0; transform: translateY(-3rem); animation-name: fountain-fade; animation-duration: 1s; }
+  @keyframes fountain-fade { 0%, 100% { opacity: 0; } 25%, 75% { opacity: 1; } }
+}
+

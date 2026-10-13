@@ -4,7 +4,7 @@
 > overlays e jogos) deve seguir este documento. Antes de codar visual, leia a seção
 > **Status / Progresso** para saber o que já foi feito e o que falta.
 
-- **Última atualização:** 2026-10-12
+- **Última atualização:** 2026-10-13
 - **Escopo:** Node `node/public/*` (HTML/CSS/JS embutido) + `node/public/style.css`
 - **Regra de ouro:** refatoração **visual e estrutural de CSS/componentes**. Não alterar
   lógica de jogo, rotas, IDs, eventos, WebSockets, APIs, banco, auth, permissões, OBS,
@@ -581,8 +581,26 @@ node/public/
 
 - 2026-10-13: Usuário TikTok bloqueado ao solicitar conexão; bloqueio preservado em tentativa/erro e refresh da aba, liberado somente por desconexão confirmada.
 
+- 2026-10-13: CORDA promovido de Mais jogos para botão próprio no menu principal, com ícone de corda e comportamento/permissões preservados.
+
+- 2026-10-13: Sobreposições recebe ranking de curtidas V2/V3, seleção de 1–10 participantes e links públicos OBS; visuais preservados e dados reais via snapshot/WebSocket existentes.
+
+- 2026-10-13: Sobreposições V2/V3 exibem prévia de três participantes fictícios claramente identificada; links públicos continuam com dados reais.
+
+- 2026-10-13: Cards de overlays V2/V3 lado a lado com prévias compactas sem escala de iframe; tipografia legível e seletor de quantidade com largura reduzida.
+
+- 2026-10-13: Prévias V2/V3 limitadas a 400px de largura; cenário CORDA substituído pelo arquivo fornecido cenario-hallowen.png, com versão de cache atualizada.
+
+- 2026-10-13: Overlays V2/V3 recebem brilho suave periódico nos avatares/pódio; V2 também nas bordas das linhas. Animações escalonadas, sem cobrir texto e desativadas com movimento reduzido.
+
+- 2026-10-13: Fotos reais dos overlays contidas no slot circular; atualizações de contagem preservam DOM e animações, coração do líder pulsante e borda dourada V2 animada.
+
+- 2026-10-13: Bloco V2 limitado a 380px, com nomes longos truncados e adaptação a fontes menores.
+
 - 2026-10-13: Super Admin adota, por solicitação explícita do usuário, o tema escuro/ciano de `Site/styles.css`, isolado em `ui/tikplay-admin-site.css`. Navegação por seções, resumo de contas, busca/filtro e quatro indicadores de uso preparados para o backend. Contrato em `admin-status-frontend.md`; validação desktop/mobile com dados simulados, sem alterações de backend.
 
 - 2026-10-13: Contraste das tabelas do Super Admin reforçado: cabeçalho destacado, linhas alternadas mais claras, divisórias visíveis, texto claro, hover e badges de status com fundo/borda semânticos. Indicadores de uso ampliados para leitura.
 
 - 2026-10-13: Dashboard como seção inicial do Admin, com clientes online, lives conectadas, partidas em andamento, uso por jogo e atividade dos clientes. Atualização manual, busca e acesso à conta; dados ausentes não inferem offline. Frontend validado com API simulada em desktop/mobile; histórico depende do backend.
+
+- 2026-10-13: Nova sobreposição de curtidas flutuantes, com fundo transparente, corações e avatares animados; eventos reais do ranking atualizam efeitos por participante, prévia demonstrativa disponível no painel.
