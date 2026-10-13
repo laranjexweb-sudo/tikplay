@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   auto_round_pause: 20,
   riddle_auto_narrate: true,
   tap_meta: 1000,
+  boss_mode: true,
 };
 
 try {
@@ -67,6 +68,9 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN riddle_auto_narrate INTEGER DEFAULT 1");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN boss_mode INTEGER DEFAULT 1");
 } catch {}
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
@@ -177,7 +181,8 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   auto_round INTEGER DEFAULT 0,
   auto_round_pause INTEGER DEFAULT 20,
   riddle_auto_narrate INTEGER DEFAULT 1,
-  tap_meta INTEGER DEFAULT 1000
+  tap_meta INTEGER DEFAULT 1000,
+  boss_mode INTEGER DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
   tenant_id INTEGER PRIMARY KEY,
@@ -479,13 +484,14 @@ function getTenantSettings(tenantId) {
     auto_round_pause: (row.auto_round_pause === null || row.auto_round_pause === undefined) ? 20 : row.auto_round_pause,
     riddle_auto_narrate: row.riddle_auto_narrate === 0 ? false : true,
     tap_meta: (row.tap_meta === null || row.tap_meta === undefined) ? 1000 : row.tap_meta,
+    boss_mode: row.boss_mode === 0 ? false : true,
   };
 }
 
 function saveTenantSettings(tenantId, s) {
   db.prepare(`
-    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta, boss_mode)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET
       apenas_seguidores=excluded.apenas_seguidores,
       apenas_heart_me=excluded.apenas_heart_me,
@@ -500,7 +506,8 @@ function saveTenantSettings(tenantId, s) {
       auto_round=excluded.auto_round,
       auto_round_pause=excluded.auto_round_pause,
       riddle_auto_narrate=excluded.riddle_auto_narrate,
-      tap_meta=excluded.tap_meta
+      tap_meta=excluded.tap_meta,
+      boss_mode=excluded.boss_mode
   `).run(
     tenantId,
     s.apenas_seguidores ? 1 : 0,
@@ -516,7 +523,8 @@ function saveTenantSettings(tenantId, s) {
     s.auto_round ? 1 : 0,
     (s.auto_round_pause === null || s.auto_round_pause === undefined) ? 20 : s.auto_round_pause,
     s.riddle_auto_narrate === false ? 0 : 1,
-    (s.tap_meta === null || s.tap_meta === undefined) ? 1000 : s.tap_meta
+    (s.tap_meta === null || s.tap_meta === undefined) ? 1000 : s.tap_meta,
+    s.boss_mode === false ? 0 : 1
   );
 }
 

@@ -148,7 +148,7 @@ def get_tenant_settings(tenant_id):
         conn = _conn()
         row = conn.execute(
             "SELECT apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, "
-            "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix "
+            "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, boss_mode "
             "FROM tenant_settings WHERE tenant_id=?",
             (tenant_id,),
         ).fetchone()
@@ -166,6 +166,7 @@ def get_tenant_settings(tenant_id):
             "chat_narr_mode": (row[7] or "all"),
             "chat_narr_char": (row[8] or "#"),
             "command_prefix": (row[9] or "#"),
+            "boss_mode": bool(row[10] if row[10] is not None else 1),
         }
     except Exception:
         return {}

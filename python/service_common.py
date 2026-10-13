@@ -34,6 +34,7 @@ DEFAULT_SETTINGS = {
     "auto_round_pause": 20,
     "riddle_auto_narrate": True,
     "tap_meta": 1000,
+    "boss_mode": True,
 }
 
 
@@ -91,6 +92,8 @@ def normalize_settings(raw) -> dict:
             pass
     if "riddle_auto_narrate" in raw:
         settings["riddle_auto_narrate"] = bool(raw["riddle_auto_narrate"])
+    if "boss_mode" in raw:
+        settings["boss_mode"] = bool(raw["boss_mode"])
     return settings
 
 

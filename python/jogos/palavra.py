@@ -208,6 +208,7 @@ class JogoContexto:
         self.history_path = history_path or DEFAULT_HISTORY_PATH
         self._gift_tags = gift_tags if gift_tags is not None else self.load_default_gift_tags()
         self.recent_active_gifts = []
+        self.boss_mode = True
         self._load_word_pool()
         self._load_history()
         self._pool_ready = True
@@ -773,8 +774,8 @@ class JogoContexto:
         if self.guesses:
             best_rank = min(g["rank"] for g in self.guesses)
 
-        # 4. Check Final Boss overriding condition
-        if best_rank <= 3:
+        # 4. Check Final Boss overriding condition (somente com Modo Boss ativo)
+        if self.boss_mode and best_rank <= 3:
             self.is_final_boss = True
             self.tension_score = 100
             fb = self._canon_gift_name(final_boss_gift)
@@ -797,6 +798,18 @@ class JogoContexto:
         active = self._canon_gift_name(available_gifts[gift_idx][0])
         self.record_active_gift_shown(active)
         return active
+
+    def _hint_protected(self) -> bool:
+        """Zona 'sem boss' ativa: com o Modo Boss desativado, ao chegar no mesmo nível de
+        proximidade que ativaria o Final Boss (melhor rank <= 3), as dicas não podem
+        revelar as palavras de posição 1-2 (rank 1 = palavra secreta, rank 2 = 2ª mais
+        próxima) e a meta de tap dobra (x2)."""
+        if self.boss_mode or self.finished or not self.secret_word:
+            return False
+        best_rank = 1000
+        if self.guesses:
+            best_rank = min(g["rank"] for g in self.guesses)
+        return best_rank <= 3
 
     def record_active_gift_shown(self, gift: str):
         if not gift:

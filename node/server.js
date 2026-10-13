@@ -568,6 +568,7 @@ function normalizeSettings(raw) {
     if (typeof raw.riddle_auto_narrate === "boolean") out.riddle_auto_narrate = raw.riddle_auto_narrate;
     let tapMeta = parseInt(raw.tap_meta, 10);
     if (Number.isFinite(tapMeta)) out.tap_meta = Math.max(50, Math.min(100000, tapMeta));
+    if (typeof raw.boss_mode === "boolean") out.boss_mode = raw.boss_mode;
   }
   return out;
 }

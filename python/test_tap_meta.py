@@ -4,7 +4,10 @@
 #
 # Cobre: congelamento durante o Final Boss (taps não incrementam), ausência de
 # despacho de prêmio durante o Boss, exibição "concluída" (verde) na página
-# pública, prêmio despachado apenas sem Boss e valores públicos corretos.
+# pública, prêmio despachado apenas sem Boss, valores públicos corretos e o
+# Modo Boss opcional (boss_mode): sem boss, rank <= 3 não ativa o Final Boss,
+# a meta de tap dobra (x2) uma única vez mantendo o progresso e a zona fica
+# protegida para dicas (sem revelar rank 1-2).
 
 import asyncio
 import os
@@ -99,6 +102,50 @@ async def main():
     s.game.is_final_boss = False
     pub = s._tap_meta_public()
     check("sem Boss: nao exibe concluido", pub["tap_meta_ready"] is False and pub["tap_meta_current"] == 300, f"pub={pub}")
+
+    print("[6] Modo Boss: gatilho com boss ativo")
+    s.game.boss_mode = True
+    s.game.is_final_boss = False
+    s.game.secret_word = "teste"
+    s.game.finished = False
+    s.game.hint_gifts = ["Rose"]
+    s.game.riddle_gifts = []
+    s.game.guesses = [{"word": "perto", "rank": 3}]
+    ok = s.game.get_active_gift()
+    check("boss ON: rank 3 ativa Final Boss", s.game.is_final_boss is True and bool(ok), f"boss={s.game.is_final_boss} gift={ok}")
+
+    print("[7] Modo Boss OFF: sem Final Boss, zona protegida")
+    s.game.boss_mode = False
+    s.game.is_final_boss = True  # estado obsoleto que deve ser limpo
+    ok = s.game.get_active_gift()
+    check("boss OFF: rank 3 NAO ativa Final Boss", s.game.is_final_boss is False, f"boss={s.game.is_final_boss}")
+    check("boss OFF: _hint_protected True na zona", s.game._hint_protected() is True, f"protect={s.game._hint_protected()}")
+    s.game.guesses = [{"word": "q", "rank": 5}]
+    check("boss OFF: fora da zona (rank 5) nao protege", s.game._hint_protected() is False, f"protect={s.game._hint_protected()}")
+
+    print("[8] Meta de tap x2 (dobra mantendo progresso)")
+    s.game.boss_mode = False
+    s.game.secret_word = "teste"
+    s.game.finished = False
+    s.game.guesses = [{"word": "perto", "rank": 3}]
+    s.settings["tap_meta"] = 1000
+    s._tap_meta_x2 = False
+    s.tap_meta_total = 1000
+    s.tap_meta_current = 400
+    applied = s._apply_tap_meta_x2()
+    check("x2 aplicado (total dobra)", applied is True and s.tap_meta_total == 2000, f"total={s.tap_meta_total}")
+    check("progresso mantido", s.tap_meta_current == 400, f"current={s.tap_meta_current}")
+    check("multiplier publico = 2", s._tap_meta_public()["tap_meta_multiplier"] == 2, f"pub={s._tap_meta_public()}")
+    applied2 = s._apply_tap_meta_x2()
+    check("x2 unica vez (nao re-dobra)", applied2 is False and s.tap_meta_total == 2000, f"total={s.tap_meta_total}")
+
+    print("[9] Boss ON: x2 NAO se aplica")
+    s.game.boss_mode = True
+    s._tap_meta_x2 = False
+    s.tap_meta_total = 1000
+    applied3 = s._apply_tap_meta_x2()
+    check("boss ON bloqueia x2", applied3 is False and s.tap_meta_total == 1000, f"total={s.tap_meta_total}")
+    check("multiplier publico = 1 com boss", s._tap_meta_public()["tap_meta_multiplier"] == 1, f"pub={s._tap_meta_public()}")
 
     print(f"\nResultado: {passed} passaram, {failed} falharam.")
     sys.exit(1 if failed else 0)

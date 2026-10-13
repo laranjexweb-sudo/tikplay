@@ -233,6 +233,8 @@ class GameSession:
                 self.settings = normalize_settings(db_settings)
         except Exception:
             pass
+        self._tap_meta_x2 = False
+        self.game.boss_mode = bool(self.settings.get("boss_mode", True))
 
     @staticmethod
     def _is_follower(meta) -> bool:
@@ -456,11 +458,36 @@ class GameSession:
             "tap_meta_current": int(self.tap_meta_current or 0),
             "tap_meta_total": int(self.tap_meta_total or 1000),
             "tap_meta_ready": bool(self.tap_meta_ready) or bool(getattr(self.game, "is_final_boss", False)),
+            "tap_meta_multiplier": 2 if getattr(self, "_tap_meta_x2", False) else 1,
         }
+
+    def _apply_tap_meta_x2(self) -> bool:
+        """Sem Modo Boss: ao chegar na zona que ativaria o Final Boss (melhor rank <= 3),
+        a meta de tap DOBRA (x2) mantendo o progresso atual. Dispara uma única vez por partida."""
+        if self._tap_meta_x2:
+            return False
+        if not self.game.secret_word or self.game.finished:
+            return False
+        if not self.game._hint_protected():
+            return False
+        base = int(self.settings.get("tap_meta", 1000) or 1000)
+        self._tap_meta_x2 = True
+        self.tap_meta_total = max(50, base * 2)
+        self._likes_dirty = True
+        emit(self.tenant_id, "game", {
+            "type": "tap_meta_x2",
+            "base": base,
+            "total": self.tap_meta_total,
+            "current": int(self.tap_meta_current or 0),
+        })
+        emit(self.tenant_id, "log", f"[Tap] Zona protegida (sem boss): meta de tap DOBROU para {self.tap_meta_total} (x2)")
+        return True
 
     async def _likes_loop(self):
         while True:
             await asyncio.sleep(3)
+            # Sem Modo Boss, ao entrar na zona protegida (rank <= 3) a meta dobra (x2).
+            self._apply_tap_meta_x2()
             # Durante o Final Boss mantém a marcação "concluída" (verde) na página,
             # mesmo sem likes novos; sem boss, só emite quando houver mudanças.
             if not self._likes_dirty and not getattr(self.game, "is_final_boss", False):
@@ -474,6 +501,7 @@ class GameSession:
                 "tap_meta_current": pub["tap_meta_current"],
                 "tap_meta_total": pub["tap_meta_total"],
                 "tap_meta_ready": pub["tap_meta_ready"],
+                "tap_meta_multiplier": pub["tap_meta_multiplier"],
             })
             # Meta de tap: se atingiu, despacha dica/charada (respeitando Final Boss e cooldown)
             if self.game.secret_word and not self.game.finished:
@@ -737,6 +765,7 @@ class GameSession:
         self.tap_meta_total = int(self.settings.get("tap_meta", 1000) or 1000)
         self.tap_meta_ready = False
         self._tap_meta_cooldown_until = 0
+        self._tap_meta_x2 = False
         # Índice de proximidade: normalmente instantâneo (cache), mas a 1ª vez de uma
         # palavra nunca vista calcula similaridade do pool (~10-16s). Roda em thread
         # para NÃO travar a live; o jogo só é liberado quando o ranking fica pronto.
@@ -782,6 +811,7 @@ class GameSession:
             "tap_meta_current": pub_tap["tap_meta_current"],
             "tap_meta_total": pub_tap["tap_meta_total"],
             "tap_meta_ready": pub_tap["tap_meta_ready"],
+            "tap_meta_multiplier": pub_tap["tap_meta_multiplier"],
         })
         # Garante que os clientes recebam o estado zerado da meta imediatamente
         emit(self.tenant_id, "game", {
@@ -790,6 +820,7 @@ class GameSession:
             "tap_meta_current": pub_tap["tap_meta_current"],
             "tap_meta_total": pub_tap["tap_meta_total"],
             "tap_meta_ready": pub_tap["tap_meta_ready"],
+            "tap_meta_multiplier": pub_tap["tap_meta_multiplier"],
         })
 
     @staticmethod
@@ -1268,18 +1299,25 @@ class GameSession:
         # choice == "hint" (ou charada convertida em dica pelo limite de 1 por combo)
         best_word = None
         guessed_words = {g["word"] for g in self.game.guesses}
+        protect = self.game._hint_protected()
         for radius in range(n):
             for idx in (target_idx - radius, target_idx + radius):
                 if 0 <= idx < n:
                     w = self.game.all_scored[idx]
                     if w not in self.game.hints_given and w not in guessed_words:
+                        # Sem Modo Boss, dentro da zona protegida não revela rank 1-2
+                        if protect and self.game._compute_rank(w) <= 2:
+                            continue
                         best_word = w
                         break
             if best_word is not None:
                 break
 
         if best_word is None:
-            emit(self.tenant_id, "log", f"[{source}] Sem novas dicas no pool")
+            if protect:
+                emit(self.tenant_id, "log", f"[{source}] Sem novas dicas fora da posição protegida (rank 1-2)")
+            else:
+                emit(self.tenant_id, "log", f"[{source}] Sem novas dicas no pool")
             return
 
         hint_rank = self.game._compute_rank(best_word)
@@ -1371,17 +1409,24 @@ class GameSession:
         target_idx = max(0, min(n - 1, target_rank - 2))
         guessed_words = {g["word"] for g in self.game.guesses}
         best_word = None
+        protect = self.game._hint_protected()
         for radius in range(n):
             for idx in (target_idx - radius, target_idx + radius):
                 if 0 <= idx < n:
                     w = self.game.all_scored[idx]
                     if w not in self.game.hints_given and w not in guessed_words:
+                        # Sem Modo Boss, dentro da zona protegida não revela rank 1-2
+                        if protect and self.game._compute_rank(w) <= 2:
+                            continue
                         best_word = w
                         break
             if best_word is not None:
                 break
         if best_word is None:
-            emit(self.tenant_id, "log", "[Manual] Sem novas dicas no pool")
+            if protect:
+                emit(self.tenant_id, "log", "[Manual] Sem novas dicas fora da posição protegida (rank 1-2)")
+            else:
+                emit(self.tenant_id, "log", "[Manual] Sem novas dicas no pool")
             return
         hint_rank = self.game._compute_rank(best_word)
         self.game.hints_given.append(best_word)
@@ -1843,9 +1888,12 @@ async def process_commands(queue):
             s = sessions.get(tid)
             if s:
                 s.settings = normalize_settings(cmd.get("settings"))
+                s.game.boss_mode = bool(s.settings.get("boss_mode", True))
                 # Meta de tap: aplica em runtime preservando o progresso atual
+                s._tap_meta_x2 = False
                 s.tap_meta_total = int(s.settings.get("tap_meta", 1000) or 1000)
                 if s.game.secret_word and not s.game.finished:
+                    s._apply_tap_meta_x2()
                     s_pub = s._tap_meta_public()
                     emit(tid, "game", {
                         "type": "likes_ranking",
@@ -1853,10 +1901,12 @@ async def process_commands(queue):
                         "tap_meta_current": s_pub["tap_meta_current"],
                         "tap_meta_total": s_pub["tap_meta_total"],
                         "tap_meta_ready": s_pub["tap_meta_ready"],
+                        "tap_meta_multiplier": s_pub["tap_meta_multiplier"],
                     })
                     await s._check_tap_meta()
                 emit(tid, "log",
-                     f"[Service] Preferências atualizadas — Seguidores: {'sim' if s.settings['apenas_seguidores'] else 'nao'} | "
+                     f"[Service] Preferências atualizadas — Boss: {'sim' if s.settings['boss_mode'] else 'nao'} | "
+                     f"Seguidores: {'sim' if s.settings['apenas_seguidores'] else 'nao'} | "
                      f"Heart-me: {'sim' if s.settings['apenas_heart_me'] else 'nao'} | "
                      f"Dicas: {s.settings['pct_dica']}% / Charadas: {s.settings['pct_charada']}% | Meta de tap: {s.tap_meta_total}")
             else:

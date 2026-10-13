@@ -36,6 +36,14 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Na rota `/api/game-state`, a lista salva do usuário tem prioridade para evitar que sincronizações secundárias sobrescrevam os presentes selecionados.
 - O mapeamento de presentes no frontend utiliza fallback (`giftByName(n)?.name || n`) para evitar o descarte acidental de itens.
 
+### 2.3 Final Boss (Modo Boss) — opcional
+- Configuração **`boss_mode`** (bool, padrão **`true`**, via GET/POST `/api/settings`). O streamer escolhe na configuração da Palavra Secreta.
+- **Com `boss_mode = true` (padrão/atual):** ao atingir **melhor rank <= 3** o **Final Boss** é ativado (`is_final_boss`), o presente ativo vira o **presente revelador** (`riddle_gifts[0]`, ou último `hint_gifts`, ou `"TikTok"`), outros gifts são rejeitados, enviar o revelador decretar **vitória instantânea** e a **meta de tap congela** (exibida como concluída).
+- **Com `boss_mode = false`:** não há Final Boss (nenhum gift encerra a partida; o fim é apenas pelo palpite Rank #1). Ao chegar no mesmo nível de proximidade (melhor rank <= 3), a **zona protegida** entra em vigor:
+  - A **meta de tap dobra (x2)** mantendo o progresso atual — disparada uma única vez por partida (evento `game/type=tap_meta_x2`; estado contínuo em `likes_ranking.tap_meta_multiplier`). O prêmio segue a roleta **dica/charada**.
+  - **Dicas não podem revelar rank 1 e 2** (posições 1 = palavra secreta, 2 = segunda mais próxima); apenas rank **3+**. Vale para roleta de presentes, meta de tap e dica manual.
+- Sessão nova hidrata `boss_mode` do banco (`tenant_settings`); mudança em runtime é propagada via comando `update_settings` (reavalia zona/x2).
+
 ---
 
 ## 3. Interface do Usuário (Frontend & UI)

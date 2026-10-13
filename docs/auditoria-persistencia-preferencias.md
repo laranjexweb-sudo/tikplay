@@ -10,7 +10,7 @@ Para cada área de preferência: rastreei o contrato (endpoint de leitura/grava�
 
 | Área / campo | Onde grava (tabela/coluna) | Refresh/logout | Reinício (Node+daemon) | Contrato leitura/escrita | Evidência |
 |---|---|---|---|---|---|
-| Preferências (voz/velocidade/filtro/prefixo/meta/auto) | `tenant_settings` (todas as colunas) | ✔ | ✔ (sessão carrega em `start`; `GameSession.__init__` tb lê do banco) | GET `/api/settings`; POST grava **substituindo todas as colunas** | `db.js: getTenantSettings/saveTenantSettings`; `server.js /api/settings`; `service.py _start` |
+| Preferências (voz/velocidade/filtro/prefixo/meta/auto/boss) | `tenant_settings` (todas as colunas) | ✔ | ✔ (sessão carrega em `start`; `GameSession.__init__` tb lê do banco) | GET `/api/settings`; POST grava **substituindo todas as colunas** | `db.js: getTenantSettings/saveTenantSettings`; `server.js /api/settings`; `service.py _start` |
 | Voz/velocidade na narração | `tenant_settings.tts_voice/tts_rate` | ✔ | ✔ (hidratado no `GameSession.__init__` e no `start`) | POST `/api/settings` (full-replace) | commits TTS; `service._tts_url` |
 | Credenciais TikTools/username/engine | `users.tiktools_api_key/username/tiktok_engine/room_code` | ✔ | ✔ | POST `/api/panel-config` (por campo) — key mascarada no GET (`publicUser`/`maskKey`) | `panel-config`; `db.publicUser` |
 | Gifts Palavra (dica/revelador/tamanho/letra) | `tenant_gift_config.hint_gifts/riddle_gifts/size_gift/letter_gift` | ✔ | ✔ (re-aplicado no próximo `/new-game`) | GET/POST `/api/gift-config` — **merge por campo no servidor** | `routes/gifts.js` |
@@ -38,6 +38,7 @@ Para cada área de preferência: rastreei o contrato (endpoint de leitura/grava�
 1. **Grav. granular p/ evitar update-loss entre abas/dispositivos**: substituir POST `/api/settings` full-snapshot por **PATCH parcial** (cliente envia apenas chaves alteradas). Backend já tolera payload parcial (merge). Sem isso, dois painéis editando campos diferentes resultam em *last-write-wins* por objeto inteiro.
 2. **Restaurar prefixo Caça-Palavras na UI**: o painel deve chamar `GET /api/caca/config` ao carregar (contrato já disponível) e preencher o campo.
 3. **Replay de logs no painel**: integrar `GET /api/logs` (páginas/cursor `before`) + deduplicar por `id` com eventos `type:"log"` ao vivo (que já carregam `id/ts/category`).
+4. **Toggle "Modo Boss" na UI (dependência de front-end)**: adicionar switch no bloco Palavra Secreta do `control-panel.html` ligado ao campo **`boss_mode`** (bool) via GET/POST `/api/settings` (backend já implementado). Ao desativar, o Final Boss é substituído pelo modo normal: em rank ≤ 3 a meta de tap dobra (**x2**) e dicas não revelam rank 1–2. O painel deve renderizar o efeito **x2** na barra de meta ao receber o evento WS `game`/`type: "tap_meta_x2"` e refletir o estado contínuo em `likes_ranking.tap_meta_multiplier` (1 ou 2).
 
 ## Concorrência / atualização perdida
 
