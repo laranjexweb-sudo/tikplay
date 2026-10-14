@@ -1194,9 +1194,8 @@ function renderGameOver(winner, html) {
   if (name) name.innerHTML = html;
 }
 
-const GUESS_TOP_MS = 600;   // tempo destacado no topo
-const GUESS_FLIP_MS = 300;  // duracao do deslize para a posicao
-const GUESS_GAP_MS = 50;    // intervalo antes do proximo
+const GUESS_TOP_MS = 1200;  // tempo para ler o palpite no topo
+const GUESS_GAP_MS = 20;    // intervalo antes do proximo
 
 function handleGuessHighlight(msg) {
   guessHighlightQueue.push(msg);
@@ -1251,55 +1250,15 @@ function processGuessHighlightQueue() {
     return;
   }
 
-  // Keep it at the top for 3 seconds
+  // Hold the incoming guess briefly before moving it into its ranked position.
   setTimeout(() => {
     if (!tempRow.isConnected) return;
     if (isDuplicate) {
-      tempRow.classList.add("guess-duplicate-exit");
-      tempRow.style.animation = "none";
-      const exitAnimation = tempRow.animate(
-        [
-          { transform: "translateX(0)", opacity: 1 },
-          { transform: "translateX(110%)", opacity: 0 }
-        ],
-        { duration: 550, easing: "ease-in", fill: "forwards" }
-      );
-      exitAnimation.onfinish = () => {
-        if (!tempRow.isConnected) return;
-        tempRow.remove();
-        guessHighlightShowing = false;
-        setTimeout(processGuessHighlightQueue, GUESS_GAP_MS);
-      };
-      return;
-    }
-    // Measure its first position (First)
-    const firstRect = tempRow.getBoundingClientRect();
-    tempRow.remove();
-
-    // Add to list and render (Last)
-    addGuessToList(current);
-
-    // Run FLIP transition
-    const finalRow = document.getElementById("just_added_row");
-    if (finalRow) {
-      const lastRect = finalRow.getBoundingClientRect();
-      const deltaY = firstRect.top - lastRect.top;
-
-      // Invert
-      finalRow.style.transform = `translateY(${deltaY}px)`;
-      finalRow.style.transition = "none";
-      
-      // Force layout repaint
-      finalRow.offsetHeight;
-
-      // Play (smooth slide to real position)
-      finalRow.classList.add("guess-row-transitioning");
-      finalRow.style.transform = "translateY(0)";
-
-      setTimeout(() => {
-        finalRow.classList.remove("guess-row-transitioning");
-        finalRow.removeAttribute("id");
-      }, GUESS_FLIP_MS);
+      highlightDuplicateRow(current.word || "");
+      tempRow.remove();
+    } else {
+      addGuessToList(current);
+      tempRow.remove();
     }
 
     guessHighlightShowing = false;
@@ -1407,7 +1366,6 @@ function renderGuesses() {
     row.className = `guess-row rank-${g.color || "red"}`;
     if (g.justAdded) {
       row.id = "just_added_row";
-      row.classList.add("row-flash-active");
       g.justAdded = false;
     }
 

@@ -212,7 +212,7 @@ body.secret-word-public::before {
   border-radius: 6px;
   background: #1C1E26;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  animation: fadeIn 0.3s ease-in;
+  animation: guessRowEnter 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .guess-row:hover { background: #252833; }
@@ -220,6 +220,11 @@ body.secret-word-public::before {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes guessRowEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .guess-rank {
@@ -1926,17 +1931,30 @@ body.secret-word-public::before {
 
 /* Highlight row style while sitting at the top */
 .guess-row.new-guess-highlight {
-  border: 2px solid #FBBF24 !important;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), inset 0 0 10px rgba(251, 191, 36, 0.3) !important;
-  background: linear-gradient(90deg, #1E1B4B, #0F172A) !important;
-  transform: scale(1.02);
+  border-color: currentColor !important;
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.035) !important;
   z-index: 10;
   position: relative;
-  transition: all 0.3s ease;
+  animation: guessRowEnter 140ms ease-out both;
 }
 
-.guess-row-transitioning {
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+.guess-row.new-guess-highlight.rank-green { color: #34D399; }
+.guess-row.new-guess-highlight.rank-lime { color: #A3E635; }
+.guess-row.new-guess-highlight.rank-yellow { color: #FBBF24; }
+.guess-row.new-guess-highlight.rank-orange { color: #FB923C; }
+.guess-row.new-guess-highlight.rank-red,
+.guess-row.new-guess-highlight.guess-duplicate {
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.6) !important;
+  background: rgba(248, 113, 113, 0.1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guess-row,
+  .guess-row.new-guess-highlight {
+    animation-duration: 1ms;
+  }
 }
 
 /* Flash animation on new guess row */
@@ -2758,8 +2776,3 @@ body.secret-word-public::before {
   overflow: hidden;
 }
 .compact .guess-incoming-slot .guess-row { height: 100%; }
-.compact .guess-incoming-slot .guess-duplicate-exit {
-  transform: translateX(100%);
-  opacity: 0;
-  transition: transform var(--tp-guess-motion) ease-in, opacity var(--tp-guess-motion) ease-in;
-}
