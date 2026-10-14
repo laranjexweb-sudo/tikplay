@@ -24,6 +24,10 @@
     "diamond_count": 1
   },
   {
+    "name": "Club Cheers",
+    "diamond_count": 1
+  },
+  {
     "name": "Community Heart",
     "diamond_count": 1
   },
@@ -105,6 +109,10 @@
   },
   {
     "name": "Oldies",
+    "diamond_count": 1
+  },
+  {
+    "name": "Palm of Protection",
     "diamond_count": 1
   },
   {
@@ -220,6 +228,10 @@
     "diamond_count": 9
   },
   {
+    "name": "Club Power",
+    "diamond_count": 9
+  },
+  {
     "name": "Super Popular",
     "diamond_count": 9
   },
@@ -241,6 +253,10 @@
   },
   {
     "name": "Friendship Necklace",
+    "diamond_count": 10
+  },
+  {
+    "name": "Heart",
     "diamond_count": 10
   },
   {
@@ -352,6 +368,10 @@
     "diamond_count": 30
   },
   {
+    "name": "Ghostfire",
+    "diamond_count": 30
+  },
+  {
     "name": "Warm Cocoa",
     "diamond_count": 30
   },
@@ -385,6 +405,10 @@
   },
   {
     "name": "Charmer Bow",
+    "diamond_count": 99
+  },
+  {
+    "name": "Club Victory",
     "diamond_count": 99
   },
   {
@@ -485,6 +509,10 @@
   },
   {
     "name": "Confetti",
+    "diamond_count": 100
+  },
+  {
+    "name": "Danger Door",
     "diamond_count": 100
   },
   {
@@ -680,6 +708,10 @@
     "diamond_count": 199
   },
   {
+    "name": "Love You",
+    "diamond_count": 199
+  },
+  {
     "name": "Mystic Panpipes",
     "diamond_count": 199
   },
@@ -693,6 +725,18 @@
   },
   {
     "name": "Rose Hand",
+    "diamond_count": 199
+  },
+  {
+    "name": "Rose Hand",
+    "diamond_count": 199
+  },
+  {
+    "name": "Side by Side",
+    "diamond_count": 199
+  },
+  {
+    "name": "Side by Side",
     "diamond_count": 199
   },
   {
@@ -729,6 +773,10 @@
   },
   {
     "name": "Gold necklace",
+    "diamond_count": 200
+  },
+  {
+    "name": "Magic Genie",
     "diamond_count": 200
   },
   {
@@ -1001,6 +1049,10 @@
   },
   {
     "name": "Butterfly Vibe",
+    "diamond_count": 349
+  },
+  {
+    "name": "Candy Bouquet",
     "diamond_count": 349
   },
   {
@@ -1524,6 +1576,14 @@
     "diamond_count": 500
   },
   {
+    "name": "Monster Box!",
+    "diamond_count": 500
+  },
+  {
+    "name": "Mystery Box",
+    "diamond_count": 500
+  },
+  {
     "name": "Mystery Box",
     "diamond_count": 500
   },
@@ -1569,6 +1629,10 @@
   },
   {
     "name": "VR Goggles",
+    "diamond_count": 500
+  },
+  {
+    "name": "XXXL Flowers",
     "diamond_count": 500
   },
   {
@@ -1816,6 +1880,10 @@
     "diamond_count": 1300
   },
   {
+    "name": "Autumn Picnic",
+    "diamond_count": 1300
+  },
+  {
     "name": "Party Laser",
     "diamond_count": 1300
   },
@@ -1897,6 +1965,10 @@
   },
   {
     "name": "Fox Legend",
+    "diamond_count": 1800
+  },
+  {
+    "name": "Freestyle",
     "diamond_count": 1800
   },
   {
@@ -2136,6 +2208,10 @@
     "diamond_count": 4999
   },
   {
+    "name": "Sports Car",
+    "diamond_count": 4999
+  },
+  {
     "name": "The Trial of Sea",
     "diamond_count": 4999
   },
@@ -2153,6 +2229,14 @@
   },
   {
     "name": "Desert Wolf",
+    "diamond_count": 5000
+  },
+  {
+    "name": "Diamond Gun",
+    "diamond_count": 5000
+  },
+  {
+    "name": "Diamond Gun",
     "diamond_count": 5000
   },
   {
@@ -2184,8 +2268,16 @@
     "diamond_count": 5000
   },
   {
+    "name": "Unicorn Fantasy",
+    "diamond_count": 5000
+  },
+  {
     "name": "Fluffy Buddies",
     "diamond_count": 5388
+  },
+  {
+    "name": "Desert Wolf",
+    "diamond_count": 5500
   },
   {
     "name": "Wolf",
@@ -2272,6 +2364,10 @@
     "diamond_count": 7999
   },
   {
+    "name": "Star Throne",
+    "diamond_count": 7999
+  },
+  {
     "name": "Bird of Paradise",
     "diamond_count": 8000
   },
@@ -2304,11 +2400,19 @@
     "diamond_count": 10999
   },
   {
+    "name": "Falcon",
+    "diamond_count": 10999
+  },
+  {
     "name": "Verified Glider",
     "diamond_count": 10999
   },
   {
     "name": "Hot Rods",
+    "diamond_count": 12000
+  },
+  {
+    "name": "Red Lightning",
     "diamond_count": 12000
   },
   {
@@ -2318,6 +2422,10 @@
   {
     "name": "Level-up Spectacle",
     "diamond_count": 12999
+  },
+  {
+    "name": "Daylight Debut",
+    "diamond_count": 13999
   },
   {
     "name": "Daylight Debut",
@@ -2424,6 +2532,14 @@
     "diamond_count": 19999
   },
   {
+    "name": "Masquerade",
+    "diamond_count": 19999
+  },
+  {
+    "name": "Castle Fantasy",
+    "diamond_count": 20000
+  },
+  {
     "name": "Castle Fantasy",
     "diamond_count": 20000
   },
@@ -2438,6 +2554,10 @@
   {
     "name": "TikTok Shuttle",
     "diamond_count": 20000
+  },
+  {
+    "name": "Level Ship",
+    "diamond_count": 21000
   },
   {
     "name": "Pop Off",
@@ -2514,6 +2634,10 @@
   {
     "name": "Yuki's Vigilance",
     "diamond_count": 42999
+  },
+  {
+    "name": "TikTok Universe",
+    "diamond_count": 44999
   },
   {
     "name": "TikTok Universe",

@@ -115,7 +115,14 @@ def seed_from_files(max_age_ok=True):
 # ---------------- Escrita (usada pelo sincronizador) ----------------
 
 def upsert_gifts(rows):
-    """Insere/atualiza gifts vindos do TikTok. Casamento por id, depois por nome.
+    """Insere/atualiza gifts vindos do TikTok.
+
+    Casamento **somente por id** (o TikTok tem gifts com o MESMO nome e ids/preços
+    diferentes — ex.: dois "Heart", de 1 e 10 moedas). Nunca mesclar linhas distintas
+    por compartilharem o nome.
+
+    Linhas legadas do seed (id NULL) são "adotadas" pelo primeiro sync que traga aquele
+    nome: em vez de criar uma duplicata, preenche o id da linha existente.
 
     `rows`: lista de dicts {id, name, name_pt, diamond_count, icon_url, icon_local}.
     Retorna {inserted, updated}.
@@ -139,8 +146,12 @@ def upsert_gifts(rows):
             row = None
             if gid:
                 row = cur.execute("SELECT gid FROM gifts WHERE id = ?", (gid,)).fetchone()
-            if not row:
-                row = cur.execute("SELECT gid FROM gifts WHERE lower(name) = lower(?) LIMIT 1", (name,)).fetchone()
+            if not row and gid:
+                # Adota (não duplica) uma linha de seed sem id com o mesmo nome.
+                row = cur.execute(
+                    "SELECT gid FROM gifts WHERE id IS NULL AND lower(name) = lower(?) LIMIT 1",
+                    (name,),
+                ).fetchone()
             if row:
                 cur.execute(
                     "UPDATE gifts SET id = COALESCE(?, id), name = ?, "
@@ -213,7 +224,9 @@ def regenerate_derived_files():
     for r in rows:
         if r["icon_local"]:
             if r["name"]:
-                image_map[r["name"]] = r["icon_local"]
+                # Nome pode repetir (ex.: dois "Heart"): mantém o primeiro (menor preço)
+                # sem sobrescrever; a resolução correta é por id.
+                image_map.setdefault(r["name"], r["icon_local"])
             if r["id"]:
                 image_map[r["id"]] = r["icon_local"]
     try:
@@ -276,12 +289,18 @@ class GiftCatalog:
         return str(row.get("id")) if row and row.get("id") else ""
 
     def reference_matches(self, incoming_id, incoming_name, ref):
-        """Match ID-first com fallback por nome/alias. Usado pelos jogos (Fase 2)."""
+        """Match ID-first com fallback por nome/alias. Usado pelos jogos (Fase 2).
+
+        Quando o id do evento E a linha da config têm id, o id é **autoritativo**:
+        decide só por ele (evita casar gifts de MESMO nome e ids/preços diferentes,
+        ex.: `Heart` de 1 e de 10 moedas). O fallback por nome só vale quando falta id.
+        """
         row = self.resolve_ref(ref)
         if row:
             rid = str(row.get("id") or "")
-            if rid and incoming_id and str(incoming_id).strip() == rid:
-                return True
+            incoming = str(incoming_id or "").strip()
+            if rid and incoming:
+                return incoming == rid
             names = {norm(row.get("name")), norm(row.get("name_pt"))}
             names.discard("")
             if norm(incoming_name) and norm(incoming_name) in names:

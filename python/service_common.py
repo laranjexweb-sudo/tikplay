@@ -103,6 +103,8 @@ def emit(tenant_id, type_, payload):
         out["status"] = payload
     elif type_ == "game":
         out["msg"] = payload
+    elif type_ in ("interaction", "live_session"):
+        out[type_] = payload
     elif type_ == "log" and isinstance(payload, dict):
         # Log estruturado: {text, game?, level?} — diagnóstico por jogo no painel
         out.update(payload)

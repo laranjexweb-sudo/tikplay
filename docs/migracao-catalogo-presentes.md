@@ -182,3 +182,32 @@ Tabela `gift_meta` (single-row): `id INTEGER PK CHECK(id=1)`, `last_sync INTEGER
    robustez standalone).
 3. **Ícones:** `node/public/gift-images/<id>.<ext>`; `gift-image-map.json` vira derivado `nome→arquivo`.
 4. **IDs como TEXT** em todo lugar (IDs do TikTok são inteiros grandes).
+
+---
+
+## 13. Correção — presentes com nome repetido (id-first)
+
+**Problema (observado):** o catálogo casava/inseria **por nome** (`WHERE lower(name)=lower(?)`).
+O TikTok tem presentes **com o mesmo nome e ids/preços diferentes** — ex.: na lista BR existem **dois
+`Heart`**, um de **1** e outro de **10 moedas**, com ícones distintos (`dd300f…` e `98bea1b1…`). O
+segundo era mesclado/sobrescrito pelo primeiro, então o `Heart` de 10 desaparecia e qualquer
+resolução por nome (`giftImageMap["Heart"]`, `getGiftDiamonds("Heart")`) mostrava o de **1 moeda**.
+
+**Correção (backend):**
+- `gifts_catalog.upsert_gifts` casa **somente por `id`**; se o nome colidir com outro id → **nova linha**.
+  Linha legada de seed (id nulo) é *adotada* (preenche id) em vez de duplicar.
+- `regenerate_derived_files`: sempre grava chave de **id**; a chave de nome (ambígua) usa `setdefault`
+  (mantém o primeiro = menor preço), sem sobrescrever.
+- Diagnóstico: `service.on_gift` loga `[Gift][diag] name='…' id='…' moedas=…` (throttle 10s) e o
+  evento `gift_event` agora inclui `gift_id` e `diamond_count`.
+- Regressão: `python/tests/test_gifts_upsert.py` (nomes repetidos coexistem; seed adotado; mapa por id).
+
+**Pendências:** após o próximo `sync_gifts`, o `Heart` de 10 volta com id próprio.
+
+**Contrato de front-end (pendente — IA de UI):**
+1. Resolver **ícone e valor por id**: `giftImageMap[giftId] || giftImageMap[giftName]` e
+   `getGiftDiamondsById(giftId, name)` em `web-game.html`, `control-panel.html`, `tres-pontinhos.html`,
+   overlays.
+2. Seletor de presentes deve gravar o **ID** como valor (hoje `data-val="${g.name}"` — nome), para
+   desambiguar `Heart` (1) de `Heart` (10). Exibir 💎/ID no item quando houver nome repetido.
+3. Usar `gift_id` dos eventos (`gift_event`, roleta, boss) ao exibir o gift enviado.

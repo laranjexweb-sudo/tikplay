@@ -36,13 +36,31 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Na rota `/api/game-state`, a lista salva do usuário tem prioridade para evitar que sincronizações secundárias sobrescrevam os presentes selecionados.
 - O mapeamento de presentes no frontend utiliza fallback (`giftByName(n)?.name || n`) para evitar o descarte acidental de itens.
 
-### 2.3 Final Boss (Modo Boss) — opcional
+### 2.3 Presentes com NOME repetido (id-first)
+- O TikTok tem presentes **com o mesmo nome e ids/preços diferentes** (ex.: dois `"Heart"`, um de 1 e outro de 10 moedas, com ícones distintos). Eles **coexistem** no catálogo (`gifts`), cada um com seu `id`.
+- **Regra:** casar/atualizar presentes **somente por `id`** — nunca mesclar duas linhas só porque compartilham o nome. Linhas legadas de seed (id nulo) são *adotadas* pelo primeiro sync daquele nome.
+- Config de jogos (`hint_gifts`, `riddle_gifts`, etc.) e o match em jogo são **ID-first** (fallback por nome só para dados legados).
+- A **exibição** (ícone/valor) deve resolver por **id** (`map[id] || map[name]`); a chave de nome no `gift-image-map.json` é ambígua e mantém o primeiro (menor preço).
+- Diagnóstico: `on_gift` emite `[Gift][diag] name='…' id='…' moedas=…` (com throttle) e o evento `gift_event` carrega `gift_id`/`diamond_count`.
+
+### 2.4 Final Boss (Modo Boss) — opcional
 - Configuração **`boss_mode`** (bool, padrão **`true`**, via GET/POST `/api/settings`). O streamer escolhe na configuração da Palavra Secreta.
 - **Com `boss_mode = true` (padrão/atual):** ao atingir **melhor rank <= 3** o **Final Boss** é ativado (`is_final_boss`), o presente ativo vira o **presente revelador** (`riddle_gifts[0]`, ou último `hint_gifts`, ou `"TikTok"`), outros gifts são rejeitados, enviar o revelador decretar **vitória instantânea** e a **meta de tap congela** (exibida como concluída).
 - **Com `boss_mode = false`:** não há Final Boss (nenhum gift encerra a partida; o fim é apenas pelo palpite Rank #1). Ao chegar no mesmo nível de proximidade (melhor rank <= 3), a **zona protegida** entra em vigor:
   - A **meta de tap dobra (x2)** mantendo o progresso atual — disparada uma única vez por partida (evento `game/type=tap_meta_x2`; estado contínuo em `likes_ranking.tap_meta_multiplier`). O prêmio segue a roleta **dica/charada**.
   - **Dicas não podem revelar rank 1 e 2** (posições 1 = palavra secreta, 2 = segunda mais próxima); apenas rank **3+**. Vale para roleta de presentes, meta de tap e dica manual.
+  - Além disso, na zona protegida a dica **nunca revela rank pior ou igual ao melhor rank já obtido** (evita a dica "cair" num número maior do que o já exibido). Quando só restam os ranks 1-2, **nenhuma dica é liberada**. A regra é centralizada em `JogoContexto.pick_hint_word`; o cluster da charada (`hint_cluster`) também não inclui rank 1-2 na zona protegida.
 - Sessão nova hidrata `boss_mode` do banco (`tenant_settings`); mudança em runtime é propagada via comando `update_settings` (reavalia zona/x2).
+
+### 2.5 Interações por live, isolamento por `room_id` e relatórios
+- Cada `room_id` é uma **live** (`live_sessions`). Trocar de sala **zera o ranking/acumulador de curtidas** e abre nova sessão; reconectar na mesma sala **preserva**. **Não encerra partidas** ao desconectar/trocar de sala.
+- O daemon Python **só emite** eventos normalizados (`interaction`) — via `emit`; o **Node grava em lote** (`lib/interactions.js`), dono do DDL. Nunca guardar payload bruto.
+- Idempotência por `event_id` (dedupe) — exato no **TikTokLive** (`common.msg_id`/`room_id`); **best-effort** no **TikTools** (sem `event_id`/`room_id` por evento).
+- Retenção (configurável por env): detalhe **90d**, texto de comentário **7d** (truncado 300 chars; linha/contagem permanecem até 90d), agregados **24m**. Poda no boot e a cada 6h.
+- APIs `/api/live-sessions` e `/api/reports/{summary,series,ranking,events}` — autenticadas e **sempre escopadas por `req.user.id`**; nunca aceitam `tenant_id` do cliente; datas em UTC. Ver `docs/relatorios-interacoes.md`.
+
+### 2.6 Overlay de curtidas — personalização validada
+- Layout v2/v3 ampliado de forma **aditiva** (mantém `x,y,scale,count`). Novos campos validados (sem CSS arbitrário): `photo_position` (left/right/top/bottom), `font_color` (#rrggbb), `shadow` (none/soft/medium/strong), `animation` (float/rise/pop/sway), `heart_colors` (até 5 hex). `GET /api/likes-overlay/layout` expõe `options`/`defaults`; POST inválido → 400.
 
 ---
 

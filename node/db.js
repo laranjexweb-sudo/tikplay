@@ -73,10 +73,10 @@ try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN boss_mode INTEGER DEFAULT 1");
 } catch {}
 try {
-  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1}'");
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1,\"count\":5}'");
 } catch {}
 try {
-  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_v2_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1}'");
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_v2_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1,\"count\":5}'");
 } catch {}
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
@@ -93,6 +93,51 @@ CREATE TABLE IF NOT EXISTS log_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_id ON log_entries(tenant_id, id);
 CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_ts ON log_entries(tenant_id, ts);
+`);
+// Interações por live (relatórios do streamer). Node é o único escritor (ingestão em lote).
+db.exec(`
+CREATE TABLE IF NOT EXISTS live_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  room_id TEXT NOT NULL,
+  engine TEXT DEFAULT '',
+  username TEXT DEFAULT '',
+  started_at INTEGER NOT NULL,
+  ended_at INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_live_sessions_room ON live_sessions(tenant_id, room_id);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_tenant ON live_sessions(tenant_id, started_at);
+
+CREATE TABLE IF NOT EXISTS interactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  room_id TEXT DEFAULT '',
+  session_id INTEGER,
+  ts INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  user_id TEXT DEFAULT '',
+  username TEXT DEFAULT '',
+  nickname TEXT DEFAULT '',
+  avatar TEXT DEFAULT '',
+  value INTEGER DEFAULT 0,
+  meta TEXT DEFAULT '',
+  event_id TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_interactions_tenant_ts ON interactions(tenant_id, ts);
+CREATE INDEX IF NOT EXISTS idx_interactions_tenant_room_type ON interactions(tenant_id, room_id, type, ts);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_interactions_event ON interactions(tenant_id, event_id) WHERE event_id <> '';
+
+CREATE TABLE IF NOT EXISTS interaction_aggregates (
+  tenant_id INTEGER NOT NULL,
+  room_id TEXT NOT NULL DEFAULT '',
+  bucket_minute INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  user_id TEXT NOT NULL DEFAULT '',
+  count INTEGER NOT NULL DEFAULT 0,
+  value_sum INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (tenant_id, room_id, bucket_minute, type, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_interaction_agg_tenant ON interaction_aggregates(tenant_id, bucket_minute);
 `);
 db.exec(`
 CREATE TABLE IF NOT EXISTS tenant_caca_config (
@@ -189,8 +234,8 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   riddle_auto_narrate INTEGER DEFAULT 1,
   tap_meta INTEGER DEFAULT 1000,
   boss_mode INTEGER DEFAULT 1,
-  likes_overlay_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1}',
-  likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1}'
+  likes_overlay_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}',
+  likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}'
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
   tenant_id INTEGER PRIMARY KEY,
@@ -675,7 +720,19 @@ function saveTenantSettings(tenantId, s) {
   );
 }
 
-const DEFAULT_LIKES_OVERLAY_LAYOUT = Object.freeze({ x: 0, y: 0, scale: 1 });
+// Opções validadas (sem CSS arbitrário). Aditivas ao contrato x/y/scale/count.
+const LIKES_OVERLAY_OPTIONS = Object.freeze({
+  photo_position: ["left", "right", "top", "bottom"],
+  shadow: ["none", "soft", "medium", "strong"],
+  animation: ["float", "rise", "pop", "sway"],
+  heart_colors_max: 5,
+});
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_LIKES_OVERLAY_LAYOUT = Object.freeze({
+  x: 0, y: 0, scale: 1, count: 5,
+  photo_position: "left", font_color: "#ffffff", shadow: "soft",
+  animation: "float", heart_colors: ["#ff4d6d"],
+});
 
 function likesOverlayLayoutColumn(version) {
   if (version === "v2") return "likes_overlay_v2_layout";
@@ -683,31 +740,89 @@ function likesOverlayLayoutColumn(version) {
   throw new RangeError("Unsupported likes overlay version");
 }
 
+function isHexColor(v) {
+  return typeof v === "string" && HEX_COLOR_RE.test(v);
+}
+
+function pickNumber(value, def, min, max, strict, label) {
+  if (value === undefined || value === null) return def;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) {
+    if (strict) throw new Error(`${label} fora do intervalo permitido`);
+    return def;
+  }
+  return n;
+}
+
+function pickEnum(value, allowed, def, strict, label) {
+  if (value === undefined || value === null) return def;
+  if (allowed.includes(value)) return value;
+  if (strict) throw new Error(`${label} inválido`);
+  return def;
+}
+
+function pickColor(value, def, strict, label) {
+  if (value === undefined || value === null) return def;
+  if (isHexColor(value)) return value;
+  if (strict) throw new Error(`${label} deve ser hexadecimal #rrggbb`);
+  return def;
+}
+
+function pickColors(value, def, strict) {
+  if (value === undefined || value === null) return [...def];
+  if (!Array.isArray(value)) {
+    if (strict) throw new Error("heart_colors deve ser uma lista");
+    return [...def];
+  }
+  const valid = value.filter(isHexColor).slice(0, LIKES_OVERLAY_OPTIONS.heart_colors_max);
+  if (!valid.length) {
+    if (strict) throw new Error("heart_colors inválido");
+    return [...def];
+  }
+  if (strict && valid.length !== value.length) throw new Error("heart_colors contém cores inválidas");
+  return valid;
+}
+
+// Valida/normaliza o layout. Campos ausentes recebem default (compatibilidade);
+// com `strict = true` (POST) valores inválidos lançam erro (resposta 400).
+function normalizeLikesOverlayLayout(layout, strict = false) {
+  const l = (layout && typeof layout === "object" && !Array.isArray(layout)) ? layout : {};
+  const D = DEFAULT_LIKES_OVERLAY_LAYOUT;
+  return {
+    x: pickNumber(l.x, D.x, 0, 100, strict, "x"),
+    y: pickNumber(l.y, D.y, 0, 100, strict, "y"),
+    scale: pickNumber(l.scale, D.scale, 0.5, 2, strict, "scale"),
+    count: Math.round(pickNumber(l.count, D.count, 1, 10, strict, "count")),
+    photo_position: pickEnum(l.photo_position, LIKES_OVERLAY_OPTIONS.photo_position, D.photo_position, strict, "photo_position"),
+    font_color: pickColor(l.font_color, D.font_color, strict, "font_color"),
+    shadow: pickEnum(l.shadow, LIKES_OVERLAY_OPTIONS.shadow, D.shadow, strict, "shadow"),
+    animation: pickEnum(l.animation, LIKES_OVERLAY_OPTIONS.animation, D.animation, strict, "animation"),
+    heart_colors: pickColors(l.heart_colors, D.heart_colors, strict),
+  };
+}
+
+function defaultLikesOverlayLayout() {
+  return normalizeLikesOverlayLayout({}, false);
+}
+
 function getLikesOverlayLayout(tenantId, version = "v3") {
   const column = likesOverlayLayoutColumn(version);
   const row = db.prepare(`SELECT ${column} AS layout_json FROM tenant_settings WHERE tenant_id = ?`).get(tenantId);
-  if (!row || !row.layout_json) return { ...DEFAULT_LIKES_OVERLAY_LAYOUT };
+  if (!row || !row.layout_json) return defaultLikesOverlayLayout();
   try {
-    const layout = JSON.parse(row.layout_json);
-    if (
-      layout && Number.isFinite(layout.x) && layout.x >= 0 && layout.x <= 100 &&
-      Number.isFinite(layout.y) && layout.y >= 0 && layout.y <= 100 &&
-      Number.isFinite(layout.scale) && layout.scale >= 0.5 && layout.scale <= 2
-    ) {
-      return { x: layout.x, y: layout.y, scale: layout.scale };
-    }
+    return normalizeLikesOverlayLayout(JSON.parse(row.layout_json), false);
   } catch {}
-  return { ...DEFAULT_LIKES_OVERLAY_LAYOUT };
+  return defaultLikesOverlayLayout();
 }
 
 function saveLikesOverlayLayout(tenantId, version, layout) {
   const column = likesOverlayLayoutColumn(version);
-  const value = JSON.stringify({ x: layout.x, y: layout.y, scale: layout.scale });
+  const normalized = normalizeLikesOverlayLayout(layout, true);
   db.prepare(`
     INSERT INTO tenant_settings (tenant_id, ${column}) VALUES (?, ?)
     ON CONFLICT(tenant_id) DO UPDATE SET ${column}=excluded.${column}
-  `).run(tenantId, value);
-  return { x: layout.x, y: layout.y, scale: layout.scale };
+  `).run(tenantId, JSON.stringify(normalized));
+  return normalized;
 }
 
 function getTenantGiftConfig(tenantId) {
@@ -897,6 +1012,177 @@ function pruneLogEntries() {
         AND id NOT IN (SELECT id FROM log_entries WHERE tenant_id = ? ORDER BY id DESC LIMIT ?)
     `).run(t.tenant_id, t.tenant_id, LOG_MAX_ROWS_PER_TENANT);
   }
+}
+
+// ---------------- Interações por live (relatórios) ----------------
+
+// Abre/reaproveita a sessão da sala atual e encerra a sessão anterior de outra sala.
+function openLiveSession({ tenant_id, room_id, engine = "", username = "", ts }) {
+  const t = Number(ts) || Date.now();
+  const rid = String(room_id || "");
+  db.prepare("UPDATE live_sessions SET ended_at = ? WHERE tenant_id = ? AND ended_at IS NULL AND room_id <> ?")
+    .run(t, tenant_id, rid);
+  const existing = db.prepare("SELECT id, ended_at FROM live_sessions WHERE tenant_id = ? AND room_id = ?").get(tenant_id, rid);
+  if (existing) {
+    // Reconexão na MESMA sala: reabre se estava encerrada, preservando started_at.
+    if (existing.ended_at) db.prepare("UPDATE live_sessions SET ended_at = NULL WHERE id = ?").run(existing.id);
+    return existing.id;
+  }
+  const info = db.prepare(
+    "INSERT INTO live_sessions (tenant_id, room_id, engine, username, started_at, ended_at) VALUES (?,?,?,?,?,NULL)"
+  ).run(tenant_id, rid, String(engine || ""), String(username || ""), t);
+  return Number(info.lastInsertRowid);
+}
+
+function getLiveSessions(tenantId, { from, to, limit } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("started_at >= ?"); args.push(from); }
+  if (to != null) { where.push("started_at <= ?"); args.push(to); }
+  const lim = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+  args.push(lim);
+  return db.prepare(
+    `SELECT id, room_id, engine, username, started_at, ended_at FROM live_sessions
+     WHERE ${where.join(" AND ")} ORDER BY started_at DESC LIMIT ?`
+  ).all(...args);
+}
+
+// Ingestão em lote: detalhe + agregados por (tenant, sala, minuto, tipo, usuário).
+// Deduplica por event_id (quando presente) via índice único parcial + INSERT OR IGNORE.
+// Os agregados contam SOMENTE as linhas efetivamente inseridas (duplicatas não inflam).
+function insertInteractionsBatch(items) {
+  const ins = db.prepare(
+    `INSERT OR IGNORE INTO interactions
+       (tenant_id, room_id, session_id, ts, type, user_id, username, nickname, avatar, value, meta, event_id)
+     VALUES (@tenant_id, @room_id, @session_id, @ts, @type, @user_id, @username, @nickname, @avatar, @value, @meta, @event_id)`
+  );
+  const agg = db.prepare(
+    `INSERT INTO interaction_aggregates (tenant_id, room_id, bucket_minute, type, user_id, count, value_sum)
+     VALUES (@tenant_id, @room_id, @bucket_minute, @type, @user_id, @count, @value_sum)
+     ON CONFLICT(tenant_id, room_id, bucket_minute, type, user_id)
+     DO UPDATE SET count = count + excluded.count, value_sum = value_sum + excluded.value_sum`
+  );
+  const tx = db.transaction((rows) => {
+    let inserted = 0;
+    const aggs = new Map();
+    for (const r of rows) {
+      const info = ins.run(r);
+      if (!info.changes) continue; // duplicado por event_id
+      inserted++;
+      const bk = Math.floor((Number(r.ts) || 0) / 60000) * 60000;
+      const key = `${r.room_id}|${bk}|${r.type}|${r.user_id}`;
+      const a = aggs.get(key) || {
+        tenant_id: r.tenant_id, room_id: r.room_id, bucket_minute: bk,
+        type: r.type, user_id: r.user_id, count: 0, value_sum: 0,
+      };
+      a.count += 1;
+      a.value_sum += Number(r.value) || 0;
+      aggs.set(key, a);
+    }
+    for (const a of aggs.values()) agg.run(a);
+    return inserted;
+  });
+  return tx(items || []);
+}
+
+function pruneInteractions({ detailCutoff, commentTextCutoff, aggCutoff }) {
+  const delDetail = db.prepare("DELETE FROM interactions WHERE ts < ?").run(detailCutoff);
+  const clearComments = db.prepare(
+    "UPDATE interactions SET meta = '' WHERE type = 'comment' AND ts < ? AND meta <> ''"
+  ).run(commentTextCutoff);
+  const delAgg = db.prepare("DELETE FROM interaction_aggregates WHERE bucket_minute < ?").run(aggCutoff);
+  return { detail: delDetail.changes, comments: clearComments.changes, aggregates: delAgg.changes };
+}
+
+function queryInteractions({ tenantId, from, to, room_id, type, cursor, limit } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("ts >= ?"); args.push(from); }
+  if (to != null) { where.push("ts <= ?"); args.push(to); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  if (type) { where.push("type = ?"); args.push(String(type)); }
+  if (cursor != null) { where.push("id < ?"); args.push(Number(cursor)); }
+  const lim = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  args.push(lim);
+  const rows = db.prepare(
+    `SELECT id, room_id, session_id, ts, type, user_id, username, nickname, avatar, value, meta
+     FROM interactions WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`
+  ).all(...args);
+  const next_cursor = rows.length === lim ? rows[rows.length - 1].id : null;
+  return { events: rows, next_cursor };
+}
+
+// Resumo por tipo usando agregados (rápido), mais pessoas únicas no período.
+function summaryInteractions({ tenantId, from, to, room_id } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("bucket_minute >= ?"); args.push(bucketFloorMinute(from)); }
+  if (to != null) { where.push("bucket_minute <= ?"); args.push(bucketFloorMinute(to)); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  const w = where.join(" AND ");
+  const byType = db.prepare(
+    `SELECT type, SUM(count) AS count, SUM(value_sum) AS value_sum
+     FROM interaction_aggregates WHERE ${w} GROUP BY type`
+  ).all(...args);
+  const uniq = db.prepare(
+    `SELECT COUNT(DISTINCT user_id) AS people FROM interaction_aggregates WHERE ${w} AND user_id <> ''`
+  ).get(...args);
+  const totals = {};
+  let events = 0;
+  for (const r of byType) {
+    totals[r.type] = { count: r.count || 0, value_sum: r.value_sum || 0 };
+    events += r.count || 0;
+  }
+  return { from: from ?? null, to: to ?? null, room_id: room_id || null, events, people: uniq.people || 0, by_type: totals };
+}
+
+function seriesInteractions({ tenantId, from, to, room_id, type, bucketMs = 60000 } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("bucket_minute >= ?"); args.push(bucketFloorMinute(from)); }
+  if (to != null) { where.push("bucket_minute <= ?"); args.push(bucketFloorMinute(to)); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  if (type) { where.push("type = ?"); args.push(String(type)); }
+  const step = Math.max(60000, parseInt(bucketMs, 10) || 60000);
+  const rows = db.prepare(
+    `SELECT bucket_minute, type, SUM(count) AS count, SUM(value_sum) AS value_sum
+     FROM interaction_aggregates WHERE ${where.join(" AND ")}
+     GROUP BY bucket_minute, type ORDER BY bucket_minute ASC`
+  ).all(...args);
+  const buckets = new Map();
+  for (const r of rows) {
+    const b = Math.floor(r.bucket_minute / step) * step;
+    let entry = buckets.get(b);
+    if (!entry) { entry = { t: b, by_type: {}, count: 0, value_sum: 0 }; buckets.set(b, entry); }
+    entry.by_type[r.type] = { count: r.count || 0, value_sum: r.value_sum || 0 };
+    entry.count += r.count || 0;
+    entry.value_sum += r.value_sum || 0;
+  }
+  return { bucket_ms: step, points: [...buckets.values()].sort((a, b) => a.t - b.t) };
+}
+
+// Ranking de participantes (por contagem total, ou por valor quando type é gift).
+function rankingInteractions({ tenantId, from, to, room_id, type, limit } = {}) {
+  const where = ["tenant_id = ?", "user_id <> ''"];
+  const args = [tenantId];
+  if (from != null) { where.push("bucket_minute >= ?"); args.push(bucketFloorMinute(from)); }
+  if (to != null) { where.push("bucket_minute <= ?"); args.push(bucketFloorMinute(to)); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  if (type) { where.push("type = ?"); args.push(String(type)); }
+  const lim = Math.max(1, Math.min(200, parseInt(limit, 10) || 20));
+  const order = type === "gift" ? "value_sum" : "count";
+  args.push(lim);
+  const rows = db.prepare(
+    `SELECT user_id, SUM(count) AS count, SUM(value_sum) AS value_sum
+     FROM interaction_aggregates WHERE ${where.join(" AND ")}
+     GROUP BY user_id ORDER BY ${order} DESC, user_id ASC LIMIT ?`
+  ).all(...args);
+  return { ranking: rows };
+}
+
+function bucketFloorMinute(ts) {
+  const n = Number(ts) || 0;
+  return Math.floor(n / 60000) * 60000;
 }
 
 function getGames(tenantId, limit) {
@@ -1970,6 +2256,8 @@ module.exports = {
   saveTenantSettings,
   getLikesOverlayLayout,
   saveLikesOverlayLayout,
+  LIKES_OVERLAY_OPTIONS,
+  DEFAULT_LIKES_OVERLAY_LAYOUT,
   getTenantGiftConfig,
   saveTenantGiftConfig,
   getTresGiftConfig,
@@ -1986,6 +2274,15 @@ module.exports = {
   LOG_RETENTION_MS,
   LOG_MAX_ROWS_PER_TENANT,
   LOG_PAGE_MAX,
+  openLiveSession,
+  getLiveSessions,
+  insertInteractionsBatch,
+  pruneInteractions,
+  queryInteractions,
+  summaryInteractions,
+  seriesInteractions,
+  rankingInteractions,
+  bucketFloorMinute,
   getGames,
   getGamesPaged,
   getWeeklyWins,

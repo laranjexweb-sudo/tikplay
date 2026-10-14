@@ -212,6 +212,7 @@ class GameSession:
             on_like=self.on_like,
             on_share=self.on_share,
             on_join=self.on_member,
+            on_follow=self.on_follow,
         )
         self.handler._emit_status = self.emit_status
         self.handler.log_cb = lambda text: emit(self.tenant_id, "log", text)
@@ -220,6 +221,8 @@ class GameSession:
         self.likes = {}
         self._likes_dirty = False
         self._likes_loop_task = None
+        # Sala (live) atual — dados de curtidas/ranking são escopados por room_id.
+        self.current_room_id = None
         # Meta de tap (likes) da Palavra Secreta: enche barra e libera dica/charada
         self.tap_meta_current = 0
         self.tap_meta_total = 1000
@@ -283,6 +286,52 @@ class GameSession:
                 return (False, f"nao_{label}")
             checks.append(label)
         return (True, ",".join(checks))
+
+    def _emit_interaction(self, type_, user, nickname, avatar, value=0, meta=None,
+                          event_id=None, room_id=None, user_id=""):
+        """Envia um evento normalizado de interacao para o Node persistir (em lote)."""
+        payload = {
+            "type": type_,
+            "room_id": str(room_id or self.current_room_id or ""),
+            "event_id": str(event_id or ""),
+            "ts": int(time.time() * 1000),
+            "user_id": str(user_id or self._stable_uid(user)),
+            "username": str(user or ""),
+            "nickname": str(nickname or user or ""),
+            "avatar": str(avatar or ""),
+            "value": int(value or 0),
+        }
+        if meta:
+            payload["meta"] = meta
+        emit(self.tenant_id, "interaction", payload)
+
+    def _ensure_room(self, room_id):
+        """Detecta troca de sala. Nova sala => abre nova sessao de live e zera o
+        ranking/acumulador de curtidas (dados sao por live). NAO encerra partidas."""
+        rid = str(room_id or "").strip()
+        if not rid or rid == self.current_room_id:
+            return
+        self.current_room_id = rid
+        self.likes = {}
+        self._likes_dirty = True
+        emit(self.tenant_id, "live_session", {
+            "state": "start",
+            "room_id": rid,
+            "engine": self.engine,
+            "username": self.username,
+            "ts": int(time.time() * 1000),
+        })
+        # Publica ranking vazio imediatamente (a live anterior nao vaza).
+        pub = self._tap_meta_public()
+        emit(self.tenant_id, "game", {
+            "type": "likes_ranking",
+            "ranking": [],
+            "tap_meta_current": pub["tap_meta_current"],
+            "tap_meta_total": pub["tap_meta_total"],
+            "tap_meta_ready": pub["tap_meta_ready"],
+            "tap_meta_multiplier": pub["tap_meta_multiplier"],
+        })
+        emit(self.tenant_id, "log", f"[Live] Nova sala detectada ({rid}) — ranking de curtidas reiniciado")
 
     def _rate_value(self) -> float:
         try:
@@ -415,12 +464,22 @@ class GameSession:
         except Exception as e:
             emit(self.tenant_id, "log", f"[Duelo] Erro ao registrar equipe: {e}")
 
-    async def on_share(self, user, nickname, avatar, user_meta=None):
+    async def on_share(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
+        self._ensure_room(room_id)
+        self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
+                               user_id=self._stable_uid(user, user_meta))
         allowed, _ = self._check_access(user_meta)
         if allowed:
             self.corda.share(self._stable_uid(user, user_meta), user, nickname, avatar)
 
-    async def on_like(self, user, nickname, avatar, like_count, user_meta=None):
+    async def on_follow(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
+        self._ensure_room(room_id)
+        self._emit_interaction("follow", user, nickname, avatar, event_id=event_id, room_id=room_id,
+                               user_id=self._stable_uid(user, user_meta))
+        emit(self.tenant_id, "log", f"[Follow] @{user} começou a seguir")
+
+    async def on_like(self, user, nickname, avatar, like_count, user_meta=None, room_id=None, event_id=None):
+        self._ensure_room(room_id)
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
         if self.vpet.active:
             self.vpet.on_like(user, nickname, avatar, like_count)
@@ -438,6 +497,10 @@ class GameSession:
                 "avatar": str(avatar or ""),
                 "like_count": activity_count,
             })
+            # Relatório: curtidas de todos os espectadores (engajamento da live).
+            self._emit_interaction("like", user, nickname, avatar, value=activity_count,
+                                   event_id=event_id, room_id=room_id,
+                                   user_id=self._stable_uid(user, user_meta))
         allowed, reason = self._check_access(user_meta)
         if not allowed:
             emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado")
@@ -892,12 +955,15 @@ class GameSession:
                 "nickname": nickname or user,
             })
 
-    async def on_member(self, user, nickname):
+    async def on_member(self, user, nickname, room_id=None, event_id=None):
         """Um espectador entrou na live (JoinEvent — apenas motor TikTokLive)."""
+        self._ensure_room(room_id)
+        self._emit_interaction("join", user, nickname, "", event_id=event_id, room_id=room_id)
         if self.vpet.active and self.vpet.state.get("assistant_mode"):
             self.vpet.greet_member(nickname or user)
 
-    async def on_comment(self, user, nickname, avatar, text, user_meta=None):
+    async def on_comment(self, user, nickname, avatar, text, user_meta=None, room_id=None, event_id=None):
+        self._ensure_room(room_id)
         raw = text.strip()
         self._throttled_log("chat_arrival", f"[Chat] {user}: {raw}"[:130], game="chat", level="chat", secs=1.0)
         emit(self.tenant_id, "game", {
@@ -907,6 +973,9 @@ class GameSession:
             "avatar": avatar or "",
             "text": text,
         })
+        if raw:
+            self._emit_interaction("comment", user, nickname, avatar, event_id=event_id, room_id=room_id,
+                                   user_id=self._stable_uid(user, user_meta), meta={"text": raw})
         allowed, _ = self._check_access(user_meta)
         if allowed:
             self.corda.join(self._stable_uid(user, user_meta), raw, user, nickname, avatar)
@@ -1057,6 +1126,10 @@ class GameSession:
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
         emit(self.tenant_id, "log", f"[Guess] {final_user}: {result['word']} -> #{result['rank']}")
+        # Relatório: palpite válido (não duplicado).
+        self._emit_interaction("guess", final_user, final_nickname, final_avatar,
+                               value=int(result["rank"]), event_id=event_id, room_id=room_id,
+                               meta={"word": result["word"], "rank": int(result["rank"])})
 
         if result["rank"] == 1:
             self.game.save_result(winner=final_user, nickname=final_nickname, avatar=final_avatar, total_guesses=len(self.game.guesses), room_id=self._live_room_id())
@@ -1069,18 +1142,40 @@ class GameSession:
                 "total_guesses": len(self.game.guesses),
                 "post_game_summary": self.game.build_post_game_summary(100),
             })
+            self._emit_interaction("winner", final_user, final_nickname, final_avatar, value=1,
+                                   room_id=room_id, meta={"word": self.game.secret_word})
             emit(self.tenant_id, "log", f"[FIM] Vencedor: {final_user}! Palavra: {self.game.secret_word}")
             self._schedule_auto_next_game()
 
-    async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None, gift_id=""):
+    async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None, gift_id="", room_id=None, event_id=None):
+        self._ensure_room(room_id)
         emit(self.tenant_id, "game", {
             "type": "gift_event",
             "user": user,
             "nickname": nickname or user,
             "avatar": avatar or "",
             "gift": gift_name,
+            "gift_id": str(gift_id or ""),
+            "diamond_count": int(diamond_count or 0),
             "repeat_count": repeat_count,
         })
+        # Relatório: valor = diamantes totais do envio.
+        self._emit_interaction(
+            "gift", user, nickname, avatar,
+            value=int(diamond_count or 0) * max(1, int(repeat_count or 1)),
+            event_id=event_id, room_id=room_id,
+            user_id=self._stable_uid(user, user_meta),
+            meta={"gift_id": str(gift_id or ""), "gift_name": str(gift_name or ""),
+                  "repeat_count": max(1, int(repeat_count or 1)), "diamonds": int(diamond_count or 0)},
+        )
+        # Diagnóstico do gift cru (id/nome/moedas): ajuda a desambiguar gifts com o
+        # MESMO nome e preços diferentes (ex.: dois "Heart", 1 e 10 moedas). Throttle
+        # por id para não floodar o log.
+        self._throttled_log(
+            f"gift_diag_{gift_id or gift_name}",
+            f"[Gift][diag] name='{gift_name}' id='{gift_id}' moedas={int(diamond_count or 0)}",
+            game="chat", level="chat", secs=10.0,
+        )
         combo_str = f" x{repeat_count}" if repeat_count > 1 else ""
         emit(self.tenant_id, "log", f"[Gift] {user} enviou '{gift_name}'{combo_str} ({diamond_count} diamantes)")
 
@@ -1264,18 +1359,13 @@ class GameSession:
                 import random
                 choice = random.choices(["hint", "riddle"], weights=[pct_dica, pct_charada], k=1)[0]
 
-        n = len(self.game.all_scored)
-        target_idx = max(0, min(n - 1, max(0, target_rank - 2)))
+        protect = self.game._hint_protected()
 
         if choice == "riddle" and allow_riddle:
             riddle_res = self.game.process_riddle_gift(user, gift, force=True)
             if riddle_res:
                 stage = riddle_res["stage"]
-                cluster_words = []
-                for offset in [-2, -1, 0, 1, 2]:
-                    c_idx = target_idx + offset
-                    if 0 <= c_idx < n:
-                        cluster_words.append(self.game.all_scored[c_idx])
+                cluster_words = self.game.hint_cluster(target_rank)
 
                 emit(self.tenant_id, "game", {
                     "type": "roulette_drop",
@@ -1313,30 +1403,15 @@ class GameSession:
                 return
 
         # choice == "hint" (ou charada convertida em dica pelo limite de 1 por combo)
-        best_word = None
-        guessed_words = {g["word"] for g in self.game.guesses}
-        protect = self.game._hint_protected()
-        for radius in range(n):
-            for idx in (target_idx - radius, target_idx + radius):
-                if 0 <= idx < n:
-                    w = self.game.all_scored[idx]
-                    if w not in self.game.hints_given and w not in guessed_words:
-                        # Sem Modo Boss, dentro da zona protegida não revela rank 1-2
-                        if protect and self.game._compute_rank(w) <= 2:
-                            continue
-                        best_word = w
-                        break
-            if best_word is not None:
-                break
-
-        if best_word is None:
+        picked = self.game.pick_hint_word(target_rank)
+        if picked is None:
             if protect:
-                emit(self.tenant_id, "log", f"[{source}] Sem novas dicas fora da posição protegida (rank 1-2)")
+                emit(self.tenant_id, "log", f"[{source}] Sem dica válida na zona protegida (não pode revelar rank 1-2 nem piorar o melhor rank)")
             else:
                 emit(self.tenant_id, "log", f"[{source}] Sem novas dicas no pool")
             return
 
-        hint_rank = self.game._compute_rank(best_word)
+        best_word, hint_rank = picked
         self.game.hints_given.append(best_word)
 
         entry = {"user": user, "word": best_word, "rank": hint_rank, "is_hint": True, "gift": gift}
@@ -1362,6 +1437,8 @@ class GameSession:
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
         emit(self.tenant_id, "log", f"[{source}] Dica revelada: {best_word} (#{hint_rank})")
+        self._emit_interaction("hint", user, nickname, avatar, value=int(hint_rank),
+                               meta={"word": best_word, "rank": int(hint_rank), "source": source})
 
     async def end_game(self):
         if not self.game.secret_word or self.game.finished:
@@ -1421,30 +1498,14 @@ class GameSession:
             best_rank = min(g["rank"] for g in self.game.guesses)
         import math
         target_rank = best_rank - max(1, math.floor(best_rank * 0.1))
-        n = len(self.game.all_scored)
-        target_idx = max(0, min(n - 1, target_rank - 2))
-        guessed_words = {g["word"] for g in self.game.guesses}
-        best_word = None
-        protect = self.game._hint_protected()
-        for radius in range(n):
-            for idx in (target_idx - radius, target_idx + radius):
-                if 0 <= idx < n:
-                    w = self.game.all_scored[idx]
-                    if w not in self.game.hints_given and w not in guessed_words:
-                        # Sem Modo Boss, dentro da zona protegida não revela rank 1-2
-                        if protect and self.game._compute_rank(w) <= 2:
-                            continue
-                        best_word = w
-                        break
-            if best_word is not None:
-                break
-        if best_word is None:
-            if protect:
-                emit(self.tenant_id, "log", "[Manual] Sem novas dicas fora da posição protegida (rank 1-2)")
+        picked = self.game.pick_hint_word(target_rank)
+        if picked is None:
+            if self.game._hint_protected():
+                emit(self.tenant_id, "log", "[Manual] Sem dica válida na zona protegida (não pode revelar rank 1-2 nem piorar o melhor rank)")
             else:
                 emit(self.tenant_id, "log", "[Manual] Sem novas dicas no pool")
             return
-        hint_rank = self.game._compute_rank(best_word)
+        best_word, hint_rank = picked
         self.game.hints_given.append(best_word)
         entry = {"user": "streamer", "word": best_word, "rank": hint_rank, "is_hint": True}
         self.game.guesses.append(entry)
@@ -1477,18 +1538,12 @@ class GameSession:
             best_rank = min(g["rank"] for g in self.game.guesses)
         import math
         target_rank = best_rank - max(1, math.floor(best_rank * 0.1))
-        n = len(self.game.all_scored)
-        target_idx = max(0, min(n - 1, target_rank - 2))
         riddle_res = self.game.process_riddle_gift("streamer", None, force=True)
         if not riddle_res:
             emit(self.tenant_id, "log", "[Manual] Falha ao iniciar charada")
             return
         stage = riddle_res["stage"]
-        cluster_words = []
-        for offset in [-2, -1, 0, 1, 2]:
-            c_idx = target_idx + offset
-            if 0 <= c_idx < n:
-                cluster_words.append(self.game.all_scored[c_idx])
+        cluster_words = self.game.hint_cluster(target_rank)
         emit(self.tenant_id, "game", {
             "type": "roulette_drop",
             "reward_type": "riddle_started",
@@ -1760,6 +1815,16 @@ async def _run_gifts_sync(tid):
         import sync_gifts as _sync
         emit(tid, "log", "[Gifts] Sincronizando catálogo de presentes com o TikTok...")
         result = await _sync.sync(username=None, download=True, log=lambda m: emit(tid, "log", m))
+        # Recarrega o catálogo em memória (singleton) para o jogo resolver os novos
+        # ids/gifts sem precisar reiniciar o daemon.
+        try:
+            import gifts_catalog as _catalog
+            inst = _catalog.get_catalog()
+            if inst:
+                inst.refresh()
+                emit(tid, "log", f"[Gifts] Catálogo em memória recarregado ({len(inst._rows)} gifts)")
+        except Exception:
+            pass
         emit(tid, "gifts_synced", result)
         emit(tid, "log", f"[Gifts] Catálogo atualizado: +{result.get('inserted', 0)} novos, "
                           f"{result.get('updated', 0)} atualizados, {result.get('unavailable', 0)} indisponíveis.")

@@ -10,6 +10,7 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
     auth,
     getTenant,
     PYTHON_BIN,
+    activityForUser,
   } = ctx;
 
   const loginAttempts = new Map();
@@ -151,7 +152,14 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
   // ---------------- Admin ----------------
 
   app.get("/api/admin/users", auth.requireAdmin, (req, res) => {
-    res.json({ success: true, users: db.listUsers().map(db.publicUser) });
+    const users = db.listUsers().map((user) => {
+      const pub = db.publicUser(user);
+      // Objeto opcional `activity` (telemetria de presenca/atividade do cliente).
+      // Nunca inclui senha/token/API key; ausencia de dados => valores neutros.
+      pub.activity = typeof activityForUser === "function" ? activityForUser(user.id) : null;
+      return pub;
+    });
+    res.json({ success: true, users });
   });
 
   app.post("/api/admin/users/:id/status", auth.requireAdmin, (req, res) => {

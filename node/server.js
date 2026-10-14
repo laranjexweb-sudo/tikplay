@@ -14,6 +14,7 @@ const auth = require("./auth");
 const corda = require("./lib/corda");
 
 const logstore = require("./lib/logstore");
+const interactions = require("./lib/interactions");
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
@@ -28,6 +29,8 @@ registerLogPersister((tenantId, item) => {
 try {
   db.pruneLogEntries();
 } catch (e) {}
+// Retenção de interações (detalhe/agregados/comentários) no boot e periódica.
+try { interactions.startRetention(); } catch (e) {}
 
 const HTTP_PORT = process.env.PORT || 3100;
 const defaultPythonPath = "C:\\Users\\djlar\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
@@ -55,6 +58,8 @@ const FRIENDLY_PAGES = {
   "/duelo": "duelo.html",
   "/corda": "corda.html",
   "/docs": "docs.html",
+  "/suporte": "support.html",
+  "/ajuda": "help.html",
 };
 const LEGACY_PAGES = {
   "/control-panel.html": "/painel",
@@ -88,6 +93,31 @@ fs.mkdirSync(path.join(__dirname, "public", "duelo-audio", "_system"), { recursi
 app.use("/alert-audio", express.static(path.join(__dirname, "public", "alert-audio"), { maxAge: "1d" }));
 app.use("/vendor", express.static(path.join(__dirname, "vendor")));
 
+// ---------------- Telemetria de atividade (Super Admin) ----------------
+// Sinaliza "ultima acao operacional do cliente" (conectar/desconectar live,
+// iniciar/pausar/encerrar partida). Consultar o dashboard/API NAO entra aqui:
+// apenas os endpoints de acao listados em lib/admin-activity.js tocam o sinal.
+const adminActivity = require("./lib/admin-activity");
+
+function touchActivity(tenantId) {
+  if (!tenantId) return;
+  // Registra a acao sem criar tenant por telemetria: se a conta nao tem estado no
+  // servidor (nao abriu painel/mandou comando), nao inventamos atividade.
+  const tenant = tenants.get(tenantId);
+  if (tenant) tenant.lastActivityAt = Date.now();
+}
+
+app.use((req, res, next) => {
+  if (req.method === "POST" && adminActivity.isActivityTouchPath(req.path)) {
+    try {
+      const token = auth.extractToken(req);
+      const payload = token ? auth.verifyToken(token) : null;
+      if (payload && payload.id) touchActivity(payload.id);
+    } catch (e) { /* token ausente/invalido: requireAuth decide o resto */ }
+  }
+  next();
+});
+
 // Instrumentacao de latencia/erros da API para o Monitor de Servidor.
 // Mede apenas /api/* e NUNCA os proprios endpoints do monitor (nem o SSE),
 // para nao distorcer a propria medicao.
@@ -104,6 +134,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Objeto `activity` do contrato do dashboard. Nao cria tenant: ausencia de
+// estado => dados neutros (sem inferir uso por plano/permissao/username).
+function activityForUser(tenantId) {
+  return adminActivity.computeActivity(tenants.get(tenantId));
+}
+
 const httpServer = http.createServer(app);
 httpServer.listen(HTTP_PORT, () => {
   console.log(`[HTTP] Servidor rodando em http://localhost:${HTTP_PORT}`);
@@ -114,6 +150,26 @@ httpServer.listen(HTTP_PORT, () => {
 
 const wss = new WebSocketServer({ server: httpServer });
 console.log(`[WS] WebSocket compartilhando a porta ${HTTP_PORT}`);
+
+// Heartbeat: detecta conexoes abandonadas (navegador fechado sem close frame)
+// encerrando sockets que nao respondem ao ping. Sem isso, um painel "fantasma"
+// ficaria contado como online indefinidamente.
+const WS_HEARTBEAT_MS = 30000;
+const wsHeartbeat = setInterval(() => {
+  for (const tenant of tenants.values()) {
+    for (const list of [tenant.logClients, tenant.browserClients]) {
+      for (const ws of list.slice()) {
+        if (ws.isAlive === false) {
+          try { ws.terminate(); } catch (e) {}
+          continue;
+        }
+        ws.isAlive = false;
+        try { ws.ping(); } catch (e) {}
+      }
+    }
+  }
+}, WS_HEARTBEAT_MS);
+if (wsHeartbeat.unref) wsHeartbeat.unref();
 
 // ---------------- Tenants ----------------
 
@@ -482,6 +538,18 @@ function handleDaemonMessage(msg) {
     const tenant = getTenant(tenantId);
     if (msg.type === "status") {
       broadcastStatus(tenant, msg.status || {});
+    } else if (msg.type === "interaction") {
+      // Ingestão em lote (relatórios). Não é difundido aos clientes.
+      interactions.ingest(tenant, msg.interaction || {});
+    } else if (msg.type === "live_session") {
+      // Nova live (sala) detectada pelo daemon: abre/reaproveita a sessão e zera
+      // o ranking de curtidas (dados são por live). NÃO encerra jogos.
+      const p = msg.live_session || {};
+      if (p.state === "start") {
+        interactions.openSession(tenant, p);
+        tenant.gameState.likes_ranking = [];
+        tenant.gameState.likes_ranking_all = [];
+      }
     } else if (msg.type === "game") {
       const gameMsg = msg.msg || {};
       if (gameMsg.type === "likes_activity") {
@@ -632,7 +700,10 @@ function normalizeSettings(raw) {
 }
 
 // ---------------- Auth / Admin / Panel (rotas - Fase B-2b) ----------------
-require("./routes/auth")(app, { db, auth, getTenant, PYTHON_BIN });
+require("./routes/auth")(app, { db, auth, getTenant, PYTHON_BIN, activityForUser });
+
+// ---------------- Relatórios do streamer (por live/room_id) ----------------
+require("./lib/reports")(app, { db, auth });
 
 // ---------------- Shared/public configs ----------------
 
@@ -827,7 +898,13 @@ function requireLikesOverlayVersion(req, res, next) {
 
 app.get("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverlayAccount, requireLikesOverlayVersion, (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ success: true, version: req.likesOverlayVersion, layout: db.getLikesOverlayLayout(req.user.id, req.likesOverlayVersion) });
+  res.json({
+    success: true,
+    version: req.likesOverlayVersion,
+    layout: db.getLikesOverlayLayout(req.user.id, req.likesOverlayVersion),
+    options: db.LIKES_OVERLAY_OPTIONS,
+    defaults: db.DEFAULT_LIKES_OVERLAY_LAYOUT,
+  });
 });
 
 app.post("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverlayAccount, requireLikesOverlayVersion, (req, res) => {
@@ -835,22 +912,17 @@ app.post("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverla
   if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
     return res.status(400).json({ success: false, error: "Layout invalido" });
   }
-  const { x, y, scale } = layout;
-  if (
-    !Number.isFinite(x) || x < 0 || x > 100 ||
-    !Number.isFinite(y) || y < 0 || y > 100 ||
-    !Number.isFinite(scale) || scale < 0.5 || scale > 2
-  ) {
-    return res.status(400).json({ success: false, error: "x/y devem estar entre 0 e 100 e scale entre 0.5 e 2" });
-  }
   try {
     const version = req.likesOverlayVersion;
-    const saved = db.saveLikesOverlayLayout(req.user.id, version, { x, y, scale });
+    // Valida/normaliza os campos (x/y/scale/count + personalização). Valores
+    // inválidos lançam e viram 400 (sem aceitar CSS arbitrário).
+    const saved = db.saveLikesOverlayLayout(req.user.id, version, layout);
     const tenant = getTenant(req.user.id);
     broadcastToClients(tenant.browserClients, { type: "likes_overlay_layout", version, layout: saved });
     res.json({ success: true, version, layout: saved });
   } catch (e) {
-    res.status(500).json({ success: false, error: "Falha ao salvar layout" });
+    if (e instanceof RangeError) return res.status(400).json({ success: false, error: "Versao invalida" });
+    return res.status(400).json({ success: false, error: e.message || "Layout invalido" });
   }
 });
 
@@ -1910,6 +1982,7 @@ function dueloForceStop(userId) {
   const saved = db.saveDueloConfig(userId, { gifts: cfg.gifts || [], active: false, settings: cfg.settings || {} });
   const st = Object.assign({ type: "duelo_state" }, dueloInitialState(Object.assign({}, saved, { active: false })));
   const tenant = getTenant(userId);
+  tenant.dueloState = st;
   broadcastToClients(tenant.browserClients, st);
   broadcastToClients(tenant.logClients, st);
 }
@@ -1936,6 +2009,8 @@ wss.on("connection", (ws, req) => {
     }
     const tenant = getTenant(user.id);
     tenant.logClients.push(ws);
+    ws.isAlive = true;
+    ws.on("pong", () => { ws.isAlive = true; });
     ws.on("close", () => {
       const idx = tenant.logClients.indexOf(ws);
       if (idx !== -1) tenant.logClients.splice(idx, 1);
@@ -1966,6 +2041,8 @@ wss.on("connection", (ws, req) => {
     }
     const tenant = getTenant(user.id);
     tenant.browserClients.push(ws);
+    ws.isAlive = true;
+    ws.on("pong", () => { ws.isAlive = true; });
     ws.on("close", () => {
       const idx = tenant.browserClients.indexOf(ws);
       if (idx !== -1) tenant.browserClients.splice(idx, 1);

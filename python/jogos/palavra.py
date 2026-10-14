@@ -581,73 +581,11 @@ class JogoContexto:
                     "secret_length": len(self.secret_word),
                 }
 
-        norm_incoming = strip_accents(gift_name.strip().lower())
-        matched_gift = None
-        for hg in self.hint_gifts:
-            if self._gift_ref_match(gift_id, gift_name, hg):
-                matched_gift = hg
-                break
-
-        if not matched_gift:
-            return None
-        self._ensure_hint_pool()
-        if not self.all_scored:
-            return {"user": user, "gift": gift_name, "hint": None, "rank": None}
-
-        gift_diamonds = []
-        for g in self.hint_gifts:
-            d = self._catalog_diamond(g)
-            if d is None:
-                g_lower = str(g).lower()
-                for tag in self._gift_tags:
-                    if tag["name"].lower() == g_lower:
-                        d = tag["diamond_count"]
-                        break
-            if d is not None:
-                gift_diamonds.append(d)
-
-        if not gift_diamonds:
-            return {"user": user, "gift": gift_name, "hint": None, "rank": None}
-
-        min_d = min(gift_diamonds)
-        max_d = max(gift_diamonds)
-        if max_d == min_d:
-            ratio = 0.5
-        else:
-            ratio = (diamond_count - min_d) / (max_d - min_d)
-        ratio = max(0.0, min(1.0, ratio))
-
-        n = len(self.all_scored)
-        min_index = 4  # dica mais cara: ~rank 6 (posicao 6), nao a palavra mais proxima
-        max_index = min(n - 1, 299)
-        target_index = round(min_index + (max_index - min_index) * (1 - ratio))
-
-        guessed_words = {g["word"] for g in self.guesses}
-        best_word = None
-        for radius in range(n):
-            for idx in (target_index - radius, target_index + radius):
-                if 0 <= idx < n:
-                    w = self.all_scored[idx]
-                    if w in self.hints_given or w in guessed_words:
-                        continue
-                    best_word = w
-                    break
-            if best_word is not None:
-                break
-
-        if best_word is None:
-            return {"user": user, "gift": gift_name, "hint": None, "rank": None}
-
-        hint_rank = self._compute_rank(best_word)
-        self.hints_given.append(best_word)
-        entry = {"user": user, "word": best_word, "rank": hint_rank, "is_hint": True, "gift": matched_gift}
-        if nickname:
-            entry["nickname"] = nickname
-        if avatar:
-            entry["avatar"] = avatar
-        self.guesses.append(entry)
-        self.guesses.sort(key=lambda x: x["rank"])
-        return {"user": user, "gift": gift_name, "hint": best_word, "rank": hint_rank, "gift_canonical": matched_gift}
+        # Dicas por presente NÃO são mais resolvidas aqui: a seleção (com as regras
+        # de rank/zona protegida) é centralizada em `pick_hint_word` e aplicada pela
+        # roleta/meta de tap/dica manual em service.py. Manter a dica aqui mutava
+        # `guesses`/`hints_given` em silêncio (estado divergente do emitido).
+        return None
 
     def finalize_game(self, room_id: str = ""):
         if not self.secret_word or self.finished:
@@ -810,6 +748,61 @@ class JogoContexto:
         if self.guesses:
             best_rank = min(g["rank"] for g in self.guesses)
         return best_rank <= 3
+
+    def pick_hint_word(self, target_rank: int):
+        """Escolhe a palavra de uma dica, centralizando a regra compartilhada pela
+        roleta de presentes, meta de tap e dica manual.
+
+        - Pula palavras já reveladas (`hints_given`) ou já chutadas (`guesses`).
+        - Na zona protegida (Modo Boss off, melhor rank <= 3): não revela rank 1-2
+          e nunca revela rank pior/igual ao melhor rank já obtido — evita a dica
+          "cair" num número maior do que o já exibido na partida.
+
+        Retorna (palavra, rank) ou None quando não há dica válida.
+        """
+        n = len(self.all_scored)
+        if n == 0:
+            return None
+        target_idx = max(0, min(n - 1, max(0, int(target_rank) - 2)))
+        guessed_words = {g["word"] for g in self.guesses}
+        protect = self._hint_protected()
+        best_rank = 1000
+        if self.guesses:
+            best_rank = min(g["rank"] for g in self.guesses)
+        for radius in range(n):
+            for idx in (target_idx - radius, target_idx + radius):
+                if 0 <= idx < n:
+                    w = self.all_scored[idx]
+                    if w in self.hints_given or w in guessed_words:
+                        continue
+                    rank = idx + 2
+                    if protect:
+                        # Não revela rank 1-2 nem dica pior/igual ao melhor rank
+                        if rank <= 2 or rank >= best_rank:
+                            continue
+                    return w, rank
+        return None
+
+    def hint_cluster(self, target_rank: int, span: int = 2) -> list:
+        """Palavras de contexto para a charada (cluster em torno do alvo).
+
+        Na zona protegida (Modo Boss off, melhor rank <= 3) remove rank 1-2 para
+        não vazar a palavra secreta/2ª mais próxima via charada.
+        """
+        n = len(self.all_scored)
+        if n == 0:
+            return []
+        target_idx = max(0, min(n - 1, max(0, int(target_rank) - 2)))
+        protect = self._hint_protected()
+        cluster = []
+        for offset in range(-span, span + 1):
+            c_idx = target_idx + offset
+            if 0 <= c_idx < n:
+                # all_scored é ordenado por proximidade: rank = índice + 2
+                if protect and c_idx + 2 <= 2:
+                    continue
+                cluster.append(self.all_scored[c_idx])
+        return cluster
 
     def record_active_gift_shown(self, gift: str):
         if not gift:

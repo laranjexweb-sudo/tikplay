@@ -58,13 +58,15 @@ async def check_live_status_tiktools(username: str, api_key: str, log_cb=None) -
 
 
 class TikToolsHandler:
-    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None):
+    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
         self.on_gift_cb = on_gift
         self.on_like_cb = on_like
+        self.on_join_cb = on_join
         self.on_share_cb = on_share
+        self.on_follow_cb = on_follow
         self.log_cb = None
         self._room_id = None
         self._connected = False
@@ -111,6 +113,12 @@ class TikToolsHandler:
             status.update(extra)
         print(f"[STATUS] {json.dumps(status, ensure_ascii=False)}", flush=True)
 
+    def _ids(self, event: dict, data: dict):
+        """(room_id, event_id) best-effort: o TikTools pode não trazer por evento."""
+        rid = (event or {}).get("roomId") or (data or {}).get("roomId") or self._room_id
+        mid = (data or {}).get("msgId") or (data or {}).get("messageId") or (event or {}).get("msgId")
+        return (str(rid) if rid else None, str(mid) if mid else None)
+
     async def _handle_event(self, event: dict):
         etype = event.get("event", "")
         if etype == "roomInfo":
@@ -119,6 +127,7 @@ class TikToolsHandler:
         user = data.get("user") or {}
         if etype in ("liveStatus", "roomUser", "status"):
             return
+        room_id, event_id = self._ids(event, data)
         if etype == "chat":
             if self.on_comment_cb:
                 await self.on_comment_cb(
@@ -127,6 +136,8 @@ class TikToolsHandler:
                     avatar=self._avatar(user),
                     text=data.get("comment", ""),
                     user_meta=self._user_meta(user),
+                    room_id=room_id,
+                    event_id=event_id,
                 )
 
         elif etype == "gift":
@@ -143,7 +154,7 @@ class TikToolsHandler:
             # para nao perder gifts caso o frame final se perca (queda/reconexao).
             if repeat_end:
                 self._pending_gifts.pop(key, None)
-                await self._emit_gift(user, gift_name, diamond_count, repeat_count, key, gift_id)
+                await self._emit_gift(user, gift_name, diamond_count, repeat_count, key, gift_id, room_id, event_id)
             else:
                 prev = self._pending_gifts.get(key)
                 if prev is None:
@@ -153,17 +164,33 @@ class TikToolsHandler:
                         "gift_id": gift_id,
                         "diamond_count": diamond_count,
                         "repeat_count": repeat_count,
+                        "room_id": room_id,
+                        "event_id": event_id,
                         "ts": time.time(),
                     }
                 else:
                     prev["repeat_count"] = max(prev["repeat_count"], repeat_count)
                     prev["diamond_count"] = diamond_count
+                    prev["room_id"] = room_id or prev.get("room_id")
+                    prev["event_id"] = event_id or prev.get("event_id")
                     prev["ts"] = time.time()
 
-        elif etype == "share":
+        elif etype in ("share", "social_share"):
             if self.on_share_cb and user:
                 await self.on_share_cb(user=self._display_name(user), nickname=self._nickname(user),
-                                       avatar=self._avatar(user), user_meta=self._user_meta(user))
+                                       avatar=self._avatar(user), user_meta=self._user_meta(user),
+                                       room_id=room_id, event_id=event_id)
+
+        elif etype in ("follow", "social_follow"):
+            if self.on_follow_cb and user:
+                await self.on_follow_cb(user=self._display_name(user), nickname=self._nickname(user),
+                                        avatar=self._avatar(user), user_meta=self._user_meta(user),
+                                        room_id=room_id, event_id=event_id)
+
+        elif etype in ("member", "join", "roomMember"):
+            if self.on_join_cb and user:
+                await self.on_join_cb(user=self._display_name(user), nickname=self._nickname(user),
+                                      room_id=room_id, event_id=event_id)
 
         elif etype == "like":
             like_count = int(data.get("likeCount") or 0)
@@ -176,9 +203,11 @@ class TikToolsHandler:
                     avatar=self._avatar(user),
                     like_count=like_count,
                     user_meta=self._user_meta(user),
+                    room_id=room_id,
+                    event_id=event_id,
                 )
 
-    async def _emit_gift(self, user, gift_name, diamond_count, repeat_count, key, gift_id=""):
+    async def _emit_gift(self, user, gift_name, diamond_count, repeat_count, key, gift_id="", room_id=None, event_id=None):
         now = time.time()
         self._emitted_gifts = {k: v for k, v in self._emitted_gifts.items() if now - v <= 12}
         if key in self._emitted_gifts:
@@ -194,6 +223,8 @@ class TikToolsHandler:
                 diamond_count=diamond_count,
                 repeat_count=repeat_count,
                 user_meta=self._user_meta(user),
+                room_id=room_id or self._room_id,
+                event_id=event_id,
             )
 
     async def _flush_pending_gifts(self):
@@ -211,6 +242,8 @@ class TikToolsHandler:
                         entry["repeat_count"],
                         key,
                         entry.get("gift_id", "") or "",
+                        entry.get("room_id"),
+                        entry.get("event_id"),
                     )
 
     async def _connect(self):

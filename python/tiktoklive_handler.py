@@ -11,6 +11,7 @@ from TikTokLive.events import (
     LikeEvent,
     JoinEvent,
     ShareEvent,
+    FollowEvent,
 )
 
 
@@ -22,7 +23,7 @@ class TikTokLiveHandler:
     pois o TikTokLive nao exige chave.
     """
 
-    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None):
+    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
@@ -30,6 +31,7 @@ class TikTokLiveHandler:
         self.on_like_cb = on_like
         self.on_join_cb = on_join
         self.on_share_cb = on_share
+        self.on_follow_cb = on_follow
         self.log_cb = None
         self._room_id = None
         self._connected = False
@@ -90,6 +92,16 @@ class TikTokLiveHandler:
         common = getattr(event, "common", None)
         return int(getattr(common, "create_time", 0) or 0)
 
+    @staticmethod
+    def _event_ids(event):
+        """(room_id, event_id) do envelope `common` do Webcast (pode ser ausente)."""
+        common = getattr(event, "common", None)
+        if common is None:
+            return (None, None)
+        rid = getattr(common, "room_id", None)
+        mid = getattr(common, "msg_id", None)
+        return (str(rid) if rid else None, str(mid) if mid else None)
+
     def _is_backlog(self, event) -> bool:
         """Descarta eventos criados antes da conexao (backlog reenviado pelo
         WebSocket/cursor), mantendo margem para o handshake."""
@@ -120,7 +132,11 @@ class TikTokLiveHandler:
         if not rid:
             conn = getattr(event, "conn", None)
             rid = getattr(conn, "room_id", None) if conn else None
-        self._room_id = str(rid or "").strip() or None
+        new_rid = str(rid or "").strip() or None
+        # Sala diferente => baseline de totais de curtida por usuário recomeça.
+        if new_rid and new_rid != self._room_id:
+            self._last_like_total = {}
+        self._room_id = new_rid
         self._emit_status("connected")
         self.log(f"[TikTokLive] Conectado a @{self.username}" + (f" (room {self._room_id})" if self._room_id else ""))
 
@@ -135,12 +151,15 @@ class TikTokLiveHandler:
         if self._is_backlog(event):
             return
         user = getattr(event, "user", None)
+        rid, mid = self._event_ids(event)
         await self.on_comment_cb(
             user=self._display_name(user),
             nickname=self._nickname(user),
             avatar=self._avatar(user),
             text=str(getattr(event, "comment", "") or getattr(event, "content", "")),
             user_meta=self._user_meta(user),
+            room_id=rid or self._room_id,
+            event_id=mid,
         )
 
     async def _on_gift(self, event: GiftEvent):
@@ -160,6 +179,7 @@ class TikTokLiveHandler:
         if bool(getattr(event, "streaking", False)):
             return
         repeat_count = max(1, int(getattr(event, "repeat_count", 1) or 1))
+        rid, mid = self._event_ids(event)
         await self.on_gift_cb(
             user=self._display_name(user),
             nickname=self._nickname(user),
@@ -169,14 +189,27 @@ class TikTokLiveHandler:
             diamond_count=diamond_count,
             repeat_count=repeat_count,
             user_meta=self._user_meta(user),
+            room_id=rid or self._room_id,
+            event_id=mid,
         )
 
     async def _on_share(self, event):
         if self.on_share_cb and not self._is_backlog(event):
             user = getattr(event, "user", None)
             if user is not None:
+                rid, mid = self._event_ids(event)
                 await self.on_share_cb(user=self._display_name(user), nickname=self._nickname(user),
-                                       avatar=self._avatar(user), user_meta=self._user_meta(user))
+                                       avatar=self._avatar(user), user_meta=self._user_meta(user),
+                                       room_id=rid or self._room_id, event_id=mid)
+
+    async def _on_follow(self, event):
+        if self.on_follow_cb and not self._is_backlog(event):
+            user = getattr(event, "user", None)
+            if user is not None:
+                rid, mid = self._event_ids(event)
+                await self.on_follow_cb(user=self._display_name(user), nickname=self._nickname(user),
+                                        avatar=self._avatar(user), user_meta=self._user_meta(user),
+                                        room_id=rid or self._room_id, event_id=mid)
 
     async def _on_like(self, event: LikeEvent):
         if not self.on_like_cb:
@@ -205,21 +238,27 @@ class TikTokLiveHandler:
             self._last_like_total[uid] = total
         if like_count <= 0:
             return
+        rid, mid = self._event_ids(event)
         await self.on_like_cb(
             user=self._display_name(user),
             nickname=self._nickname(user),
             avatar=self._avatar(user),
             like_count=like_count,
             user_meta=self._user_meta(user),
+            room_id=rid or self._room_id,
+            event_id=mid,
         )
 
     async def _on_join(self, event: JoinEvent):
         if not self.on_join_cb:
             return
         user = getattr(event, "user", None)
+        rid, mid = self._event_ids(event)
         await self.on_join_cb(
             user=self._display_name(user),
             nickname=self._nickname(user),
+            room_id=rid or self._room_id,
+            event_id=mid,
         )
 
     async def run(self):
@@ -241,6 +280,7 @@ class TikTokLiveHandler:
             client.add_listener(DisconnectEvent, self._on_disconnect)
             client.add_listener(CommentEvent, self._on_comment)
             client.add_listener(ShareEvent, self._on_share)
+            client.add_listener(FollowEvent, self._on_follow)
             client.add_listener(GiftEvent, self._on_gift)
             client.add_listener(LikeEvent, self._on_like)
             client.add_listener(JoinEvent, self._on_join)

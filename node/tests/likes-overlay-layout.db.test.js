@@ -33,29 +33,33 @@ legacyDb.prepare("INSERT INTO tenant_settings (tenant_id) VALUES (?)").run(101);
 legacyDb.close();
 const db = require("../db");
 
+// Default completo do layout (inclui os campos de personalização aditivos).
+const D = db.DEFAULT_LIKES_OVERLAY_LAYOUT;
+const expectLayout = (x, y, scale, count) => ({ ...D, x, y, scale, count });
+
 try {
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), { x: 0, y: 0, scale: 1 });
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), { x: 0, y: 0, scale: 1 });
-  assert.deepEqual(db.getLikesOverlayLayout(202, "v3"), { x: 0, y: 0, scale: 1 });
-  assert.deepEqual(db.getLikesOverlayLayout(202, "v2"), { x: 0, y: 0, scale: 1 });
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), expectLayout(0, 0, 1, 5));
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), expectLayout(0, 0, 1, 5));
+  assert.deepEqual(db.getLikesOverlayLayout(202, "v3"), expectLayout(0, 0, 1, 5));
+  assert.deepEqual(db.getLikesOverlayLayout(202, "v2"), expectLayout(0, 0, 1, 5));
   assert.deepEqual(
-    db.saveLikesOverlayLayout(101, "v3", { x: 12.5, y: 87.25, scale: 1.5 }),
-    { x: 12.5, y: 87.25, scale: 1.5 }
+    db.saveLikesOverlayLayout(101, "v3", { x: 12.5, y: 87.25, scale: 1.5, count: 7 }),
+    expectLayout(12.5, 87.25, 1.5, 7)
   );
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), { x: 12.5, y: 87.25, scale: 1.5 });
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), { x: 0, y: 0, scale: 1 });
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), expectLayout(12.5, 87.25, 1.5, 7));
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), expectLayout(0, 0, 1, 5));
   assert.deepEqual(
-    db.saveLikesOverlayLayout(101, "v2", { x: 75, y: 20, scale: 0.75 }),
-    { x: 75, y: 20, scale: 0.75 }
+    db.saveLikesOverlayLayout(101, "v2", { x: 75, y: 20, scale: 0.75, count: 3 }),
+    expectLayout(75, 20, 0.75, 3)
   );
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), { x: 75, y: 20, scale: 0.75 });
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), { x: 12.5, y: 87.25, scale: 1.5 });
-  assert.deepEqual(db.saveLikesOverlayLayout(202, "v3", { x: 50, y: 50, scale: 1 }), { x: 50, y: 50, scale: 1 });
-  assert.deepEqual(db.getLikesOverlayLayout(202, "v3"), { x: 50, y: 50, scale: 1 });
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), expectLayout(75, 20, 0.75, 3));
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), expectLayout(12.5, 87.25, 1.5, 7));
+  assert.deepEqual(db.saveLikesOverlayLayout(202, "v3", { x: 50, y: 50, scale: 1, count: 4 }), expectLayout(50, 50, 1, 4));
+  assert.deepEqual(db.getLikesOverlayLayout(202, "v3"), expectLayout(50, 50, 1, 4));
 
   db.saveTenantSettings(101, { ...db.getTenantSettings(101), pct_dica: 55 });
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), { x: 12.5, y: 87.25, scale: 1.5 });
-  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), { x: 75, y: 20, scale: 0.75 });
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v3"), expectLayout(12.5, 87.25, 1.5, 7));
+  assert.deepEqual(db.getLikesOverlayLayout(101, "v2"), expectLayout(75, 20, 0.75, 3));
   console.log("PASS legacy-default migration, per-version persistence, tenant isolation, and settings coexistence");
 } finally {
   db.db.close();
