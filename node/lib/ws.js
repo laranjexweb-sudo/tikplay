@@ -1,6 +1,7 @@
 // Camada de estado e broadcast (tenants) — extraída de server.js na Fase B-2.
 // `broadcastStatus`/`broadcastStatusAll` (que dependem do daemonSend) permanecem no server.js.
 const { DEFAULT_SETTINGS } = require("../db");
+const metrics = require("./metrics");
 
 const tenants = new Map();
 
@@ -54,13 +55,17 @@ function getTenant(id) {
 
 function broadcastToClients(clients, msg) {
   const data = JSON.stringify(msg);
+  let delivered = 0;
   for (let i = clients.length - 1; i >= 0; i--) {
     try {
       clients[i].send(data);
+      delivered++;
     } catch {
       clients.splice(i, 1);
     }
   }
+  // Contador de eventos/min do Monitor de Servidor (entregas por cliente).
+  try { if (delivered > 0) metrics.recordWsEvent(delivered); } catch {}
 }
 
 let logPersister = null;

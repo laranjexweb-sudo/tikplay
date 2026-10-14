@@ -14,6 +14,9 @@ const auth = require("./auth");
 const corda = require("./lib/corda");
 
 const logstore = require("./lib/logstore");
+const metrics = require("./lib/metrics");
+const monitor = require("./lib/monitor");
+const monitorSse = require("./lib/monitor-sse");
 
 // Persiste cada log no ponto único de entrega (daemon/servidor), mantendo o
 // contrato {type:"log", text, game, level} + metadados estáveis aditivos (id, ts, category).
@@ -84,6 +87,22 @@ fs.mkdirSync(path.join(__dirname, "public", "duelo-audio"), { recursive: true })
 fs.mkdirSync(path.join(__dirname, "public", "duelo-audio", "_system"), { recursive: true });
 app.use("/alert-audio", express.static(path.join(__dirname, "public", "alert-audio"), { maxAge: "1d" }));
 app.use("/vendor", express.static(path.join(__dirname, "vendor")));
+
+// Instrumentacao de latencia/erros da API para o Monitor de Servidor.
+// Mede apenas /api/* e NUNCA os proprios endpoints do monitor (nem o SSE),
+// para nao distorcer a propria medicao.
+const MONITOR_PATH_PREFIX = "/api/admin/monitor";
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api/") || req.path.startsWith(MONITOR_PATH_PREFIX)) return next();
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    try {
+      const ms = Number(process.hrtime.bigint() - start) / 1e6;
+      metrics.recordRequest(ms, res.statusCode);
+    } catch {}
+  });
+  next();
+});
 
 const httpServer = http.createServer(app);
 httpServer.listen(HTTP_PORT, () => {
@@ -419,6 +438,7 @@ function onDaemonDown() {
 }
 
 function routeDaemonStderr(line) {
+  try { metrics.recordProcessError(); } catch {}
   const tenantId = msgTenant(line);
   if (tenantId && tenants.has(tenantId)) {
     broadcastLog(getTenant(tenantId), `[stderr] ${line}`);
@@ -443,6 +463,18 @@ function daemonSend(obj) {
   if (!daemon) startDaemon();
   return daemon ? daemon.send(obj) : false;
 }
+
+// Estado do daemon Python para o Monitor de Servidor (nao muda contrato de jogos).
+function getDaemonStatus() {
+  return {
+    alive: !!(daemon && daemon.proc),
+    pid: daemon ? daemon.pid : null,
+    backoff: daemon ? daemon.backoff : 0,
+  };
+}
+
+// Servico externo de TTS (Kokoro) e opcional; sem URL => "nao configurado".
+const TTS_CONFIGURED = !!process.env.KOKORO_URL;
 
 function handleDaemonMessage(msg) {
   const tenantId = msg.tenant_id;
@@ -511,6 +543,24 @@ process.on("SIGINT", () => { killDaemon(); process.exit(); });
 process.on("SIGTERM", () => { killDaemon(); process.exit(); });
 
 startDaemon();
+
+// ---------------- Monitor de Servidor: amostragem + motor de incidentes ----------------
+// Amostra host (CPU/RAM/disco) a cada minuto e roda o motor de transicoes de
+// incidentes a cada 20s. Ambos com unref para nao segurar o processo.
+metrics.sampleHost().catch(() => {});
+const hostSampler = setInterval(() => { metrics.sampleHost().catch(() => {}); }, 60000);
+if (hostSampler.unref) hostSampler.unref();
+
+const monitorEngine = monitor.createEngine({
+  db,
+  metrics,
+  sse: monitorSse,
+  tenants,
+  getDaemonStatus,
+  ttsConfigured: TTS_CONFIGURED,
+});
+const monitorTicker = setInterval(() => { monitorEngine.tick(); }, monitor.ENGINE_INTERVAL_MS);
+if (monitorTicker.unref) monitorTicker.unref();
 
 // ---------------- Config helpers ----------------
 
@@ -593,6 +643,12 @@ require("./routes/gifts")(app, { db, path, fs, multer, auth, getTenant, daemonSe
 // Chamados, sugestões, respostas rápidas e Central de Ajuda. Anexos ficam em
 // node/data/support-files (fora de public/) e são servidos por endpoint autenticado.
 require("./routes/support")(app, { db, auth, multer, fs, path });
+
+// ---------------- Monitor de Servidor (rotas) ----------------
+// REST (snapshot/series/widget/incidents/silences) + SSE de eventos importantes.
+require("./routes/monitor")(app, {
+  db, auth, metrics, monitor, sse: monitorSse, getDaemonStatus, tenants, ttsConfigured: TTS_CONFIGURED,
+});
 
 // ---------------- Planos e Assinaturas (Mercado Pago) ----------------
 

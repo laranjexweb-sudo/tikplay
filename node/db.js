@@ -393,6 +393,33 @@ CREATE INDEX IF NOT EXISTS idx_help_articles_category ON help_articles(category_
 CREATE INDEX IF NOT EXISTS idx_help_articles_published ON help_articles(published, id);
 `);
 
+// ---------------- Monitor de Servidor (DDL) ----------------
+// Incidentes (histórico/ack) e silêncios por chave de regra. Timestamps em epoch ms.
+db.exec(`
+CREATE TABLE IF NOT EXISTS monitor_incidents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'warning',
+  title TEXT NOT NULL DEFAULT '',
+  detail TEXT DEFAULT '',
+  source TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open',
+  first_seen INTEGER NOT NULL,
+  last_seen INTEGER NOT NULL,
+  resolved_at INTEGER,
+  ack_by INTEGER,
+  ack_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_monitor_incidents_status ON monitor_incidents(status, last_seen);
+CREATE INDEX IF NOT EXISTS idx_monitor_incidents_key ON monitor_incidents(key, status);
+CREATE TABLE IF NOT EXISTS monitor_silences (
+  key TEXT PRIMARY KEY,
+  until INTEGER NOT NULL,
+  created_by INTEGER,
+  created_at INTEGER NOT NULL
+);
+`);
+
 const CODE_CHARS = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function makeRoomCode(len = 8) {
@@ -1795,6 +1822,121 @@ function seedSupportData() {
 
 seedSupportData();
 
+// ---------------- Monitor de Servidor (funções) ----------------
+// Incidentes: no máximo UM aberto/reconhecido por `key` (regra "sem duplicatas").
+// `acknowledged` é apenas um marcador de leitura — continua resolvível pelo motor
+// quando a condição volta ao normal. Silêncios apenas suprimem eventos visíveis;
+// não apagam o histórico já persistido.
+
+const MONITOR_INCIDENT_ACTIVE = "('open','acknowledged')";
+
+function getActiveMonitorIncidentByKey(key) {
+  return db.prepare(
+    `SELECT * FROM monitor_incidents WHERE key = ? AND status IN ${MONITOR_INCIDENT_ACTIVE} ORDER BY id DESC LIMIT 1`
+  ).get(String(key)) || null;
+}
+
+function getMonitorIncidentById(id) {
+  return db.prepare("SELECT * FROM monitor_incidents WHERE id = ?").get(id) || null;
+}
+
+function openMonitorIncident({ key, severity = "warning", title = "", detail = "", source = "", ts }) {
+  const now = Number(ts) || Date.now();
+  const info = db.prepare(`
+    INSERT INTO monitor_incidents (key, severity, title, detail, source, status, first_seen, last_seen)
+    VALUES (?, ?, ?, ?, ?, 'open', ?, ?)
+  `).run(String(key), severity, String(title || ""), String(detail || ""), String(source || ""), now, now);
+  return getMonitorIncidentById(info.lastInsertRowid);
+}
+
+function touchMonitorIncident(id, { severity, detail, ts } = {}) {
+  const now = Number(ts) || Date.now();
+  const current = getMonitorIncidentById(id);
+  if (!current) return null;
+  db.prepare("UPDATE monitor_incidents SET severity = ?, detail = ?, last_seen = ? WHERE id = ?")
+    .run(severity || current.severity, detail != null ? String(detail) : current.detail, now, id);
+  return getMonitorIncidentById(id);
+}
+
+function resolveMonitorIncident(id, ts) {
+  const now = Number(ts) || Date.now();
+  const info = db.prepare(
+    `UPDATE monitor_incidents SET status = 'resolved', resolved_at = ?, last_seen = ? WHERE id = ? AND status IN ${MONITOR_INCIDENT_ACTIVE}`
+  ).run(now, now, id);
+  return info.changes > 0 ? getMonitorIncidentById(id) : null;
+}
+
+function ackMonitorIncident(id, adminId, ts) {
+  const now = Number(ts) || Date.now();
+  const current = getMonitorIncidentById(id);
+  if (!current || current.status !== "open") return null;
+  db.prepare("UPDATE monitor_incidents SET status = 'acknowledged', ack_by = ?, ack_at = ? WHERE id = ?")
+    .run(adminId, now, id);
+  return getMonitorIncidentById(id);
+}
+
+function listMonitorIncidents({ status = "all", limit = 100 } = {}) {
+  const take = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+  if (status === "open") {
+    return db.prepare(
+      `SELECT * FROM monitor_incidents WHERE status IN ${MONITOR_INCIDENT_ACTIVE} ORDER BY last_seen DESC LIMIT ?`
+    ).all(take);
+  }
+  if (["open", "acknowledged", "resolved"].includes(status)) {
+    return db.prepare("SELECT * FROM monitor_incidents WHERE status = ? ORDER BY last_seen DESC LIMIT ?").all(status, take);
+  }
+  return db.prepare("SELECT * FROM monitor_incidents ORDER BY last_seen DESC LIMIT ?").all(take);
+}
+
+function countActiveMonitorIncidents() {
+  return db.prepare(`SELECT COUNT(*) c FROM monitor_incidents WHERE status IN ${MONITOR_INCIDENT_ACTIVE}`).get().c;
+}
+
+function setMonitorSilence(key, until, createdBy) {
+  const now = Date.now();
+  db.prepare(`
+    INSERT INTO monitor_silences (key, until, created_by, created_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET until = excluded.until, created_by = excluded.created_by, created_at = excluded.created_at
+  `).run(String(key), Number(until) || now, createdBy || null, now);
+  return getMonitorSilence(key);
+}
+
+function getMonitorSilence(key) {
+  return db.prepare("SELECT * FROM monitor_silences WHERE key = ?").get(String(key)) || null;
+}
+
+function deleteMonitorSilence(key) {
+  return db.prepare("DELETE FROM monitor_silences WHERE key = ?").run(String(key)).changes > 0;
+}
+
+function listMonitorSilences({ activeOnly = true } = {}) {
+  if (activeOnly) {
+    return db.prepare("SELECT * FROM monitor_silences WHERE until > ? ORDER BY until DESC").all(Date.now());
+  }
+  return db.prepare("SELECT * FROM monitor_silences ORDER BY until DESC").all();
+}
+
+function pruneMonitorSilences() {
+  return db.prepare("DELETE FROM monitor_silences WHERE until <= ?").run(Date.now()).changes;
+}
+
+// Contadores de plataforma para o monitor (usuários, planos, jogos, chamados).
+function getMonitorPlatformStats() {
+  const users = db.prepare("SELECT COUNT(*) c FROM users").get().c;
+  const usersActive = db.prepare("SELECT COUNT(*) c FROM users WHERE status = 'active'").get().c;
+  const newToday = db.prepare("SELECT COUNT(*) c FROM users WHERE date(created_at) = date('now')").get().c;
+  const plans = {};
+  for (const r of db.prepare("SELECT plan, COUNT(*) c FROM users GROUP BY plan").all()) plans[r.plan || "free"] = r.c;
+  let gamesTotal = 0, gamesToday = 0;
+  try { gamesTotal = db.prepare("SELECT COUNT(*) c FROM games").get().c; } catch {}
+  try { gamesToday = db.prepare("SELECT COUNT(*) c FROM games WHERE date(played_at) = date('now')").get().c; } catch {}
+  let openTickets = 0;
+  try {
+    openTickets = db.prepare("SELECT COUNT(*) c FROM support_tickets WHERE status IN ('novo','em_atendimento','aguardando_usuario')").get().c;
+  } catch {}
+  return { users_total: users, users_active: usersActive, new_users_today: newToday, plans, games_total: gamesTotal, games_today: gamesToday, open_tickets: openTickets };
+}
+
 module.exports = {
   db,
   DEFAULT_SETTINGS,
@@ -1912,4 +2054,19 @@ module.exports = {
   saveHelpArticle,
   deleteHelpArticle,
   seedSupportData,
+  // Monitor de Servidor
+  getActiveMonitorIncidentByKey,
+  getMonitorIncidentById,
+  openMonitorIncident,
+  touchMonitorIncident,
+  resolveMonitorIncident,
+  ackMonitorIncident,
+  listMonitorIncidents,
+  countActiveMonitorIncidents,
+  setMonitorSilence,
+  getMonitorSilence,
+  deleteMonitorSilence,
+  listMonitorSilences,
+  pruneMonitorSilences,
+  getMonitorPlatformStats,
 };

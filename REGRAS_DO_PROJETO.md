@@ -117,4 +117,26 @@ Implementado em `node/routes/support.js` (registrado por `server.js`) com persis
   `published = true`; o CRUD administrativo permite rascunho sem exposição pública.
 
 ---
+
+## 7. Monitor de Servidor (API backend)
+
+Implementado em `node/routes/monitor.js` + `node/lib/{metrics,monitor,monitor-sse}.js`, com
+persistência em `node/db.js` (`monitor_incidents`, `monitor_silences`). Contrato completo em
+**`docs/monitor-contrato-api.md`**. Escopo backend; telas/wallboard são do front.
+
+- **Modelo híbrido:** polling REST para métricas (snapshot/series/widget) e **SSE** só para
+  alertas/incidentes/status de serviço. O SSE usa **ticket de uso único** (60s) via
+  `POST /api/admin/monitor/events-ticket` — nunca JWT na URL.
+- **Falha isolada:** `snapshot`/`widget` nunca caem por uma métrica; seções que falham vão em
+  `degraded_sections`. `series` preenche buckets vazios com zero.
+- **Incidentes:** no máximo 1 ativo por `key` (sem duplicatas); `last_seen`/`detail`/`severity`
+  são atualizados enquanto a condição persiste; `acknowledged` **não** impede resolução
+  automática; silêncio suprime evento visível mas **não apaga histórico** e expira sozinho.
+- **Medição:** 1 nó (VPS/PM2) + daemon Python; SQLite é conexão única (sem "nº de conexões");
+  percentis p50/p95/p99 na janela documentada de **15 min**; taxa de erro (5xx) na janela de **5 min**.
+- **Instrumentação:** o middleware ignora `req.path` que comece com `/api/admin/monitor`
+  (inclui o stream SSE) para não distorcer a própria medição. Limiares vivem em
+  `lib/monitor.js` (`THRESHOLDS`) e são expostos em `GET /api/admin/monitor/thresholds`.
+
+---
 *Documento exportado automaticamente para referência e governança do projeto.*
