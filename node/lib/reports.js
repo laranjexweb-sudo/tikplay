@@ -81,4 +81,14 @@ module.exports = function registerReportRoutes(app, ctx = {}) {
     });
     res.json({ success: true, events: result.events, next_cursor: result.next_cursor });
   });
+
+  // Níveis atuais (presenteador / fã-clube) por usuário. Com room_id usa o baseline
+  // da live; sem, o nível global conhecido.
+  app.get("/api/reports/levels", auth.requireAuth, (req, res) => {
+    const levels = db.listViewerLevels(req.user.id, {
+      room_id: req.query.room_id ? String(req.query.room_id) : null,
+      limit: parseLimit(req.query.limit, 100, 500),
+    });
+    res.json({ success: true, room_id: req.query.room_id ? String(req.query.room_id) : null, levels });
+  });
 };

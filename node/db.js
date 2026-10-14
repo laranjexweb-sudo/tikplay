@@ -138,6 +138,34 @@ CREATE TABLE IF NOT EXISTS interaction_aggregates (
   PRIMARY KEY (tenant_id, room_id, bucket_minute, type, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_interaction_agg_tenant ON interaction_aggregates(tenant_id, bucket_minute);
+
+-- Níveis por usuário (presenteador = pay_grade; membro = fã-clube).
+-- viewer_levels: o que o backend "sabe" do usuário (global).
+-- live_viewer_levels: baseline capturado na 1ª aparição do usuário na live.
+CREATE TABLE IF NOT EXISTS viewer_levels (
+  tenant_id INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  nickname TEXT DEFAULT '',
+  avatar TEXT DEFAULT '',
+  gifter_level INTEGER DEFAULT 0,
+  gifter_grade TEXT DEFAULT '',
+  fan_club_level INTEGER DEFAULT 0,
+  fan_club_name TEXT DEFAULT '',
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (tenant_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS live_viewer_levels (
+  tenant_id INTEGER NOT NULL,
+  room_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  nickname TEXT DEFAULT '',
+  avatar TEXT DEFAULT '',
+  gifter_level INTEGER DEFAULT 0,
+  fan_club_level INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (tenant_id, room_id, user_id)
+);
 `);
 db.exec(`
 CREATE TABLE IF NOT EXISTS tenant_caca_config (
@@ -1183,6 +1211,71 @@ function rankingInteractions({ tenantId, from, to, room_id, type, limit } = {}) 
 function bucketFloorMinute(ts) {
   const n = Number(ts) || 0;
   return Math.floor(n / 60000) * 60000;
+}
+
+// ---------------- Níveis por usuário (presenteador / fã-clube) ----------------
+
+function getViewerLevel(tenantId, userId) {
+  return db.prepare("SELECT * FROM viewer_levels WHERE tenant_id = ? AND user_id = ?").get(tenantId, String(userId)) || null;
+}
+
+function getLiveViewerLevel(tenantId, roomId, userId) {
+  return db.prepare(
+    "SELECT * FROM live_viewer_levels WHERE tenant_id = ? AND room_id = ? AND user_id = ?"
+  ).get(tenantId, String(roomId), String(userId)) || null;
+}
+
+function upsertViewerLevel({ tenant_id, user_id, nickname = "", avatar = "", gifter_level = 0, gifter_grade = "", fan_club_level = 0, fan_club_name = "", ts }) {
+  const t = Number(ts) || Date.now();
+  db.prepare(`
+    INSERT INTO viewer_levels (tenant_id, user_id, nickname, avatar, gifter_level, gifter_grade, fan_club_level, fan_club_name, updated_at)
+    VALUES (@tenant_id, @user_id, @nickname, @avatar, @gifter_level, @gifter_grade, @fan_club_level, @fan_club_name, @ts)
+    ON CONFLICT(tenant_id, user_id) DO UPDATE SET
+      nickname = CASE WHEN excluded.nickname <> '' THEN excluded.nickname ELSE nickname END,
+      avatar = CASE WHEN excluded.avatar <> '' THEN excluded.avatar ELSE avatar END,
+      gifter_level = excluded.gifter_level,
+      gifter_grade = CASE WHEN excluded.gifter_grade <> '' THEN excluded.gifter_grade ELSE gifter_grade END,
+      fan_club_level = excluded.fan_club_level,
+      fan_club_name = CASE WHEN excluded.fan_club_name <> '' THEN excluded.fan_club_name ELSE fan_club_name END,
+      updated_at = excluded.updated_at
+  `).run({
+    tenant_id, user_id: String(user_id), nickname: String(nickname || ""), avatar: String(avatar || ""),
+    gifter_level: Number(gifter_level) || 0, gifter_grade: String(gifter_grade || ""),
+    fan_club_level: Number(fan_club_level) || 0, fan_club_name: String(fan_club_name || ""), ts: t,
+  });
+}
+
+function upsertLiveViewerLevel({ tenant_id, room_id, user_id, nickname = "", avatar = "", gifter_level = 0, fan_club_level = 0, ts }) {
+  const t = Number(ts) || Date.now();
+  db.prepare(`
+    INSERT INTO live_viewer_levels (tenant_id, room_id, user_id, nickname, avatar, gifter_level, fan_club_level, created_at, updated_at)
+    VALUES (@tenant_id, @room_id, @user_id, @nickname, @avatar, @gifter_level, @fan_club_level, @ts, @ts)
+    ON CONFLICT(tenant_id, room_id, user_id) DO UPDATE SET
+      nickname = CASE WHEN excluded.nickname <> '' THEN excluded.nickname ELSE nickname END,
+      avatar = CASE WHEN excluded.avatar <> '' THEN excluded.avatar ELSE avatar END,
+      gifter_level = excluded.gifter_level,
+      fan_club_level = excluded.fan_club_level,
+      updated_at = excluded.updated_at
+  `).run({
+    tenant_id, room_id: String(room_id), user_id: String(user_id), nickname: String(nickname || ""),
+    avatar: String(avatar || ""), gifter_level: Number(gifter_level) || 0, fan_club_level: Number(fan_club_level) || 0, ts: t,
+  });
+}
+
+// Níveis atuais para uma sala (ou globais) — para overlay/tela de níveis.
+function listViewerLevels(tenantId, { room_id, limit } = {}) {
+  const lim = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+  if (room_id) {
+    return db.prepare(`
+      SELECT user_id, nickname, avatar, gifter_level, fan_club_level, updated_at
+      FROM live_viewer_levels WHERE tenant_id = ? AND room_id = ?
+      ORDER BY updated_at DESC LIMIT ?
+    `).all(tenantId, String(room_id), lim);
+  }
+  return db.prepare(`
+    SELECT user_id, nickname, avatar, gifter_level, gifter_grade, fan_club_level, fan_club_name, updated_at
+    FROM viewer_levels WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT ?
+  `).all(tenantId, lim);
 }
 
 function getGames(tenantId, limit) {
@@ -2283,6 +2376,11 @@ module.exports = {
   seriesInteractions,
   rankingInteractions,
   bucketFloorMinute,
+  getViewerLevel,
+  getLiveViewerLevel,
+  upsertViewerLevel,
+  upsertLiveViewerLevel,
+  listViewerLevels,
   getGames,
   getGamesPaged,
   getWeeklyWins,

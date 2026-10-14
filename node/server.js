@@ -15,6 +15,7 @@ const corda = require("./lib/corda");
 
 const logstore = require("./lib/logstore");
 const interactions = require("./lib/interactions");
+const levels = require("./lib/levels");
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
@@ -549,6 +550,14 @@ function handleDaemonMessage(msg) {
         interactions.openSession(tenant, p);
         tenant.gameState.likes_ranking = [];
         tenant.gameState.likes_ranking_all = [];
+      }
+    } else if (msg.type === "viewer_level") {
+      // Sincroniza nível do usuário e, se subiu DURANTE a live, difunde level_up.
+      const res = levels.handleViewerLevel(tenant, msg.viewer_level || {});
+      for (const ev of res.events) {
+        const payload = { type: "level_up", ...ev };
+        broadcastToClients(tenant.browserClients, payload);
+        broadcastToClients(tenant.logClients, payload);
       }
     } else if (msg.type === "game") {
       const gameMsg = msg.msg || {};

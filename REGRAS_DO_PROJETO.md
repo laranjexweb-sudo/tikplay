@@ -62,6 +62,12 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 ### 2.6 Overlay de curtidas — personalização validada
 - Layout v2/v3 ampliado de forma **aditiva** (mantém `x,y,scale,count`). Novos campos validados (sem CSS arbitrário): `photo_position` (left/right/top/bottom), `font_color` (#rrggbb), `shadow` (none/soft/medium/strong), `animation` (float/rise/pop/sway), `heart_colors` (até 5 hex). `GET /api/likes-overlay/layout` expõe `options`/`defaults`; POST inválido → 400.
 
+### 2.7 Níveis do usuário (apresentador / comunidade)
+- Níveis: **Presenteador** (`user.pay_grade.level`) e **Membro/comunidade** (`user.fans_club.data.level`). Extraídos em `tiktoklive_handler._user_meta`; TikTools best-effort.
+- **Regra:** 1ª aparição na live apenas **sincroniza** nível (baseline + global), **sem animação** (mesmo se subiu em outra live). Animação só quando o nível **sobe durante a nossa live**.
+- Estado: `viewer_levels` (global por usuário) e `live_viewer_levels` (baseline por live). A subida é persistida como interação `level_up` (`meta = {axis, before, after}`); a divergência de entrada não gera interação.
+- Node detecta e **difunde** WS `{"type":"level_up","axis":"gifter"|"fanclub","before","after","user",...}`; APIs `/api/reports/events?type=level_up` e `/api/reports/levels`. Ver `docs/relatorios-interacoes.md` §7.
+
 ---
 
 ## 3. Interface do Usuário (Frontend & UI)

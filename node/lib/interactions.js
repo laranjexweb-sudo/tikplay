@@ -30,6 +30,7 @@ const MAX_COMMENT_CHARS = 300;
 const ALLOWED_TYPES = new Set([
   "like", "gift", "comment", "follow", "share", "join",
   "guess", "hint", "winner", "size_reveal", "letter_reveal",
+  "level_up",
 ]);
 
 let _pending = [];

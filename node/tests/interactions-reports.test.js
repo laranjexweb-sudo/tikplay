@@ -15,6 +15,7 @@ process.env.DB_PATH = path.join(TMP, "data.db");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const db = require("../db");
 const interactions = require("../lib/interactions");
+const levels = require("../lib/levels");
 const auth = require("../auth");
 
 const BASE = process.env.TEST_BASE || "http://localhost:3100";
@@ -200,7 +201,7 @@ function testOverlayConfig() {
 }
 
 async function testIntegration() {
-  console.log("[9] integração das rotas (autenticação/isolamento)");
+  console.log("[10] integração das rotas (autenticação/isolamento)");
   let up = false;
   try { up = (await fetch(BASE + "/api/plans")).status === 200; } catch { up = false; }
   if (!up) { console.log("  SKIP servidor offline em " + BASE); return; }
@@ -228,6 +229,57 @@ async function testIntegration() {
   check("/api/reports/series autenticado -> 200", se.status === 200 && Array.isArray(se.json.points));
   const rk = await get("/api/reports/ranking?type=like");
   check("/api/reports/ranking autenticado -> 200", rk.status === 200 && Array.isArray(rk.json.ranking));
+  const lvl = await get("/api/reports/levels");
+  check("/api/reports/levels autenticado -> 200", lvl.status === 200 && Array.isArray(lvl.json.levels));
+}
+
+function testLevels() {
+  console.log("[9] níveis (presenteador / fã-clube)");
+  const t = (room) => tenant(901, room, 11);
+
+  // Pré-existente de outra live: global gifter 10.
+  db.upsertViewerLevel({ tenant_id: 901, user_id: "u1", nickname: "U1", gifter_level: 10, fan_club_level: 0, ts: 1000 });
+  // Entrada na live R1 com nível divergente (15) => silencioso (sem animação).
+  let r = levels.handleViewerLevel(t("R1"), { room_id: "R1", user_id: "u1", username: "u1", nickname: "U1", gifter_level: 15, ts: 2000 });
+  check("entrada na live = sem evento (divergência silenciosa)", r.events.length === 0, JSON.stringify(r));
+  check("baseline da live gravado (15)", db.getLiveViewerLevel(901, "R1", "u1").gifter_level === 15);
+  check("nível global sincronizado (15)", db.getViewerLevel(901, "u1").gifter_level === 15);
+
+  // Subida DURANTE a live => evento Antes > Depois.
+  r = levels.handleViewerLevel(t("R1"), { room_id: "R1", user_id: "u1", username: "u1", nickname: "U1", gifter_level: 16, ts: 3000 });
+  check("subida durante a live gera evento (15->16)",
+    r.events.length === 1 && r.events[0].axis === "gifter" && r.events[0].before === 15 && r.events[0].after === 16,
+    JSON.stringify(r));
+  check("baseline atualizado (16)", db.getLiveViewerLevel(901, "R1", "u1").gifter_level === 16);
+
+  // Ausente/0 não sobrescreve nem gera evento.
+  r = levels.handleViewerLevel(t("R1"), { room_id: "R1", user_id: "u1", username: "u1", gifter_level: 0, ts: 3100 });
+  check("nível ausente/0 não gera evento nem sobrescreve",
+    r.events.length === 0 && db.getLiveViewerLevel(901, "R1", "u1").gifter_level === 16);
+
+  // Persistido como interação level_up.
+  const s = db.summaryInteractions({ tenantId: 901 });
+  check("level_up persistido como interação", s.by_type.level_up && s.by_type.level_up.count === 1, JSON.stringify(s.by_type));
+
+  // Eixo fã-clube independente.
+  const t2 = tenant(901, "R1", 11);
+  db.upsertLiveViewerLevel({ tenant_id: 901, room_id: "R1", user_id: "u2", nickname: "U2", gifter_level: 0, fan_club_level: 3, ts: 4000 });
+  r = levels.handleViewerLevel(t2, { room_id: "R1", user_id: "u2", username: "u2", nickname: "U2", fan_club_level: 4, ts: 4100 });
+  check("subida de fã-clube (eixo independente 3->4)",
+    r.events.length === 1 && r.events[0].axis === "fanclub" && r.events[0].before === 3 && r.events[0].after === 4,
+    JSON.stringify(r));
+
+  // Baseline desconhecido (0) => silent set, sem animar; próxima subida anima.
+  db.upsertLiveViewerLevel({ tenant_id: 901, room_id: "R1", user_id: "u3", nickname: "U3", gifter_level: 0, fan_club_level: 2, ts: 5000 });
+  r = levels.handleViewerLevel(t2, { room_id: "R1", user_id: "u3", username: "u3", gifter_level: 7, ts: 5100 });
+  check("baseline desconhecido (0) => sem evento", r.events.length === 0, JSON.stringify(r));
+  r = levels.handleViewerLevel(t2, { room_id: "R1", user_id: "u3", username: "u3", gifter_level: 8, ts: 5200 });
+  check("após baseline, próxima subida anima (7->8)", r.events.length === 1 && r.events[0].before === 7 && r.events[0].after === 8);
+
+  // Isolamento e listagem.
+  check("isolamento por tenant", db.getLiveViewerLevel(902, "R1", "u1") === null);
+  const lv = db.listViewerLevels(901, { room_id: "R1" });
+  check("listViewerLevels por sala", Array.isArray(lv) && lv.length >= 3, "n=" + lv.length);
 }
 
 (async () => {
@@ -239,6 +291,7 @@ async function testIntegration() {
   testRetention();
   testMeta();
   testOverlayConfig();
+  testLevels();
   await testIntegration();
   console.log("\nResultado: " + passed + " passaram, " + failed + " falharam.");
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch {}

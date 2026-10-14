@@ -223,6 +223,8 @@ class GameSession:
         self._likes_loop_task = None
         # Sala (live) atual — dados de curtidas/ranking são escopados por room_id.
         self.current_room_id = None
+        # Últimos níveis vistos por (room_id, user) — dedupe de observações.
+        self._viewer_levels = {}
         # Meta de tap (likes) da Palavra Secreta: enche barra e libera dica/charada
         self.tap_meta_current = 0
         self.tap_meta_total = 1000
@@ -313,6 +315,7 @@ class GameSession:
             return
         self.current_room_id = rid
         self.likes = {}
+        self._viewer_levels = {}
         self._likes_dirty = True
         emit(self.tenant_id, "live_session", {
             "state": "start",
@@ -332,6 +335,41 @@ class GameSession:
             "tap_meta_multiplier": pub["tap_meta_multiplier"],
         })
         emit(self.tenant_id, "log", f"[Live] Nova sala detectada ({rid}) — ranking de curtidas reiniciado")
+
+    def _track_levels(self, user, nickname, avatar, user_meta, room_id=None):
+        """Observa os níveis do usuário (presenteador/fã-clube) e emite ao Node só
+        quando há valor válido e mudou desde a última vista na sala. O Node decide
+        se foi subida (Antes > Depois) e se deve animar."""
+        if not user_meta:
+            return
+        try:
+            g = int(user_meta.get("gifter_level") or 0)
+        except (TypeError, ValueError):
+            g = 0
+        try:
+            f = int(user_meta.get("fan_club_level") or 0)
+        except (TypeError, ValueError):
+            f = 0
+        if g <= 0 and f <= 0:
+            return
+        rid = str(room_id or self.current_room_id or "")
+        key = (rid, str(user or ""))
+        prev = self._viewer_levels.get(key)
+        if prev is not None and prev[0] == g and prev[1] == f:
+            return
+        self._viewer_levels[key] = (g, f)
+        emit(self.tenant_id, "viewer_level", {
+            "room_id": rid,
+            "user_id": self._stable_uid(user, user_meta),
+            "username": str(user or ""),
+            "nickname": str(nickname or user or ""),
+            "avatar": str(avatar or ""),
+            "gifter_level": g or 0,
+            "gifter_grade": str(user_meta.get("gifter_grade") or ""),
+            "fan_club_level": f or 0,
+            "fan_club_name": str(user_meta.get("fan_club_name") or ""),
+            "ts": int(time.time() * 1000),
+        })
 
     def _rate_value(self) -> float:
         try:
@@ -466,6 +504,7 @@ class GameSession:
 
     async def on_share(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id)
         self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         allowed, _ = self._check_access(user_meta)
@@ -474,12 +513,14 @@ class GameSession:
 
     async def on_follow(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id)
         self._emit_interaction("follow", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         emit(self.tenant_id, "log", f"[Follow] @{user} começou a seguir")
 
     async def on_like(self, user, nickname, avatar, like_count, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id)
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
         if self.vpet.active:
             self.vpet.on_like(user, nickname, avatar, like_count)
@@ -964,6 +1005,7 @@ class GameSession:
 
     async def on_comment(self, user, nickname, avatar, text, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id)
         raw = text.strip()
         self._throttled_log("chat_arrival", f"[Chat] {user}: {raw}"[:130], game="chat", level="chat", secs=1.0)
         emit(self.tenant_id, "game", {
@@ -1149,6 +1191,7 @@ class GameSession:
 
     async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None, gift_id="", room_id=None, event_id=None):
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id)
         emit(self.tenant_id, "game", {
             "type": "gift_event",
             "user": user,

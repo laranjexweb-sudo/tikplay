@@ -75,12 +75,26 @@ class TikTokLiveHandler:
     def _user_meta(user) -> dict:
         if user is None:
             return {}
+
+        def deep(obj, *attrs):
+            cur = obj
+            for a in attrs:
+                if cur is None:
+                    return None
+                cur = getattr(cur, a, None)
+            return cur
+
         return {
             "follow_role": getattr(user, "follow_role", None) if hasattr(user, "follow_role") else (1 if getattr(user, "is_follower", False) else None),
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
             "is_follower": getattr(user, "is_follower", False) or getattr(user, "follow_info", None) is not None,
+            # Níveis: presenteador (pay_grade) e membro/fã-clube (fans_club.data.level).
+            "gifter_level": deep(user, "pay_grade", "level"),
+            "gifter_grade": deep(user, "pay_grade", "grade_describe"),
+            "fan_club_level": deep(user, "fans_club", "data", "level"),
+            "fan_club_name": deep(user, "fans_club", "data", "club_name"),
             "badges": [
-                {"name": str(getattr(b, "name", "") or "")}
+                {"name": str(getattr(b, "name", "") or ""), "level": getattr(b, "level", None)}
                 for b in (getattr(user, "badges", None) or [])
                 if b is not None
             ],

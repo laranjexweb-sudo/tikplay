@@ -97,10 +97,16 @@ class TikToolsHandler:
     @staticmethod
     def _user_meta(user: dict) -> dict:
         u = user or {}
+        fans = u.get("fansClub") if isinstance(u.get("fansClub"), dict) else {}
         return {
             "follow_role": u.get("followRole"),
             "is_subscriber": u.get("isSubscriber"),
             "is_follower": u.get("isFollower"),
+            # Níveis — best-effort: TikTools pode não trazer estes campos.
+            "gifter_level": (u.get("payGrade") or {}).get("level") if isinstance(u.get("payGrade"), dict) else (u.get("payGradeLevel") or u.get("gifterLevel")),
+            "gifter_grade": u.get("payGradeName") or u.get("gifterGrade") or "",
+            "fan_club_level": fans.get("level") or u.get("fanClubLevel"),
+            "fan_club_name": fans.get("clubName") or u.get("fanClubName") or "",
             "badges": u.get("badges") or [],
             "user_id": str(u.get("id") or u.get("userId") or ""),
         }

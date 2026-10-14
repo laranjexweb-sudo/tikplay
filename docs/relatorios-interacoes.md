@@ -73,14 +73,15 @@ o overlay. Valores validados — **sem CSS arbitrário**.
 - Defaults: `photo_position:"left"`, `font_color:"#ffffff"`, `shadow:"soft"`,
   `animation:"float"`, `heart_colors:["#ff4d6d"]`.
 
-## 5. Dependências de front-end (não alterei a interface)
+## 5. Integração de front-end
 
-1. **Relatórios:** consumir `/api/live-sessions` e `/api/reports/*` (resumo, série,
-   ranking, eventos paginados) com filtros por live/período/tipo. Exibir datas no
-   fuso local (o backend entrega UTC).
-2. **Overlay de curtidas:** exibir os novos controles usando os `options` do GET
-   (posição da foto, cor da fonte, sombra, animação e cores dos corações) e
-   enviá-los no POST; aplicar via a config `likes_overlay_layout`.
+- **Relatórios:** a aba do streamer consome `/api/live-sessions` e `/api/reports/*`
+  com filtros por live, período e tipo, resumo, série temporal, ranking e eventos
+  paginados. Datas são enviadas como epoch ms e exibidas no fuso local.
+- **Overlay de curtidas:** a área de sobreposições monta os controles a partir de
+  `options`/`defaults` do GET, salva a configuração pelo POST e aplica as mudanças
+  na prévia e nos overlays ativos via broadcast. Curtidas flutuantes usam a
+  configuração v3 para animação e paleta de cor.
 
 ## 6. Testes
 
@@ -90,3 +91,39 @@ série, ranking, paginação por cursor, retenção (detalhe/comentário/agregad
 normalização de meta, validação/round-trip do overlay, e integração das rotas
 (401/200). `tests/likes-overlay-layout.db.test.js` atualizado para o default
 estendido. Validação Python do shape dos eventos e do reset por sala.
+
+## 7. Níveis do usuário (presenteador / membro da comunidade)
+
+Detecta **subida de nível** por live. Duas dimensões:
+- **Presenteador** (`gifter`): nível de gasto — `user.pay_grade.level` (`gifter_grade`).
+- **Membro/comunidade** (`fanclub`): nível de fã-clube — `user.fans_club.data.level` (`fan_club_name`).
+
+**Regra de animação:** na **1ª aparição** do usuário na live o nível é apenas
+**sincronizado** (baseline + nível global conhecido), **sem evento/animacao** —
+mesmo que ele tenha subido em outra live. Só quando o nível **aumenta durante a
+nossa live** (acima do baseline da própria sala) é que há evento.
+
+**Armazenamento:**
+- `viewer_levels` — nível global conhecido por usuário `(tenant_id, user_id)`.
+- `live_viewer_levels` — baseline por live `(tenant_id, room_id, user_id)`.
+- Subida vira **interação** `level_up` em `interactions`:
+  `value = after`, `meta = {axis:"gifter"|"fanclub", before, after}`. A divergência
+  de entrada **não** gera interação.
+
+**Fluxo:** daemon emite `viewer_level` (só quando o nível é válido e mudou desde a
+última vista na sala); o **Node** compara com o baseline e, em aumento, persiste o
+`level_up` e **difunde** aos clientes.
+
+**Tempo real (WS):** `{"type":"level_up","axis":"gifter"|"fanclub","before":N,"after":N,
+"user","nickname","avatar","room_id"}` para overlays (`browserClients`) e painel (`logClients`).
+
+**APIs:** histórico por `/api/reports/events?type=level_up` (resumo/série/ranking por
+tipo também valem) e níveis atuais por `GET /api/reports/levels?room_id=` —
+com `room_id` usa o baseline da live; sem, o global. Autenticadas e escopadas por
+`req.user.id`.
+
+**Limites:** só ao vivo; nível ausente/`0` ignorado (não sobrescreve); fã-clube usa
+`data` principal; TikTools é best-effort (sem nível por evento na maioria dos casos).
+
+**Dependência de front-end:** escutar `level_up` para o alerta "Antes > Depois" por
+eixo; usar `/api/reports/levels` para nível atual (sem animação).
