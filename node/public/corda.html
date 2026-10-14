@@ -284,7 +284,18 @@ const effectTimers = new Map(), tapUserLast = new Map();
 const effectCounts = {face:{flavio:0,lula:0},join:{flavio:0,lula:0}};
 let targetNoticeUntil=0;
 let demoTeam = null, rallySide = null, rallyUntil = 0, rallyPressureSide = null;
-if (CONTROL) { $('controls').hidden = false; $('layout').classList.add('controls'); document.body.classList.add('tp-admin-controls'); }
+if (CONTROL) {
+  $('controls').hidden = false; $('layout').classList.add('controls'); document.body.classList.add('tp-admin-controls','tp-panel-streamer');
+  const destination = document.createElement('section'); destination.className = 'tp-card tp-technical-target';
+  destination.innerHTML = '<h2>Destino técnico</h2><p class="tp-help">Origem do TikTok Live Studio · Fonte de navegador do OBS</p><code id="cordaSourcePreview" data-source-preview></code><div class="tp-actions"></div>';
+  $('controls').append(destination);
+  $('cordaSourcePreview').textContent = location.origin + '/corda?room=…&tk=…';
+  for(const id of ['open','copy']) destination.querySelector('.tp-actions').append($(id));
+  $('open').textContent = 'Abrir fonte'; $('copy').textContent = 'Copiar link da fonte';
+  for (const href of ['https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap','/ui/tikplay-streamer-reference.css','/ui/tikplay-streamer-model.css']) {
+    const sheet = document.createElement('link'); sheet.rel = 'stylesheet'; sheet.href = href; document.head.append(sheet);
+  }
+}
 if (CONTROL && window.parent !== window) {
   document.documentElement.classList.add('corda-embedded');
   const reportHeight=()=>{const height=Math.ceil($('layout').getBoundingClientRect().height);if(height>0)window.parent.postMessage({type:'corda_panel_resize',height},location.origin);};
@@ -578,6 +589,7 @@ async function publicGameURL() {
   if(!response.ok || !data.success || !data.token) throw Error(data.error || 'Não foi possível gerar o link público.');
   const url = new URL('/corda',location.origin);
   url.searchParams.set('room',data.room || '');url.searchParams.set('tk',data.token);
+  if($('cordaSourcePreview')) $('cordaSourcePreview').textContent = url.origin + url.pathname + '?room=' + encodeURIComponent(data.room || '') + '&tk=…';
   return url.href;
 }
 if (CONTROL) {

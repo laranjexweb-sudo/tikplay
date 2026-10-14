@@ -1,0 +1,166 @@
+/* Shared action-button system for streamer and Super Admin panels. */
+.tp-panel-streamer,
+.tp-super-admin {
+  --tp-button-radius: 11px;
+  --tp-button-height: 40px;
+  --tp-button-primary: linear-gradient(135deg,#26d8ff,#1591ff);
+  --tp-button-primary-ink: #00131a;
+  --tp-button-neutral: #0a1420;
+  --tp-button-neutral-ink: #eaf2fa;
+  --tp-button-neutral-border: rgba(255,255,255,.10);
+  --tp-button-success: linear-gradient(135deg,#46efaf,#23c988);
+  --tp-button-success-ink: #062217;
+  --tp-button-danger: rgba(255,77,109,.10);
+  --tp-button-danger-ink: #ff8497;
+  --tp-button-danger-border: rgba(255,77,109,.28);
+  --tp-button-warning: rgba(255,211,92,.10);
+  --tp-button-warning-ink: #ffd95a;
+  --tp-button-warning-border: rgba(255,211,92,.26);
+}
+.tp-panel-streamer { --tp-button-focus: var(--cyan,#26d8ff); }
+.tp-super-admin {
+  --tp-button-neutral: var(--tp-surface-soft);
+  --tp-button-neutral-ink: var(--tp-text);
+  --tp-button-neutral-border: var(--tp-border);
+  --tp-button-focus: var(--tp-blue);
+}
+
+.tp-panel-streamer :is(.btn,.btn-nb,.duelo-btn),
+.tp-super-admin :is(.btn,.btn-nb) {
+  min-height: var(--tp-button-height);
+  padding: 0 14px;
+  border: 1px solid var(--tp-button-neutral-border);
+  border-radius: var(--tp-button-radius);
+  background: var(--tp-button-neutral);
+  color: var(--tp-button-neutral-ink);
+  box-shadow: none;
+  font: 700 12px/1.2 var(--tp-font-ui,Inter,Arial,sans-serif);
+  text-decoration: none;
+  transition: transform .16s ease,background-color .18s ease,border-color .18s ease,color .18s ease,filter .18s ease;
+}
+
+.tp-panel-streamer :is(.btn-sm,.btn-small,.btn-tiny),
+.tp-super-admin :is(.btn-sm,.btn-small,.btn-tiny) {
+  min-height: 34px;
+  padding-right: 11px;
+  padding-left: 11px;
+  font-size: 11px;
+}
+
+.tp-panel-streamer :is(.btn-primary,.btn-nb.btn-primary,.duelo-btn--primary),
+.tp-super-admin :is(.btn-primary,.btn-nb.btn-primary) {
+  border-color: transparent;
+  background: var(--tp-button-primary);
+  color: var(--tp-button-primary-ink);
+}
+
+.tp-panel-streamer :is(.btn-success,.btn-nb.btn-success,.duelo-btn--success),
+.tp-super-admin :is(.btn-success,.btn-nb.btn-success) {
+  border-color: transparent;
+  background: var(--tp-button-success);
+  color: var(--tp-button-success-ink);
+}
+
+.tp-panel-streamer :is(.btn-danger,.btn-nb.btn-danger,.duelo-btn--danger),
+.tp-super-admin :is(.btn-danger,.btn-nb.btn-danger) {
+  border-color: var(--tp-button-danger-border);
+  background: var(--tp-button-danger);
+  color: var(--tp-button-danger-ink);
+}
+
+.tp-panel-streamer :is(.btn-warning,.btn-warn,.btn-nb.btn-warning,.duelo-btn--warning),
+.tp-super-admin :is(.btn-warning,.btn-warn,.btn-nb.btn-warning) {
+  border-color: var(--tp-button-warning-border);
+  background: var(--tp-button-warning);
+  color: var(--tp-button-warning-ink);
+}
+
+.tp-panel-streamer .duelo-btn--neutral,
+.tp-panel-streamer .btn-violet,
+.tp-super-admin .btn-violet {
+  border-color: var(--tp-button-neutral-border);
+  background: var(--tp-button-neutral);
+  color: var(--tp-button-neutral-ink);
+}
+
+.tp-panel-streamer :is(.btn,.btn-nb,.duelo-btn):not(:disabled):not([aria-disabled="true"]):hover,
+.tp-super-admin :is(.btn,.btn-nb):not(:disabled):not([aria-disabled="true"]):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.tp-panel-streamer :is(.btn,.btn-nb,.duelo-btn):not(:disabled):not([aria-disabled="true"]):active,
+.tp-super-admin :is(.btn,.btn-nb):not(:disabled):not([aria-disabled="true"]):active {
+  filter: brightness(.97);
+  transform: translateY(0);
+}
+
+.tp-panel-streamer :is(.btn,.btn-nb,.duelo-btn):disabled,
+.tp-super-admin :is(.btn,.btn-nb):disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: .48;
+  transform: none;
+}
+
+.tp-panel-streamer :is(.btn,.btn-nb,.duelo-btn):focus-visible,
+.tp-super-admin :is(.btn,.btn-nb):focus-visible {
+  outline: 2px solid var(--tp-button-focus);
+  outline-offset: 3px;
+}
+
+.tp-panel-streamer :is(.icon-button,.tp-log-icon-btn),
+.tp-super-admin :is(.icon-button,.tp-log-icon-btn) {
+  transition: background-color .18s ease,border-color .18s ease,color .18s ease,transform .16s ease;
+}
+
+.tp-panel-streamer :is(.icon-button,.tp-log-icon-btn):hover:not(:disabled),
+.tp-super-admin :is(.icon-button,.tp-log-icon-btn):hover:not(:disabled) {
+  border-color: color-mix(in srgb,var(--tp-blue,#26d8ff) 40%,transparent);
+}
+
+.tp-panel-streamer :is(.icon-button,.tp-log-icon-btn):active:not(:disabled),
+.tp-super-admin :is(.icon-button,.tp-log-icon-btn):active:not(:disabled) {
+  transform: translateY(0);
+}
+
+#tab-dashboard .btn:not(:disabled):hover,
+#tab-sons .btn:not(:disabled):hover,
+#tab-games .btn:not(:disabled):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+#tab-dashboard .btn:not(:disabled):active,
+#tab-sons .btn:not(:disabled):active,
+#tab-games .btn:not(:disabled):active {
+  filter: brightness(.97);
+  transform: translateY(0);
+}
+
+#tab-dashboard .btn:disabled,
+#tab-sons .btn:disabled,
+#tab-games .btn:disabled {
+  filter: none;
+  transform: none;
+}
+
+.tp-panel-streamer .tp-overlay-dpad button:not(:disabled):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.tp-panel-streamer .tp-overlay-dpad button:not(:disabled):active {
+  filter: brightness(.97);
+  transform: translateY(0);
+}
+
+.tp-panel-streamer .tp-overlay-row .tp-overlay-card > .d-flex > .btn:not(:disabled):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.tp-panel-streamer .tp-overlay-row .tp-overlay-card > .d-flex > .btn:not(:disabled):active {
+  filter: brightness(.97);
+  transform: translateY(0);
+}

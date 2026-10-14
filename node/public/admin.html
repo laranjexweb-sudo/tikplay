@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TikPlay - Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
 <style>
   body { background: #fdfaf3; min-height: 100vh; padding: 20px; }
@@ -22,11 +25,14 @@
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
 <link rel="stylesheet" href="/ui/tikplay-admin-site.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
+<link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
 
 </head>
 <body class="tp-super-admin">
 <aside class="tp-admin-sidebar">
-  <a class="tp-admin-logo" href="/admin">Tik<span>Play</span></a>
+  <a class="tp-admin-logo" href="/admin"><span class="tp-admin-brand-mark" aria-hidden="true"><span></span></span><span class="tp-admin-brand-name">Tik<span>Play</span></span></a>
+  <div class="tp-admin-workspace"><span class="tp-admin-workspace-avatar">TP</span><div><small>WORKSPACE</small><strong>Super Admin</strong></div></div>
   <span class="tp-admin-caption">ADMINISTRAÇÃO</span>
   <nav class="tp-admin-nav" aria-label="Seções do Super Admin">
     <a href="#adminDashboard">Dashboard</a>
@@ -34,17 +40,22 @@
     <a href="#adminInvites">Convites</a>
     <a href="#adminRules">Regras globais</a>
     <a href="#adminOperations">Operação local</a>
+    <span class="tp-admin-caption">SUPORTE</span>
+    <a href="#adminSupportOverview">Visão geral</a>
+    <a href="#adminSupportTickets">Chamados</a>
+    <a href="#adminSupportSuggestions">Sugestões</a>
+    <a href="#adminSupportCategories">Categorias</a>
+    <a href="#adminSupportReplies">Respostas rápidas</a>
+    <a href="#adminHelpManager">Central de Ajuda</a>
   </nav>
   <a class="tp-admin-back" href="/painel">Painel do streamer &#8599;</a>
 </aside>
 <main class="tp-admin-main">
+<header class="tp-admin-topbar"><span>Administração TikPlay</span><div class="d-flex gap-2"><button class="btn btn-nb btn-dark" onclick="location.href='/painel'">Painel do streamer</button><button class="btn btn-nb btn-danger" onclick="logout()">Sair</button></div></header>
+<div class="tp-admin-content">
 <div class="nb-card tp-card mb-3 d-flex justify-content-between align-items-center tp-admin-header">
   <div>
     <div class="tp-admin-brand"><span>WORKSPACE / SUPER ADMIN</span><strong id="adminPageTitle">Contas e permissões</strong></div>
-  </div>
-  <div class="d-flex gap-2">
-    <button class="btn btn-nb btn-success" onclick="location.href='/painel'">Painel do streamer</button>
-    <button class="btn btn-nb btn-danger" onclick="logout()">Sair</button>
   </div>
 </div>
 
@@ -211,6 +222,60 @@
   </div>
 </div>
 
+<section class="tp-admin-section tp-support-admin" id="adminSupportOverview" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Suporte · Visão geral</h2><p>Volume atual de chamados e sugestões.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportOverviewRefresh">Atualizar</button></div>
+  <p id="supportAdminNotice" class="text-secondary" role="status" aria-live="polite"></p>
+  <div class="tp-support-admin-metrics" id="supportOverviewMetrics"><article class="tp-card"><span>Novos</span><strong>—</strong></article><article class="tp-card"><span>Em atendimento</span><strong>—</strong></article><article class="tp-card"><span>Aguardando usuário</span><strong>—</strong></article><article class="tp-card"><span>Resolvidos</span><strong>—</strong></article></div>
+  <div class="tp-card tp-support-admin-shortcuts"><h3>Atalhos</h3><a href="#adminSupportTickets">Abrir fila de chamados</a><a href="#adminSupportSuggestions">Revisar sugestões</a><a href="#adminHelpManager">Gerenciar Central de Ajuda</a></div>
+</section>
+
+<section class="tp-admin-section tp-support-admin" id="adminSupportTickets" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Chamados</h2><p>Fila de atendimento, filtros e respostas.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportTicketsRefresh">Atualizar</button></div>
+  <div class="tp-admin-toolbar tp-support-filters"><label>Buscar<input id="adminTicketQuery" class="form-control" type="search" placeholder="Assunto, nome ou e-mail"></label><label>Status<select id="adminTicketStatus" class="form-select"><option value="">Todos</option><option value="novo">Novo</option><option value="em_atendimento">Em atendimento</option><option value="aguardando_usuario">Aguardando usuário</option><option value="resolvido">Resolvido</option><option value="fechado">Fechado</option></select></label><label>Categoria<select id="adminTicketCategory" class="form-select"><option value="">Todas</option></select></label><label>Prioridade<select id="adminTicketPriority" class="form-select"><option value="">Todas</option><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label><label>Jogo<select id="adminTicketGame" class="form-select"><option value="">Todos</option></select></label></div>
+  <p id="adminTicketNotice" class="text-secondary" role="status" aria-live="polite"></p>
+  <div class="table-responsive"><table class="table align-middle"><thead><tr><th>ID</th><th>Usuário</th><th>Assunto</th><th>Categoria</th><th>Jogo</th><th>Prioridade</th><th>Status</th><th>Atualizado</th><th></th></tr></thead><tbody id="adminTicketRows"><tr><td colspan="9">Carregando chamados…</td></tr></tbody></table></div>
+  <div class="tp-support-pagination"><button class="btn btn-nb btn-dark" id="adminTicketPrev">Anterior</button><span id="adminTicketPage">Página 1</span><button class="btn btn-nb btn-dark" id="adminTicketNext">Próxima</button></div>
+  <div id="adminTicketDetail" class="tp-card tp-admin-ticket-detail" hidden></div>
+</section>
+
+<section class="tp-admin-section tp-support-admin" id="adminSupportSuggestions" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Sugestões</h2><p>Revise as ideias enviadas pelos streamers.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportSuggestionsRefresh">Atualizar</button></div>
+  <div class="tp-admin-toolbar tp-support-filters"><label>Buscar<input id="adminSuggestionQuery" class="form-control" type="search" placeholder="Título, usuário ou e-mail"></label><label>Status<select id="adminSuggestionStatus" class="form-select"><option value="">Todos</option><option value="recebida">Recebida</option><option value="em_avaliacao">Em avaliação</option><option value="planejada">Planejada</option><option value="em_desenvolvimento">Em desenvolvimento</option><option value="implementada">Implementada</option><option value="nao_planejada">Não planejada</option></select></label><label>Tipo<select id="adminSuggestionType" class="form-select"><option value="">Todos</option><option value="nova_funcionalidade">Nova funcionalidade</option><option value="melhoria">Melhoria</option><option value="novo_jogo">Novo jogo</option><option value="melhoria_jogo">Melhoria de jogo</option><option value="interface">Interface</option><option value="integracao">Integração</option><option value="outro">Outro</option></select></label><label>Jogo<select id="adminSuggestionGame" class="form-select"><option value="">Todos</option></select></label></div>
+  <p id="adminSuggestionNotice" class="text-secondary" role="status" aria-live="polite"></p>
+  <div class="table-responsive"><table class="table align-middle"><thead><tr><th>ID</th><th>Usuário</th><th>Título</th><th>Tipo</th><th>Jogo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody id="adminSuggestionRows"><tr><td colspan="8">Carregando sugestões…</td></tr></tbody></table></div>
+  <div class="tp-support-pagination"><button class="btn btn-nb btn-dark" id="adminSuggestionPrev">Anterior</button><span id="adminSuggestionPage">Página 1</span><button class="btn btn-nb btn-dark" id="adminSuggestionNext">Próxima</button></div>
+</section>
+
+<section class="tp-admin-section tp-support-admin" id="adminSupportCategories" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Categorias</h2><p>Organize as categorias de chamados e artigos.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportCategoriesRefresh">Atualizar</button></div>
+  <div class="tp-support-admin-columns">
+    <div class="tp-card"><h3>Categorias de suporte</h3><form id="supportCategoryCreate" class="tp-support-inline-form"><input name="name" required maxlength="80" placeholder="Nome da categoria"><input name="slug" maxlength="80" placeholder="Slug (opcional)"><input name="icon" maxlength="24" placeholder="Ícone"><input name="sort_order" type="number" value="0" aria-label="Ordem"><button class="btn btn-nb btn-success">Criar</button></form><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nome</th><th>Slug</th><th>Ícone</th><th>Ordem</th><th>Ativa</th><th></th></tr></thead><tbody id="supportCategoryRows"></tbody></table></div></div>
+    <div class="tp-card"><h3>Categorias da Central de Ajuda</h3><form id="helpCategoryCreate" class="tp-support-inline-form"><input name="name" required maxlength="80" placeholder="Nome da categoria"><input name="slug" maxlength="80" placeholder="Slug (opcional)"><input name="icon" maxlength="24" placeholder="Ícone"><input name="sort_order" type="number" value="0" aria-label="Ordem"><button class="btn btn-nb btn-success">Criar</button></form><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nome</th><th>Slug</th><th>Ícone</th><th>Ordem</th><th>Ativa</th><th></th></tr></thead><tbody id="helpCategoryRows"></tbody></table></div></div>
+  </div>
+  <p id="adminCategoryNotice" class="text-secondary" role="status" aria-live="polite"></p>
+</section>
+
+<section class="tp-admin-section tp-support-admin" id="adminSupportReplies" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Respostas rápidas</h2><p>Textos reutilizáveis para responder chamados com agilidade.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportRepliesRefresh">Atualizar</button></div>
+  <div class="tp-card"><form id="quickReplyCreate" class="tp-support-reply-form"><input name="title" required maxlength="100" placeholder="Título da resposta"><textarea name="body" required maxlength="5000" placeholder="Texto da resposta"></textarea><label>Ordem<input name="sort_order" type="number" value="0"></label><button class="btn btn-nb btn-success">Criar resposta</button></form><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Título</th><th>Texto</th><th>Ordem</th><th>Ativa</th><th></th></tr></thead><tbody id="quickReplyRows"></tbody></table></div></div>
+  <p id="adminReplyNotice" class="text-secondary" role="status" aria-live="polite"></p>
+</section>
+
+<section class="tp-admin-section tp-support-admin" id="adminHelpManager" hidden>
+  <div class="tp-support-admin-heading"><div><h2>Central de Ajuda</h2><p>Gerencie artigos publicados e rascunhos.</p></div><button type="button" class="btn btn-nb btn-dark" id="helpArticlesRefresh">Atualizar</button></div>
+  <div class="tp-admin-toolbar tp-support-filters"><label>Buscar<input id="adminArticleQuery" class="form-control" type="search" placeholder="Título, resumo ou palavra-chave"></label><label>Categoria<select id="adminArticleCategoryFilter" class="form-select"><option value="">Todas</option></select></label><label>Publicação<select id="adminArticlePublishedFilter" class="form-select"><option value="">Todos</option><option value="1">Publicado</option><option value="0">Rascunho</option></select></label></div>
+  <p id="adminArticleNotice" class="text-secondary" role="status" aria-live="polite"></p>
+  <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Título</th><th>Categoria</th><th>Jogo</th><th>Estado</th><th>Atualizado</th><th></th></tr></thead><tbody id="adminArticleRows"></tbody></table></div>
+  <div class="tp-support-pagination"><button class="btn btn-nb btn-dark" id="adminArticlePrev">Anterior</button><span id="adminArticlePage">Página 1</span><button class="btn btn-nb btn-dark" id="adminArticleNext">Próxima</button></div>
+  <form id="helpArticleForm" class="tp-card tp-help-editor">
+    <div class="tp-support-admin-heading"><h3 id="helpArticleFormTitle">Novo artigo</h3><button type="button" class="btn btn-nb btn-dark" id="helpArticleNew">Novo artigo</button></div>
+    <input type="hidden" name="id">
+    <div class="tp-help-editor-grid"><label>Categoria<select name="category_id" required></select></label><label>Jogo relacionado<select name="game_id"><option value="">Nenhum / Geral</option></select></label><label>Título<input name="title" required minlength="3" maxlength="160"></label><label>Slug<input name="slug" maxlength="180" placeholder="Gerado a partir do título se vazio"></label><label class="wide">Resumo<textarea name="summary" maxlength="500" rows="2"></textarea></label><label class="wide">Conteúdo (Markdown simples)<textarea name="content" rows="12" placeholder="## Como fazer&#10;1. Primeiro passo&#10;&#10;## O que deve acontecer&#10;Descreva o resultado esperado."></textarea></label><label class="wide">Palavras-chave<input name="keywords" placeholder="termos separados por vírgula"></label><label>Ordem<input name="sort_order" type="number" value="0"></label><label class="tp-help-published"><input name="published" type="checkbox"> Publicado</label></div>
+    <div class="tp-support-actions"><button class="btn btn-nb btn-success">Salvar artigo</button><button type="button" class="btn btn-nb btn-danger" id="helpArticleDelete" hidden>Excluir artigo</button></div>
+  </form>
+</section>
+
+</div>
 </main>
 <script>
 function selectAdminSection() {
@@ -756,6 +821,101 @@ loadBannedWords();
 loadUsers();
 loadInvites();
 pollContextos();
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ticketStatus = {novo:'Novo',em_atendimento:'Em atendimento',aguardando_usuario:'Aguardando usuário',resolvido:'Resolvido',fechado:'Fechado'};
+  const suggestionStatus = {recebida:'Recebida',em_avaliacao:'Em avaliação',planejada:'Planejada',em_desenvolvimento:'Em desenvolvimento',implementada:'Implementada',nao_planejada:'Não planejada'};
+  const suggestionType = {nova_funcionalidade:'Nova funcionalidade',melhoria:'Melhoria',novo_jogo:'Novo jogo',melhoria_jogo:'Melhoria de jogo',interface:'Interface',integracao:'Integração',outro:'Outro'};
+  const ticketPriority = {baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const gameNames = {};
+  let ticketStatusValues=Object.keys(ticketStatus), ticketPriorityValues=Object.keys(ticketPriority), suggestionStatusValues=Object.keys(suggestionStatus), suggestionTypeValues=Object.keys(suggestionType);
+  let ticketPage=1, ticketTotal=0, suggestionPage=1, suggestionTotal=0, articlePage=1, articleTotal=0;
+  let supportCategories=[], helpCategories=[], quickReplies=[], helpGames=[], ticketAttachmentUrls=[];
+  let ticketSearchTimer=null, suggestionSearchTimer=null, articleSearchTimer=null;
+  const date = value => { if(!value)return '—'; const d=new Date(String(value).replace(' ','T')+(String(value).includes('Z')?'':'Z')); return Number.isNaN(d.getTime())?String(value):new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(d); };
+  async function api(url, options={}) { const data=await apiFetch(url,options); if(!data || data.success===false) throw new Error(data?.error || 'Não foi possível concluir a operação.'); return data; }
+  function notice(id,message,error=false) { const el=$(id); if(!el)return; el.textContent=message||''; el.classList.toggle('tp-help-error',error); el.classList.toggle('tp-help-success',!error&&!!message); }
+  function statusSelect(current, options, values=Object.keys(options)) { return `<select class="form-select form-select-sm" data-status-choice>${values.map(value=>`<option value="${escape(value)}" ${value===current?'selected':''}>${escape(options[value]||value)}</option>`).join('')}</select>`; }
+  function fillSelect(id, rows, firstLabel, valueKey, labelKey) { const el=$(id); if(!el)return; const old=el.value; el.innerHTML=`<option value="">${firstLabel}</option>`+rows.map(row=>`<option value="${escape(row[valueKey])}">${escape(row[labelKey])}</option>`).join(''); if(rows.some(row=>String(row[valueKey])===old))el.value=old; }
+  function fillEnumSelect(id, values, labels, firstLabel) { const el=$(id); if(!el)return; const old=el.value; el.innerHTML=`<option value="">${firstLabel}</option>`+(values||[]).map(value=>`<option value="${escape(value)}">${escape(labels[value]||value)}</option>`).join(''); if((values||[]).includes(old))el.value=old; }
+  async function loadBaseOptions() {
+    const [sc,hc,gd,qr]=await Promise.all([api('/api/admin/support/categories'),api('/api/admin/help/categories'),api('/api/support/games'),api('/api/admin/support/quick-replies')]);
+    supportCategories=sc.categories||[]; helpCategories=hc.categories||[]; helpGames=gd.games||[]; quickReplies=qr.quick_replies||[];
+    ticketStatusValues=gd.ticket_statuses||[]; ticketPriorityValues=gd.ticket_priorities||[]; suggestionStatusValues=gd.suggestion_statuses||[]; suggestionTypeValues=gd.suggestion_types||[];
+    helpGames.forEach(g=>gameNames[g.slug]=g.name);
+    fillEnumSelect('adminTicketStatus',ticketStatusValues,ticketStatus,'Todos');
+    fillEnumSelect('adminTicketPriority',ticketPriorityValues,ticketPriority,'Todas');
+    fillEnumSelect('adminSuggestionStatus',suggestionStatusValues,suggestionStatus,'Todos');
+    fillEnumSelect('adminSuggestionType',suggestionTypeValues,suggestionType,'Todos');
+    fillSelect('adminTicketCategory',supportCategories,'Todas','id','name');
+    fillSelect('adminArticleCategoryFilter',helpCategories,'Todas','id','name');
+    fillSelect('adminTicketGame',helpGames,'Todos','slug','name');
+    fillSelect('adminSuggestionGame',helpGames,'Todos','slug','name');
+    const articleCategory=$('helpArticleForm').elements.category_id; articleCategory.innerHTML='<option value="">Selecione uma categoria</option>'+helpCategories.filter(c=>c.active).map(c=>`<option value="${escape(c.id)}">${escape(c.name)}</option>`).join('');
+    const gameSelect=$('helpArticleForm').elements.game_id; gameSelect.innerHTML='<option value="">Nenhum / Geral</option>'+helpGames.map(g=>`<option value="${escape(g.slug)}">${escape(g.name)}</option>`).join('');
+  }
+  async function loadOverview() {
+    notice('supportAdminNotice','Carregando…');
+    try { const d=await api('/api/admin/support/overview'), t=d.tickets||{}; $('supportOverviewMetrics').innerHTML=[['Novos',t.novo],['Em atendimento',t.em_atendimento],['Aguardando usuário',t.aguardando_usuario],['Resolvidos',t.resolvido]].map(([label,value])=>`<article class="tp-card"><span>${label}</span><strong>${Number(value)||0}</strong></article>`).join(''); notice('supportAdminNotice',''); }
+    catch(e){notice('supportAdminNotice',e.message,true);}
+  }
+  function ticketQuery() { const q=new URLSearchParams({page:String(ticketPage),pageSize:'20'}); [['status','adminTicketStatus'],['category_id','adminTicketCategory'],['game_id','adminTicketGame'],['priority','adminTicketPriority'],['q','adminTicketQuery']].forEach(([key,id])=>{const value=$(id).value.trim();if(value)q.set(key,value);}); return q; }
+  async function loadTickets() {
+    $('adminTicketRows').innerHTML='<tr><td colspan="9">Carregando chamados…</td></tr>'; notice('adminTicketNotice','');
+    try { const d=await api(`/api/admin/support/tickets?${ticketQuery()}`); ticketTotal=d.total||0; const rows=d.items||[];
+      $('adminTicketRows').innerHTML=rows.length?rows.map(t=>`<tr><td>#${escape(t.id)}</td><td>${escape(t.user_name||'—')}<small class="d-block text-secondary">${escape(t.user_email||'')}</small></td><td>${escape(t.subject)}</td><td>${escape(t.category_name||'Geral')}</td><td>${escape(gameNames[t.game_id]||t.game_id||'Geral')}</td><td>${escape(ticketPriority[t.priority]||t.priority)}</td><td>${escape(ticketStatus[t.status]||t.status)}</td><td>${escape(date(t.updated_at))}</td><td><button class="btn btn-nb btn-dark btn-sm" data-ticket-open="${escape(t.id)}">Abrir</button></td></tr>`).join(''):'<tr><td colspan="9">Nenhum chamado corresponde aos filtros selecionados.</td></tr>';
+      $('adminTicketPage').textContent=`Página ${ticketPage} · ${ticketTotal} chamados`; $('adminTicketPrev').disabled=ticketPage<=1; $('adminTicketNext').disabled=ticketPage*20>=ticketTotal;
+      $('adminTicketRows').querySelectorAll('[data-ticket-open]').forEach(b=>b.addEventListener('click',()=>loadTicketDetail(b.dataset.ticketOpen)));
+    } catch(e) { $('adminTicketRows').innerHTML=''; notice('adminTicketNotice',e.message,true); }
+  }
+  function revokeTicketImages(){ticketAttachmentUrls.forEach(URL.revokeObjectURL);ticketAttachmentUrls=[];}
+  async function loadTicketDetail(id) {
+    const target=$('adminTicketDetail'); target.hidden=false; target.innerHTML='<div class="tp-help-skeleton"></div>'; revokeTicketImages();
+    try {
+      const d=await api(`/api/admin/support/tickets/${encodeURIComponent(id)}`), t=d.ticket, replies=d.quick_replies||[];
+      target.innerHTML=`<div class="tp-admin-ticket-detail-head"><div><span class="tp-help-eyebrow">CHAMADO #${escape(t.id)}</span><h3>${escape(t.subject)}</h3><p class="text-secondary">${escape(t.user_name||'—')} · ${escape(t.user_email||'')} · ${escape(t.category_name||'Geral')} · ${escape(gameNames[t.game_id]||t.game_id||'Geral')} · ${escape(ticketPriority[t.priority]||t.priority)} · ${escape(date(t.created_at))}</p></div><button type="button" class="btn btn-nb btn-dark" data-ticket-detail-close>Fechar detalhe</button></div><label class="tp-help-field tp-admin-ticket-status-field">Status${statusSelect(t.status,ticketStatus,ticketStatusValues)}</label><div class="tp-help-message-list" data-admin-messages>${(d.messages||[]).map(m=>`<article class="tp-help-message" data-sender="${escape(m.sender_type)}"><strong>${m.sender_type==='staff'?'Suporte TikPlay':escape(m.sender_name||'Cliente')}</strong><time class="tp-help-muted tp-help-time">${escape(date(m.created_at))}</time><p>${escape(m.message)}</p></article>`).join('')||'<p class="text-secondary">Sem mensagens.</p>'}</div><div class="tp-help-attachments" data-admin-attachments></div><form class="tp-admin-ticket-reply"><label class="tp-help-field">Resposta rápida<select data-quick-reply><option value="">Selecionar resposta…</option>${replies.map(r=>`<option value="${escape(r.id)}">${escape(r.title)}</option>`).join('')}</select></label><label class="tp-help-field">Resposta<textarea data-ticket-reply maxlength="5000" required></textarea></label><label class="tp-help-field">Status após resposta${statusSelect(t.status,ticketStatus,ticketStatusValues)}</label><button class="btn btn-nb btn-success">Enviar resposta</button></form><p data-admin-ticket-notice class="text-secondary" role="status" aria-live="polite"></p>`;
+      target.querySelector('[data-ticket-detail-close]').addEventListener('click',()=>{target.hidden=true;revokeTicketImages();});
+      const statusControls=target.querySelectorAll('[data-status-choice]');
+      statusControls[0].addEventListener('change',async e=>{try{await api(`/api/admin/support/tickets/${id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:e.target.value})});await loadTicketDetail(id);loadTickets();loadOverview();}catch(err){notice('adminTicketNotice',err.message,true);}});
+      const form=target.querySelector('.tp-admin-ticket-reply'), replySelect=target.querySelector('[data-quick-reply]'), replyText=target.querySelector('[data-ticket-reply]');
+      replySelect.addEventListener('change',()=>{const item=replies.find(r=>String(r.id)===replySelect.value);if(item)replyText.value=item.body;});
+      form.addEventListener('submit',async e=>{e.preventDefault();const button=form.querySelector('button[type=submit]')||form.querySelector('button');button.disabled=true;try{const status=form.querySelectorAll('[data-status-choice]')[1].value;await api(`/api/admin/support/tickets/${id}/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:replyText.value.trim(),status})});await loadTicketDetail(id);loadTickets();loadOverview();}catch(err){const n=target.querySelector('[data-admin-ticket-notice]');n.textContent=err.message;n.classList.add('tp-help-error');}finally{button.disabled=false;}});
+      const messageBox=target.querySelector('[data-admin-messages]');messageBox.scrollTop=messageBox.scrollHeight;
+      const attachments=target.querySelector('[data-admin-attachments]');
+      for(const item of d.attachments||[]){try{const response=await fetch(`/api/support/attachments/${encodeURIComponent(item.id)}`,{headers:{Authorization:'Bearer '+token}});if(!response.ok)continue;const url=URL.createObjectURL(await response.blob());ticketAttachmentUrls.push(url);const image=document.createElement('img');image.src=url;image.alt=`Anexo do chamado #${t.id}`;attachments.append(image);}catch(e){}}
+    } catch(e){target.innerHTML=`<p class="tp-help-error">${escape(e.message)}</p>`;}
+  }
+  function suggestionQuery(){const q=new URLSearchParams({page:String(suggestionPage),pageSize:'20'});[['status','adminSuggestionStatus'],['type','adminSuggestionType'],['game_id','adminSuggestionGame'],['q','adminSuggestionQuery']].forEach(([key,id])=>{const value=$(id).value.trim();if(value)q.set(key,value);});return q;}
+  async function loadSuggestions(){ $('adminSuggestionRows').innerHTML='<tr><td colspan="8">Carregando sugestões…</td></tr>';notice('adminSuggestionNotice','');try{const d=await api(`/api/admin/support/suggestions?${suggestionQuery()}`);suggestionTotal=d.total||0;const rows=d.items||[];$('adminSuggestionRows').innerHTML=rows.length?rows.map(s=>`<tr><td>#${escape(s.id)}</td><td>${escape(s.user_name||'—')}<small class="d-block text-secondary">${escape(s.user_email||'')}</small></td><td><strong>${escape(s.title)}</strong></td><td>${escape(suggestionType[s.type]||s.type)}</td><td>${escape(gameNames[s.game_id]||s.game_id||'Geral')}</td><td>${escape((s.description||'').slice(0,180)||'—')}</td><td>${statusSelect(s.status,suggestionStatus,suggestionStatusValues)}</td><td>${escape(date(s.created_at))}</td></tr>`).join(''):'<tr><td colspan="8">Nenhuma sugestão corresponde aos filtros selecionados.</td></tr>';$('adminSuggestionPage').textContent=`Página ${suggestionPage} · ${suggestionTotal} sugestões`;$('adminSuggestionPrev').disabled=suggestionPage<=1;$('adminSuggestionNext').disabled=suggestionPage*20>=suggestionTotal;$('adminSuggestionRows').querySelectorAll('tr').forEach((row,index)=>{const select=row.querySelector('[data-status-choice]');if(!select)return;const item=rows[index];select.addEventListener('change',async()=>{select.disabled=true;try{await api(`/api/admin/support/suggestions/${item.id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:select.value})});loadOverview();}catch(e){notice('adminSuggestionNotice',e.message,true);}finally{select.disabled=false;}});});}catch(e){$('adminSuggestionRows').innerHTML='';notice('adminSuggestionNotice',e.message,true);}}
+  function renderCategoryRows(kind){const rows=kind==='support'?supportCategories:helpCategories, prefix=kind==='support'?'support':'help';const root=$(kind==='support'?'supportCategoryRows':'helpCategoryRows');root.innerHTML=rows.map(c=>`<tr data-category-row="${escape(c.id)}"><td><input class="form-control form-control-sm" data-field="name" value="${escape(c.name)}" maxlength="80"></td><td><input class="form-control form-control-sm" data-field="slug" value="${escape(c.slug)}" maxlength="80"></td><td><input class="form-control form-control-sm" data-field="icon" value="${escape(c.icon||'')}" maxlength="24"></td><td><input class="form-control form-control-sm" data-field="sort_order" type="number" value="${escape(c.sort_order)}"></td><td><input data-field="active" type="checkbox" ${c.active?'checked':''} aria-label="Categoria ativa"></td><td><div class="d-flex gap-1"><button class="btn btn-nb btn-dark btn-sm" data-save-category="${escape(c.id)}">Salvar</button><button class="btn btn-nb btn-danger btn-sm" data-delete-category="${escape(c.id)}">Excluir</button></div></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma categoria cadastrada.</td></tr>';
+    root.querySelectorAll('[data-save-category]').forEach(b=>b.addEventListener('click',async()=>{const row=b.closest('tr'),payload={id:Number(b.dataset.saveCategory)};row.querySelectorAll('[data-field]').forEach(i=>payload[i.dataset.field]=i.type==='checkbox'?i.checked:i.type==='number'?Number(i.value):i.value.trim());try{await api(`/api/admin/${prefix}/categories`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});notice('adminCategoryNotice','Categoria salva.');await loadBaseOptions();renderCategoryRows(kind);}catch(e){notice('adminCategoryNotice',e.message,true);}}));
+    root.querySelectorAll('[data-delete-category]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Excluir esta categoria?'))return;try{await api(`/api/admin/${prefix}/categories/${b.dataset.deleteCategory}`,{method:'DELETE'});notice('adminCategoryNotice','Categoria excluída.');await loadBaseOptions();renderCategoryRows(kind);}catch(e){notice('adminCategoryNotice',e.message,true);}}));
+  }
+  async function loadCategories(){try{await loadBaseOptions();renderCategoryRows('support');renderCategoryRows('help');}catch(e){notice('adminCategoryNotice',e.message,true);}}
+  function renderQuickReplies(){const root=$('quickReplyRows');root.innerHTML=quickReplies.map(r=>`<tr data-reply-row="${escape(r.id)}"><td><input class="form-control form-control-sm" data-field="title" value="${escape(r.title)}" maxlength="100"></td><td><textarea class="form-control form-control-sm" data-field="body" rows="2" maxlength="5000">${escape(r.body)}</textarea></td><td><input class="form-control form-control-sm" data-field="sort_order" type="number" value="${escape(r.sort_order)}"></td><td><input data-field="active" type="checkbox" ${r.active?'checked':''} aria-label="Resposta ativa"></td><td><div class="d-flex gap-1"><button class="btn btn-nb btn-dark btn-sm" data-save-reply="${escape(r.id)}">Salvar</button><button class="btn btn-nb btn-danger btn-sm" data-delete-reply="${escape(r.id)}">Excluir</button></div></td></tr>`).join('')||'<tr><td colspan="5">Nenhuma resposta rápida.</td></tr>';
+    root.querySelectorAll('[data-save-reply]').forEach(b=>b.addEventListener('click',async()=>{const row=b.closest('tr'),payload={id:Number(b.dataset.saveReply)};row.querySelectorAll('[data-field]').forEach(i=>payload[i.dataset.field]=i.type==='checkbox'?i.checked:i.type==='number'?Number(i.value):i.value.trim());try{await api('/api/admin/support/quick-replies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});notice('adminReplyNotice','Resposta rápida salva.');await loadReplies();}catch(e){notice('adminReplyNotice',e.message,true);}}));
+    root.querySelectorAll('[data-delete-reply]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Excluir esta resposta rápida?'))return;try{await api(`/api/admin/support/quick-replies/${b.dataset.deleteReply}`,{method:'DELETE'});notice('adminReplyNotice','Resposta rápida excluída.');await loadReplies();}catch(e){notice('adminReplyNotice',e.message,true);}}));
+  }
+  async function loadReplies(){try{const d=await api('/api/admin/support/quick-replies');quickReplies=d.quick_replies||[];renderQuickReplies();}catch(e){notice('adminReplyNotice',e.message,true);}}
+  function articleQuery(){const q=new URLSearchParams({page:String(articlePage),pageSize:'20'});[['q','adminArticleQuery'],['category_id','adminArticleCategoryFilter'],['published','adminArticlePublishedFilter']].forEach(([key,id])=>{const v=$(id).value.trim();if(v)q.set(key,v);});return q;}
+  async function loadArticles(){ $('adminArticleRows').innerHTML='<tr><td colspan="6">Carregando artigos…</td></tr>';notice('adminArticleNotice','');try{const d=await api(`/api/admin/help/articles?${articleQuery()}`);articleTotal=d.total||0;const rows=d.items||[];$('adminArticleRows').innerHTML=rows.length?rows.map(a=>`<tr><td>${escape(a.title)}<small class="d-block text-secondary">/${escape(a.slug)}</small></td><td>${escape(a.category_name||'—')}</td><td>${escape(gameNames[a.game_id]||a.game_id||'Geral')}</td><td>${a.published?'<span class="tp-help-badge" data-status="implementada">Publicado</span>':'<span class="tp-help-badge">Rascunho</span>'}</td><td>${escape(date(a.updated_at))}</td><td><button class="btn btn-nb btn-dark btn-sm" data-edit-article="${escape(a.id)}">Editar</button></td></tr>`).join(''):'<tr><td colspan="6">Nenhum artigo encontrado.</td></tr>';$('adminArticlePage').textContent=`Página ${articlePage} · ${articleTotal} artigos`;$('adminArticlePrev').disabled=articlePage<=1;$('adminArticleNext').disabled=articlePage*20>=articleTotal;$('adminArticleRows').querySelectorAll('[data-edit-article]').forEach(b=>b.addEventListener('click',()=>editArticle(b.dataset.editArticle)));}catch(e){$('adminArticleRows').innerHTML='';notice('adminArticleNotice',e.message,true);}}
+  function resetArticleForm(){const f=$('helpArticleForm');f.reset();f.elements.id.value='';f.elements.sort_order.value='0';$('helpArticleFormTitle').textContent='Novo artigo';$('helpArticleDelete').hidden=true;}
+  async function editArticle(id){try{const d=await api(`/api/admin/help/articles/${encodeURIComponent(id)}`),a=d.article,f=$('helpArticleForm');f.elements.id.value=a.id;f.elements.category_id.value=a.category_id||'';f.elements.game_id.value=a.game_id||'';f.elements.title.value=a.title||'';f.elements.slug.value=a.slug||'';f.elements.summary.value=a.summary||'';f.elements.content.value=a.content||'';f.elements.keywords.value=a.keywords||'';f.elements.published.checked=!!a.published;f.elements.sort_order.value=a.sort_order||0;$('helpArticleFormTitle').textContent=`Editar artigo #${a.id}`;$('helpArticleDelete').hidden=false;f.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){notice('adminArticleNotice',e.message,true);}}
+  async function loadHelpManager(){try{await loadBaseOptions();await loadArticles();}catch(e){notice('adminArticleNotice',e.message,true);}}
+  async function loadSection(){const hash=location.hash;if(hash==='#adminSupportOverview')loadOverview();if(hash==='#adminSupportTickets'){if(!supportCategories.length)try{await loadBaseOptions();}catch(e){}loadTickets();}if(hash==='#adminSupportSuggestions'){if(!helpGames.length)try{await loadBaseOptions();}catch(e){}loadSuggestions();}if(hash==='#adminSupportCategories')loadCategories();if(hash==='#adminSupportReplies')loadReplies();if(hash==='#adminHelpManager')loadHelpManager();}
+  $('supportOverviewRefresh').addEventListener('click',loadOverview);$('supportTicketsRefresh').addEventListener('click',()=>{ticketPage=1;loadTickets();});$('supportSuggestionsRefresh').addEventListener('click',()=>{suggestionPage=1;loadSuggestions();});$('supportCategoriesRefresh').addEventListener('click',loadCategories);$('supportRepliesRefresh').addEventListener('click',loadReplies);$('helpArticlesRefresh').addEventListener('click',loadHelpManager);
+  ['adminTicketStatus','adminTicketCategory','adminTicketGame','adminTicketPriority'].forEach(id=>$(id).addEventListener('change',()=>{ticketPage=1;loadTickets();}));$('adminTicketQuery').addEventListener('input',()=>{clearTimeout(ticketSearchTimer);ticketSearchTimer=setTimeout(()=>{ticketPage=1;loadTickets();},400);});$('adminTicketPrev').addEventListener('click',()=>{if(ticketPage>1){ticketPage--;loadTickets();}});$('adminTicketNext').addEventListener('click',()=>{if(ticketPage*20<ticketTotal){ticketPage++;loadTickets();}});
+  ['adminSuggestionStatus','adminSuggestionType','adminSuggestionGame'].forEach(id=>$(id).addEventListener('change',()=>{suggestionPage=1;loadSuggestions();}));$('adminSuggestionQuery').addEventListener('input',()=>{clearTimeout(suggestionSearchTimer);suggestionSearchTimer=setTimeout(()=>{suggestionPage=1;loadSuggestions();},400);});$('adminSuggestionPrev').addEventListener('click',()=>{if(suggestionPage>1){suggestionPage--;loadSuggestions();}});$('adminSuggestionNext').addEventListener('click',()=>{if(suggestionPage*20<suggestionTotal){suggestionPage++;loadSuggestions();}});
+  async function createCategory(event,kind){event.preventDefault();const form=event.currentTarget,p=new FormData(form),prefix=kind==='support'?'support':'help',payload={name:p.get('name').trim(),slug:p.get('slug').trim()||undefined,icon:p.get('icon').trim(),sort_order:Number(p.get('sort_order'))||0,active:true};try{await api(`/api/admin/${prefix}/categories`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});form.reset();form.elements.sort_order.value='0';notice('adminCategoryNotice','Categoria criada.');await loadCategories();}catch(e){notice('adminCategoryNotice',e.message,true);}}
+  $('supportCategoryCreate').addEventListener('submit',e=>createCategory(e,'support'));$('helpCategoryCreate').addEventListener('submit',e=>createCategory(e,'help'));
+  $('quickReplyCreate').addEventListener('submit',async e=>{e.preventDefault();const form=e.currentTarget,p=new FormData(form);try{await api('/api/admin/support/quick-replies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:p.get('title').trim(),body:p.get('body').trim(),sort_order:Number(p.get('sort_order'))||0,active:true})});form.reset();form.elements.sort_order.value='0';notice('adminReplyNotice','Resposta rápida criada.');await loadReplies();}catch(err){notice('adminReplyNotice',err.message,true);}});
+  ['adminArticleCategoryFilter','adminArticlePublishedFilter'].forEach(id=>$(id).addEventListener('change',()=>{articlePage=1;loadArticles();}));$('adminArticleQuery').addEventListener('input',()=>{clearTimeout(articleSearchTimer);articleSearchTimer=setTimeout(()=>{articlePage=1;loadArticles();},400);});$('adminArticlePrev').addEventListener('click',()=>{if(articlePage>1){articlePage--;loadArticles();}});$('adminArticleNext').addEventListener('click',()=>{if(articlePage*20<articleTotal){articlePage++;loadArticles();}});$('helpArticleNew').addEventListener('click',resetArticleForm);
+  $('helpArticleForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,p=new FormData(f),payload={id:p.get('id')?Number(p.get('id')):undefined,category_id:Number(p.get('category_id')),game_id:p.get('game_id'),title:p.get('title').trim(),slug:p.get('slug').trim()||undefined,summary:p.get('summary').trim(),content:p.get('content'),keywords:p.get('keywords').trim(),published:f.elements.published.checked,sort_order:Number(p.get('sort_order'))||0};try{const d=await api('/api/admin/help/articles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});notice('adminArticleNotice',payload.published?'Artigo publicado.':'Rascunho salvo.');f.elements.id.value=d.article.id;await loadArticles();}catch(err){notice('adminArticleNotice',err.message,true);}});
+  $('helpArticleDelete').addEventListener('click',async()=>{const id=$('helpArticleForm').elements.id.value;if(!id||!confirm('Excluir este artigo?'))return;try{await api(`/api/admin/help/articles/${encodeURIComponent(id)}`,{method:'DELETE'});resetArticleForm();notice('adminArticleNotice','Artigo excluído.');loadArticles();}catch(e){notice('adminArticleNotice',e.message,true);}});
+  window.addEventListener('hashchange',loadSection);window.addEventListener('pagehide',revokeTicketImages);loadSection();
+})();
 </script>
 </body>
 </html>

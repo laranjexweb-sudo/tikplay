@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay | Ajuda e Suporte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ui/tikplay-theme.css">
+<link rel="stylesheet" href="/ui/tikplay-panels.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css">
+<link rel="stylesheet" href="/ui/tikplay-support.css">
+</head>
+<body class="tp-help-page tp-super-admin">
+<div class="tp-help-layout">
+  <aside class="tp-help-sidebar">
+    <a class="tp-help-brand" href="/painel"><span class="tp-help-brand-mark" aria-hidden="true">T</span><span>TikPlay</span></a>
+    <nav class="tp-help-nav" aria-label="Ajuda e suporte">
+      <a href="/support.html" data-view="home">Visão geral</a>
+      <a href="/help.html">Central de Ajuda</a>
+      <a href="/support.html?view=tickets" data-view="tickets">Meus chamados</a>
+      <a href="/support.html?view=suggestions" data-view="suggestions">Minhas sugestões</a>
+      <a href="/painel">Voltar ao painel</a>
+    </nav>
+  </aside>
+  <main class="tp-help-main">
+    <header class="tp-help-topbar"><span>Ajuda e Suporte</span><a class="tp-help-btn" href="/painel">Painel do streamer</a></header>
+    <div class="tp-help-content">
+      <section id="supportHome" data-screen="home">
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">SUPORTE TIKPLAY</span><h1>Ajuda e Suporte</h1><p>Encontre respostas, acompanhe seus chamados ou fale com nossa equipe.</p></header>
+        <form id="quickSearchForm" class="tp-help-search"><input id="quickSearch" type="search" placeholder="Pesquisar na Central de Ajuda" aria-label="Pesquisar na Central de Ajuda"><button class="tp-help-btn tp-help-btn-primary">Pesquisar</button></form>
+        <div class="tp-help-grid">
+          <article class="tp-help-action"><h2>Central de Ajuda</h2><p>Guias, tutoriais e soluções para usar o TikPlay.</p><a class="tp-help-btn" href="/help.html">Acessar documentação</a></article>
+          <article class="tp-help-action"><h2>Abrir chamado</h2><p>Está com algum problema? Fale com o suporte.</p><button class="tp-help-btn tp-help-btn-primary" data-action="new-ticket">Abrir chamado</button></article>
+          <article class="tp-help-action"><h2>Enviar sugestão</h2><p>Tem uma ideia para melhorar o TikPlay?</p><button class="tp-help-btn" data-action="new-suggestion">Enviar sugestão</button></article>
+          <article class="tp-help-action"><h2>Meus chamados</h2><p>Acompanhe solicitações e respostas da equipe.</p><span id="openTicketCount" class="tp-help-badge">Carregando</span><button class="tp-help-btn" data-action="tickets">Ver chamados</button></article>
+        </div>
+        <div class="tp-help-panel tp-help-spaced"><div class="tp-help-split-heading"><div><h2>Minhas sugestões</h2><p class="tp-help-muted">Consulte o andamento das ideias enviadas.</p></div><button class="tp-help-btn" data-action="suggestions">Ver sugestões</button></div></div>
+      </section>
+
+      <section id="ticketListScreen" data-screen="tickets" hidden>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">ATENDIMENTO</span><h1>Meus chamados</h1><p>Acompanhe o status e as respostas da equipe.</p></header>
+        <div class="tp-help-toolbar"><label>Status<select id="ticketStatusFilter"><option value="">Todos</option><option value="novo">Novo</option><option value="em_atendimento">Em atendimento</option><option value="aguardando_usuario">Aguardando você</option><option value="resolvido">Resolvido</option><option value="fechado">Fechado</option></select></label><button class="tp-help-btn tp-help-btn-primary" data-action="new-ticket">Abrir chamado</button></div>
+        <p id="ticketListNotice" class="tp-help-notice" role="status" aria-live="polite"></p><div id="ticketList" class="tp-help-list"><div class="tp-help-skeleton"></div></div>
+      </section>
+
+      <section id="ticketDetailScreen" data-screen="ticket" hidden>
+        <div class="tp-help-toolbar"><a class="tp-help-btn" href="/support.html?view=tickets" data-view="tickets">Voltar aos chamados</a><button id="closeTicketBtn" class="tp-help-btn tp-help-btn-danger" hidden>Fechar chamado</button></div>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">DETALHE DO CHAMADO</span><h1 id="ticketTitle">Chamado</h1><p id="ticketMeta"></p></header>
+        <section class="tp-help-panel"><div id="ticketMessages" class="tp-help-message-list"><div class="tp-help-skeleton"></div></div><div id="ticketAttachments" class="tp-help-attachments tp-help-spaced"></div><form id="ticketReplyForm" class="tp-help-spaced" hidden><label class="tp-help-field" for="ticketReply">Escreva sua resposta<textarea id="ticketReply" maxlength="5000" required></textarea></label><div class="tp-help-form-actions"><button type="submit" class="tp-help-btn tp-help-btn-primary">Enviar resposta</button></div></form><p id="ticketDetailNotice" class="tp-help-notice" role="status" aria-live="polite"></p><p id="ticketClosedMessage" class="tp-help-notice" hidden>Este chamado foi encerrado. O formulário de resposta está desativado.</p></section>
+      </section>
+
+      <section id="suggestionListScreen" data-screen="suggestions" hidden>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">IDEIAS DA COMUNIDADE</span><h1>Minhas sugestões</h1><p>Acompanhe a avaliação das suas ideias para o TikPlay.</p></header>
+        <div class="tp-help-toolbar"><label>Status<select id="suggestionStatusFilter"><option value="">Todos</option><option value="recebida">Recebida</option><option value="em_avaliacao">Em avaliação</option><option value="planejada">Planejada</option><option value="em_desenvolvimento">Em desenvolvimento</option><option value="implementada">Implementada</option><option value="nao_planejada">Não planejada</option></select></label><button class="tp-help-btn tp-help-btn-primary" data-action="new-suggestion">Enviar sugestão</button></div>
+        <p id="suggestionListNotice" class="tp-help-notice" role="status" aria-live="polite"></p><div id="suggestionList" class="tp-help-list"><div class="tp-help-skeleton"></div></div>
+      </section>
+
+      <section id="ticketFormScreen" data-screen="new-ticket" hidden>
+        <div class="tp-help-toolbar"><button class="tp-help-btn" data-action="home">Cancelar</button></div>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">ATENDIMENTO</span><h1>Abrir chamado</h1><p>Conte o que aconteceu. As informações abaixo ajudam a equipe a investigar.</p></header>
+        <form id="ticketForm" class="tp-help-panel"><div class="tp-help-form-grid">
+          <label class="tp-help-field">Categoria<select id="newTicketCategory" required><option value="">Carregando categorias…</option></select></label>
+          <label class="tp-help-field">Jogo relacionado<select id="newTicketGame"><option value="">Nenhum / Geral</option></select></label>
+          <label class="tp-help-field">Prioridade<select id="newTicketPriority"><option value="baixa">Baixa</option><option value="normal" selected>Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label>
+          <label class="tp-help-field tp-help-field-full">Assunto<input id="newTicketSubject" minlength="3" maxlength="140" required></label>
+          <label class="tp-help-field tp-help-field-full">Descrição<textarea id="newTicketMessage" minlength="5" maxlength="5000" required placeholder="Descreva os passos, o resultado esperado e o que aconteceu."></textarea></label>
+          <div class="tp-help-field tp-help-field-full"><span>Anexos de imagem</span><div class="tp-help-files"><input id="newTicketFiles" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,image/heic,image/heif" multiple><span class="tp-help-muted">Até 5 imagens, 5 MB por arquivo.</span></div><div id="newTicketPreviews" class="tp-help-previews"></div><p id="ticketFileError" class="tp-help-error" role="status"></p></div>
+        </div><p id="ticketFormNotice" class="tp-help-notice" role="status" aria-live="polite"></p><div class="tp-help-field-actions"><button id="ticketSubmit" class="tp-help-btn tp-help-btn-primary">Enviar chamado</button></div></form>
+      </section>
+
+      <section id="suggestionFormScreen" data-screen="new-suggestion" hidden>
+        <div class="tp-help-toolbar"><button class="tp-help-btn" data-action="home">Cancelar</button></div>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">IDEIAS DA COMUNIDADE</span><h1>Enviar sugestão</h1><p>Compartilhe uma ideia para melhorar sua experiência no TikPlay.</p></header>
+        <form id="suggestionForm" class="tp-help-panel"><div class="tp-help-form-grid">
+          <label class="tp-help-field">Tipo<select id="suggestionType"><option value="nova_funcionalidade">Nova funcionalidade</option><option value="melhoria">Melhoria</option><option value="novo_jogo">Novo jogo</option><option value="melhoria_jogo">Melhoria de jogo</option><option value="interface">Interface</option><option value="integracao">Integração</option><option value="outro">Outro</option></select></label>
+          <label class="tp-help-field">Jogo relacionado<select id="suggestionGame"><option value="">Nenhum / Geral</option></select></label>
+          <label class="tp-help-field tp-help-field-full">Título<input id="suggestionTitle" minlength="3" maxlength="140" required></label>
+          <label class="tp-help-field tp-help-field-full">Descrição<textarea id="suggestionDescription" maxlength="5000" placeholder="Como essa ideia poderia funcionar?"></textarea></label>
+        </div><p id="suggestionFormNotice" class="tp-help-notice" role="status" aria-live="polite"></p><div style="display:flex;justify-content:flex-end"><button type="submit" class="tp-help-btn tp-help-btn-primary">Enviar sugestão</button></div></form>
+      </section>
+
+      <section id="ticketSuccessScreen" data-screen="ticket-success" hidden>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">ATENDIMENTO</span><h1>Chamado aberto com sucesso</h1><p id="ticketSuccessSummary"></p></header>
+        <div class="tp-help-panel"><div class="tp-help-toolbar"><a id="ticketSuccessTrack" class="tp-help-btn tp-help-btn-primary" href="#">Acompanhar chamado</a><a class="tp-help-btn" href="/support.html">Voltar para suporte</a></div></div>
+      </section>
+
+      <section id="suggestionSuccessScreen" data-screen="suggestion-success" hidden>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">IDEIAS DA COMUNIDADE</span><h1>Sugestão enviada</h1><p id="suggestionSuccessSummary"></p></header>
+        <div class="tp-help-panel"><div class="tp-help-toolbar"><a class="tp-help-btn tp-help-btn-primary" href="/support.html?view=suggestions" data-view="suggestions">Ver minhas sugestões</a><a class="tp-help-btn" href="/support.html">Voltar para suporte</a></div></div>
+      </section>
+    </div>
+  </main>
+</div>
+<dialog id="closeTicketDialog" class="tp-help-dialog"><h2>Fechar chamado?</h2><p class="tp-help-muted">Você não poderá enviar novas respostas depois de encerrar este chamado.</p><p id="closeTicketNotice" class="tp-help-error" role="status" aria-live="polite"></p><div class="tp-help-dialog-actions"><button type="button" class="tp-help-btn" data-action="cancel-close">Cancelar</button><button type="button" id="confirmCloseTicket" class="tp-help-btn tp-help-btn-danger">Fechar chamado</button></div></dialog>
+<script>
+(() => {
+  const token = localStorage.getItem('token');
+  if (!token) { location.href = '/login'; return; }
+  const panelEmbed = new URLSearchParams(location.search).get('embed') === 'panel';
+  if (panelEmbed) document.body.classList.add('tp-help-embedded');
+  const $ = (id) => document.getElementById(id);
+  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const statusNames = { novo:'Novo', em_atendimento:'Em atendimento', aguardando_usuario:'Aguardando você', resolvido:'Resolvido', fechado:'Fechado', recebida:'Recebida', em_avaliacao:'Em avaliação', planejada:'Planejada', em_desenvolvimento:'Em desenvolvimento', implementada:'Implementada', nao_planejada:'Não planejada' };
+  const typeNames = { nova_funcionalidade:'Nova funcionalidade', melhoria:'Melhoria', novo_jogo:'Novo jogo', melhoria_jogo:'Melhoria de jogo', interface:'Interface', integracao:'Integração', outro:'Outro' };
+  let files = [], previewUrls = [], currentTicketId = null, attachmentUrls = [];
+  function date(value) {
+    if (!value) return '—';
+    const d = new Date(String(value).replace(' ', 'T') + (String(value).includes('Z') ? '' : 'Z'));
+    return Number.isNaN(d.getTime()) ? String(value) : new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(d);
+  }
+  async function api(url, options = {}) {
+    const headers = new Headers(options.headers || {}); headers.set('Authorization', `Bearer ${token}`);
+    if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type','application/json');
+    const response = await fetch(url,{...options,headers});
+    if (response.status === 401) { localStorage.removeItem('token'); location.href='/login'; throw new Error('Sessão expirada. Entre novamente.'); }
+    const data = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : null;
+    if (!response.ok || data?.success === false) throw new Error(data?.error || `Não foi possível concluir (${response.status}).`);
+    return data;
+  }
+  function setView(view, replace = false) {
+    const params = new URLSearchParams(location.search); params.delete('ticket'); params.set('view',view === 'home' ? 'home' : view);
+    if (panelEmbed) params.set('embed','panel');
+    const url = '/support.html' + (view === 'home' ? (panelEmbed ? '?embed=panel' : '') : `?${params}`);
+    history[replace ? 'replaceState' : 'pushState']({},'',url); renderView(view);
+  }
+  function renderView(view) {
+    document.querySelectorAll('[data-screen]').forEach((el) => { el.hidden = el.dataset.screen !== view; });
+    document.querySelectorAll('.tp-help-nav [data-view]').forEach((link) => link.setAttribute('aria-current',link.dataset.view === view ? 'page' : 'false'));
+    if (view === 'tickets') loadGameOptions().then(loadTickets).catch(e => { $('ticketList').innerHTML=''; setNotice('ticketListNotice',e.message,true); });
+    if (view === 'suggestions') loadGameOptions().then(loadSuggestions).catch(e => { $('suggestionList').innerHTML=''; setNotice('suggestionListNotice',e.message,true); });
+    if (view === 'new-ticket') loadTicketOptions();
+    if (view === 'new-suggestion') loadGameOptions();
+  }
+  function routeFromLocation() {
+    const params = new URLSearchParams(location.search), ticketId = params.get('ticket'), view = params.get('view') || 'home';
+    if (ticketId) { renderView('ticket'); loadTicket(ticketId); return; }
+    const allowed = ['home','tickets','suggestions','new-ticket','new-suggestion','ticket-success','suggestion-success'];
+    renderView(allowed.includes(view) ? view : 'home');
+  }
+  function statusBadge(status) { return `<span class="tp-help-badge" data-status="${esc(status)}">${esc(statusNames[status] || status || '—')}</span>`; }
+  function setNotice(id, text, error = false) { const el = $(id); el.textContent = text || ''; el.classList.toggle('tp-help-error',error); el.classList.toggle('tp-help-success',!error && !!text); }
+  async function loadHomeCount() {
+    try { const data = await api('/api/support/tickets?page=1&pageSize=100'); const open = (data.items || []).filter(x => !['resolvido','fechado'].includes(x.status)).length; $('openTicketCount').textContent = `${open} em aberto`; }
+    catch (e) { $('openTicketCount').textContent = 'Indisponível'; }
+  }
+  async function loadGameOptions() {
+    const data = await api('/api/support/games'); applyGameOptions(data); return data;
+  }
+  function fillEnum(id, values, labels, firstLabel, preferred) {
+    const select=$(id), current=select.value; select.innerHTML=`<option value="">${firstLabel}</option>`+(values||[]).map(value=>`<option value="${esc(value)}">${esc(labels[value]||value)}</option>`).join('');
+    select.value=(values||[]).includes(current)?current:((values||[]).includes(preferred)?preferred:'');
+  }
+  function applyGameOptions(data) {
+    ['suggestionGame','newTicketGame'].forEach((id) => { const select = $(id); select.innerHTML = '<option value="">Nenhum / Geral</option>' + (data.games || []).map(g => `<option value="${esc(g.slug)}">${esc(g.name)}</option>`).join(''); });
+    fillEnum('ticketStatusFilter',data.ticket_statuses,statusNames,'Todos');
+    fillEnum('suggestionStatusFilter',data.suggestion_statuses,statusNames,'Todos');
+    fillEnum('suggestionType',data.suggestion_types,typeNames,'Selecione um tipo','outro');
+    fillEnum('newTicketPriority',data.ticket_priorities,{baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'},'Selecione uma prioridade','normal');
+  }
+  async function loadTicketOptions() {
+    try {
+      const [categoryData, gameData] = await Promise.all([api('/api/support/categories'),api('/api/support/games')]); applyGameOptions(gameData);
+      $('newTicketCategory').innerHTML = '<option value="">Selecione uma categoria</option>' + (categoryData.categories || []).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+      $('newTicketGame').innerHTML = '<option value="">Nenhum / Geral</option>' + (gameData.games || []).map(g => `<option value="${esc(g.slug)}">${esc(g.name)}</option>`).join('');
+    } catch (e) { setNotice('ticketFormNotice',e.message,true); }
+    const slug = new URLSearchParams(location.search).get('artigo'); if (slug) $('ticketForm').dataset.sourceArticleSlug = slug;
+  }
+  async function loadTickets() {
+    const list = $('ticketList'), notice = $('ticketListNotice'); list.innerHTML = '<div class="tp-help-skeleton"></div>'; notice.textContent='';
+    try {
+      const status = $('ticketStatusFilter').value, data = await api('/api/support/tickets?page=1&pageSize=100' + (status ? `&status=${encodeURIComponent(status)}` : ''));
+      if (!(data.items || []).length) { list.innerHTML = `<div class="tp-help-panel"><h2>Você ainda não abriu nenhum chamado.</h2><p class="tp-help-muted">Quando precisar de ajuda, nossa equipe acompanha por aqui.</p><button class="tp-help-btn tp-help-btn-primary" data-action="new-ticket">Abrir meu primeiro chamado</button></div>`; return; }
+      list.innerHTML = data.items.map(t => `<a class="tp-help-row" href="/support.html?ticket=${encodeURIComponent(t.id)}${panelEmbed?'&embed=panel':''}" data-ticket-id="${esc(t.id)}"><span><strong>#${esc(t.id)} · ${esc(t.subject)}</strong><p>${esc(t.category_name || 'Geral')} · ${esc(t.game_id || 'Sem jogo')} · Atualizado ${esc(date(t.updated_at))}</p></span>${statusBadge(t.status)}</a>`).join('');
+      list.querySelectorAll('[data-ticket-id]').forEach(a => a.addEventListener('click',e => { e.preventDefault(); openTicket(a.dataset.ticketId); }));
+    } catch (e) { list.innerHTML=''; notice.textContent=e.message; notice.classList.add('tp-help-error'); }
+  }
+  async function loadSuggestions() {
+    const list = $('suggestionList'), notice = $('suggestionListNotice'); list.innerHTML='<div class="tp-help-skeleton"></div>'; notice.textContent='';
+    try {
+      const status = $('suggestionStatusFilter').value, data = await api('/api/support/suggestions?page=1&pageSize=100' + (status ? `&status=${encodeURIComponent(status)}` : ''));
+      if (!(data.items || []).length) { list.innerHTML='<div class="tp-help-panel"><h2>Você ainda não enviou sugestões.</h2><p class="tp-help-muted">Sua próxima ideia pode ajudar a melhorar o TikPlay.</p><button class="tp-help-btn tp-help-btn-primary" data-action="new-suggestion">Enviar sugestão</button></div>'; return; }
+      list.innerHTML = data.items.map(s => `<article class="tp-help-row"><span><strong>${esc(s.title)}</strong><p>${esc(typeNames[s.type] || s.type)} · ${esc(s.game_id || 'Geral')} · ${esc(date(s.created_at))}</p></span>${statusBadge(s.status)}</article>`).join('');
+    } catch (e) { list.innerHTML=''; notice.textContent=e.message; notice.classList.add('tp-help-error'); }
+  }
+  function releaseAttachmentUrls() { attachmentUrls.forEach(URL.revokeObjectURL); attachmentUrls=[]; $('ticketAttachments').replaceChildren(); }
+  async function loadTicket(id) {
+    currentTicketId = id; releaseAttachmentUrls(); $('ticketTitle').textContent=`Chamado #${id}`; $('ticketMeta').textContent='Carregando…'; $('ticketMessages').innerHTML='<div class="tp-help-skeleton"></div>';
+    try {
+      const data = await api(`/api/support/tickets/${encodeURIComponent(id)}`), t = data.ticket;
+      $('ticketTitle').textContent=`#${t.id} · ${t.subject}`; $('ticketMeta').textContent=`${t.category_name || 'Geral'} · ${t.game_id || 'Sem jogo'} · ${statusNames[t.status] || t.status} · Aberto ${date(t.created_at)}`;
+      $('ticketMessages').innerHTML=(data.messages || []).map(m => `<article class="tp-help-message" data-sender="${esc(m.sender_type)}"><strong>${m.sender_type === 'staff' ? 'Suporte TikPlay' : 'Você'}</strong><time class="tp-help-muted tp-help-time">${esc(date(m.created_at))}</time><p>${esc(m.message)}</p></article>`).join('') || '<p class="tp-help-muted">Nenhuma mensagem neste chamado.</p>';
+      $('ticketMessages').scrollTop = $('ticketMessages').scrollHeight;
+      const closed = t.status === 'fechado'; $('ticketReplyForm').hidden=closed; $('ticketClosedMessage').hidden=!closed; $('closeTicketBtn').hidden=closed;
+      for (const item of data.attachments || []) {
+        try {
+          const response = await fetch(`/api/support/attachments/${encodeURIComponent(item.id)}`,{headers:{Authorization:`Bearer ${token}`}});
+          if (!response.ok) continue;
+          const url=URL.createObjectURL(await response.blob()); attachmentUrls.push(url);
+          const img=document.createElement('img'); img.src=url; img.alt=`Anexo do chamado #${t.id}`; $('ticketAttachments').append(img);
+        } catch (_) {}
+      }
+    } catch (e) { $('ticketMeta').textContent=e.message; $('ticketMeta').classList.add('tp-help-error'); $('ticketMessages').replaceChildren(); }
+  }
+  function openTicket(id) { const url=`/support.html?ticket=${encodeURIComponent(id)}${panelEmbed?'&embed=panel':''}`; history.pushState({},'',url); renderView('ticket'); loadTicket(id); }
+  const imageExts = new Set(['png','jpg','jpeg','gif','webp','bmp','heic','heif']);
+  function renderPreviews() {
+    previewUrls.forEach(URL.revokeObjectURL); previewUrls=[];
+    const root=$('newTicketPreviews'); root.innerHTML='';
+    files.forEach((file,index) => { const url=URL.createObjectURL(file); previewUrls.push(url); const item=document.createElement('div'); item.className='tp-help-preview'; item.innerHTML=`<img src="${url}" alt="Prévia ${index+1}"><button type="button" aria-label="Remover ${esc(file.name)}" data-remove-file="${index}">×</button>`; root.append(item); });
+  }
+  $('newTicketFiles').addEventListener('change',() => {
+    const incoming=Array.from($('newTicketFiles').files || []); setNotice('ticketFileError','');
+    const combined=[...files,...incoming];
+    if (combined.length>5) { setNotice('ticketFileError','Selecione no máximo 5 imagens por chamado.',true); $('newTicketFiles').value=''; return; }
+    const invalid=combined.find(file => !imageExts.has(file.name.split('.').pop().toLowerCase()) || !file.type.startsWith('image/'));
+    if (invalid) { setNotice('ticketFileError',`${invalid.name}: formato não aceito. Envie uma imagem PNG, JPG, GIF, WEBP, BMP, HEIC ou HEIF.`,true); $('newTicketFiles').value=''; return; }
+    const oversized=combined.find(file => file.size>5*1024*1024);
+    if (oversized) { setNotice('ticketFileError',`${oversized.name} excede o limite de 5 MB.`,true); $('newTicketFiles').value=''; return; }
+    files=combined; $('newTicketFiles').value=''; renderPreviews();
+  });
+  $('newTicketPreviews').addEventListener('click',e => { const button=e.target.closest('[data-remove-file]'); if (!button) return; files.splice(Number(button.dataset.removeFile),1); renderPreviews(); });
+  $('ticketForm').addEventListener('submit',async e => {
+    e.preventDefault(); const button=$('ticketSubmit'); button.disabled=true; setNotice('ticketFormNotice','Enviando chamado…');
+    try {
+      const payload={subject:$('newTicketSubject').value.trim(),message:$('newTicketMessage').value.trim(),category_id:$('newTicketCategory').value || undefined,game_id:$('newTicketGame').value || '',priority:$('newTicketPriority').value};
+      const source = $('ticketForm').dataset.sourceArticleSlug || new URLSearchParams(location.search).get('artigo'); if (source) payload.source_article_slug=source;
+      const data=await api('/api/support/tickets',{method:'POST',body:JSON.stringify(payload)}), ticket=data.ticket;
+      let attachmentWarning='';
+      if (files.length) { const form=new FormData(); files.forEach(file => form.append('files',file)); try { await api(`/api/support/tickets/${ticket.id}/attachments`,{method:'POST',body:form}); } catch(err) { attachmentWarning=` O chamado foi criado, mas os anexos não foram enviados: ${err.message}`; } }
+      $('ticketSuccessSummary').textContent=`Chamado #${ticket.id} · ${ticket.subject} · ${statusNames[ticket.status] || 'Novo'}.${attachmentWarning}`;
+      $('ticketSuccessTrack').href=`/support.html?ticket=${encodeURIComponent(ticket.id)}${panelEmbed?'&embed=panel':''}`; $('ticketForm').reset(); files=[]; renderPreviews(); history.pushState({},'',`/support.html?view=ticket-success${panelEmbed?'&embed=panel':''}`); renderView('ticket-success'); loadHomeCount();
+    } catch (err) { setNotice('ticketFormNotice',err.message,true); }
+    finally { button.disabled=false; }
+  });
+  $('suggestionForm').addEventListener('submit',async e => {
+    e.preventDefault(); const button=$('suggestionForm').querySelector('button[type=submit]'); button.disabled=true; setNotice('suggestionFormNotice','Enviando sugestão…');
+    try { const data=await api('/api/support/suggestions',{method:'POST',body:JSON.stringify({type:$('suggestionType').value,game_id:$('suggestionGame').value || '',title:$('suggestionTitle').value.trim(),description:$('suggestionDescription').value.trim()})}); $('suggestionSuccessSummary').textContent=`Sugestão “${data.suggestion.title}” enviada. Status: ${statusNames[data.suggestion.status] || 'Recebida'}.`; history.pushState({},'', `/support.html?view=suggestion-success${panelEmbed?'&embed=panel':''}`); renderView('suggestion-success'); }
+    catch(err) { setNotice('suggestionFormNotice',err.message,true); } finally { button.disabled=false; }
+  });
+  $('ticketReplyForm').addEventListener('submit',async e => {
+    e.preventDefault(); const button=$('ticketReplyForm').querySelector('button'); button.disabled=true;
+    try { await api(`/api/support/tickets/${encodeURIComponent(currentTicketId)}/messages`,{method:'POST',body:JSON.stringify({message:$('ticketReply').value.trim()})}); $('ticketReply').value=''; await loadTicket(currentTicketId); }
+    catch(err) { setNotice('ticketDetailNotice',err.message,true); } finally { button.disabled=false; }
+  });
+  $('closeTicketBtn').addEventListener('click',() => { $('closeTicketNotice').textContent=''; $('closeTicketDialog').showModal(); });
+  $('confirmCloseTicket').addEventListener('click',async () => { const button=$('confirmCloseTicket'); button.disabled=true; $('closeTicketNotice').textContent=''; try { await api(`/api/support/tickets/${encodeURIComponent(currentTicketId)}/close`,{method:'POST',body:'{}'}); $('closeTicketDialog').close(); await loadTicket(currentTicketId); } catch(e) { $('closeTicketNotice').textContent=e.message; } finally { button.disabled=false; } });
+  $('closeTicketDialog').addEventListener('click',e => { if (e.target.matches('[data-action="cancel-close"]')) $('closeTicketDialog').close(); });
+  $('ticketStatusFilter').addEventListener('change',loadTickets); $('suggestionStatusFilter').addEventListener('change',loadSuggestions);
+  $('quickSearchForm').addEventListener('submit',e => { e.preventDefault(); const q=$('quickSearch').value.trim(), target=new URL('/help.html',location.origin); if(q)target.searchParams.set('q',q); if(panelEmbed)target.searchParams.set('embed','panel'); location.href=target.pathname+target.search; });
+  document.addEventListener('click',e => {
+    const action=e.target.closest('[data-action]')?.dataset.action;
+    if (action) { e.preventDefault(); const view={home:'home',tickets:'tickets',suggestions:'suggestions','new-ticket':'new-ticket','new-suggestion':'new-suggestion'}[action]; if(view){ history.pushState({},'',view==='home'?(panelEmbed?'/support.html?embed=panel':'/support.html'):`/support.html?view=${view}${panelEmbed?'&embed=panel':''}`); renderView(view); } }
+    const link=e.target.closest('[data-view]'); if(link && link.origin===location.origin && link.pathname==='/support.html') { e.preventDefault(); const view=link.dataset.view; history.pushState({},'',view==='home'?(panelEmbed?'/support.html?embed=panel':'/support.html'):`/support.html?view=${view}${panelEmbed?'&embed=panel':''}`); renderView(view); }
+  });
+  document.addEventListener('click', (event) => {
+    const link=event.target.closest('a[href]'); if(!panelEmbed||!link)return;
+    const target=new URL(link.href,location.origin); if(target.origin!==location.origin)return;
+    if(target.pathname==='/painel'){event.preventDefault();parent.postMessage({type:'tikplay-panel-navigation',tab:'dashboard'},location.origin);return;}
+    if(target.pathname==='/suporte'||target.pathname==='/support.html'){target.pathname='/support.html';target.searchParams.set('embed','panel');link.href=target.pathname+target.search+target.hash;}
+    if(target.pathname==='/ajuda'||target.pathname==='/help.html'){target.pathname='/help.html';target.searchParams.set('embed','panel');link.href=target.pathname+target.search+target.hash;}
+  });
+  window.addEventListener('popstate',routeFromLocation); window.addEventListener('pagehide',() => { previewUrls.forEach(URL.revokeObjectURL); attachmentUrls.forEach(URL.revokeObjectURL); });
+  loadHomeCount(); routeFromLocation();
+})();
+</script>
+</body>
+</html>

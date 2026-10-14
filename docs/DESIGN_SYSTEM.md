@@ -1,10 +1,74 @@
 # TikPlay — Design System Oficial (tema reutilizável)
 
+> 2026-10-14: Botoes de acao do Painel Streamer e Super Admin centralizados em `ui/tikplay-admin-buttons.css`: alturas, bordas, tipografia, cores semanticas e estados hover/press/disabled/foco consistentes. Controles de navegacao e layout permanecem especificos.
+
+> 2026-10-14: Preferências de posição, tipografia e sombra dos rankings V2/V3 agora se aplicam ao elemento correto nas prévias e overlays. Assets receberam nova versão de cache para carregar o suporte a configuração ao atualizar o painel.
+
+> 2026-10-14: Ao posicionar a foto do ranking à direita, nome, curtidas e total também se alinham à direita. No Neon Compacto, o acento vertical dos três primeiros colocados acompanha a composição e passa para a margem direita.
+
+> 2026-10-14: Controles de cor da fonte dos rankings usam seletor HSV integrado ao tema (matiz contínua + área de saturação/brilho), campo HEX e cores rápidas; sem pop-up nativo e com atualização imediata da prévia.
+
+> 2026-10-14: Espaçamento horizontal entre retrato e nome reduzido de forma consistente nos rankings Neon Compacto e Pódio Neon, para foto à esquerda ou à direita.
+
+> 2026-10-14: Curtidas flutuantes seguem o arranjo dos rankings, com prévia à esquerda e controles à direita. Campos de animação/HEX usam o formulário escuro padrão do painel; cores dos corações usam o seletor HSV/HEX integrado, com amostras rápidas e atualização imediata. Persistência e contrato `heart_colors` preservados.
+
+> 2026-10-14: Central de Ajuda e Suporte implementada no tema escuro atual em `/suporte` e `/ajuda`, com chamados, anexos autenticados, sugestões e gestão no Super Admin. A interface consome somente o contrato existente em `suporte-contrato-api.md`; nenhuma rota, banco ou regra do backend foi alterada.
+
+> 2026-10-14: Ajuda e Suporte implementados como interface nativa no DOM do Painel Streamer, sem iframe. A aba consome o contrato existente de artigos, chamados, anexos, respostas e sugestões; shell, navegação e console originais permanecem no mesmo painel.
+
+> 2026-10-14: Aba 3 Dicas migrada integralmente para `tikplay-3-dicas-novo.html`: cabecalho, grade responsiva, status/controles, configuracao, presentes e resumo/ranking lateral. IDs, handlers, autosave, catalogo e destino tecnico preservados; chips, autocomplete e botoes seguem o tema escuro atual.
+
+> 2026-10-13: Setas de posicao dos rankings aceitam pressao continua: movimento inicia no pressionar e repete ate soltar, com suporte pointer/touch e teclado.
+
+> 2026-10-13: Botoes de copiar link dos rankings receberam estilo compartilhado, com altura, cor, tipografia e estados de interacao iguais e sem sombra/deslocamento herdados.
+
+> 2026-10-13: Rankings de sobreposicao agora usam nomes descritivos no painel: Ranking Neon Compacto (antigo V2) e Ranking Podio Neon (antigo V3). Rotas e chaves internas mantidas.
+
+> 2026-10-13: Resetar movido ao cabecalho de controles, como no index.html de referencia. Controle Passo removido; movimento fixo de 1% por seta.
+
+> 2026-10-13: Controles de Sobreposicoes conferidos contra index.html da referencia. Removido o controle extra Passo 1% (alternava deslocamento entre 1% e 5%); setas agora movem em 1% fixo e permanecem d-pad 52px, escala +/- 44px e espacamento 60px.
+
+> 2026-10-13: Controles de posicao/escala das Sobreposicoes alinhados ao modelo: d-pad 52px, ajuste de escala 44px, espacamento central de 60px e paineis com proporcao 1.2/.8. Efeitos antigos de sombra/deslocamento retirados, com hover suave.
+
+> 2026-10-13: Historico de partidas alinhado a tabela da referencia: filtros organizados, cabecalho escuro, divisorias sutis, palavra sem ID repetido e sem estilos antigos de borda preta.
+
+> 2026-10-13: Probabilidade de dicas/charadas integrada a Regras e automacao, com slider unico e percentuais complementares ao vivo. IDs de preferencias e autosave preservados.
+
+> 2026-10-13: Switches da Palavra Secreta corrigidos: removido deslocamento duplicado (left + transform) herdado da referencia geral. Bolinha permanece dentro do trilho nos dois estados.
+
+> 2026-10-13: Presente do Boss movido ao final de Dicas e presentes, depois de tamanho/primeira letra. Contador de selecao removido; limite de um presente e bloqueio por modo Boss preservados.
+
+> 2026-10-13: Presente Revelador renomeado Presente do Boss. Configuracao desabilitada por fieldset quando Boss esta OFF, com mensagem de ativacao; selecao salva preservada.
+
+> 2026-10-13: Contadores de presentes seguem a referencia: badge amarelo discreto, fonte 9px/800 e apenas quantidade/limite. Removida regra antiga do giftCounter que escurecia e ampliava o texto.
+
+> 2026-10-13: Etiquetas selecionadas reforcadas no escopo da Palavra Secreta, sem sombra/efeito antigo e com texto mais legivel. Versao dos estilos atualizada para invalidar cache do navegador.
+
+> 2026-10-13: Catalogo de presentes padronizado no painel streamer: filtro de valor escuro com campos alinhados, selecao em ciano e etiquetas sem sombra antiga, com remocao discreta. Filtragem e selecao preservadas.
+
+> 2026-10-13: Dica usa o mesmo estilo azul/ciano de Soltar Charada, mantendo os bloqueios existentes.
+
+> 2026-10-13: O botao de alternar ranking mostra o estado recebido do backend: Ranking Rodada, Ranking Live, Ranking Semanal ou Ranking Oculto. Texto inferior ocultado; acao e bloqueios preservados.
+
+> 2026-10-13: Controles da Palavra Secreta agrupados em duas linhas de tres: Dica/Mudar Ranking/Lista Final e Soltar Charada/Replay/Fechar Charada. Acoes secundarias no mesmo tom neutro; Soltar Charada em ciano e Encerrar Partida em vermelho discreto. Iniciar/Encerrar permanece em largura total; handlers e bloqueios preservados.
+
+> 2026-10-13: Palavra Secreta usa a estrutura/CSS de `tikplay-palavra-secreta-novo.html`, isolados em `ui/tikplay-word-model.css`. Layout de duas colunas, controles, presentes, automação, roleta, histórico e resumo lateral; dados fictícios removidos e IDs/handlers preservados. Estados dos botões e campos seguem o modelo. Validado com API simulada, campos, switches e viewport mobile; sem erros JS ou overflow na página do jogo.
+
+> 2026-10-13: Sons migra para a estrutura e CSS de `Site/tikplay-admin-new/tikplay-admin-new/tikplay-sons-novo.html`, com estilos isolados em `ui/tikplay-sounds-model.css`. Abas Narração/Alertas, resumo lateral e lista real de presentes; handlers de voz, upload normal/combo, reprodução e remoção preservados. Dados demonstrativos removidos. Validado com API simulada, permissões, upload e viewport mobile.
+
+> 2026-10-13: Conectar Live reconstruída com a estrutura da referência: título, conexão e filtros em duas colunas, campo com @, botões e status-card, switches originais. IDs/handlers e credencial opcional preservados; validação desktop/mobile sem erros JS.
+
+> 2026-10-13: Sobreposições segue a página do modelo fornecido, com prévia à esquerda e posição/escala à direita por ranking. Painéis, setas e campos no tema original; prévia dimensionada pela quantidade de participantes. Navegação desktop/mobile e controles V2/V3 validados com API simulada.
+
+> 2026-10-13: Painel streamer migra, a pedido explícito do usuário, para o modelo `Site/tikplay-admin-new/tikplay-admin-new`. CSS original em `ui/tikplay-streamer-reference.css`, adaptações isoladas em `ui/tikplay-streamer-model.css`. Dashboard funcional, sidebar, busca, topbar e console; controles existentes e gating preservados. CORDA aplica o tema apenas em control=1. Validado com Playwright nas 11 seções, desktop/mobile e API simulada; sem alterações de backend nesta tarefa.
+
+> 2026-10-13: Admin usa a referência explícita `Site/tikplay-admin-new/tikplay-admin-new`: fontes Inter/Space Grotesk, paleta, marca, workspace, topbar e navegação ciano. Funções administrativas preservadas; frontend validado desktop/mobile.
+
 > **Documento vivo.** Toda alteração visual do TikPlay (Painel Streamer, Super Admin,
 > overlays e jogos) deve seguir este documento. Antes de codar visual, leia a seção
 > **Status / Progresso** para saber o que já foi feito e o que falta.
 
-- **Última atualização:** 2026-10-13
+- **Última atualização:** 2026-10-14
 - **Escopo:** Node `node/public/*` (HTML/CSS/JS embutido) + `node/public/style.css`
 - **Regra de ouro:** refatoração **visual e estrutural de CSS/componentes**. Não alterar
   lógica de jogo, rotas, IDs, eventos, WebSockets, APIs, banco, auth, permissões, OBS,
@@ -436,6 +500,12 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-14 — Central de Ajuda e Suporte: hub do streamer, busca/categorias/artigos públicos, chamados com conversa e anexos via fetch autenticado, sugestões, e gestão administrativa de fila, status, respostas rápidas, categorias e artigos Markdown.
+
+- 2026-10-14 — 3 Dicas: estrutura e tema alinhados à referência em `ui/tikplay-threedicas-model.css`. Ranking continua vindo do serviço, resumo lateral reflete os valores configurados, presentes mantêm busca/seleção funcional e destino técnico continua usando link autenticado por sala. Controles usam a folha compartilhada de botões.
+
+- 2026-10-14 — Painel Streamer e Super Admin: botões de ação usam uma folha compartilhada para tamanho, tipografia, cores semânticas, hover, clique, indisponibilidade e foco. Mantidos os fundos neutros adequados a cada tema.
+
 - 2026-10-12 — CORDA: áudios fornecidos integrados; trilha em loop com liga/desliga e volume, efeitos por entrada em movimento/pressão/vitória com volume próprio. Ajustes persistentes durante a partida e botão para liberação de autoplay no navegador.
 
 - 2026-10-12 — CORDA: seleção de presentes refinada conforme Duelo: blocos por equipe, busca individual, nome original no campo, tradução + original nas sugestões, foto de 24px, moedas e opção Ativo. Seleção e salvamento verificados no navegador.
@@ -608,3 +678,5 @@ node/public/
 - 2026-10-13: Legibilidade do ranking V3 reforçada para cenários de live variáveis, com contorno/sombra escura e reticências em nomes longos; nome completo preservado como título e rótulo acessível.
 
 - 2026-10-13: Painel de Sobreposições organiza as prévias V2/V3 ao lado dos respectivos botões de posição e escala, com orientação para configurar a origem no TikTok Live Studio na resolução de saída da live; ajustes são salvos por streamer e enviados em tempo real às fontes abertas.
+
+- 2026-10-13: Quantidade exibida de participantes configurável separadamente para V2 e V3; cada escolha acompanha a posição e escala salvas por versão, atualiza a prévia e a fonte aberta em tempo real.

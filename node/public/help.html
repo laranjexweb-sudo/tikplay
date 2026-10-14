@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikPlay | Central de Ajuda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ui/tikplay-theme.css">
+<link rel="stylesheet" href="/ui/tikplay-panels.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css">
+<link rel="stylesheet" href="/ui/tikplay-support.css">
+</head>
+<body class="tp-help-page tp-super-admin">
+<div class="tp-help-layout">
+  <aside class="tp-help-sidebar">
+    <a class="tp-help-brand" href="/painel"><span class="tp-help-brand-mark" aria-hidden="true">T</span><span>TikPlay</span></a>
+    <nav class="tp-help-nav" aria-label="Central de Ajuda"><a href="/help.html" aria-current="page">Central de Ajuda</a><a href="/support.html">Ajuda e Suporte</a><a href="/painel">Voltar ao painel</a></nav>
+  </aside>
+  <main class="tp-help-main">
+    <header class="tp-help-topbar"><span>Central de Ajuda</span><a class="tp-help-btn" href="/support.html">Falar com suporte</a></header>
+    <div class="tp-help-content">
+      <section id="helpIndex">
+        <header class="tp-help-heading"><span class="tp-help-eyebrow">CENTRAL DE AJUDA</span><h1>Como podemos ajudar?</h1><p>Pesquise por uma dúvida ou navegue pelos guias do TikPlay.</p></header>
+        <form id="helpSearchForm" class="tp-help-search"><input id="helpSearch" type="search" placeholder="Pesquisar artigos..." aria-label="Pesquisar artigos"><button class="tp-help-btn tp-help-btn-primary">Pesquisar</button></form>
+        <div class="tp-help-panel"><h2>Categorias</h2><p id="helpCategoryStatus" class="tp-help-notice" role="status" aria-live="polite">Carregando categorias…</p><div id="helpCategories" class="tp-help-grid"></div></div>
+        <div class="tp-help-panel tp-help-spaced"><div class="tp-help-split-heading"><h2 id="articleListHeading">Artigos</h2><button id="clearHelpFilters" class="tp-help-btn" hidden>Limpar filtros</button></div>
+          <div class="tp-help-toolbar"><label>Jogo<select id="helpGameFilter"><option value="">Todos os jogos</option></select></label></div>
+          <p id="helpArticleStatus" class="tp-help-notice" role="status" aria-live="polite"></p><div id="helpArticles" class="tp-help-list"><div class="tp-help-skeleton"></div></div>
+        </div>
+      </section>
+      <section id="helpArticlePage" class="tp-help-article" hidden>
+        <div class="tp-help-toolbar"><a href="/help.html" class="tp-help-btn" id="helpBackLink">Todos os artigos</a></div>
+        <p class="tp-help-muted" id="helpBreadcrumb">Central de Ajuda</p>
+        <header class="tp-help-heading"><span class="tp-help-eyebrow" id="helpArticleCategory">ARTIGO</span><h1 id="helpArticleTitle">Carregando artigo…</h1><p id="helpArticleSummary"></p></header>
+        <article id="helpArticleContent" class="tp-help-panel tp-help-article-content"><div class="tp-help-skeleton"></div></article>
+        <section class="tp-help-panel tp-help-spaced"><h2>Ainda precisa de ajuda?</h2><p class="tp-help-muted">Envie os detalhes para nossa equipe continuar com você.</p><a id="helpTicketLink" class="tp-help-btn tp-help-btn-primary" href="/support.html?view=new-ticket">Não, preciso de ajuda</a></section>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const params=new URLSearchParams(location.search), articleSlug=params.get('artigo'), panelEmbed=params.get('embed')==='panel';
+  if(panelEmbed) document.body.classList.add('tp-help-embedded');
+  let categories=[], items=[], allItems=[], selectedCategory='', debounce=null, categoryMap=new Map();
+  async function api(url) { const response=await fetch(url); const data=await response.json(); if(!response.ok || data.success===false) throw new Error(data.error || 'Não foi possível carregar a Central de Ajuda.'); return data; }
+  function markdown(source) {
+    const lines=String(source || '').replace(/\r/g,'').split('\n'), output=[]; let list='';
+    const inline = value => value.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    const closeList=()=>{ if(list){output.push(`</${list}>`);list='';} };
+    for (const raw of lines) {
+      const line=esc(raw);
+      const heading=line.match(/^(#{1,3})\s+(.+)$/);
+      const ordered=line.match(/^\d+\.\s+(.+)$/), bullet=line.match(/^[-*]\s+(.+)$/);
+      if (heading) { closeList(); const level=heading[1].length; output.push(`<h${level+1}>${inline(heading[2])}</h${level+1}>`); }
+      else if (ordered || bullet) { const type=ordered?'ol':'ul'; if(list!==type){closeList();list=type;output.push(`<${list}>`);} output.push(`<li>${inline((ordered||bullet)[1])}</li>`); }
+      else { closeList(); if(line.trim()) output.push(`<p>${inline(line)}</p>`); }
+    }
+    closeList(); return output.join('');
+  }
+  function loadCategoryGrid() {
+    $('helpCategories').innerHTML=categories.map(cat=>`<button type="button" class="tp-help-action" data-category="${esc(cat.id)}"><strong>${esc(cat.name)}</strong><span class="tp-help-muted">Explorar artigos</span></button>`).join('');
+    $('helpCategories').querySelectorAll('[data-category]').forEach(button=>button.addEventListener('click',()=>{selectedCategory=button.dataset.category; $('articleListHeading').textContent=categoryMap.get(selectedCategory)?.name || 'Artigos'; loadArticles(); window.scrollTo({top:$('helpArticles').getBoundingClientRect().top+scrollY-100,behavior:'smooth'});}));
+  }
+  function updateGames() {
+    const gameSet=new Map(); allItems.forEach(item=>{ if(item.game_id) gameSet.set(item.game_id,item.game_name || item.game_id.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase())); });
+    const select=$('helpGameFilter'), chosen=select.value; select.innerHTML='<option value="">Todos os jogos</option>'+[...gameSet].map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join(''); select.value=chosen;
+  }
+  async function loadArticles() {
+    const q=$('helpSearch').value.trim(), game=$('helpGameFilter').value, query=new URLSearchParams({page:'1',pageSize:'200'});
+    if(q) query.set('q',q); if(selectedCategory) query.set('category_id',selectedCategory); if(game) query.set('game_id',game);
+    $('helpArticleStatus').textContent=''; $('helpArticles').innerHTML='<div class="tp-help-skeleton"></div>';
+    try {
+      const data=await api(`/api/help/articles?${query}`); items=data.items || []; updateGames();
+      $('clearHelpFilters').hidden=!(q||selectedCategory||game);
+      if(!items.length) { $('helpArticles').innerHTML='<div class="tp-help-panel"><h3>Nenhum artigo encontrado para essa pesquisa.</h3><p class="tp-help-muted">Tente outros termos ou remova os filtros.</p></div>'; return; }
+      $('helpArticles').innerHTML=items.map(a=>`<a class="tp-help-row" href="/help.html?artigo=${encodeURIComponent(a.slug)}${panelEmbed?'&embed=panel':''}" data-article="${esc(a.slug)}"><span><strong>${esc(a.title)}</strong><p>${esc(a.summary || '')}</p><p>${esc(a.category_name || 'Central de Ajuda')}${a.game_id ? ` · ${esc(a.game_id)}` : ''}</p></span><span aria-hidden="true">›</span></a>`).join('');
+      $('helpArticles').querySelectorAll('[data-article]').forEach(link=>link.addEventListener('click',e=>{e.preventDefault(); location.href=link.href;}));
+    } catch(e) { $('helpArticles').innerHTML=''; $('helpArticleStatus').textContent=e.message; $('helpArticleStatus').classList.add('tp-help-error'); }
+  }
+  async function loadArticle(slug) {
+    $('helpIndex').hidden=true; $('helpArticlePage').hidden=false;
+    try {
+      const data=await api(`/api/help/articles/${encodeURIComponent(slug)}`), article=data.article;
+      $('helpArticleTitle').textContent=article.title; $('helpArticleSummary').textContent=article.summary || ''; $('helpArticleCategory').textContent=article.category_name || 'CENTRAL DE AJUDA'; $('helpBreadcrumb').textContent=`Central de Ajuda › ${article.category_name || 'Artigo'}`;
+      $('helpArticleContent').innerHTML=markdown(article.content || ''); $('helpTicketLink').href=`/support.html?view=new-ticket&artigo=${encodeURIComponent(article.slug)}${panelEmbed?'&embed=panel':''}`;
+      document.title=`TikPlay | ${article.title}`;
+    } catch(e) { $('helpArticleTitle').textContent='Artigo indisponível'; $('helpArticleSummary').textContent=e.message; $('helpArticleContent').replaceChildren(); $('helpTicketLink').hidden=true; }
+  }
+  $('helpSearch').addEventListener('input',()=>{clearTimeout(debounce); debounce=setTimeout(()=>{const url=new URL(location.href); const q=$('helpSearch').value.trim(); q?url.searchParams.set('q',q):url.searchParams.delete('q'); history.replaceState({},'',url); loadArticles();},400);});
+  $('helpSearchForm').addEventListener('submit',e=>{e.preventDefault(); clearTimeout(debounce); loadArticles();});
+  $('helpGameFilter').addEventListener('change',loadArticles);
+  $('clearHelpFilters').addEventListener('click',()=>{selectedCategory=''; $('helpSearch').value=''; $('helpGameFilter').value=''; $('articleListHeading').textContent='Artigos recentes'; history.replaceState({},'',panelEmbed?'/help.html?embed=panel':'/help.html'); loadArticles();});
+  document.addEventListener('click',event=>{const link=event.target.closest('a[href]');if(!panelEmbed||!link)return;const target=new URL(link.href,location.origin);if(target.origin!==location.origin)return;if(target.pathname==='/painel'){event.preventDefault();parent.postMessage({type:'tikplay-panel-navigation',tab:'dashboard'},location.origin);return;}if(target.pathname==='/suporte'||target.pathname==='/support.html'){target.pathname='/support.html';target.searchParams.set('embed','panel');link.href=target.pathname+target.search+target.hash;}if(target.pathname==='/ajuda'||target.pathname==='/help.html'){target.pathname='/help.html';target.searchParams.set('embed','panel');link.href=target.pathname+target.search+target.hash;}});
+  (async()=>{ try { const [categoryData,articleData]=await Promise.all([api('/api/help/categories'),api('/api/help/articles?page=1&pageSize=200')]); categories=categoryData.categories || []; allItems=articleData.items || []; categories.forEach(c=>categoryMap.set(String(c.id),c)); $('helpCategoryStatus').textContent=categories.length?'':'Nenhuma categoria publicada.'; loadCategoryGrid(); updateGames(); if(articleSlug) await loadArticle(articleSlug); else { $('helpSearch').value=params.get('q') || ''; await loadArticles(); } } catch(e) { $('helpCategoryStatus').textContent=e.message; $('helpCategoryStatus').classList.add('tp-help-error'); $('helpArticles').replaceChildren(); } })();
+})();
+</script>
+</body>
+</html>

@@ -43,9 +43,19 @@ html.overlay-document{background:transparent}
 .ranking:before,.ranking:after,.ranking-header,.ranking-footer { display:none; }
 .ranking-header { padding:0; margin:0; border:0; background:transparent; }
 .ranking-footer { height:0; }
+.overlay .name,.overlay .total { color:var(--likes-font-color,#fff)!important; text-shadow:var(--likes-text-shadow,0 1px 3px rgba(0,0,0,.7))!important; }
+.ranking.photo-right .row { grid-template-columns:minmax(0,1fr) 58px; }
+.ranking.photo-right .row .avatar-slot { order:2; }
+.ranking.photo-right .row .details { order:1; }
+.ranking:is(.photo-top,.photo-bottom) .row { grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; justify-items:center; text-align:center; }
+.ranking.photo-top .row .avatar-slot { order:0; }
+.ranking.photo-top .row .details { order:1; text-align:center; }
+.ranking.photo-bottom .row .details { order:0; text-align:center; }
+.ranking.photo-bottom .row .avatar-slot { order:1; }
+.ranking:is(.photo-top,.photo-bottom) .row .meta { justify-content:center; }
 
 /* Compact V2 rows: preserve the card while giving names room to breathe. */
-.row,.row.rank-1,.row.rank-2,.row.rank-3 { grid-template-columns:58px minmax(0,1fr); gap:7px; min-height:56px; padding:2px 9px; }
+.row,.row.rank-1,.row.rank-2,.row.rank-3 { grid-template-columns:58px minmax(0,1fr); gap:5px; min-height:56px; padding:2px 9px; }
 .row.rank-1,.row.rank-2,.row.rank-3 { min-height:64px; }
 .position { font-size:20px; }
 .avatar-slot { width:54px; height:54px; display:grid; place-items:center; }
@@ -132,3 +142,14 @@ body.demo-preview .ranking { width:100%; max-width:320px; }
 
 html.overlay-document,html.overlay-document body.overlay,html.overlay-document .ranking { background:transparent; }
 .plain-avatar .avatar-fallback { display:grid; place-items:center; }
+
+/* Keep portrait-to-name spacing consistent for either photo position. */
+.ranking .row,.ranking .row.rank-1,.ranking .row.rank-2,.ranking .row.rank-3 { column-gap:5px; }
+
+/* Right-photo rules come last to override compact and podium column presets. */
+.ranking.photo-right .row,.ranking.photo-right .row.rank-1,.ranking.photo-right .row.rank-2,.ranking.photo-right .row.rank-3 { grid-template-columns:minmax(0,1fr) 58px; column-gap:5px; }
+.ranking.photo-right .row .avatar-slot { order:2; }
+.ranking.photo-right .row .details { order:1; text-align:right; justify-items:end; }
+.ranking.photo-right .row .meta { justify-content:flex-end; }
+.ranking.photo-right .row .total { text-align:right; }
+.ranking.photo-right .row.rank-1:before,.ranking.photo-right .row.rank-2:before,.ranking.photo-right .row.rank-3:before { left:auto; right:-1px; }

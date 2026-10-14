@@ -5,6 +5,28 @@ const demo = params.get('demo') === '1';
 const heartSvg = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 29 3 16C-5 7 7-3 16 6c9-9 21 1 13 10Z"/></svg>';
 let closing = false;
 let demoTimer;
+let fountainConfig = { animation: 'float', heart_colors: ['#ff4d6d'] };
+
+function applyFountainConfig(config = {}) {
+  fountainConfig = {
+    animation: ['float', 'rise', 'pop', 'sway'].includes(config.animation) ? config.animation : 'float',
+    heart_colors: Array.isArray(config.heart_colors) && config.heart_colors.length
+      ? config.heart_colors.filter(color => /^#[0-9a-f]{6}$/i.test(color)).slice(0, 5)
+      : ['#ff4d6d']
+  };
+  root.dataset.animation = fountainConfig.animation;
+}
+async function loadFountainConfig() {
+  if (demo || !token) return;
+  try {
+    const response = await fetch('/api/likes-overlay/layout?version=v3', {
+      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.success) applyFountainConfig(data.layout);
+  } catch { /* mantém as cores e animação padrão */ }
+}
 
 function random(min, max) { return min + Math.random() * (max - min); }
 function addParticle(kind, item, x, options = {}) {
@@ -15,7 +37,8 @@ function addParticle(kind, item, x, options = {}) {
   particle.style.setProperty('--particle-duration', `${random(4.4, 6.6)}s`);
   particle.style.setProperty('--particle-drift', `${random(-9, 9)}vw`);
   if (kind === 'heart') {
-    particle.style.setProperty('--particle-color', options.color || (Math.random() > .42 ? 'var(--tp-pink)' : 'var(--tp-purple)'));
+    const colors = fountainConfig.heart_colors;
+    particle.style.setProperty('--particle-color', options.color || colors[Math.floor(Math.random() * colors.length)]);
     particle.innerHTML = heartSvg;
   } else {
     const label = String(item.nickname || item.user || '?').trim();
@@ -57,6 +80,7 @@ function connect() {
   socket.onmessage = event => {
     try {
       const message = JSON.parse(event.data);
+      if (message.type === 'likes_overlay_layout' && message.version === 'v3') { applyFountainConfig(message.layout); return; }
       if (message.type !== 'likes_activity') return;
       const activity = message.activity || message;
       const amount = Math.max(1, Number(activity.like_count ?? activity.count) || 1);
@@ -69,6 +93,10 @@ function connect() {
   };
   window.addEventListener('pagehide', () => { closing = true; socket.close(); }, { once: true });
 }
+window.addEventListener('message', event => {
+  if (event.origin !== location.origin || event.data?.type !== 'likes-overlay-preview-config') return;
+  applyFountainConfig(event.data.layout);
+});
 if (demo) {
   const samples = [
     { user: 'preview-a', nickname: 'Ana' },
@@ -77,6 +105,7 @@ if (demo) {
   ];
   demoTimer = window.setInterval(() => burst(samples[Math.floor(Math.random() * samples.length)], Math.ceil(random(1, 12))), 620);
 } else {
+  loadFountainConfig();
   connect();
 }
 window.addEventListener('pagehide', () => window.clearInterval(demoTimer), { once: true });
