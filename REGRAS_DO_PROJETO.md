@@ -95,4 +95,26 @@ Regras obrigatórias:
 - Ao concluir uma etapa, atualizar o **Status/Progresso** em `docs/DESIGN_SYSTEM.md`.
 
 ---
+
+## 6. Ajuda e Suporte (API backend)
+
+Implementado em `node/routes/support.js` (registrado por `server.js`) com persistência em
+`node/db.js`. Contrato completo em **`docs/suporte-contrato-api.md`**.
+
+- **Escopo do backend:** apenas API/banco. Telas (`/suporte`, `/ajuda`), HTML/CSS/JS de
+  interface e o registro das rotas amigáveis em `FRIENDLY_PAGES` são responsabilidade do
+  agente de front-end.
+- **Anexos:** somente **imagens** (png/jpg/jpeg/gif/webp/bmp/heic/heif), até **5 MB**; gravados
+  em `node/data/support-files/<user_id>/` (fora de `public/`, ignorado pelo git) e entregues
+  **apenas** por `GET /api/support/attachments/:id`, autenticado (dono do chamado ou admin).
+- **Propriedade:** o streamer só acessa/responder/fecha os próprios chamados; o admin opera
+  todos. `fechado` grava `closed_at`; reabrir (qualquer status ≠ `fechado`) limpa `closed_at`.
+  `updated_at` do chamado muda em nova mensagem, mudança de status e novo anexo.
+- **Enums e `game_id`** são validados no backend: `game_id` é slug
+  (`palavra-secreta`, `tres`, `duelo`, `caca`, `batalha`, `bichinho`, `corda`). Statuses,
+  prioridades e tipos de sugestão seguem o contrato e não devem divergir no front.
+- **Central de Ajuda:** `GET /api/help/*` é leitura pública e só expõe artigos com
+  `published = true`; o CRUD administrativo permite rascunho sem exposição pública.
+
+---
 *Documento exportado automaticamente para referência e governança do projeto.*

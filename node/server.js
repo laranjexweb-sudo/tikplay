@@ -589,6 +589,11 @@ require("./routes/auth")(app, { db, auth, getTenant, PYTHON_BIN });
 // ---------------- Gifts / gift-config / Alertas sonoros (rotas - Fase B-2b) ----------------
 require("./routes/gifts")(app, { db, path, fs, multer, auth, getTenant, daemonSend, broadcastToClients, readGiftTags, readGiftImageMap, readTenantGiftConfig });
 
+// ---------------- Ajuda e Suporte (rotas) ----------------
+// Chamados, sugestões, respostas rápidas e Central de Ajuda. Anexos ficam em
+// node/data/support-files (fora de public/) e são servidos por endpoint autenticado.
+require("./routes/support")(app, { db, auth, multer, fs, path });
+
 // ---------------- Planos e Assinaturas (Mercado Pago) ----------------
 
 const MP_API = "https://api.mercadopago.com";

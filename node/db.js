@@ -298,6 +298,101 @@ try { db.exec("ALTER TABLE batalha_rounds ADD COLUMN room_id TEXT DEFAULT ''"); 
 try { db.exec("ALTER TABLE batalha_interactions ADD COLUMN room_id TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE users ADD COLUMN tiktok_engine TEXT NOT NULL DEFAULT 'tiktoklive'"); } catch {}
 
+// ---------------- Suporte / Central de Ajuda (DDL) ----------------
+// Tickets, sugestões, categorias, respostas rápidas e artigos de ajuda.
+// Anexos NÃO ficam em public/: são gravados em node/data/support-files/<tenant>/
+// (fora do versionamento) e entregues só por endpoint autenticado (routes/support.js).
+db.exec(`
+CREATE TABLE IF NOT EXISTS support_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  icon TEXT DEFAULT '',
+  sort_order INTEGER DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS support_quick_replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  category_id INTEGER,
+  game_id TEXT DEFAULT '',
+  subject TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'novo',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  source_article_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id, id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status, id);
+CREATE TABLE IF NOT EXISTS support_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  sender_id INTEGER,
+  sender_type TEXT NOT NULL DEFAULT 'user',
+  message TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages(ticket_id, id);
+CREATE TABLE IF NOT EXISTS support_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  message_id INTEGER,
+  file_path TEXT NOT NULL,
+  mime_type TEXT DEFAULT '',
+  size INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_support_attachments_ticket ON support_attachments(ticket_id, id);
+CREATE TABLE IF NOT EXISTS support_suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL DEFAULT 'outro',
+  game_id TEXT DEFAULT '',
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'recebida',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_support_suggestions_user ON support_suggestions(user_id, id);
+CREATE INDEX IF NOT EXISTS idx_support_suggestions_status ON support_suggestions(status, id);
+CREATE TABLE IF NOT EXISTS help_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  icon TEXT DEFAULT '',
+  sort_order INTEGER DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS help_articles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER,
+  game_id TEXT DEFAULT '',
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  summary TEXT DEFAULT '',
+  content TEXT DEFAULT '',
+  keywords TEXT DEFAULT '',
+  published INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_help_articles_category ON help_articles(category_id, sort_order, id);
+CREATE INDEX IF NOT EXISTS idx_help_articles_published ON help_articles(published, id);
+`);
+
 const CODE_CHARS = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function makeRoomCode(len = 8) {
@@ -1182,6 +1277,524 @@ function getGiftImageMapDerived() {
   return out;
 }
 
+// ---------------- Suporte / Central de Ajuda (funções) ----------------
+// Enums validados no backend; game_id é sempre um slug conhecido (SUPPORT_GAME_SLUGS).
+const SUPPORT_TICKET_STATUSES = ["novo", "em_atendimento", "aguardando_usuario", "resolvido", "fechado"];
+const SUPPORT_TICKET_PRIORITIES = ["baixa", "normal", "alta", "urgente"];
+const SUPPORT_SUGGESTION_TYPES = ["nova_funcionalidade", "melhoria", "novo_jogo", "melhoria_jogo", "interface", "integracao", "outro"];
+const SUPPORT_SUGGESTION_STATUSES = ["recebida", "em_avaliacao", "planejada", "em_desenvolvimento", "implementada", "nao_planejada"];
+const SUPPORT_SENDER_TYPES = ["user", "staff"];
+const SUPPORT_GAME_SLUGS = ["palavra-secreta", "tres", "duelo", "caca", "batalha", "bichinho", "corda"];
+const SUPPORT_GAME_LABELS = {
+  "palavra-secreta": "Palavra Secreta",
+  tres: "3 Dicas",
+  duelo: "Duelo 1x1",
+  caca: "Caça Palavras",
+  batalha: "Batalha",
+  bichinho: "Bichinho",
+  corda: "CORDA",
+};
+
+function slugifySupport(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function normalizeSupportGameId(gameId) {
+  const g = String(gameId || "").trim();
+  return SUPPORT_GAME_SLUGS.includes(g) ? g : "";
+}
+
+function supportPageParams(page, pageSize, defSize = 20, maxSize = 100) {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const s = Math.max(1, Math.min(maxSize, parseInt(pageSize, 10) || defSize));
+  return { page: p, pageSize: s };
+}
+
+// ---- Categorias de chamado ----
+
+function listSupportCategories({ activeOnly = true } = {}) {
+  const sql = activeOnly
+    ? "SELECT id, name, slug, icon, sort_order FROM support_categories WHERE active = 1 ORDER BY sort_order, name"
+    : "SELECT id, name, slug, icon, sort_order, active FROM support_categories ORDER BY sort_order, name";
+  return db.prepare(sql).all();
+}
+
+function getSupportCategoryById(id) {
+  return db.prepare("SELECT * FROM support_categories WHERE id = ?").get(id) || null;
+}
+
+function saveSupportCategory({ id = null, name, slug, icon = "", sort_order = 0, active = true }) {
+  const cleanName = String(name || "").trim();
+  const cleanSlug = slugifySupport(slug || cleanName);
+  if (!cleanName || !cleanSlug) return null;
+  if (id) {
+    db.prepare("UPDATE support_categories SET name=?, slug=?, icon=?, sort_order=?, active=? WHERE id=?")
+      .run(cleanName, cleanSlug, String(icon || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0, id);
+    return getSupportCategoryById(id);
+  }
+  const info = db.prepare("INSERT INTO support_categories (name, slug, icon, sort_order, active) VALUES (?,?,?,?,?)")
+    .run(cleanName, cleanSlug, String(icon || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0);
+  return getSupportCategoryById(info.lastInsertRowid);
+}
+
+function deleteSupportCategory(id) {
+  return db.prepare("DELETE FROM support_categories WHERE id = ?").run(id).changes > 0;
+}
+
+// ---- Respostas rápidas (admin) ----
+
+function listSupportQuickReplies({ activeOnly = false } = {}) {
+  const sql = activeOnly
+    ? "SELECT id, title, body, sort_order FROM support_quick_replies WHERE active = 1 ORDER BY sort_order, id"
+    : "SELECT id, title, body, sort_order, active, created_at, updated_at FROM support_quick_replies ORDER BY sort_order, id";
+  return db.prepare(sql).all();
+}
+
+function getSupportQuickReplyById(id) {
+  return db.prepare("SELECT * FROM support_quick_replies WHERE id = ?").get(id) || null;
+}
+
+function saveSupportQuickReply({ id = null, title, body = "", sort_order = 0, active = true }) {
+  const cleanTitle = String(title || "").trim();
+  if (!cleanTitle) return null;
+  if (id) {
+    db.prepare("UPDATE support_quick_replies SET title=?, body=?, sort_order=?, active=?, updated_at=datetime('now') WHERE id=?")
+      .run(cleanTitle, String(body || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0, id);
+    return getSupportQuickReplyById(id);
+  }
+  const info = db.prepare("INSERT INTO support_quick_replies (title, body, sort_order, active) VALUES (?,?,?,?)")
+    .run(cleanTitle, String(body || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0);
+  return getSupportQuickReplyById(info.lastInsertRowid);
+}
+
+function deleteSupportQuickReply(id) {
+  return db.prepare("DELETE FROM support_quick_replies WHERE id = ?").run(id).changes > 0;
+}
+
+// ---- Chamados ----
+
+function getSupportTicket(id) {
+  return db.prepare(`
+    SELECT t.*, c.name AS category_name, c.slug AS category_slug,
+           u.name AS user_name, u.email AS user_email, u.tiktok_username AS user_tiktok
+    FROM support_tickets t
+    LEFT JOIN support_categories c ON c.id = t.category_id
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.id = ?
+  `).get(id) || null;
+}
+
+function createSupportTicket({ user_id, category_id = null, game_id = "", subject, message, priority = "normal", source_article_id = null }) {
+  const run = db.transaction(() => {
+    const info = db.prepare(`
+      INSERT INTO support_tickets (user_id, category_id, game_id, subject, status, priority, source_article_id, updated_at)
+      VALUES (?, ?, ?, ?, 'novo', ?, ?, datetime('now'))
+    `).run(user_id, category_id, String(game_id || ""), subject, priority, source_article_id);
+    const ticketId = info.lastInsertRowid;
+    const msg = String(message || "").trim();
+    if (msg) {
+      db.prepare("INSERT INTO support_messages (ticket_id, sender_id, sender_type, message) VALUES (?, ?, 'user', ?)")
+        .run(ticketId, user_id, msg);
+    }
+    return ticketId;
+  });
+  return getSupportTicket(run());
+}
+
+function listSupportTicketsByUser(user_id, { status = "", page = 1, pageSize = 20 } = {}) {
+  const p = supportPageParams(page, pageSize, 20, 100);
+  const where = ["t.user_id = ?"];
+  const params = [user_id];
+  if (SUPPORT_TICKET_STATUSES.includes(status)) { where.push("t.status = ?"); params.push(status); }
+  const w = where.join(" AND ");
+  const total = db.prepare(`SELECT COUNT(*) c FROM support_tickets t WHERE ${w}`).get(...params).c;
+  const items = db.prepare(`
+    SELECT t.id, t.subject, t.status, t.priority, t.game_id, t.category_id, t.source_article_id,
+           t.created_at, t.updated_at, t.closed_at, c.name AS category_name
+    FROM support_tickets t
+    LEFT JOIN support_categories c ON c.id = t.category_id
+    WHERE ${w} ORDER BY t.updated_at DESC, t.id DESC LIMIT ? OFFSET ?
+  `).all(...params, p.pageSize, (p.page - 1) * p.pageSize);
+  return { items, total, page: p.page, pageSize: p.pageSize };
+}
+
+function listAllSupportTickets({ status = "", category_id = null, game_id = "", priority = "", q = "", page = 1, pageSize = 20 } = {}) {
+  const p = supportPageParams(page, pageSize, 20, 100);
+  const where = [];
+  const params = [];
+  if (SUPPORT_TICKET_STATUSES.includes(status)) { where.push("t.status = ?"); params.push(status); }
+  if (SUPPORT_TICKET_PRIORITIES.includes(priority)) { where.push("t.priority = ?"); params.push(priority); }
+  const cid = parseInt(category_id, 10);
+  if (Number.isFinite(cid) && cid > 0) { where.push("t.category_id = ?"); params.push(cid); }
+  const g = normalizeSupportGameId(game_id);
+  if (g) { where.push("t.game_id = ?"); params.push(g); }
+  const term = String(q || "").trim();
+  if (term) {
+    where.push("(t.subject LIKE ? OR u.email LIKE ? OR u.name LIKE ?)");
+    const like = `%${term}%`;
+    params.push(like, like, like);
+  }
+  const w = where.length ? "WHERE " + where.join(" AND ") : "";
+  const total = db.prepare(
+    `SELECT COUNT(*) c FROM support_tickets t LEFT JOIN users u ON u.id = t.user_id ${w}`
+  ).get(...params).c;
+  const items = db.prepare(`
+    SELECT t.id, t.user_id, t.subject, t.status, t.priority, t.game_id, t.category_id, t.source_article_id,
+           t.created_at, t.updated_at, t.closed_at,
+           c.name AS category_name, u.name AS user_name, u.email AS user_email
+    FROM support_tickets t
+    LEFT JOIN support_categories c ON c.id = t.category_id
+    LEFT JOIN users u ON u.id = t.user_id
+    ${w} ORDER BY t.updated_at DESC, t.id DESC LIMIT ? OFFSET ?
+  `).all(...params, p.pageSize, (p.page - 1) * p.pageSize);
+  return { items, total, page: p.page, pageSize: p.pageSize };
+}
+
+function listSupportTicketMessages(ticket_id) {
+  return db.prepare(`
+    SELECT m.id, m.ticket_id, m.sender_id, m.sender_type, m.message, m.created_at,
+           u.name AS sender_name
+    FROM support_messages m
+    LEFT JOIN users u ON u.id = m.sender_id
+    WHERE m.ticket_id = ? ORDER BY m.id ASC
+  `).all(ticket_id);
+}
+
+function addSupportMessage({ ticket_id, sender_id = null, sender_type = "user", message }) {
+  const text = String(message || "").trim();
+  if (!text) return null;
+  const run = db.transaction(() => {
+    const info = db.prepare("INSERT INTO support_messages (ticket_id, sender_id, sender_type, message) VALUES (?,?,?,?)")
+      .run(ticket_id, sender_id, sender_type, text);
+    db.prepare("UPDATE support_tickets SET updated_at = datetime('now') WHERE id = ?").run(ticket_id);
+    return info.lastInsertRowid;
+  });
+  const id = run();
+  return db.prepare(`
+    SELECT m.id, m.ticket_id, m.sender_id, m.sender_type, m.message, m.created_at, u.name AS sender_name
+    FROM support_messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.id = ?
+  `).get(id);
+}
+
+function setSupportTicketStatus(id, status) {
+  if (!SUPPORT_TICKET_STATUSES.includes(status)) return null;
+  const current = db.prepare("SELECT id FROM support_tickets WHERE id = ?").get(id);
+  if (!current) return null;
+  if (status === "fechado") {
+    db.prepare("UPDATE support_tickets SET status = ?, closed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(status, id);
+  } else {
+    // Qualquer transição que não seja "fechado" representa (re)abertura: limpa closed_at.
+    db.prepare("UPDATE support_tickets SET status = ?, closed_at = NULL, updated_at = datetime('now') WHERE id = ?").run(status, id);
+  }
+  return getSupportTicket(id);
+}
+
+function countSupportTicketsByUser(user_id) {
+  const rows = db.prepare("SELECT status, COUNT(*) c FROM support_tickets WHERE user_id = ? GROUP BY status").all(user_id);
+  const out = {};
+  for (const s of SUPPORT_TICKET_STATUSES) out[s] = 0;
+  for (const r of rows) out[r.status] = r.c;
+  return out;
+}
+
+function getSupportOverview() {
+  const counts = {};
+  for (const s of SUPPORT_TICKET_STATUSES) counts[s] = 0;
+  for (const r of db.prepare("SELECT status, COUNT(*) c FROM support_tickets GROUP BY status").all()) {
+    counts[r.status] = r.c;
+  }
+  const suggestions = {};
+  for (const s of SUPPORT_SUGGESTION_STATUSES) suggestions[s] = 0;
+  for (const r of db.prepare("SELECT status, COUNT(*) c FROM support_suggestions GROUP BY status").all()) {
+    suggestions[r.status] = r.c;
+  }
+  const resolvedThisWeek = db.prepare(
+    "SELECT COUNT(*) c FROM support_tickets WHERE status IN ('resolvido','fechado') AND COALESCE(closed_at, updated_at) >= datetime('now','-7 days')"
+  ).get().c;
+  return { tickets: counts, suggestions, resolved_this_week: resolvedThisWeek };
+}
+
+// ---- Anexos ----
+
+function addSupportAttachment({ ticket_id, message_id = null, file_path, mime_type = "", size = 0 }) {
+  const info = db.prepare("INSERT INTO support_attachments (ticket_id, message_id, file_path, mime_type, size) VALUES (?,?,?,?,?)")
+    .run(ticket_id, message_id, file_path, String(mime_type || ""), parseInt(size, 10) || 0);
+  db.prepare("UPDATE support_tickets SET updated_at = datetime('now') WHERE id = ?").run(ticket_id);
+  return db.prepare("SELECT id, ticket_id, message_id, mime_type, size, created_at FROM support_attachments WHERE id = ?")
+    .get(info.lastInsertRowid);
+}
+
+function listSupportAttachments(ticket_id) {
+  return db.prepare(
+    "SELECT id, ticket_id, message_id, mime_type, size, created_at FROM support_attachments WHERE ticket_id = ? ORDER BY id ASC"
+  ).all(ticket_id);
+}
+
+function getSupportAttachment(id) {
+  return db.prepare("SELECT * FROM support_attachments WHERE id = ?").get(id) || null;
+}
+
+// ---- Sugestões ----
+
+function getSupportSuggestion(id) {
+  return db.prepare(`
+    SELECT s.*, u.name AS user_name, u.email AS user_email
+    FROM support_suggestions s LEFT JOIN users u ON u.id = s.user_id
+    WHERE s.id = ?
+  `).get(id) || null;
+}
+
+function createSupportSuggestion({ user_id, type = "outro", game_id = "", title, description = "" }) {
+  const cleanTitle = String(title || "").trim();
+  if (!cleanTitle) return null;
+  const t = SUPPORT_SUGGESTION_TYPES.includes(type) ? type : "outro";
+  const info = db.prepare("INSERT INTO support_suggestions (user_id, type, game_id, title, description) VALUES (?,?,?,?,?)")
+    .run(user_id, t, normalizeSupportGameId(game_id), cleanTitle, String(description || "").trim());
+  return getSupportSuggestion(info.lastInsertRowid);
+}
+
+function listSupportSuggestionsByUser(user_id, { status = "", page = 1, pageSize = 20 } = {}) {
+  const p = supportPageParams(page, pageSize, 20, 100);
+  const where = ["s.user_id = ?"];
+  const params = [user_id];
+  if (SUPPORT_SUGGESTION_STATUSES.includes(status)) { where.push("s.status = ?"); params.push(status); }
+  const w = where.join(" AND ");
+  const total = db.prepare(`SELECT COUNT(*) c FROM support_suggestions s WHERE ${w}`).get(...params).c;
+  const items = db.prepare(
+    `SELECT s.id, s.type, s.game_id, s.title, s.description, s.status, s.created_at, s.updated_at
+     FROM support_suggestions s WHERE ${w} ORDER BY s.id DESC LIMIT ? OFFSET ?`
+  ).all(...params, p.pageSize, (p.page - 1) * p.pageSize);
+  return { items, total, page: p.page, pageSize: p.pageSize };
+}
+
+function listAllSupportSuggestions({ status = "", type = "", game_id = "", q = "", page = 1, pageSize = 20 } = {}) {
+  const p = supportPageParams(page, pageSize, 20, 100);
+  const where = [];
+  const params = [];
+  if (SUPPORT_SUGGESTION_STATUSES.includes(status)) { where.push("s.status = ?"); params.push(status); }
+  if (SUPPORT_SUGGESTION_TYPES.includes(type)) { where.push("s.type = ?"); params.push(type); }
+  const g = normalizeSupportGameId(game_id);
+  if (g) { where.push("s.game_id = ?"); params.push(g); }
+  const term = String(q || "").trim();
+  if (term) {
+    where.push("(s.title LIKE ? OR s.description LIKE ? OR u.email LIKE ?)");
+    const like = `%${term}%`;
+    params.push(like, like, like);
+  }
+  const w = where.length ? "WHERE " + where.join(" AND ") : "";
+  const total = db.prepare(
+    `SELECT COUNT(*) c FROM support_suggestions s LEFT JOIN users u ON u.id = s.user_id ${w}`
+  ).get(...params).c;
+  const items = db.prepare(`
+    SELECT s.id, s.user_id, s.type, s.game_id, s.title, s.description, s.status, s.created_at, s.updated_at,
+           u.name AS user_name, u.email AS user_email
+    FROM support_suggestions s LEFT JOIN users u ON u.id = s.user_id
+    ${w} ORDER BY s.id DESC LIMIT ? OFFSET ?
+  `).all(...params, p.pageSize, (p.page - 1) * p.pageSize);
+  return { items, total, page: p.page, pageSize: p.pageSize };
+}
+
+function setSupportSuggestionStatus(id, status) {
+  if (!SUPPORT_SUGGESTION_STATUSES.includes(status)) return null;
+  const info = db.prepare("UPDATE support_suggestions SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
+  if (info.changes === 0) return null;
+  return getSupportSuggestion(id);
+}
+
+// ---- Categorias da Central de Ajuda ----
+
+function listHelpCategories({ activeOnly = true } = {}) {
+  const sql = activeOnly
+    ? "SELECT id, name, slug, icon, sort_order FROM help_categories WHERE active = 1 ORDER BY sort_order, name"
+    : "SELECT id, name, slug, icon, sort_order, active FROM help_categories ORDER BY sort_order, name";
+  return db.prepare(sql).all();
+}
+
+function getHelpCategoryById(id) {
+  return db.prepare("SELECT * FROM help_categories WHERE id = ?").get(id) || null;
+}
+
+function saveHelpCategory({ id = null, name, slug, icon = "", sort_order = 0, active = true }) {
+  const cleanName = String(name || "").trim();
+  const cleanSlug = slugifySupport(slug || cleanName);
+  if (!cleanName || !cleanSlug) return null;
+  if (id) {
+    db.prepare("UPDATE help_categories SET name=?, slug=?, icon=?, sort_order=?, active=? WHERE id=?")
+      .run(cleanName, cleanSlug, String(icon || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0, id);
+    return getHelpCategoryById(id);
+  }
+  const info = db.prepare("INSERT INTO help_categories (name, slug, icon, sort_order, active) VALUES (?,?,?,?,?)")
+    .run(cleanName, cleanSlug, String(icon || ""), parseInt(sort_order, 10) || 0, active ? 1 : 0);
+  return getHelpCategoryById(info.lastInsertRowid);
+}
+
+function deleteHelpCategory(id) {
+  return db.prepare("DELETE FROM help_categories WHERE id = ?").run(id).changes > 0;
+}
+
+// ---- Artigos da Central de Ajuda ----
+
+function getHelpArticleById(id) {
+  return db.prepare(`
+    SELECT a.*, c.name AS category_name, c.slug AS category_slug
+    FROM help_articles a LEFT JOIN help_categories c ON c.id = a.category_id
+    WHERE a.id = ?
+  `).get(id) || null;
+}
+
+function getHelpArticleBySlug(slug, { publishedOnly = true } = {}) {
+  const where = publishedOnly ? "a.slug = ? AND a.published = 1" : "a.slug = ?";
+  return db.prepare(`
+    SELECT a.*, c.name AS category_name, c.slug AS category_slug
+    FROM help_articles a LEFT JOIN help_categories c ON c.id = a.category_id
+    WHERE ${where}
+  `).get(String(slug || "")) || null;
+}
+
+function listHelpArticles({ category_id = null, game_id = "", q = "", published = null, page = 1, pageSize = 50 } = {}) {
+  const p = supportPageParams(page, pageSize, 50, 200);
+  const where = [];
+  const params = [];
+  if (published === true) where.push("a.published = 1");
+  else if (published === false) where.push("a.published = 0");
+  const cid = parseInt(category_id, 10);
+  if (Number.isFinite(cid) && cid > 0) { where.push("a.category_id = ?"); params.push(cid); }
+  const g = normalizeSupportGameId(game_id);
+  if (g) { where.push("a.game_id = ?"); params.push(g); }
+  const term = String(q || "").trim();
+  if (term) {
+    where.push("(a.title LIKE ? OR a.summary LIKE ? OR a.keywords LIKE ?)");
+    const like = `%${term}%`;
+    params.push(like, like, like);
+  }
+  const w = where.length ? "WHERE " + where.join(" AND ") : "";
+  const total = db.prepare(`SELECT COUNT(*) c FROM help_articles a ${w}`).get(...params).c;
+  const items = db.prepare(`
+    SELECT a.id, a.category_id, a.game_id, a.title, a.slug, a.summary, a.keywords, a.published, a.sort_order,
+           a.created_at, a.updated_at, c.name AS category_name, c.slug AS category_slug
+    FROM help_articles a LEFT JOIN help_categories c ON c.id = a.category_id
+    ${w} ORDER BY c.sort_order, a.sort_order, a.id LIMIT ? OFFSET ?
+  `).all(...params, p.pageSize, (p.page - 1) * p.pageSize);
+  return { items, total, page: p.page, pageSize: p.pageSize };
+}
+
+function saveHelpArticle({ id = null, category_id = null, game_id = "", title, slug, summary = "", content = "", keywords = "", published = false, sort_order = 0 }) {
+  const cleanTitle = String(title || "").trim();
+  const cleanSlug = slugifySupport(slug || cleanTitle);
+  if (!cleanTitle || !cleanSlug) return null;
+  const cid = parseInt(category_id, 10);
+  const categoryId = Number.isFinite(cid) && cid > 0 ? cid : null;
+  const g = normalizeSupportGameId(game_id);
+  const pub = published ? 1 : 0;
+  const order = parseInt(sort_order, 10) || 0;
+  if (id) {
+    db.prepare(`
+      UPDATE help_articles
+      SET category_id=?, game_id=?, title=?, slug=?, summary=?, content=?, keywords=?, published=?, sort_order=?, updated_at=datetime('now')
+      WHERE id=?
+    `).run(categoryId, g, cleanTitle, cleanSlug, String(summary || ""), String(content || ""), String(keywords || ""), pub, order, id);
+    return getHelpArticleById(id);
+  }
+  const info = db.prepare(`
+    INSERT INTO help_articles (category_id, game_id, title, slug, summary, content, keywords, published, sort_order, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?, datetime('now'))
+  `).run(categoryId, g, cleanTitle, cleanSlug, String(summary || ""), String(content || ""), String(keywords || ""), pub, order);
+  return getHelpArticleById(info.lastInsertRowid);
+}
+
+function deleteHelpArticle(id) {
+  return db.prepare("DELETE FROM help_articles WHERE id = ?").run(id).changes > 0;
+}
+
+// ---- Seed idempotente (categorias + respostas rápidas + artigos de exemplo) ----
+
+function seedSupportData() {
+  const supportCats = [
+    ["Problema técnico", "problema-tecnico"],
+    ["TikTok / Conexão", "tiktok-conexao"],
+    ["Presentes", "presentes"],
+    ["OBS / Overlay", "obs-overlay"],
+    ["Jogos", "jogos"],
+    ["Conta / Plano", "conta-plano"],
+    ["Outro", "outro"],
+  ];
+  const helpCats = [
+    ["Primeiros passos", "primeiros-passos", "🚀"],
+    ["TikTok e conexão", "tiktok-e-conexao", "🔌"],
+    ["OBS e transmissão", "obs-e-transmissao", "🖥️"],
+    ["Jogos", "jogos", "🎮"],
+    ["Presentes e interações", "presentes-e-interacoes", "🎁"],
+    ["Conta e plano", "conta-e-plano", "👤"],
+    ["Solução de problemas", "solucao-de-problemas", "🛠️"],
+  ];
+  const insSupportCat = db.prepare("INSERT OR IGNORE INTO support_categories (name, slug, sort_order, active) VALUES (?,?,?,1)");
+  supportCats.forEach(([name, slug], i) => insSupportCat.run(name, slug, i));
+  const insHelpCat = db.prepare("INSERT OR IGNORE INTO help_categories (name, slug, icon, sort_order, active) VALUES (?,?,?,?,1)");
+  helpCats.forEach(([name, slug, icon], i) => insHelpCat.run(name, slug, icon, i));
+
+  if (db.prepare("SELECT COUNT(*) c FROM support_quick_replies").get().c === 0) {
+    const insQR = db.prepare("INSERT INTO support_quick_replies (title, body, sort_order) VALUES (?,?,?)");
+    insQR.run("Recebemos seu chamado", "Olá! Recebemos seu chamado e já estamos verificando. Qualquer novidade, respondemos por aqui.", 0);
+    insQR.run("Precisamos de mais detalhes", "Para investigar melhor, você poderia descrever o passo a passo e, se possível, enviar uma imagem do que está acontecendo?", 1);
+    insQR.run("Problema resolvido", "Ótimo! Vamos considerar este chamado resolvido. Se precisar de algo, é só responder por aqui.", 2);
+  }
+
+  if (db.prepare("SELECT COUNT(*) c FROM help_articles").get().c === 0) {
+    const catId = (slug) => {
+      const row = db.prepare("SELECT id FROM help_categories WHERE slug = ?").get(slug);
+      return row ? row.id : null;
+    };
+    const insArt = db.prepare(`
+      INSERT INTO help_articles (category_id, game_id, title, slug, summary, content, keywords, published, sort_order)
+      VALUES (?,?,?,?,?,?,?,?,?)
+    `);
+    insArt.run(
+      catId("primeiros-passos"), "", "Como começar no TikPlay", "como-comecar-no-tikplay",
+      "Crie sua conta, acesse o painel e inicie sua primeira live.",
+      "## Como fazer\n1. Crie sua conta em /register (é preciso ter um convite).\n2. Faça login e abra o Painel do streamer em /painel.\n3. Conecte sua live na aba Conectar Live.\n\n## O que deve acontecer\nO status da conexão fica Conectado e o público já pode interagir.",
+      "primeiros passos, conta, painel, live", 1, 0
+    );
+    insArt.run(
+      catId("tiktok-e-conexao"), "", "Conectar a live do TikTok", "conectar-a-live-do-tiktok",
+      "Informe seu @ e escolha o motor de conexão para receber chat, curtidas e presentes.",
+      "## Como fazer\n1. No painel, abra Conectar Live.\n2. Informe seu usuário do TikTok (sem o @).\n3. Escolha o motor TikTokLive (recomendado) ou Tik.Tools (requer API key).\n4. Clique em Conectar Live.\n\n## O que deve acontecer\nO estado fica Conectado e os eventos (chat, curtidas, presentes) começam a chegar.",
+      "tiktok, conexão, live, chat, presentes", 1, 0
+    );
+    insArt.run(
+      catId("obs-e-transmissao"), "", "Adicionar o TikPlay ao OBS", "adicionar-o-tikplay-ao-obs",
+      "Use o link público do painel como fonte de Navegador no OBS.",
+      "## Como fazer\n1. No painel, copie o Link público do jogo desejado.\n2. No OBS, adicione uma fonte de Navegador.\n3. Cole o link (ex.: /jogo?room=SEUCODIGO&tk=...).\n\n## O que deve acontecer\nA tela do jogo aparece no OBS e acompanha a live sem pedir login.",
+      "obs, overlay, fonte de navegador, transmissão", 1, 0
+    );
+    insArt.run(
+      catId("presentes-e-interacoes"), "palavra-secreta", "Presentes não ativam ações", "presentes-nao-ativam-acoes",
+      "Confira se o presente configurado é o mesmo que está sendo enviado na live.",
+      "## Como fazer\n1. Abra o jogo no painel (ex.: Palavra Secreta).\n2. Verifique os presentes configurados (nome ou ID).\n3. Faça um teste pelo botão de teste do presente.\n\n## O que deve acontecer\nAo enviar o presente, a ação correspondente dispara na tela.\n\n## Problemas comuns\n- Presente com nome repetido e ID diferente: confirme o ID correto no catálogo.",
+      "presentes, gifts, interações, palavra secreta", 1, 0
+    );
+    insArt.run(
+      catId("solucao-de-problemas"), "duelo", "Jogo não inicia", "jogo-nao-inicia",
+      "Os jogos só iniciam com a live conectada.",
+      "## Como fazer\n1. Confirme que a live está Conectado no painel.\n2. Confirme que a funcionalidade do jogo está liberada para sua conta.\n3. Clique em Iniciar.\n\n## O que deve acontecer\nA partida inicia e o estado é exibido no painel e nas telas públicas.",
+      "jogo, iniciar, duelo, live, conexão", 1, 0
+    );
+    insArt.run(
+      catId("conta-e-plano"), "", "Planos e limites", "planos-e-limites",
+      "Entenda os planos Free e Pro e o que cada um libera.",
+      "## Como fazer\n1. Abra Assinatura no painel.\n2. Compare os planos disponíveis.\n\n## O que deve acontecer\nO plano ativo e a validade aparecem na sua conta.",
+      "conta, plano, assinatura, limites", 0, 0
+    );
+  }
+}
+
+seedSupportData();
+
 module.exports = {
   db,
   DEFAULT_SETTINGS,
@@ -1255,4 +1868,48 @@ module.exports = {
   saveBannedWords,
   tenantDataPath,
   readJsonFile,
+  // Suporte / Central de Ajuda
+  SUPPORT_TICKET_STATUSES,
+  SUPPORT_TICKET_PRIORITIES,
+  SUPPORT_SUGGESTION_TYPES,
+  SUPPORT_SUGGESTION_STATUSES,
+  SUPPORT_SENDER_TYPES,
+  SUPPORT_GAME_SLUGS,
+  SUPPORT_GAME_LABELS,
+  slugifySupport,
+  listSupportCategories,
+  getSupportCategoryById,
+  saveSupportCategory,
+  deleteSupportCategory,
+  listSupportQuickReplies,
+  getSupportQuickReplyById,
+  saveSupportQuickReply,
+  deleteSupportQuickReply,
+  getSupportTicket,
+  createSupportTicket,
+  listSupportTicketsByUser,
+  listAllSupportTickets,
+  listSupportTicketMessages,
+  addSupportMessage,
+  setSupportTicketStatus,
+  countSupportTicketsByUser,
+  getSupportOverview,
+  addSupportAttachment,
+  listSupportAttachments,
+  getSupportAttachment,
+  getSupportSuggestion,
+  createSupportSuggestion,
+  listSupportSuggestionsByUser,
+  listAllSupportSuggestions,
+  setSupportSuggestionStatus,
+  listHelpCategories,
+  getHelpCategoryById,
+  saveHelpCategory,
+  deleteHelpCategory,
+  getHelpArticleById,
+  getHelpArticleBySlug,
+  listHelpArticles,
+  saveHelpArticle,
+  deleteHelpArticle,
+  seedSupportData,
 };
