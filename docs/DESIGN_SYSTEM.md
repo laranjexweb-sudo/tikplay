@@ -2,6 +2,8 @@
 
 > 2026-10-14: Botoes de acao do Painel Streamer e Super Admin centralizados em `ui/tikplay-admin-buttons.css`: alturas, bordas, tipografia, cores semanticas e estados hover/press/disabled/foco consistentes. Controles de navegacao e layout permanecem especificos.
 
+> 2026-10-14: Palpites ficam legiveis no topo por 1,2 s; a lista ordenada atualiza incrementalmente sem reconstruir as linhas. O novo item ocupa sua posicao e so desloca suavemente os itens abaixo, sem piscadas; repetidos recebem tom vermelho e mantem a etiqueta REPETIDA. Fila e eventos preservados.
+
 > 2026-10-14: Preferências de posição, tipografia e sombra dos rankings V2/V3 agora se aplicam ao elemento correto nas prévias e overlays. Assets receberam nova versão de cache para carregar o suporte a configuração ao atualizar o painel.
 
 > 2026-10-14: Ao posicionar a foto do ranking à direita, nome, curtidas e total também se alinham à direita. No Neon Compacto, o acento vertical dos três primeiros colocados acompanha a composição e passa para a margem direita.

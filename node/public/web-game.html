@@ -1346,7 +1346,7 @@ function addGuessToList(msg) {
     justAdded: true
   });
   document.getElementById("guessCount").textContent = state.guesses.length;
-  renderGuesses();
+  insertGuessRow(state.guesses[state.guesses.length - 1]);
   refreshRanking();
   renderActiveGift(state.activeGift);
 
@@ -1361,47 +1361,70 @@ function renderGuesses() {
   const container = document.getElementById("guessesList");
   const sorted = [...state.guesses].sort((a, b) => a.rank - b.rank).slice(0, 50);
   container.innerHTML = "";
-  for (const g of sorted) {
-    const row = document.createElement("div");
-    row.className = `guess-row rank-${g.color || "red"}`;
-    if (g.justAdded) {
-      row.id = "just_added_row";
-      g.justAdded = false;
-    }
+  sorted.forEach(g => container.appendChild(createGuessRow(g)));
+}
 
-    const rank = document.createElement("span");
-    rank.className = "guess-rank";
-    rank.textContent = `#${g.rank}`;
+function createGuessRow(g, animateEntry = false) {
+  const row = document.createElement("div");
+  row.className = `guess-row rank-${g.color || "red"}`;
+  row.dataset.rank = String(g.rank);
+  if (animateEntry) row.classList.add("guess-row-entering");
 
-    const word = document.createElement("span");
-    word.className = "guess-word";
-    word.textContent = g.word;
+  const rank = document.createElement("span");
+  rank.className = "guess-rank";
+  rank.textContent = `#${g.rank}`;
 
-    const dica = document.createElement("span");
-    dica.className = "guess-dica";
-    dica.textContent = "#DICA";
+  const word = document.createElement("span");
+  word.className = "guess-word";
+  word.textContent = g.word;
 
-    const line = document.createElement("span");
-    line.className = "guess-line";
+  const dica = document.createElement("span");
+  dica.className = "guess-dica";
+  dica.textContent = "#DICA";
 
-    const avatar = document.createElement("img");
-    avatar.className = "guess-avatar";
-    avatar.src = g.avatar;
-    avatar.alt = "";
-    avatar.onerror = function() { this.style.display = "none"; };
+  const line = document.createElement("span");
+  line.className = "guess-line";
 
-    const nickname = document.createElement("span");
-    nickname.className = "guess-nickname";
-    nickname.textContent = "@" + (g.user || g.nickname || "?");
+  const avatar = document.createElement("img");
+  avatar.className = "guess-avatar";
+  avatar.src = g.avatar || "";
+  avatar.alt = "";
+  avatar.onerror = function() { this.style.display = "none"; };
 
-    row.appendChild(rank);
-    row.appendChild(word);
-    if (g.is_hint) row.appendChild(dica);
-    row.appendChild(line);
-    row.appendChild(avatar);
-    row.appendChild(nickname);
-    container.appendChild(row);
+  const nickname = document.createElement("span");
+  nickname.className = "guess-nickname";
+  nickname.textContent = "@" + (g.user || g.nickname || "?");
+
+  row.appendChild(rank);
+  row.appendChild(word);
+  if (g.is_hint) row.appendChild(dica);
+  row.appendChild(line);
+  row.appendChild(avatar);
+  row.appendChild(nickname);
+  return row;
+}
+
+function insertGuessRow(guess) {
+  const container = document.getElementById("guessesList");
+  if (!container || !guess) return;
+
+  const existingRows = [...container.querySelectorAll(":scope > .guess-row")];
+  const previousTops = new Map(existingRows.map(row => [row, row.getBoundingClientRect().top]));
+  const row = createGuessRow(guess, true);
+  const nextRow = existingRows.find(item => Number(item.dataset.rank) > Number(guess.rank));
+  container.insertBefore(row, nextRow || null);
+  guess.justAdded = false;
+
+  for (const item of existingRows) {
+    const deltaY = previousTops.get(item) - item.getBoundingClientRect().top;
+    if (Math.abs(deltaY) < 1) continue;
+    item.animate(
+      [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0)" }],
+      { duration: 180, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+    );
   }
+
+  while (container.children.length > 50) container.lastElementChild.remove();
 }
 
 const RANK_MODES = ["round", "live", "weekly", "hidden"];

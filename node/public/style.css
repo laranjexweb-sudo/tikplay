@@ -1950,6 +1950,10 @@ body.secret-word-public::before {
   background: rgba(248, 113, 113, 0.1) !important;
 }
 
+.guess-row.guess-row-entering {
+  animation: guessRowEnter 180ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .guess-row,
   .guess-row.new-guess-highlight {
