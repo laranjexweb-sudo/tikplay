@@ -12,7 +12,7 @@ from corda import CordaEngine
 
 source = ast.parse((ROOT / "service.py").read_text(encoding="utf-8"))
 session = next(node for node in source.body if isinstance(node, ast.ClassDef) and node.name == "GameSession")
-methods = {"on_comment", "on_gift", "on_like", "_stable_uid", "_emit_duelo", "_command_loop"}
+methods = {"on_comment", "on_gift", "on_like", "_stable_uid", "_log_event", "_emit_duelo", "_command_loop"}
 isolated = ast.Module(body=[ast.ClassDef(name="SessionCallbacks", bases=[], keywords=[],
     body=[node for node in session.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
           and node.name in methods], decorator_list=[])], type_ignores=[])
@@ -29,7 +29,15 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.s.corda.start(self.config)
         self.s._check_access = lambda meta: (not (meta or {}).get("blocked"), "filter")
         self.s._throttled_log = lambda *args, **kwargs: None
+        self.s._command_prefix = lambda: ""
+        self.s._record_chat_activity = lambda *args, **kwargs: None
         self.s._duelo_comment_team = self.s._duelo_handle_tap = lambda *args, **kwargs: None
+        # Stubs para dependências adicionadas ao fluxo de interação (não cobertas
+        # por este teste de fiação da Corda): isolam o comportamento testado.
+        self.s._ensure_room = lambda *args, **kwargs: None
+        self.s._track_levels = lambda *args, **kwargs: None
+        self.s._emit_interaction = lambda *args, **kwargs: None
+        self.s._enqueue_chat_narration = lambda *args, **kwargs: None
         self.s.tres = SimpleNamespace(active=False, gift_config={})
         self.s.caca = self.s.vpet = SimpleNamespace(active=False)
         self.s.duelo = SimpleNamespace(active=False, gifts=[])
@@ -54,6 +62,19 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         await self.s.on_gift("u", "U", "", "Rose", 10, 1, meta, "blue")
         self.assertEqual(self.s.corda.teams, {})
         self.assertEqual(self.s.corda.pending, 0)
+
+    async def test_inactive_word_chat_does_not_emit_palavra_nopartida_line(self):
+        self.s._command_prefix = lambda: ""
+        self.s.game = SimpleNamespace(secret_word="", finished=True, guesses=[])
+        throttled = []
+        debug = []
+        self.s._throttled_log = lambda key, text, *args, **kwargs: throttled.append((key, text))
+        self.s._palavra_debug = lambda event, **details: debug.append((event, details))
+
+        await self.s.on_comment("viewer", "Viewer", "", "comentário comum", {})
+
+        self.assertFalse(any(key == "palavra_nopartida" for key, _text in throttled))
+        self.assertFalse(debug)
 
     async def test_real_command_loop_start_test_stop(self):
         self.s.queue = asyncio.Queue()

@@ -4,87 +4,84 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TikPlay - Entrar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/vendor/brite/bootstrap.min.css">
-<style>
-  body { background: #fdfaf3; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .auth-wrap { width: 100%; max-width: 430px; }
-  .nb-card { background: #ffffff; border: 3px solid #000; border-radius: 14px; box-shadow: 8px 8px 0 #000; padding: 28px; }
-  .logo { font-size: 1.8rem; font-weight: 900; letter-spacing: 6px; text-align: center; margin-bottom: 4px; }
-  .logo .logo-img { max-width: 200px; width: 100%; height: auto; object-fit: contain; }
-  .subtitle { text-align: center; font-size: 0.85rem; margin-bottom: 18px; }
-  .nb-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-  .nb-tabs button { flex: 1; border: 3px solid #000; border-radius: 10px; background: #fff; font-weight: 800; padding: 10px; cursor: pointer; box-shadow: 3px 3px 0 #000; }
-  .nb-tabs button.active { background: #fec90f; }
-  .nb-tabs button:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #000; }
-  .form-label { font-weight: 700; }
-  .form-control { border: 3px solid #000; border-radius: 10px; box-shadow: 3px 3px 0 #000; }
-  .form-control:focus { border-color: #000; box-shadow: 3px 3px 0 #fec90f; }
-  .btn-nb { border: 3px solid #000; border-radius: 10px; font-weight: 800; padding: 10px 16px; box-shadow: 4px 4px 0 #000; width: 100%; }
-  .btn-nb:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
-  .btn-primary { background: #3ddc84; }
-  .btn-primary:hover { background: #7beaa9; }
-  .alert-box { border: 3px solid #000; border-radius: 10px; box-shadow: 3px 3px 0 #000; padding: 10px 14px; margin-bottom: 14px; display: none; font-weight: 600; }
-  .alert-box.err { display: block; background: #ff6b6b; }
-  .alert-box.ok { display: block; background: #3ddc84; }
-</style>
+<link rel="stylesheet" href="/site/styles.css">
+<link rel="stylesheet" href="/ui/tikplay-theme.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261015-auth">
+<link rel="stylesheet" href="/ui/tikplay-auth.css?v=20261015-centered-layout2">
 </head>
-<body>
-<div class="auth-wrap">
-  <div class="nb-card">
-    <div class="logo"><img src="/logo.png" alt="TikPlay" class="logo-img"></div>
-    <div class="subtitle text-secondary">Painel de Controle - Jogo ao vivo</div>
+<body class="tp-auth-page">
+<main class="tp-auth-main">
+  <section class="tp-auth-panel" aria-labelledby="authTitle">
+    <a class="brand" href="/" aria-label="TikPlay">
+      <span class="brand-mark"><span></span></span>
+      <span class="brand-name">Tik<span>Play</span></span>
+    </a>
+    <header class="tp-auth-heading">
+      <div class="eyebrow"><i></i> PAINEL DO CRIADOR</div>
+      <h1 id="authTitle">Bem-vindo ao <span>TikPlay.</span></h1>
+      <p id="authSubtitle">Entre na sua conta para continuar.</p>
+    </header>
 
-    <div class="alert-box" id="alertBox"></div>
+      <div class="tp-auth-alert" id="alertBox" role="alert" aria-live="assertive"></div>
 
-    <div class="nb-tabs">
-      <button type="button" id="tabLogin" class="active" onclick="switchTab('login')">Entrar</button>
-      <button type="button" id="tabRegister" onclick="switchTab('register')">Cadastrar</button>
-    </div>
+      <div class="tp-auth-tabs" role="tablist" aria-label="Acesso à conta">
+        <button type="button" id="tabLogin" class="active" role="tab" aria-selected="true" aria-controls="formLogin" onclick="switchTab('login')">Entrar</button>
+        <button type="button" id="tabRegister" role="tab" aria-selected="false" aria-controls="formRegister" onclick="switchTab('register')">Criar conta</button>
+      </div>
 
-    <form id="formLogin" onsubmit="doLogin(event)">
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-control" id="loginEmail" required autocomplete="email">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Senha</label>
-        <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn btn-primary btn-nb">Entrar</button>
-    </form>
+      <form id="formLogin" class="tp-auth-form" role="tabpanel" aria-labelledby="tabLogin" onsubmit="doLogin(event)">
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="loginEmail" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-nb">Entrar</button>
+      </form>
 
-    <form id="formRegister" style="display:none" onsubmit="doRegister(event)">
-      <div class="alert-box err" id="regGateMsg" style="display:none"></div>
-      <input type="hidden" id="regInviteToken" value="">
-      <div class="mb-3">
-        <label class="form-label">Nome</label>
-        <input type="text" class="form-control" id="regName">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-control" id="regEmail" required autocomplete="email">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Senha (min. 8)</label>
-        <input type="password" class="form-control" id="regPassword" required minlength="8" autocomplete="new-password">
-      </div>
-      <button type="submit" class="btn btn-primary btn-nb">Criar Conta</button>
-    </form>
-  </div>
-</div>
+      <form id="formRegister" class="tp-auth-form" role="tabpanel" aria-labelledby="tabRegister" style="display:none" onsubmit="doRegister(event)">
+        <div class="tp-auth-alert err" id="regGateMsg" style="display:none" role="status" aria-live="polite"></div>
+        <input type="hidden" id="regInviteToken" value="">
+        <div class="mb-3">
+          <label class="form-label">Nome</label>
+          <input type="text" class="form-control" id="regName">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="regEmail" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Senha (min. 8)</label>
+          <input type="password" class="form-control" id="regPassword" required minlength="8" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-nb">Criar Conta</button>
+      </form>
+  </section>
+</main>
 
 <script>
 function showAlert(msg, ok) {
   const box = document.getElementById("alertBox");
-  box.className = "alert-box " + (ok ? "ok" : "err");
+  box.className = "tp-auth-alert " + (ok ? "ok" : "err");
   box.textContent = msg;
 }
 
 function switchTab(tab) {
   document.getElementById("tabLogin").classList.toggle("active", tab === "login");
   document.getElementById("tabRegister").classList.toggle("active", tab === "register");
+  document.getElementById("tabLogin").setAttribute("aria-selected", String(tab === "login"));
+  document.getElementById("tabRegister").setAttribute("aria-selected", String(tab === "register"));
   document.getElementById("formLogin").style.display = tab === "login" ? "" : "none";
   document.getElementById("formRegister").style.display = tab === "register" ? "" : "none";
+  document.getElementById("authSubtitle").textContent = tab === "register"
+    ? "Crie sua conta para continuar."
+    : "Entre na sua conta para continuar.";
   if (tab === "register") renderRegisterGate();
 }
 
@@ -203,6 +200,9 @@ if (localStorage.getItem("token")) location.href = "/painel";
   await checkRegisterMode();
   await validateInvite();
   renderRegisterGate();
+  if (["/register", "/cadastro"].includes(location.pathname) && document.getElementById("tabRegister").style.display !== "none") {
+    switchTab("register");
+  }
 })();
 </script>
 </body>

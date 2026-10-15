@@ -78,6 +78,12 @@ try {
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN likes_overlay_v2_layout TEXT DEFAULT '{\"x\":0,\"y\":0,\"scale\":1,\"count\":5}'");
 } catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN presenter_level_overlay_layout TEXT DEFAULT '{\"x\":50,\"y\":50,\"scale\":1}'");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN gift_ranking_overlay_layout TEXT DEFAULT NULL");
+} catch {}
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
 db.exec(`
@@ -89,11 +95,26 @@ CREATE TABLE IF NOT EXISTS log_entries (
   category TEXT,
   level TEXT,
   game TEXT,
+  event TEXT,
+  source TEXT,
+  code TEXT,
+  trace_id TEXT,
+  game_id TEXT,
+  duration_ms INTEGER,
+  details TEXT,
   message TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_id ON log_entries(tenant_id, id);
 CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_ts ON log_entries(tenant_id, ts);
 `);
+for (const [column, type] of [
+  ["event", "TEXT"], ["source", "TEXT"], ["code", "TEXT"], ["trace_id", "TEXT"],
+  ["game_id", "TEXT"], ["duration_ms", "INTEGER"], ["details", "TEXT"],
+]) {
+  try { db.exec(`ALTER TABLE log_entries ADD COLUMN ${column} ${type}`); } catch {}
+}
+db.exec("CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_trace ON log_entries(tenant_id, trace_id, id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_log_entries_tenant_session_game ON log_entries(tenant_id, session_id, game_id, id)");
 // Interações por live (relatórios do streamer). Node é o único escritor (ingestão em lote).
 db.exec(`
 CREATE TABLE IF NOT EXISTS live_sessions (
@@ -166,6 +187,30 @@ CREATE TABLE IF NOT EXISTS live_viewer_levels (
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (tenant_id, room_id, user_id)
 );
+
+-- Subidas de nível por live/eixo (presenteador|fanclub). Armazenamento dedicado,
+-- com retenção maior que os detalhes de interactions (agregados históricos).
+CREATE TABLE IF NOT EXISTS level_ups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  room_id TEXT DEFAULT '',
+  session_id INTEGER,
+  user_id TEXT DEFAULT '',
+  username TEXT DEFAULT '',
+  nickname TEXT DEFAULT '',
+  avatar TEXT DEFAULT '',
+  axis TEXT NOT NULL,
+  level_before INTEGER,
+  level_after INTEGER NOT NULL,
+  event_id TEXT DEFAULT '',
+  ts INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_level_ups_reached
+  ON level_ups(tenant_id, room_id, user_id, axis, level_after);
+DROP INDEX IF EXISTS idx_level_ups_event;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_level_ups_event_axis
+  ON level_ups(tenant_id, room_id, user_id, axis, event_id) WHERE event_id <> '';
+CREATE INDEX IF NOT EXISTS idx_level_ups_tenant_ts ON level_ups(tenant_id, ts);
 `);
 db.exec(`
 CREATE TABLE IF NOT EXISTS tenant_caca_config (
@@ -263,7 +308,9 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   tap_meta INTEGER DEFAULT 1000,
   boss_mode INTEGER DEFAULT 1,
   likes_overlay_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}',
-  likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}'
+  likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}',
+  presenter_level_overlay_layout TEXT DEFAULT '{"x":50,"y":50,"scale":1}',
+  gift_ranking_overlay_layout TEXT DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
   tenant_id INTEGER PRIMARY KEY,
@@ -761,6 +808,66 @@ const DEFAULT_LIKES_OVERLAY_LAYOUT = Object.freeze({
   photo_position: "left", font_color: "#ffffff", shadow: "soft",
   animation: "float", heart_colors: ["#ff4d6d"],
 });
+const DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT = Object.freeze({ x: 50, y: 50, scale: 1 });
+const DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT = Object.freeze({ x: 0, y: 0, scale: 1, count: 10 });
+
+function normalizeGiftRankingOverlayLayout(layout, strict = false) {
+  const value = (layout && typeof layout === "object" && !Array.isArray(layout)) ? layout : {};
+  const defaults = DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT;
+  return {
+    x: pickNumber(value.x, defaults.x, 0, 100, strict, "x"),
+    y: pickNumber(value.y, defaults.y, 0, 100, strict, "y"),
+    scale: pickNumber(value.scale, defaults.scale, 0.5, 2, strict, "scale"),
+    count: Math.round(pickNumber(value.count, defaults.count, 1, 10, strict, "count")),
+  };
+}
+
+function getGiftRankingOverlayLayout(tenantId) {
+  const row = db.prepare("SELECT gift_ranking_overlay_layout AS layout_json FROM tenant_settings WHERE tenant_id = ?").get(tenantId);
+  if (!row || !row.layout_json) return { ...DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT };
+  try { return normalizeGiftRankingOverlayLayout(JSON.parse(row.layout_json)); } catch {}
+  return { ...DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT };
+}
+
+function hasGiftRankingOverlayLayout(tenantId) {
+  const row = db.prepare("SELECT gift_ranking_overlay_layout AS layout_json FROM tenant_settings WHERE tenant_id = ?").get(tenantId);
+  return Boolean(row && row.layout_json);
+}
+
+function saveGiftRankingOverlayLayout(tenantId, layout) {
+  const normalized = normalizeGiftRankingOverlayLayout(layout, true);
+  db.prepare(`
+    INSERT INTO tenant_settings (tenant_id, gift_ranking_overlay_layout) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET gift_ranking_overlay_layout=excluded.gift_ranking_overlay_layout
+  `).run(tenantId, JSON.stringify(normalized));
+  return normalized;
+}
+
+function normalizePresenterLevelOverlayLayout(layout, strict = false) {
+  const value = (layout && typeof layout === "object" && !Array.isArray(layout)) ? layout : {};
+  const defaults = DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT;
+  return {
+    x: pickNumber(value.x, defaults.x, 0, 100, strict, "x"),
+    y: pickNumber(value.y, defaults.y, 0, 100, strict, "y"),
+    scale: pickNumber(value.scale, defaults.scale, 0.5, 2, strict, "scale"),
+  };
+}
+
+function getPresenterLevelOverlayLayout(tenantId) {
+  const row = db.prepare("SELECT presenter_level_overlay_layout AS layout_json FROM tenant_settings WHERE tenant_id = ?").get(tenantId);
+  if (!row || !row.layout_json) return { ...DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT };
+  try { return normalizePresenterLevelOverlayLayout(JSON.parse(row.layout_json)); } catch {}
+  return { ...DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT };
+}
+
+function savePresenterLevelOverlayLayout(tenantId, layout) {
+  const normalized = normalizePresenterLevelOverlayLayout(layout, true);
+  db.prepare(`
+    INSERT INTO tenant_settings (tenant_id, presenter_level_overlay_layout) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET presenter_level_overlay_layout=excluded.presenter_level_overlay_layout
+  `).run(tenantId, JSON.stringify(normalized));
+  return normalized;
+}
 
 function likesOverlayLayoutColumn(version) {
   if (version === "v2") return "likes_overlay_v2_layout";
@@ -973,21 +1080,35 @@ const LOG_PAGE_MAX = 200;                           // página máxima exposta
 
 function appendLogEntry(tenantId, sessionId, entry) {
   const stmt = db.prepare(`
-    INSERT INTO log_entries (tenant_id, session_id, ts, category, level, game, message)
-    VALUES (?,?,?,?,?,?,?)
+    INSERT INTO log_entries
+      (tenant_id, session_id, ts, category, level, game, event, source, code, trace_id, game_id, duration_ms, details, message)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
-  const r = stmt.run(tenantId, sessionId || null, entry.ts, entry.category || null, entry.level || null, entry.game || null, entry.message || "");
+  const r = stmt.run(
+    tenantId, sessionId || null, entry.ts, entry.category || null, entry.level || null, entry.game || null,
+    entry.event || null, entry.source || null, entry.code || null, entry.trace_id || null,
+    entry.game_id || null, entry.duration_ms == null ? null : entry.duration_ms,
+    entry.details || null, entry.message || "",
+  );
   return {
     id: Number(r.lastInsertRowid),
     ts: entry.ts,
+    session_id: sessionId || null,
     category: entry.category || null,
     level: entry.level || null,
     game: entry.game || null,
+    event: entry.event || null,
+    source: entry.source || null,
+    code: entry.code || null,
+    trace_id: entry.trace_id || null,
+    game_id: entry.game_id || null,
+    duration_ms: entry.duration_ms == null ? null : entry.duration_ms,
+    details: entry.details || null,
     message: entry.message || "",
   };
 }
 
-function getLogEntries({ tenantId, before, since, limit, game, level }) {
+function getLogEntries({ tenantId, before, since, limit, game, level, category, event, trace_id, session_id, game_id, source, code }) {
   const take = Math.min(Math.max(parseInt(limit, 10) || 100, 1), LOG_PAGE_MAX);
   const params = [];
   let where = "WHERE tenant_id = ?";
@@ -1008,9 +1129,38 @@ function getLogEntries({ tenantId, before, since, limit, game, level }) {
     params.push(String(level).slice(0, 16));
     where += " AND level = ?";
   }
+  if (category) {
+    params.push(String(category).slice(0, 24));
+    where += " AND category = ?";
+  }
+  if (event) {
+    params.push(String(event).slice(0, 96));
+    where += " AND event = ?";
+  }
+  if (trace_id) {
+    params.push(String(trace_id).slice(0, 128));
+    where += " AND trace_id = ?";
+  }
+  if (session_id) {
+    params.push(String(session_id).slice(0, 128));
+    where += " AND session_id = ?";
+  }
+  if (game_id) {
+    params.push(String(game_id).slice(0, 128));
+    where += " AND game_id = ?";
+  }
+  if (source) {
+    params.push(String(source).slice(0, 32));
+    where += " AND source = ?";
+  }
+  if (code) {
+    params.push(String(code).slice(0, 64));
+    where += " AND code = ?";
+  }
   params.push(take);
   const rows = db.prepare(`
-    SELECT id, tenant_id, ts, category, level, game, message
+    SELECT id, tenant_id, session_id, ts, category, level, game, event, source, code,
+           trace_id, game_id, duration_ms, details, message
     FROM log_entries ${where}
     ORDER BY id DESC
     LIMIT ?
@@ -1018,11 +1168,19 @@ function getLogEntries({ tenantId, before, since, limit, game, level }) {
   return rows.map((r) => ({
     id: r.id,
     tenant_id: r.tenant_id,
+    session_id: r.session_id || null,
     ts: r.ts,
     timestamp: new Date(r.ts).toISOString(),
     category: r.category || null,
     level: r.level || null,
     game: r.game || null,
+    event: r.event || null,
+    source: r.source || null,
+    code: r.code || null,
+    trace_id: r.trace_id || null,
+    game_id: r.game_id || null,
+    duration_ms: r.duration_ms == null ? null : r.duration_ms,
+    details: r.details || null,
     message: r.message || "",
     text: r.message || "",
   }));
@@ -1040,6 +1198,69 @@ function pruneLogEntries() {
         AND id NOT IN (SELECT id FROM log_entries WHERE tenant_id = ? ORDER BY id DESC LIMIT ?)
     `).run(t.tenant_id, t.tenant_id, LOG_MAX_ROWS_PER_TENANT);
   }
+}
+
+function redactLegacyLogMessages(redactText) {
+  const migrationName = "log_entries_sensitive_text_redaction_v1";
+  if (db.prepare("SELECT 1 FROM app_schema_migrations WHERE name = ?").get(migrationName)) return 0;
+  const rows = db.prepare(`
+    SELECT id, message FROM log_entries
+    WHERE message LIKE ? OR message LIKE ? OR message LIKE ? OR message LIKE ?
+       OR message LIKE ? OR message LIKE ? OR message LIKE ?
+       OR message LIKE ? OR message LIKE ? OR message LIKE ? OR message LIKE ?
+  `).all(
+    "%Palavra secreta:%", "%Palavra:%", "%Charada:%", "%palavra era %",
+    "[3 Dicas] Dica %", "[3 Dicas]%acertou %", "[Guess]%", "[Access]%",
+    "[TTS]%para:%", "[Bichinho] Streamer falou:%", "[CacaPalavras]%",
+  );
+  const update = db.prepare("UPDATE log_entries SET message = ? WHERE id = ?");
+  let changed = 0;
+  db.transaction(() => {
+    for (const row of rows) {
+      const safe = String(redactText(row.message) || "");
+      if (safe !== row.message) {
+        update.run(safe, row.id);
+        changed++;
+      }
+    }
+    db.prepare("INSERT INTO app_schema_migrations(name) VALUES (?)").run(migrationName);
+  })();
+  return changed;
+}
+
+function normalizeLegacyLogEntries(normalizeLog) {
+  const migrationName = "log_entries_canonical_categories_v1";
+  if (db.prepare("SELECT 1 FROM app_schema_migrations WHERE name = ?").get(migrationName)) return 0;
+  const rows = db.prepare(`
+    SELECT id, category, level, game, event, source, message
+    FROM log_entries
+  `).all();
+  const update = db.prepare(`
+    UPDATE log_entries SET category = ?, level = ?, game = ?, event = ?, source = ? WHERE id = ?
+  `);
+  let changed = 0;
+  db.transaction(() => {
+    for (const row of rows) {
+      const item = { text: row.message || "", level: row.level, game: row.game,
+        event: row.event, source: row.source };
+      if (row.category && row.category !== "system") item.category = row.category;
+      const normalized = normalizeLog(item);
+      const next = {
+        category: normalized.category || "system",
+        level: normalized.level || "unknown",
+        game: normalized.game || null,
+        event: row.event || normalized.event || "legacy.message",
+        source: row.source || "legacy",
+      };
+      if (next.category !== (row.category || null) || next.level !== (row.level || null) ||
+          next.game !== (row.game || null) || next.event !== (row.event || null) || next.source !== (row.source || null)) {
+        update.run(next.category, next.level, next.game, next.event, next.source, row.id);
+        changed++;
+      }
+    }
+    db.prepare("INSERT INTO app_schema_migrations(name) VALUES (?)").run(migrationName);
+  })();
+  return changed;
 }
 
 // ---------------- Interações por live (relatórios) ----------------
@@ -1276,6 +1497,84 @@ function listViewerLevels(tenantId, { room_id, limit } = {}) {
     SELECT user_id, nickname, avatar, gifter_level, gifter_grade, fan_club_level, fan_club_name, updated_at
     FROM viewer_levels WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT ?
   `).all(tenantId, lim);
+}
+
+// ---------------- Subidas de nível (level_ups) ----------------
+
+// Insere uma subida. Deduplica por (tenant, sala, usuário, eixo, nível alcançado)
+// e por event_id (quando houver). Retorna true se foi inserida (nova) e false se
+// já existia (evento atrasado / reenvio / reinício do processo).
+function insertLevelUp({ tenant_id, room_id = "", session_id = null, user_id = "", username = "", nickname = "", avatar = "", axis, level_before = null, level_after, event_id = "", ts }) {
+  const info = db.prepare(`
+    INSERT OR IGNORE INTO level_ups
+      (tenant_id, room_id, session_id, user_id, username, nickname, avatar, axis, level_before, level_after, event_id, ts)
+    VALUES (@tenant_id, @room_id, @session_id, @user_id, @username, @nickname, @avatar, @axis, @level_before, @level_after, @event_id, @ts)
+  `).run({
+    tenant_id, room_id: String(room_id || ""), session_id: session_id || null,
+    user_id: String(user_id || ""), username: String(username || ""), nickname: String(nickname || ""),
+    avatar: String(avatar || ""), axis: String(axis || ""),
+    level_before: level_before != null ? Number(level_before) : null,
+    level_after: Number(level_after) || 0,
+    event_id: String(event_id || ""), ts: Number(ts) || Date.now(),
+  });
+  return info.changes > 0;
+}
+
+function _levelUpToEvent(r) {
+  return {
+    id: r.id,
+    room_id: r.room_id,
+    session_id: r.session_id,
+    ts: r.ts,
+    type: "level_up",
+    user_id: r.user_id,
+    username: r.username,
+    nickname: r.nickname,
+    avatar: r.avatar,
+    axis: r.axis,
+    value: r.level_after,
+    before: r.level_before,
+    after: r.level_after,
+    event_id: r.event_id,
+    meta: { axis: r.axis, before: r.level_before, after: r.level_after },
+  };
+}
+
+function queryLevelUps({ tenantId, from, to, room_id, axis, cursor, limit } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("ts >= ?"); args.push(from); }
+  if (to != null) { where.push("ts <= ?"); args.push(to); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  if (axis) { where.push("axis = ?"); args.push(String(axis)); }
+  if (cursor != null) { where.push("id < ?"); args.push(Number(cursor)); }
+  const lim = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+  args.push(lim);
+  const rows = db.prepare(
+    `SELECT * FROM level_ups WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`
+  ).all(...args);
+  const next_cursor = rows.length === lim ? rows[rows.length - 1].id : null;
+  return { events: rows.map(_levelUpToEvent), next_cursor };
+}
+
+// Contagens por eixo (independentes da retenção curta dos detalhes).
+function summarizeLevelUps({ tenantId, from, to, room_id } = {}) {
+  const where = ["tenant_id = ?"];
+  const args = [tenantId];
+  if (from != null) { where.push("ts >= ?"); args.push(from); }
+  if (to != null) { where.push("ts <= ?"); args.push(to); }
+  if (room_id) { where.push("room_id = ?"); args.push(String(room_id)); }
+  const rows = db.prepare(
+    `SELECT axis, COUNT(*) AS count FROM level_ups WHERE ${where.join(" AND ")} GROUP BY axis`
+  ).all(...args);
+  const by_axis = {};
+  let total = 0;
+  for (const r of rows) { by_axis[r.axis] = r.count; total += r.count; }
+  return { total, gifter: by_axis.gifter || 0, fanclub: by_axis.fanclub || 0, by_axis };
+}
+
+function pruneLevelUps(cutoff) {
+  return db.prepare("DELETE FROM level_ups WHERE ts < ?").run(Number(cutoff) || 0).changes;
 }
 
 function getGames(tenantId, limit) {
@@ -2349,8 +2648,16 @@ module.exports = {
   saveTenantSettings,
   getLikesOverlayLayout,
   saveLikesOverlayLayout,
+  getPresenterLevelOverlayLayout,
+  savePresenterLevelOverlayLayout,
+  getGiftRankingOverlayLayout,
+  hasGiftRankingOverlayLayout,
+  saveGiftRankingOverlayLayout,
+  normalizeGiftRankingOverlayLayout,
   LIKES_OVERLAY_OPTIONS,
   DEFAULT_LIKES_OVERLAY_LAYOUT,
+  DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT,
+  DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT,
   getTenantGiftConfig,
   saveTenantGiftConfig,
   getTresGiftConfig,
@@ -2364,6 +2671,8 @@ module.exports = {
   appendLogEntry,
   getLogEntries,
   pruneLogEntries,
+  redactLegacyLogMessages,
+  normalizeLegacyLogEntries,
   LOG_RETENTION_MS,
   LOG_MAX_ROWS_PER_TENANT,
   LOG_PAGE_MAX,
@@ -2381,6 +2690,10 @@ module.exports = {
   upsertViewerLevel,
   upsertLiveViewerLevel,
   listViewerLevels,
+  insertLevelUp,
+  queryLevelUps,
+  summarizeLevelUps,
+  pruneLevelUps,
   getGames,
   getGamesPaged,
   getWeeklyWins,

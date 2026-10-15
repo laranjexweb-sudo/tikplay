@@ -12,24 +12,41 @@ const multer = require("multer");
 const db = require("./db");
 const auth = require("./auth");
 const corda = require("./lib/corda");
+const contextoPublic = require("./routes/contexto");
 
 const logstore = require("./lib/logstore");
 const interactions = require("./lib/interactions");
 const levels = require("./lib/levels");
+const sessionGuard = require("./lib/session-guard");
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
+const { processLog } = require("./lib/process-log");
 
-// Persiste cada log no ponto único de entrega (daemon/servidor), mantendo o
-// contrato {type:"log", text, game, level} + metadados estáveis aditivos (id, ts, category).
-registerLogPersister((tenantId, item) => {
-  const entry = logstore.append(tenantId, item);
+// Persiste cada log no ponto único de entrega (daemon/servidor); mantém o contrato legado
+// {type:"log", text, game, level} e adiciona metadados estruturados/correlação.
+registerLogPersister((tenantId, item, tenant) => {
+  const entry = logstore.append(tenantId, item, item.session_id || (tenant && tenant.activeDaemonSessionId) || null);
   logstore.maybePrune();
   return entry;
 });
 try {
   db.pruneLogEntries();
 } catch (e) {}
+try {
+  const redacted = logstore.redactLegacyHistory();
+  if (redacted) processLog({ category: "notice", level: "info", event: "logs.legacy.redacted",
+    message: "Mensagens legadas com conteúdo privado foram redigidas do histórico.",
+    details: { entries_redacted: redacted } });
+  const normalized = logstore.normalizeLegacyHistory();
+  if (normalized) processLog({ category: "notice", level: "info", event: "logs.legacy.normalized",
+    message: "Categorias e níveis legados foram normalizados no histórico.",
+    details: { entries_normalized: normalized } });
+} catch (e) {
+  processLog({ category: "error", level: "error", event: "logs.legacy.redaction_failed",
+    message: "Não foi possível aplicar a limpeza de privacidade aos logs legados.",
+    code: "LOG_REDACTION_FAILED", details: { error_type: e && e.name || "Error" } });
+}
 // Retenção de interações (detalhe/agregados/comentários) no boot e periódica.
 try { interactions.startRetention(); } catch (e) {}
 
@@ -58,6 +75,7 @@ const FRIENDLY_PAGES = {
   "/tres-pontinhos": "tres-pontinhos.html",
   "/duelo": "duelo.html",
   "/corda": "corda.html",
+  "/contexto": "contexto.html",
   "/docs": "docs.html",
   "/suporte": "support.html",
   "/ajuda": "help.html",
@@ -70,8 +88,16 @@ const LEGACY_PAGES = {
   "/obs-ranking.html": "/ranking",
 };
 
-app.get("/", (req, res) => res.redirect("/login"));
-const NO_CACHE_ROUTES = new Set(["/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking"]);
+app.get("/", (req, res) => {
+  // No dominio publico (apex) a raiz serve o site institucional; no painel
+  // mantem o comportamento antigo (redireciona para o login).
+  const host = String(req.headers.host || "").split(":")[0].toLowerCase();
+  if (host === "tikplay.com.br" || host === "www.tikplay.com.br") {
+    return res.sendFile(path.join(PUBLIC_DIR, "site", "index.html"));
+  }
+  return res.redirect("/login");
+});
+const NO_CACHE_ROUTES = new Set(["/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -143,14 +169,12 @@ function activityForUser(tenantId) {
 
 const httpServer = http.createServer(app);
 httpServer.listen(HTTP_PORT, () => {
-  console.log(`[HTTP] Servidor rodando em http://localhost:${HTTP_PORT}`);
-  console.log(`[HTTP] Painel de Controle: http://localhost:${HTTP_PORT}/painel`);
-  console.log(`[HTTP] Login: http://localhost:${HTTP_PORT}/login`);
-  console.log(`[HTTP] Admin: http://localhost:${HTTP_PORT}/admin`);
+  processLog({ category: "connection", level: "info", event: "http.server.started", message: "Servidor HTTP iniciado.", details: { port: Number(HTTP_PORT) || HTTP_PORT } });
+  processLog({ category: "connection", level: "info", event: "http.routes.ready", message: "Rotas do painel disponíveis.", details: { routes: ["/painel", "/login", "/admin"] } });
 });
 
 const wss = new WebSocketServer({ server: httpServer });
-console.log(`[WS] WebSocket compartilhando a porta ${HTTP_PORT}`);
+processLog({ category: "connection", level: "info", event: "websocket.server.started", message: "WebSocket compartilhando a porta HTTP.", details: { port: Number(HTTP_PORT) || HTTP_PORT } });
 
 // Heartbeat: detecta conexoes abandonadas (navegador fechado sem close frame)
 // encerrando sockets que nao respondem ao ping. Sem isso, um painel "fantasma"
@@ -440,6 +464,45 @@ function updateGameState(tenant, msg) {
   }
 }
 
+function logPalavraDebug(tenant, event, details = {}) {
+  if (!tenant) return;
+  // Campos explicitamente montados pelos call sites; não incluir palavra secreta,
+  // texto completo de charada ou comentário bruto.
+  const { game_id, trace_id, code, duration_ms, ...safeDetails } = details || {};
+  broadcastLog(tenant, {
+    text: `[debug][Palavra] ${event}`,
+    category: "diagnostic",
+    game: "palavra",
+    level: "debug",
+    event: `palavra.${String(event || "unknown").replace(/[^a-zA-Z0-9_.-]/g, "_")}`,
+    source: "node",
+    session_id: tenant.activeDaemonSessionId || null,
+    trace_id: trace_id || null,
+    game_id: game_id || null,
+    code: code || null,
+    duration_ms: duration_ms == null ? null : duration_ms,
+    details: safeDetails,
+  });
+}
+
+function logStructuredEvent(tenant, { category, level, event, message, game, game_id, trace_id, code, duration_ms, details } = {}) {
+  if (!tenant) return;
+  broadcastLog(tenant, {
+    text: String(message || event || "Evento do sistema"),
+    category,
+    level,
+    event,
+    source: "node",
+    game,
+    game_id,
+    session_id: tenant.activeDaemonSessionId || null,
+    trace_id: trace_id || null,
+    code: code || null,
+    duration_ms: duration_ms == null ? null : duration_ms,
+    details: details || null,
+  });
+}
+
 function broadcastStatus(tenant, status) {
   tenant.currentStatus = status;
   broadcastToClients(tenant.logClients, { type: "status", ...status });
@@ -459,7 +522,10 @@ function broadcastStatus(tenant, status) {
       daemonSend({ cmd: "vpet_stop", tenant_id: tenant.id });
       vs.active = false;
       broadcastToClients(tenant.browserClients, { type: "vpet_state", ...vs });
-      broadcastToClients(tenant.logClients, { type: "log", text: "[Bichinho] Live desconectada — mascote pausado automaticamente" });
+      broadcastLog(tenant, {
+        text: "[Bichinho] Live desconectada — mascote pausado automaticamente",
+        category: "game", level: "info", game: "vpet", event: "vpet.auto_paused_on_disconnect", source: "node",
+      });
     }
   }
 }
@@ -486,6 +552,9 @@ let daemon = null;
 function resetAllTenantSessions() {
   for (const tenant of tenants.values()) {
     tenant.sessionStarted = false;
+    tenant.activeDaemonSessionId = null;
+    tenant.activeLiveUsername = null;
+    tenant.activeLiveEngine = null;
   }
 }
 
@@ -498,9 +567,14 @@ function routeDaemonStderr(line) {
   try { metrics.recordProcessError(); } catch {}
   const tenantId = msgTenant(line);
   if (tenantId && tenants.has(tenantId)) {
-    broadcastLog(getTenant(tenantId), `[stderr] ${line}`);
+    broadcastLog(getTenant(tenantId), {
+      text: `[stderr] ${logstore.sanitizeText(line)}`,
+      category: "error", level: "error", event: "daemon.stderr.received", source: "python",
+      code: "DAEMON_STDERR",
+    });
   } else {
-    console.error("[Daemon]", line);
+    processLog({ category: "error", level: "error", event: "daemon.stderr.unscoped",
+      message: logstore.sanitizeText(line), code: "DAEMON_STDERR", source: "python" });
   }
 }
 
@@ -532,13 +606,62 @@ function getDaemonStatus() {
 
 // Servico externo de TTS (Kokoro) e opcional; sem URL => "nao configurado".
 const TTS_CONFIGURED = !!process.env.KOKORO_URL;
+const staleSessionWarnAt = new Map();
+const levelDiagnosticWindows = new Map();
+
+function logLevelObservationSummary(tenant, observation, levelUpCount) {
+  if (!/^(1|true|yes)$/i.test(String(process.env.TIKTOK_LEVEL_DIAGNOSTICS || ""))) return;
+  const now = Date.now();
+  const current = levelDiagnosticWindows.get(tenant.id) || { started_at: now, observations: 0, level_up_count: 0, room_id: "" };
+  current.observations++;
+  current.level_up_count += Number(levelUpCount) || 0;
+  current.room_id = String(observation.room_id || current.room_id || "");
+  if (now - current.started_at >= 10000) {
+    logStructuredEvent(tenant, {
+      category: "diagnostic", level: "debug", event: "community.level.observation_summary",
+      message: "Resumo técnico de níveis observados na live.",
+      details: { observation_count: current.observations, level_up_count: current.level_up_count,
+        room_id: current.room_id, window_ms: now - current.started_at },
+    });
+    levelDiagnosticWindows.set(tenant.id, { started_at: now, observations: 0, level_up_count: 0, room_id: current.room_id });
+  } else {
+    levelDiagnosticWindows.set(tenant.id, current);
+  }
+}
+
+function warnStaleSessionMessage(tenant, msg) {
+  if (msg.type !== "status" && msg.type !== "game") return;
+  const key = `${tenant.id}:${msg.session_id || "missing"}:${msg.type}:${(msg.status && msg.status.state) || (msg.msg && msg.msg.type) || "?"}`;
+  const now = Date.now();
+  if (now - (staleSessionWarnAt.get(key) || 0) < 30000) return;
+  staleSessionWarnAt.set(key, now);
+  logStructuredEvent(tenant, {
+    category: "diagnostic", level: "warning", event: "daemon.session.stale_message",
+    message: "Mensagem atrasada do daemon ignorada.", trace_id: msg.trace_id,
+    details: { message_type: msg.type, received_session_id: msg.session_id || null,
+      active_session_id: tenant.activeDaemonSessionId || null },
+  });
+}
 
 function handleDaemonMessage(msg) {
+  // Respostas do motor público (site) não têm tenant_id e são resolvidas por req_id.
+  if (contextoPublic.handleDaemonMessage(msg)) return;
   const tenantId = msg.tenant_id;
   if (tenantId !== null && tenantId !== undefined) {
     const tenant = getTenant(tenantId);
+    if (!sessionGuard.shouldAcceptDaemonMessage(tenant, msg)) {
+      warnStaleSessionMessage(tenant, msg);
+      return;
+    }
     if (msg.type === "status") {
-      broadcastStatus(tenant, msg.status || {});
+      const status = msg.status || {};
+      if (status.state === "offline" && msg.session_id === tenant.activeDaemonSessionId) {
+        tenant.sessionStarted = false;
+        tenant.activeDaemonSessionId = null;
+        tenant.activeLiveUsername = null;
+        tenant.activeLiveEngine = null;
+      }
+      broadcastStatus(tenant, status);
     } else if (msg.type === "interaction") {
       // Ingestão em lote (relatórios). Não é difundido aos clientes.
       interactions.ingest(tenant, msg.interaction || {});
@@ -553,11 +676,18 @@ function handleDaemonMessage(msg) {
       }
     } else if (msg.type === "viewer_level") {
       // Sincroniza nível do usuário e, se subiu DURANTE a live, difunde level_up.
-      const res = levels.handleViewerLevel(tenant, msg.viewer_level || {});
+      const observation = msg.viewer_level || {};
+      const res = levels.handleViewerLevel(tenant, observation);
+      logLevelObservationSummary(tenant, observation, res.events.length);
       for (const ev of res.events) {
         const payload = { type: "level_up", ...ev };
         broadcastToClients(tenant.browserClients, payload);
         broadcastToClients(tenant.logClients, payload);
+        logStructuredEvent(tenant, {
+          category: "notice", level: "info", event: "community.level.upgraded",
+          message: `Nível de ${ev.axis} atualizado.`,
+          details: { axis: ev.axis, before: ev.before, after: ev.after, user: ev.user },
+        });
       }
     } else if (msg.type === "game") {
       const gameMsg = msg.msg || {};
@@ -565,6 +695,11 @@ function handleDaemonMessage(msg) {
         // Atividade da fonte de likes é efêmera: entrega apenas aos overlays
         // autenticados do tenant, sem alterar estado/ranking ou inundar os logs.
         broadcastToClients(tenant.browserClients, gameMsg);
+        return;
+      }
+      if (gameMsg.type === "riddle_audio") {
+        // A narração da charada toca apenas no painel streamer, nunca na página pública/OBS.
+        broadcastToClients(tenant.logClients, gameMsg);
         return;
       }
       if (gameMsg.type === "corda_state") {
@@ -579,7 +714,20 @@ function handleDaemonMessage(msg) {
       broadcastToClients(tenant.browserClients, gameMsg);
       broadcastToClients(tenant.logClients, gameMsg);
     } else if (msg.type === "log") {
-      broadcastLog(tenant, { text: msg.text || "", game: msg.game || "", level: msg.level || "" });
+      broadcastLog(tenant, {
+        text: msg.text || "",
+        category: msg.category,
+        game: msg.game || "",
+        level: msg.level || "",
+        event: msg.event,
+        source: msg.source || "python",
+        session_id: msg.session_id || tenant.activeDaemonSessionId || null,
+        trace_id: msg.trace_id,
+        game_id: msg.game_id,
+        code: msg.code,
+        duration_ms: msg.duration_ms,
+        details: msg.details,
+      });
     } else if (msg.type === "panel_word") {
       tenant.currentWord = msg.text || "";
       broadcastToClients(tenant.logClients, { type: "word", word: tenant.currentWord });
@@ -591,6 +739,9 @@ function handleDaemonMessage(msg) {
         type: "chat_narrate",
         text: typeof payload === "object" ? payload.text || "" : payload,
         url: (typeof payload === "object" && payload.url) || "",
+        reset: typeof payload === "object" && payload.reset === true,
+        enabled: typeof payload === "object" && typeof payload.enabled === "boolean" ? payload.enabled : undefined,
+        expires_in_ms: typeof payload === "object" ? Number(payload.expires_in_ms) || 0 : 0,
       });
     } else if (msg.type === "gifts_synced") {
       broadcastToClients(tenant.logClients, { type: "gifts_synced", result: msg.text || {} });
@@ -598,7 +749,8 @@ function handleDaemonMessage(msg) {
     return;
   }
   if (msg.type === "log") {
-    console.log("[Daemon]", msg.text);
+    processLog({ category: "connection", level: "info", event: "daemon.global_log",
+      message: logstore.sanitizeText(msg.text || ""), source: "python" });
   }
 }
 
@@ -618,7 +770,6 @@ function killDaemon() {
 process.on("exit", killDaemon);
 process.on("SIGINT", () => { killDaemon(); process.exit(); });
 process.on("SIGTERM", () => { killDaemon(); process.exit(); });
-
 startDaemon();
 
 // ---------------- Monitor de Servidor: amostragem + motor de incidentes ----------------
@@ -719,6 +870,9 @@ require("./lib/reports")(app, { db, auth });
 // ---------------- Gifts / gift-config / Alertas sonoros (rotas - Fase B-2b) ----------------
 require("./routes/gifts")(app, { db, path, fs, multer, auth, getTenant, daemonSend, broadcastToClients, readGiftTags, readGiftImageMap, readTenantGiftConfig });
 
+// ---------------- Jogo Contexto publico (site) ----------------
+contextoPublic.register(app, { daemonSend });
+
 // ---------------- Ajuda e Suporte (rotas) ----------------
 // Chamados, sugestões, respostas rápidas e Central de Ajuda. Anexos ficam em
 // node/data/support-files (fora de public/) e são servidos por endpoint autenticado.
@@ -818,7 +972,9 @@ app.post("/api/webhooks/mercadopago", async (req, res) => {
       const ok = v1 && expected && v1.length === expected.length &&
         crypto.timingSafeEqual(Buffer.from(v1, "utf8"), Buffer.from(expected, "utf8"));
       if (!ok) {
-        console.log(`[Billing] Webhook MP com assinatura invalida (id=${dataId})`);
+        processLog({ category: "error", level: "warning", event: "billing.webhook.signature_invalid",
+          message: "Webhook de pagamento rejeitado por assinatura inválida.", code: "BILLING_SIGNATURE_INVALID",
+          details: { provider_event_id: dataId } });
         return res.status(401).json({ success: false, error: "Assinatura invalida" });
       }
     } catch (e) {
@@ -859,7 +1015,8 @@ setInterval(() => {
     ).all(now);
     for (const r of rows) {
       db.updateUser(r.id, { subscription_status: "expired", status: "disabled" });
-      console.log(`[Billing] Conta ${r.id} expirada (plano ${r.plan})`);
+      processLog({ category: "notice", level: "info", event: "billing.account.expired",
+        message: "Plano de uma conta expirou.", details: { tenant_id: r.id, plan: r.plan } });
     }
   } catch (e) {}
 }, 30 * 60 * 1000);
@@ -933,6 +1090,126 @@ app.post("/api/likes-overlay/layout", auth.requireAuth, requireActiveLikesOverla
     if (e instanceof RangeError) return res.status(400).json({ success: false, error: "Versao invalida" });
     return res.status(400).json({ success: false, error: e.message || "Layout invalido" });
   }
+});
+
+const giftRankingLayoutLogWindows = new Map();
+function logGiftRankingLayoutSaved(tenantId, layout) {
+  const pending = giftRankingLayoutLogWindows.get(tenantId);
+  if (pending) {
+    pending.layout = layout;
+    pending.suppressed_count += 1;
+    return;
+  }
+  const state = { layout, suppressed_count: 0 };
+  giftRankingLayoutLogWindows.set(tenantId, state);
+  const timer = setTimeout(() => {
+    giftRankingLayoutLogWindows.delete(tenantId);
+    logStructuredEvent(getTenant(tenantId), {
+      category: "diagnostic", level: "debug", event: "overlay.gift_ranking_layout.saved",
+      message: "Preferências do ranking de diamantes atualizadas.", code: "LAYOUT_SAVED",
+      details: { ...state.layout, suppressed_count: state.suppressed_count },
+    });
+  }, 2000);
+  timer.unref?.();
+}
+
+app.get("/api/gift-ranking/layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({
+    success: true,
+    layout: db.getGiftRankingOverlayLayout(req.user.id),
+    defaults: db.DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT,
+    configured: db.hasGiftRankingOverlayLayout(req.user.id),
+  });
+});
+
+app.post("/api/gift-ranking/layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  const layout = req.body && req.body.layout;
+  if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "notice", level: "warning", event: "overlay.gift_ranking_layout.rejected",
+      message: "A configuração do ranking de diamantes foi rejeitada.", code: "INVALID_LAYOUT",
+    });
+    return res.status(400).json({ success: false, error: "Layout invalido" });
+  }
+  let normalized;
+  try {
+    normalized = db.normalizeGiftRankingOverlayLayout(layout, true);
+  } catch (error) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "notice", level: "warning", event: "overlay.gift_ranking_layout.rejected",
+      message: "A configuração do ranking de diamantes foi rejeitada.", code: "INVALID_LAYOUT",
+    });
+    return res.status(400).json({ success: false, error: error.message || "Layout invalido" });
+  }
+  try {
+    const saved = db.saveGiftRankingOverlayLayout(req.user.id, normalized);
+    const tenant = getTenant(req.user.id);
+    broadcastToClients(tenant.browserClients, { type: "gift_ranking_layout", layout: saved });
+    logGiftRankingLayoutSaved(req.user.id, saved);
+    return res.json({ success: true, layout: saved });
+  } catch (error) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "error", level: "error", event: "overlay.gift_ranking_layout.failed",
+      message: "Não foi possível salvar os ajustes do ranking de diamantes.", code: "LAYOUT_SAVE_FAILED",
+    });
+    return res.status(500).json({ success: false, error: "Não foi possível salvar os ajustes." });
+  }
+});
+
+app.get("/api/presenter-level/layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    success: true,
+    layout: db.getPresenterLevelOverlayLayout(req.user.id),
+    defaults: db.DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT,
+  });
+});
+
+app.post("/api/presenter-level/layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  const layout = req.body && req.body.layout;
+  if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
+    return res.status(400).json({ success: false, error: "Layout invalido" });
+  }
+  try {
+    const saved = db.savePresenterLevelOverlayLayout(req.user.id, layout);
+    broadcastToClients(getTenant(req.user.id).browserClients, { type: "presenter_level_layout", layout: saved });
+    return res.json({ success: true, layout: saved });
+  } catch (error) {
+    return res.status(400).json({ success: false, error: error.message || "Layout invalido" });
+  }
+});
+
+app.post("/api/presenter-level/test", auth.requireAuth, (req, res) => {
+  const tenant = getTenant(req.user.id);
+  const scenarios = {
+    "same-tier": { before: 23, after: 24 },
+    "tier-change": { before: 29, after: 30 },
+  };
+  const scenario = req.body?.scenario || "tier-change";
+  const transition = scenarios[scenario];
+  if (!transition) {
+    return res.status(400).json({ success: false, error: "Cenario de teste invalido" });
+  }
+  const axis = req.body?.axis || "gifter";
+  if (!["gifter", "fanclub"].includes(axis)) {
+    return res.status(400).json({ success: false, error: "Eixo de nivel invalido" });
+  }
+  const delivered = broadcastToClients(tenant.browserClients, {
+    type: "level_up",
+    axis,
+    before: transition.before,
+    after: transition.after,
+    user: `tikplay-test-${scenario}`,
+    nickname: "Teste TikPlay",
+    avatar: "",
+    room_id: tenant.currentRoomId || "",
+    test: true,
+  });
+  if (!delivered) {
+    return res.json({ success: false, error: "Nenhuma fonte de sobreposição está conectada. Abra o link no OBS e tente novamente." });
+  }
+  res.json({ success: true, delivered });
 });
 
 // ---------------- TTS (voz do servidor) ----------------
@@ -1089,61 +1366,108 @@ app.get("/api/ranking-live", auth.requireAuth, (req, res) => {
 
 app.post("/api/new-game", auth.requireAuth, (req, res) => {
   const tenantId = req.user.id;
+  const traceId = crypto.randomUUID();
   const user = db.getUserById(tenantId);
   if (user && !featureAllowed(user, "games")) {
-    return res.status(403).json({ success: false, error: "Funcionalidade nao liberada para sua conta" });
+    logPalavraDebug(tenants.get(tenantId), "start.rejected", { reason: "feature_unavailable", trace_id: traceId });
+    return res.status(403).json({ success: false, error: "Funcionalidade nao liberada para sua conta", trace_id: traceId });
   }
   const tenant = tenants.get(tenantId);
+  const gs = tenant && tenant.gameState || {};
+  const gameInProgress = !!(gs.active && !gs.finished);
+  logPalavraDebug(tenant, "start.click", {
+    game_id: gs.game_id || null,
+    trace_id: traceId,
+    current_status: gameInProgress ? "running" : (gs.finished ? "finished" : "idle"),
+    guess_count: Number(gs.guess_count) || 0,
+    room_id: tenant && tenant.currentStatus && tenant.currentStatus.room_id || null,
+  });
+  if (gameInProgress) {
+    logPalavraDebug(tenant, "start.replaces_in_progress", {
+      game_id: gs.game_id || null,
+      trace_id: traceId,
+      guess_count: Number(gs.guess_count) || 0,
+    });
+  }
   if (!liveOnline(tenant)) {
-    return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar a Palavra Secreta" });
+    logPalavraDebug(tenant, "start.rejected", { reason: "live_offline", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar a Palavra Secreta", trace_id: traceId });
   }
   const config = readTenantGiftConfig(tenantId);
   const ok = daemonSend({
     cmd: "new_game",
     tenant_id: tenantId,
+    trace_id: traceId,
     hint_gifts: config.hint_gifts || [],
     riddle_gifts: config.riddle_gifts || [],
     size_gift: config.size_gift || "",
     letter_gift: config.letter_gift || "",
   });
   if (!ok) {
-    return res.json({ success: false, error: "Servico Python indisponivel" });
+    logPalavraDebug(tenant, "start.rejected", { reason: "daemon_unavailable", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
   }
-  res.json({ success: true });
+  logPalavraDebug(tenant, "start.queued", { replaces_game_id: gs.game_id || null, trace_id: traceId });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/end-game", auth.requireAuth, (req, res) => {
   const tenantId = req.user.id;
+  const traceId = crypto.randomUUID();
   const tenant = tenants.get(tenantId);
+  const gs = tenant && tenant.gameState || {};
+  logPalavraDebug(tenant, "end.click", {
+    game_id: gs.game_id || null,
+    trace_id: traceId,
+    current_status: gs.active ? (gs.finished ? "finished" : "running") : "idle",
+    guess_count: Number(gs.guess_count) || 0,
+  });
   if (!liveOnline(tenant)) {
-    return res.json({ success: false, error: "Live offline — conecte a live antes de finalizar" });
+    logPalavraDebug(tenant, "end.rejected", { reason: "live_offline", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Live offline — conecte a live antes de finalizar", trace_id: traceId });
   }
   const ok = daemonSend({
     cmd: "end_game",
     tenant_id: tenantId,
+    trace_id: traceId,
   });
   if (!ok) {
-    return res.json({ success: false, error: "Servico Python indisponivel" });
+    logPalavraDebug(tenant, "end.rejected", { reason: "daemon_unavailable", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
   }
-  res.json({ success: true });
+  logPalavraDebug(tenant, "end.queued", { game_id: gs.game_id || null, trace_id: traceId });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/game/manual-action", auth.requireAuth, (req, res) => {
   const tenantId = req.user.id;
+  const traceId = crypto.randomUUID();
   const action = (req.body && req.body.action) || "";
   const cmd = action === "riddle" ? "manual_riddle" : action === "hint" ? "manual_hint" : null;
-  if (!cmd) {
-    return res.json({ success: false, error: "action invalida (use hint ou riddle)" });
-  }
   const tenant = tenants.get(tenantId);
+  const gs = tenant && tenant.gameState || {};
+  logPalavraDebug(tenant, "manual_action.click", {
+    action: action || null,
+    trace_id: traceId,
+    game_id: gs.game_id || null,
+    game_status: gs.active ? (gs.finished ? "finished" : "running") : "idle",
+    guess_count: Number(gs.guess_count) || 0,
+  });
+  if (!cmd) {
+    logPalavraDebug(tenant, "manual_action.rejected", { action: action || null, reason: "invalid_action", trace_id: traceId });
+    return res.json({ success: false, error: "action invalida (use hint ou riddle)", trace_id: traceId });
+  }
   if (!liveOnline(tenant)) {
-    return res.json({ success: false, error: "Live offline — conecte a live antes de usar" });
+    logPalavraDebug(tenant, "manual_action.rejected", { action, reason: "live_offline", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Live offline — conecte a live antes de usar", trace_id: traceId });
   }
-  const ok = daemonSend({ cmd, tenant_id: tenantId });
+  const ok = daemonSend({ cmd, tenant_id: tenantId, trace_id: traceId });
   if (!ok) {
-    return res.json({ success: false, error: "Servico Python indisponivel" });
+    logPalavraDebug(tenant, "manual_action.rejected", { action, reason: "daemon_unavailable", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
   }
-  res.json({ success: true });
+  logPalavraDebug(tenant, "manual_action.queued", { action, game_id: gs.game_id || null, trace_id: traceId });
+  res.json({ success: true, trace_id: traceId });
 });
 
 // ---------------- Caça Palavras ----------------
@@ -1220,41 +1544,104 @@ function tresTenantId(req) {
 }
 
 app.post("/api/tres/start", auth.requireAuth, requireFeature("tres"), (req, res) => {
-  const tenant = tenants.get(req.user.id);
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  const traceId = crypto.randomUUID();
+  const suppliedWord = !!String((req.body && req.body.palavra) || "").trim();
+  logStructuredEvent(tenant, {
+    category: "game", level: "info", event: "tres.start.requested", game: "tres", trace_id: traceId,
+    message: "Solicitação para iniciar 3 Dicas recebida.",
+    details: { custom_word_supplied: suppliedWord },
+  });
   if (!liveOnline(tenant)) {
-    return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar o Jogo dos 3 Pontinhos" });
+    logStructuredEvent(tenant, {
+      category: "notice", level: "warning", event: "tres.start.rejected", game: "tres", trace_id: traceId,
+      code: "LIVE_OFFLINE", message: "3 Dicas não iniciou porque a live está offline.",
+    });
+    return res.json({ success: false, error: "Live offline — conecte a live antes de iniciar o Jogo dos 3 Pontinhos", trace_id: traceId });
   }
-  const ok = daemonSend({ cmd: "tres_start", tenant_id: req.user.id, palavra: (req.body && req.body.palavra) || "" });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const ok = daemonSend({ cmd: "tres_start", tenant_id: tenantId, trace_id: traceId, palavra: (req.body && req.body.palavra) || "" });
+  if (!ok) {
+    logStructuredEvent(tenant, {
+      category: "error", level: "error", event: "tres.start.failed", game: "tres", trace_id: traceId,
+      code: "DAEMON_UNAVAILABLE", message: "3 Dicas não iniciou porque o serviço de jogo está indisponível.",
+    });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
+  }
+  logStructuredEvent(tenant, {
+    category: "game", level: "info", event: "tres.start.queued", game: "tres", trace_id: traceId,
+    message: "Solicitação de início de 3 Dicas enviada ao serviço de jogo.",
+  });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/tres/stop", auth.requireAuth, (req, res) => {
-  const ok = daemonSend({ cmd: "tres_stop", tenant_id: req.user.id });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  const traceId = crypto.randomUUID();
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.stop.requested", game: "tres", trace_id: traceId, message: "Solicitação para parar 3 Dicas recebida." });
+  const ok = daemonSend({ cmd: "tres_stop", tenant_id: tenantId, trace_id: traceId });
+  if (!ok) {
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "tres.stop.failed", game: "tres", trace_id: traceId, code: "DAEMON_UNAVAILABLE", message: "Não foi possível enviar o comando para parar 3 Dicas." });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
+  }
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.stop.queued", game: "tres", trace_id: traceId, message: "Comando para parar 3 Dicas enviado." });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/tres/pause", auth.requireAuth, (req, res) => {
-  const ok = daemonSend({ cmd: "tres_pause", tenant_id: req.user.id });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  const traceId = crypto.randomUUID();
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.pause.requested", game: "tres", trace_id: traceId, message: "Solicitação para pausar 3 Dicas recebida." });
+  const ok = daemonSend({ cmd: "tres_pause", tenant_id: tenantId, trace_id: traceId });
+  if (!ok) {
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "tres.pause.failed", game: "tres", trace_id: traceId, code: "DAEMON_UNAVAILABLE", message: "Não foi possível enviar o comando para pausar 3 Dicas." });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
+  }
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.pause.queued", game: "tres", trace_id: traceId, message: "Comando para pausar 3 Dicas enviado." });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/tres/resume", auth.requireAuth, (req, res) => {
-  const ok = daemonSend({ cmd: "tres_resume", tenant_id: req.user.id });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  const traceId = crypto.randomUUID();
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.resume.requested", game: "tres", trace_id: traceId, message: "Solicitação para retomar 3 Dicas recebida." });
+  const ok = daemonSend({ cmd: "tres_resume", tenant_id: tenantId, trace_id: traceId });
+  if (!ok) {
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "tres.resume.failed", game: "tres", trace_id: traceId, code: "DAEMON_UNAVAILABLE", message: "Não foi possível enviar o comando para retomar 3 Dicas." });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
+  }
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.resume.queued", game: "tres", trace_id: traceId, message: "Comando para retomar 3 Dicas enviado." });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/tres/reset", auth.requireAuth, (req, res) => {
-  const ok = daemonSend({ cmd: "tres_reset", tenant_id: req.user.id });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const tenantId = req.user.id;
+  const tenant = tenants.get(tenantId);
+  const traceId = crypto.randomUUID();
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.reset.requested", game: "tres", trace_id: traceId, message: "Solicitação para resetar 3 Dicas recebida." });
+  const ok = daemonSend({ cmd: "tres_reset", tenant_id: tenantId, trace_id: traceId });
+  if (!ok) {
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "tres.reset.failed", game: "tres", trace_id: traceId, code: "DAEMON_UNAVAILABLE", message: "Não foi possível enviar o comando para resetar 3 Dicas." });
+    return res.json({ success: false, error: "Servico Python indisponivel" });
+  }
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.reset.queued", game: "tres", trace_id: traceId, message: "Comando para resetar 3 Dicas enviado." });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.post("/api/tres/config", auth.requireAuth, (req, res) => {
   const config = (req.body && req.body.config) || {};
+  const tenant = tenants.get(req.user.id);
+  const traceId = crypto.randomUUID();
+  logStructuredEvent(tenant, {
+    category: "game", level: "info", event: "tres.config.save_requested", game: "tres", trace_id: traceId,
+    message: "Solicitação para salvar a configuração de 3 Dicas recebida.",
+    details: { size_gift_configured: !!config.size, letter_gift_configured: !!config.letter,
+      ticket_configured: !!config.ticket, stage_times: config.stage_times || [120, 60, 30],
+      stage_points: config.stage_points || [30, 20, 10] },
+  });
   try {
     db.saveTresGiftConfig(req.user.id, {
       size: config.size || "",
@@ -1264,11 +1651,26 @@ app.post("/api/tres/config", auth.requireAuth, (req, res) => {
       stage_points: config.stage_points || [30, 20, 10],
     });
   } catch (e) {
-    return res.json({ success: false, error: e.message });
+    logStructuredEvent(tenant, {
+      category: "error", level: "error", event: "tres.config.save_failed", game: "tres", trace_id: traceId,
+      code: "TRES_CONFIG_SAVE_FAILED", message: "Não foi possível salvar a configuração de 3 Dicas.",
+      details: { error_type: e && e.name || "Error" },
+    });
+    return res.json({ success: false, error: e.message, trace_id: traceId });
   }
-  const ok = daemonSend({ cmd: "tres_config", tenant_id: req.user.id, config });
-  if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const ok = daemonSend({ cmd: "tres_config", tenant_id: req.user.id, trace_id: traceId, config });
+  if (!ok) {
+    logStructuredEvent(tenant, {
+      category: "notice", level: "warning", event: "tres.config.apply_failed", game: "tres", trace_id: traceId,
+      code: "DAEMON_UNAVAILABLE", message: "Configuração salva, mas não foi aplicada à rodada ativa.",
+    });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
+  }
+  logStructuredEvent(tenant, {
+    category: "game", level: "info", event: "tres.config.apply_queued", game: "tres", trace_id: traceId,
+    message: "Configuração salva e enviada ao serviço de 3 Dicas.",
+  });
+  res.json({ success: true, trace_id: traceId });
 });
 
 app.get("/api/tres/config", auth.requireAuth, (req, res) => {
@@ -1294,6 +1696,7 @@ app.get("/api/tres/weekly", auth.requireAuth, (req, res) => {
 // Testes VISUAIS do 3 Dicas — efeitos só na tela (não altera regras/pontuação/ranking)
 app.post("/api/tres/test", auth.requireAuth, (req, res) => {
   const tenant = getTenant(req.user.id);
+  const traceId = crypto.randomUUID();
   const action = String((req.body && req.body.action) || "").trim();
   const nickname = String((req.body && req.body.nickname) || "Streamer");
   const avatar = String((req.body && req.body.avatar) || "");
@@ -1324,11 +1727,17 @@ app.post("/api/tres/test", auth.requireAuth, (req, res) => {
     ];
     payload.weekly = fake;
   } else {
-    return res.json({ success: false, error: "Ação de teste inválida" });
+    logStructuredEvent(tenant, { category: "notice", level: "warning", event: "tres.test.rejected", game: "tres",
+      trace_id: traceId, code: "TRES_TEST_ACTION_INVALID", message: "Ação de teste visual de 3 Dicas inválida.",
+      details: { action: action.slice(0, 32) } });
+    return res.json({ success: false, error: "Ação de teste inválida", trace_id: traceId });
   }
 
   broadcastToClients(tenant.browserClients, payload);
-  res.json({ success: true });
+  logStructuredEvent(tenant, { category: "game", level: "info", event: "tres.test.sent", game: "tres",
+    trace_id: traceId, message: "Teste visual de 3 Dicas enviado à sobreposição.",
+    details: { action, stage: payload.stage || null, kind: payload.kind || null } });
+  res.json({ success: true, trace_id: traceId });
 });
 
 // ---------------- Bichinho Virtual (V-Pet) ----------------
@@ -1406,8 +1815,15 @@ app.post("/api/play-riddle", auth.requireAuth, (req, res) => {
   if (!tenant) {
     return res.json({ success: false, error: "Tenant nao encontrado" });
   }
-  broadcastToClients(tenant.browserClients, { type: "riddle_play" });
-  res.json({ success: true });
+  const traceId = crypto.randomUUID();
+  logPalavraDebug(tenant, "riddle.play_requested", {
+    trace_id: traceId,
+    game_id: tenant.gameState && tenant.gameState.game_id || null,
+    stage: tenant.gameState && tenant.gameState.current_riddle_stage || null,
+    riddle_visible: !!(tenant.gameState && tenant.gameState.display && tenant.gameState.display.riddle_visible),
+  });
+  broadcastToClients(tenant.browserClients, { type: "riddle_play", trace_id: traceId });
+  res.json({ success: true, trace_id: traceId });
 });
 
 // ---------------- Histórico de logs (recuperação paginada) ----------------
@@ -1421,7 +1837,21 @@ app.get("/api/logs", auth.requireAuth, (req, res) => {
   const before = /^\d+$/.test(String(req.query.before || "")) ? Number(req.query.before) : undefined;
   const since = /^\d+$/.test(String(req.query.since || "")) ? Number(req.query.since) : undefined;
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), db.LOG_PAGE_MAX);
-  const logs = logstore.query({ tenantId: req.user.id, before, since, limit });
+  const logs = logstore.query({
+    tenantId: req.user.id,
+    before,
+    since,
+    limit,
+    category: req.query.category,
+    game: req.query.game,
+    level: req.query.level,
+    event: req.query.event,
+    trace_id: req.query.trace_id,
+    session_id: req.query.session_id,
+    game_id: req.query.game_id,
+    source: req.query.source,
+    code: req.query.code,
+  });
   res.json({ success: true, logs, limit, has_more: logs.length >= limit });
 });
 
@@ -1434,7 +1864,19 @@ app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
   const gs = tenant.gameState;
   if (!gs.display) gs.display = { riddle_visible: false, ranking_view: "live" };
   const action = String((req.body && req.body.action) || "").trim();
-  const payload = { type: "display_action", action };
+  const traceId = crypto.randomUUID();
+  const payload = { type: "display_action", action, trace_id: traceId };
+  const displayBefore = {
+    riddle_visible: !!gs.display.riddle_visible,
+    ranking_view: gs.display.ranking_view || "live",
+  };
+  logPalavraDebug(tenant, "display_action.click", {
+    action: action || null,
+    trace_id: traceId,
+    game_id: gs.game_id || null,
+    before_riddle_visible: displayBefore.riddle_visible,
+    before_ranking_view: displayBefore.ranking_view,
+  });
 
   switch (action) {
     case "show_riddle":
@@ -1444,7 +1886,13 @@ app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
       gs.display.riddle_visible = false;
       broadcastToClients(tenant.browserClients, payload);
       broadcastToClients(tenant.logClients, payload);
-      return res.json({ success: true, message: "Charada fechada no OBS.", riddle_visible: false });
+      logPalavraDebug(tenant, "riddle.closed", {
+        trace_id: traceId,
+        game_id: gs.game_id || null,
+        stage: gs.current_riddle_stage || null,
+        was_visible: displayBefore.riddle_visible,
+      });
+      return res.json({ success: true, message: "Charada fechada no OBS.", riddle_visible: false, trace_id: traceId });
     case "change_ranking": {
       const order = ["round", "live", "weekly", "hidden"];
       const cur = gs.display.ranking_view || "live";
@@ -1453,7 +1901,14 @@ app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
       payload.ranking_view = next;
       broadcastToClients(tenant.browserClients, payload);
       broadcastToClients(tenant.logClients, payload);
-      return res.json({ success: true, ranking_view: next, message: "Ranking alterado para " + rankingLabel(next) + "." });
+      logPalavraDebug(tenant, "ranking.view_changed", {
+        trace_id: traceId,
+        game_id: gs.game_id || null,
+        from: cur,
+        to: next,
+        guess_count: Number(gs.guess_count) || 0,
+      });
+      return res.json({ success: true, ranking_view: next, message: "Ranking alterado para " + rankingLabel(next) + ".", trace_id: traceId });
     }
     case "show_ranking":
       gs.display.ranking_view = String((req.body && req.body.ranking_view) || "live").trim() || "live";
@@ -1476,11 +1931,25 @@ app.post("/api/game/display-action", auth.requireAuth, (req, res) => {
       payload.postgame_visible = false;
       break;
     default:
+      logPalavraDebug(tenant, "display_action.rejected", {
+        trace_id: traceId,
+        action: action || null,
+        game_id: gs.game_id || null,
+        reason: "unknown_action",
+      });
       return res.json({ success: false, error: "Action desconhecida: " + action });
   }
   broadcastToClients(tenant.browserClients, payload);
   broadcastToClients(tenant.logClients, payload);
-  res.json({ success: true, ...gs.display });
+  logPalavraDebug(tenant, "display_action.applied", {
+    trace_id: traceId,
+    action,
+    game_id: gs.game_id || null,
+    riddle_visible: !!gs.display.riddle_visible,
+    ranking_view: gs.display.ranking_view || "live",
+    postgame_visible: !!gs.display.postgame_visible,
+  });
+  res.json({ success: true, ...gs.display, trace_id: traceId });
 });
 
 function rankingLabel(view) {
@@ -1944,16 +2413,46 @@ app.post("/api/duelo/audio", auth.requireAuth, requireFeature("duelo"), (req, re
 app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
   const user = db.getUserById(req.user.id);
   if (!user) return res.status(401).json({ success: false, error: "Usuario nao encontrado" });
+  const tenant = getTenant(user.id);
+  const trace_id = crypto.randomUUID();
   if (!user.tiktok_username) {
-    return res.json({ success: false, error: "Defina o usuario do TikTok no painel" });
+    logStructuredEvent(tenant, { category: "notice", level: "warning", event: "connection.start.rejected",
+      trace_id, code: "TIKTOK_USERNAME_MISSING", message: "Conexão não iniciada: usuário TikTok não configurado." });
+    return res.json({ success: false, error: "Defina o usuario do TikTok no painel", trace_id });
   }
   const engine = user.tiktok_engine || "tiktoklive";
   if (engine === "tiktools" && !user.tiktools_api_key) {
-    return res.json({ success: false, error: "Defina a API key do Tik.Tools no painel (motor Tik.Tools)" });
+    logStructuredEvent(tenant, { category: "notice", level: "warning", event: "connection.start.rejected",
+      trace_id, code: "TIKTOOLS_KEY_MISSING", message: "Conexão não iniciada: credencial do motor TikTools ausente." });
+    return res.json({ success: false, error: "Defina a API key do Tik.Tools no painel (motor Tik.Tools)", trace_id });
   }
+  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.requested",
+    trace_id, message: "Solicitação de conexão com a live recebida.", details: { engine } });
+  // Duplo clique/outra aba não deve abrir uma segunda sessão igual.
+  if (tenant.sessionStarted && tenant.activeDaemonSessionId &&
+      tenant.activeLiveUsername === user.tiktok_username && tenant.activeLiveEngine === engine) {
+    logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.already_running",
+      trace_id, message: "A conexão solicitada já está ativa." });
+    return res.json({ success: true, already_running: true, message: "Monitoramento da live já ativo", trace_id });
+  }
+  const previousSession = {
+    sessionStarted: tenant.sessionStarted,
+    activeDaemonSessionId: tenant.activeDaemonSessionId,
+    activeLiveUsername: tenant.activeLiveUsername,
+    activeLiveEngine: tenant.activeLiveEngine,
+  };
+  const session_id = crypto.randomUUID();
+  // Ativa a geração ANTES de enviar start: qualquer mensagem atrasada da geração
+  // anterior passa a ser ignorada pelo guard em handleDaemonMessage.
+  tenant.activeDaemonSessionId = session_id;
+  tenant.activeLiveUsername = user.tiktok_username;
+  tenant.activeLiveEngine = engine;
+  tenant.sessionStarted = true;
   const ok = daemonSend({
     cmd: "start",
     tenant_id: user.id,
+    session_id,
+    trace_id,
     username: user.tiktok_username,
     api_key: user.tiktools_api_key,
     settings: readTenantSettings(user.id),
@@ -1962,23 +2461,42 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
     caca_config: db.getCacaConfig(user.id),
   });
   if (!ok) {
-    return res.json({ success: false, error: "Servico Python indisponivel" });
+    Object.assign(tenant, previousSession);
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "connection.start.failed",
+      trace_id, code: "DAEMON_UNAVAILABLE", message: "Serviço Python indisponível para iniciar a conexão." });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id });
   }
-  getTenant(user.id).sessionStarted = true;
+  broadcastStatus(tenant, { state: "connecting", user: user.tiktok_username });
+  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.queued",
+    trace_id, session_id, message: "Comando de conexão enviado ao daemon.", details: { engine } });
   // Ao iniciar a live, a ÁREA do Duelo fica DESATIVADA por padrão;
   // só entra quando o operador clicar em "Ativar Área".
   dueloForceStop(user.id);
-  res.json({ success: true, message: "Jogo iniciado" });
+  res.json({ success: true, message: "Jogo iniciado", trace_id });
 });
 
 app.post("/stop-game", auth.requireAuth, (req, res) => {
-  const ok = daemonSend({ cmd: "stop", tenant_id: req.user.id });
+  const tenant = getTenant(req.user.id);
+  const session_id = tenant.activeDaemonSessionId;
+  const trace_id = crypto.randomUUID();
+  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.stop.requested",
+    trace_id, session_id, message: "Solicitação para desconectar a live recebida." });
+  const ok = daemonSend({ cmd: "stop", tenant_id: req.user.id, session_id, trace_id });
   if (!ok) {
-    return res.json({ success: false, error: "Servico Python indisponivel" });
+    logStructuredEvent(tenant, { category: "error", level: "error", event: "connection.stop.failed",
+      trace_id, session_id, code: "DAEMON_UNAVAILABLE", message: "Serviço Python indisponível para desconectar." });
+    return res.json({ success: false, error: "Servico Python indisponivel", trace_id });
   }
-  getTenant(req.user.id).sessionStarted = false;
+  // Invalidar já a geração para rejeitar eventos tardios após desconexão manual.
+  tenant.sessionStarted = false;
+  tenant.activeDaemonSessionId = null;
+  tenant.activeLiveUsername = null;
+  tenant.activeLiveEngine = null;
+  broadcastStatus(tenant, { state: "offline", user: tenant.currentStatus?.user || "" });
+  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.stop.queued",
+    trace_id, session_id, message: "Comando de desconexão enviado ao daemon." });
   dueloForceStop(req.user.id); // desconectar live também desativa a Área do Duelo
-  res.json({ success: true, message: "Jogo encerrado" });
+  res.json({ success: true, message: "Jogo encerrado", trace_id });
 });
 
 function dueloForceStop(userId) {

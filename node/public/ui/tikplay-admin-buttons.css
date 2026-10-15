@@ -1,6 +1,7 @@
 /* Shared action-button system for streamer and Super Admin panels. */
 .tp-panel-streamer,
-.tp-super-admin {
+.tp-super-admin,
+.tp-auth-page {
   --tp-button-radius: 11px;
   --tp-button-height: 40px;
   --tp-button-primary: linear-gradient(135deg,#26d8ff,#1591ff);
@@ -18,6 +19,7 @@
   --tp-button-warning-border: rgba(255,211,92,.26);
 }
 .tp-panel-streamer { --tp-button-focus: var(--cyan,#26d8ff); }
+.tp-auth-page { --tp-button-focus: var(--tp-auth-cyan,#26d8ff); }
 .tp-super-admin {
   --tp-button-neutral: var(--tp-surface-soft);
   --tp-button-neutral-ink: var(--tp-text);
@@ -37,6 +39,47 @@
   font: 700 12px/1.2 var(--tp-font-ui,Inter,Arial,sans-serif);
   text-decoration: none;
   transition: transform .16s ease,background-color .18s ease,border-color .18s ease,color .18s ease,filter .18s ease;
+}
+
+.tp-auth-form :is(.btn,.btn-nb) {
+  min-height: var(--tp-button-height);
+  padding: 0 14px;
+  border: 1px solid var(--tp-button-neutral-border);
+  border-radius: var(--tp-button-radius);
+  background: var(--tp-button-neutral);
+  color: var(--tp-button-neutral-ink);
+  box-shadow: none;
+  font: 700 12px/1.2 var(--tp-font-ui,Inter,Arial,sans-serif);
+  text-decoration: none;
+  transition: transform .16s ease,background-color .18s ease,border-color .18s ease,color .18s ease,filter .18s ease;
+}
+
+.tp-auth-form :is(.btn-primary,.btn-nb.btn-primary) {
+  border-color: transparent;
+  background: var(--tp-button-primary);
+  color: var(--tp-button-primary-ink);
+}
+
+.tp-auth-form :is(.btn,.btn-nb):not(:disabled):not([aria-disabled="true"]):is(:hover,:active) {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.tp-auth-form :is(.btn,.btn-nb):not(:disabled):not([aria-disabled="true"]):active {
+  filter: brightness(.97);
+  transform: translateY(0);
+}
+
+.tp-auth-form :is(.btn,.btn-nb):disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: .48;
+  transform: none;
+}
+
+.tp-auth-form :is(.btn,.btn-nb):focus-visible {
+  outline: 2px solid var(--tp-button-focus);
+  outline-offset: 3px;
 }
 
 .tp-panel-streamer :is(.btn-sm,.btn-small,.btn-tiny),

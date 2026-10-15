@@ -36,12 +36,12 @@ module.exports = function registerReportRoutes(app, ctx = {}) {
   });
 
   app.get("/api/reports/summary", auth.requireAuth, (req, res) => {
-    const summary = db.summaryInteractions({
-      tenantId: req.user.id,
-      from: parseTime(req.query.from),
-      to: parseTime(req.query.to),
-      room_id: req.query.room_id ? String(req.query.room_id) : null,
-    });
+    const from = parseTime(req.query.from);
+    const to = parseTime(req.query.to);
+    const room_id = req.query.room_id ? String(req.query.room_id) : null;
+    const summary = db.summaryInteractions({ tenantId: req.user.id, from, to, room_id });
+    // Subidas de nível: contagens por eixo (fonte dedicada, retenção longa).
+    summary.level_up = db.summarizeLevelUps({ tenantId: req.user.id, from, to, room_id });
     res.json({ success: true, ...summary });
   });
 
@@ -70,15 +70,21 @@ module.exports = function registerReportRoutes(app, ctx = {}) {
   });
 
   app.get("/api/reports/events", auth.requireAuth, (req, res) => {
-    const result = db.queryInteractions({
-      tenantId: req.user.id,
-      from: parseTime(req.query.from),
-      to: parseTime(req.query.to),
-      room_id: req.query.room_id ? String(req.query.room_id) : null,
-      type: req.query.type ? String(req.query.type) : null,
-      cursor: req.query.cursor ? Number(req.query.cursor) : null,
-      limit: parseLimit(req.query.limit, 50, 200),
-    });
+    const from = parseTime(req.query.from);
+    const to = parseTime(req.query.to);
+    const room_id = req.query.room_id ? String(req.query.room_id) : null;
+    const type = req.query.type ? String(req.query.type) : null;
+    const cursor = req.query.cursor ? Number(req.query.cursor) : null;
+    const limit = parseLimit(req.query.limit, 50, 200);
+    const axis = req.query.axis ? String(req.query.axis) : null;
+
+    // Subidas de nível vêm da tabela dedicada (retenção longa + filtro por eixo).
+    if (type === "level_up") {
+      const result = db.queryLevelUps({ tenantId: req.user.id, from, to, room_id, axis, cursor, limit });
+      return res.json({ success: true, events: result.events, next_cursor: result.next_cursor });
+    }
+
+    const result = db.queryInteractions({ tenantId: req.user.id, from, to, room_id, type, cursor, limit });
     res.json({ success: true, events: result.events, next_cursor: result.next_cursor });
   });
 

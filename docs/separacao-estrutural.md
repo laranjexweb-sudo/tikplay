@@ -139,3 +139,16 @@
 - `node/server.js`: `TTS_VOICES` = `[edge_antonio, edge_francisca]`.
 - Painel: seletor de voz **só Edge**; removidas opções antigas, vozes de navegador, `enqueueNarrate`/`chat_narrate`/`NARRATE_GAP`; `testPanelVoice` só servidor.
 - **Resultado:** narração por voz existe **somente para a Charada (Palavra Secreta)**; o chat não é mais narrado.
+
+## 14. Narração do chat reativada com Edge (2026-10-15)
+
+- `edge-tts` atualizado no ambiente local de 7.2.8 para a versão mais recente verificada, 7.3.1; fixado em `python/requirements-tts.txt`. A instalação de produção requer atualização usando o mesmo Python configurado para o daemon.
+- Sons expõe ativação, modo e caractere de filtro da narração de chat. O daemon aplica limpeza de emoji/conteúdo não falável, limite de texto, exclusão do streamer, fila serial limitada por sessão e contagens agregadas sem comentário bruto em logs.
+- Chat reutiliza as preferências de voz e velocidade e o evento de entrega de narração existente; a página de painel reproduz as URLs TTS em sequência. Charada continua usando texto gerado pelo OpenRouter e áudio sintetizado pelo mesmo Edge TTS.
+- Voz e taxa são capturadas no início da geração da charada e permanecem no cache do áudio; diagnóstico registra estágio, taxa, voz, duração e estado sem texto da charada nem palavra secreta.
+- Contrato da configuração continua em `/api/settings` e `tenant_settings`; não há migração de banco. Ver mapa de observabilidade, regras e testes em `docs/narracao-chat-edge.md`.
+
+## 15. Áudio da charada somente no painel (2026-10-15)
+
+- O texto da charada continua na página pública/OBS. O evento `riddle_audio` é entregue somente aos clientes de log do painel; a página pública não recebe nem reproduz o MP3.
+- Narração automática e replay manual da charada acontecem no painel e obedecem `riddle_auto_narrate` para o modo automático. O replay usa a URL TTS já gerada, sem pedir nova geração OpenRouter.

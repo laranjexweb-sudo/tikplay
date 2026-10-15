@@ -63,10 +63,27 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Layout v2/v3 ampliado de forma **aditiva** (mantém `x,y,scale,count`). Novos campos validados (sem CSS arbitrário): `photo_position` (left/right/top/bottom), `font_color` (#rrggbb), `shadow` (none/soft/medium/strong), `animation` (float/rise/pop/sway), `heart_colors` (até 5 hex). `GET /api/likes-overlay/layout` expõe `options`/`defaults`; POST inválido → 400.
 
 ### 2.7 Níveis do usuário (apresentador / comunidade)
-- Níveis: **Presenteador** (`user.pay_grade.level`) e **Membro/comunidade** (`user.fans_club.data.level`). Extraídos em `tiktoklive_handler._user_meta`; TikTools best-effort.
-- **Regra:** 1ª aparição na live apenas **sincroniza** nível (baseline + global), **sem animação** (mesmo se subiu em outra live). Animação só quando o nível **sobe durante a nossa live**.
-- Estado: `viewer_levels` (global por usuário) e `live_viewer_levels` (baseline por live). A subida é persistida como interação `level_up` (`meta = {axis, before, after}`); a divergência de entrada não gera interação.
-- Node detecta e **difunde** WS `{"type":"level_up","axis":"gifter"|"fanclub","before","after","user",...}`; APIs `/api/reports/events?type=level_up` e `/api/reports/levels`. Ver `docs/relatorios-interacoes.md` §7.
+- **Dois eixos explícitos, nunca misturados:** `axis: "gifter"` (presenteador — `user.pay_grade.level`/
+  `ExtendedUser.gifter_level`) e `axis: "fanclub"` (comunidade — `fans_club_info.fans_level`/
+  `fans_club.data.level`/`ExtendedUser.member_level`). TikTools best-effort.
+- **Regras:** 1ª aparição na live apenas **sincroniza** (baseline + global), **sem evento**. Conta-se só
+  subida **durante a live**. **`before: null` quando não há baseline confiável** (não inferimos `after-1`
+  nem nível global antigo). Sinais: explícito (`BarrageEvent` `USER_UPGRADE` e `FANS_LEVEL_UPGRADE`) + diff;
+  `FANS_LEVEL_ENTRANCE` não é subida.
+- **Estado:** `viewer_levels` (global por usuário) e `live_viewer_levels` (baseline por live). Subidas ficam
+  em **`level_ups`** (tabela dedicada, retenção `LEVEL_UPS_RETENTION_DAYS`, default 730d), com **dedupe** por
+  `(tenant, sala, usuário, eixo, nível)` e por `event_id`; a divergência de entrada não gera subida.
+- Node detecta e **difunde** WS `{"type":"level_up","axis":"gifter"|"fanclub","before":N|null,"after":N,"user",...}`;
+  APIs `/api/reports/events?type=level_up&axis=` (filtro por eixo) e `/api/reports/summary` (`level_up.by_axis`)
+  e `/api/reports/levels`. No painel, `before: null` exibe "nível anterior não identificado". Ver `docs/relatorios-interacoes.md` §7.
+- `POST /api/presenter-level/test` exige autenticação e difunde apenas um evento visual `level_up` de teste (`test: true`) às fontes `/browser` da própria conta; não grava interação nem altera níveis. Aceita `scenario: "same-tier"` (23 → 24) ou `scenario: "tier-change"` (29 → 30), e `axis: "gifter"` ou `"fanclub"` (padrão gifter); sem corpo mantém o cenário/eixo de troca do presenteador por compatibilidade. A fonte OBS precisa estar aberta para receber o teste.
+- A fonte pública única `/overlays/presenter-level/overlay.html` identifica `axis: "gifter"` (presenteador) e `axis: "fanclub"` (comunidade). A comunidade segue os marcos 1/10/20/30/40/50, usa os escudos `assets/community/capitulo1.png` a `capitulo6.png` e a identidade Jornada de Fã; não cria outro canal de coleta ou persistência.
+
+### 2.8 Fonte de subida de nível (canvas e layout)
+- A animação do presenteador fica dentro de um canvas mestre fixo de **1040×820 px**; as mudanças de fase não alteram as dimensões da fonte de navegador no OBS/TikTok Live Studio. A fonte reduz proporcionalmente o canvas apenas quando a resolução configurada é menor.
+- Posição e escala são preferências por conta em `tenant_settings.presenter_level_overlay_layout` (`x/y` 0–100%, `scale` 0,5–2, padrão 50/50/1). Não criar serviço ou persistência paralelos.
+- `GET/POST /api/presenter-level/layout` usa autenticação existente e `req.user.id`; POST rejeita layout inválido com 400. Alterações são propagadas para as fontes da própria conta pelo evento WebSocket `presenter_level_layout`.
+- O painel atualiza a prévia imediatamente e salva automaticamente. A fonte OBS busca o layout no endpoint e aplica atualizações recebidas durante a live.
 
 ---
 
@@ -76,6 +93,10 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - A caixa de logs (`.log-area`) possui barra de rolagem dedicada (`overflow-y: scroll`), `height` flexível e estilização de scrollbar customizada.
 - Possui o botão **Copiar Logs** que copia todo o histórico formatado para a área de transferência via `navigator.clipboard`.
 - Possui o botão **Limpar** para resetar a visualização da tela quando necessário.
+- Padrão obrigatório para qualquer implementação que gere ações, eventos ou falhas: consultar **`docs/PADRAO_DE_LOGS.md`**, planejar categoria/nível/correlação/privacidade e validar o evento no processo atualizado. Instrumentação presente no código não comprova que o processo em execução já a carregou.
+- Comentários reais permanecem somente na categoria **Chat** (truncados e com throttle); não duplicar o texto em Diagnóstico ou nas categorias de jogo/sistema.
+- Eventos estruturados de diagnóstico da Palavra Secreta usam `game: "palavra"` e `level: "debug"`, devem ser classificados como Diagnóstico e não podem incluir palavra secreta, texto completo da charada ou comentário bruto. A presença em execução precisa ser confirmada no log persistido e no filtro **Diagnóstico detalhado**.
+- O Jogo 3 Dicas usa `category: "game"`, `game: "tres"` e eventos `tres.*`; logs de início, geração/fallback de dicas, estágios, presentes, vitória, timeout e controles não podem incluir resposta, texto integral de dica ou palpite bruto. Usar `game_id`/rodada e `trace_id` quando a ação veio do painel; não emitir log por tick ou por palpite incorreto individual.
 
 ### 3.2 Overlay de Dica Ativada (`dica-overlay`)
 - Card centralizado via Flexbox (`align-items: center; justify-content: center;`).
@@ -94,6 +115,17 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - **Servidor Web (Node.js/Express)**: Rodando na porta `3100`, gerenciando sessões WebSockets (`/browser`, `/logs`), persistência SQLite e rotas REST.
 - **Daemon de NLP (Python `service.py`)**: Executado como filho do processo Node (`PYTHON_BIN`). Respawn automático com backoff exponencial se desconectado.
 - **Modelo SpaCy**: Utiliza o modelo `pt_core_news_lg` para calcular a similaridade semântica por vetores entre palpites e a palavra secreta.
+
+### 4.1 Narração por voz do chat e das charadas
+
+- Comentários do espectador podem ser lidos em voz alta pelo Edge TTS; o padrão é desativado (`chat_narr_enabled = false`). A fala usa apenas o texto limpo, sem narrar o nome do usuário; emojis, menções, URLs, hashtags/símbolos não faláveis são removidos e o texto é limitado a 200 caracteres.
+- `chat_narr_mode`: `all` lê todos os comentários; `exclude` ignora os que começam por `chat_narr_char`; `only` lê somente os que começam por esse caractere e remove o caractere antes da fala. Padrão: `all` e `#`.
+- A leitura ignora comentários do próprio streamer. Não altera captura, pontuação, filtros de participação ou encaminhamento do comentário aos jogos.
+- A fila do daemon é serial e limitada a 10 itens por sessão; comentários expiram após 10 segundos, e itens pendentes são limpos ao alterar ativação/filtro/voz/velocidade ou desconectar. Quando cheia, descarta novos itens até haver espaço. A reprodução no painel também é serial e limitada a 10 itens, priorizando charada e teste de voz sobre comentários pendentes; mensagens expiram após o prazo restante enviado pelo daemon.
+- O cache local de áudio Edge mantém no máximo 500 MP3s recentes por conta; MP3s mais antigos são removidos durante a geração de novos áudios.
+- A voz (`tts_voice`) e a velocidade (`tts_rate`) configuradas em **Sons → Narração** são compartilhadas entre chat e charadas. Voz/velocidade da charada são capturadas antes da geração OpenRouter, para que alterações durante uma requisição não mudem a narração já solicitada.
+- OpenRouter gera exclusivamente o texto da charada; Edge TTS gera o MP3. O texto da charada aparece no painel e na página pública/OBS; o áudio é entregue somente ao painel streamer. `riddle_auto_narrate` controla a reprodução automática no painel e permanece independente do toggle de narração do chat.
+- Logs técnicos agregam contagens e falhas; nunca incluem comentário bruto, nome de usuário, texto integral da charada, palavra secreta ou prompt. A persistência de interações de comentário segue a retenção funcional documentada na seção 2.5.
 
 ---
 
@@ -161,6 +193,33 @@ persistência em `node/db.js` (`monitor_incidents`, `monitor_silences`). Contrat
 - **Instrumentação:** o middleware ignora `req.path` que comece com `/api/admin/monitor`
   (inclui o stream SSE) para não distorcer a própria medição. Limiares vivem em
   `lib/monitor.js` (`THRESHOLDS`) e são expostos em `GET /api/admin/monitor/thresholds`.
+---
+
+## 8. Jogo Contexto Público (site — sem live)
+
+Página pública `/contexto` (`node/public/contexto.html`, auto-contida) e API pública
+`/api/contexto/*` (`node/routes/contexto.js`), sem autenticação. Reutiliza o motor
+`JogoContexto` (`python/jogos/palavra.py`) por meio de `python/contexto_public.py`, que roda
+no **mesmo daemon `service.py`** (comandos `public_*`, sem `tenant_id`; resposta
+`{type:"public_result", req_id, ok, data}`).
+
+- **Palavra do dia:** sorteio pseudorrandômico por navegador e data no fuso `America/Sao_Paulo`;
+  o identificador aleatório do navegador mantém a mesma palavra até a virada do dia.
+- **Modo ilimitado:** palavra aleatória por rodada (`Map` em memória com TTL de 6h); a página
+  sorteia ao entrar no modo e avança automaticamente após mostrar um acerto. O navegador envia
+  a lista local das palavras já acertadas para evitar repeti-las.
+- **Dicas:** 3 por jogo, em posições fixas do índice (`HINT_INDEXES`), sem repetir palavras
+  já chutadas/dicadas (`avoid`).
+- **Ranking:** lista do próprio jogador, anônima (sem nome/avatar). Cores por rank iguais às
+  do jogo da live (`get_rank_color`).
+- **Informação oculta:** a página/API não informa o tamanho da palavra e não oferece endpoint
+  de revelação; a palavra só é retornada quando o jogador acerta.
+- **Tensão:** calculada no cliente com a mesma fórmula do motor
+  (`min(palpites/60,1)*50 + max((100-melhorRank)/100,0)*50`).
+- **Cache:** `localStorage` guarda o identificador anônimo do navegador, o jogo diário daquele
+  navegador e as palavras já acertadas no ilimitado. Nenhum dado de jogador é persistido no servidor.
+- **Índice:** reusa o cache (`_INDEX_CACHE` + `palavra_index_cache` do `data.db`). Não altera o jogo da live.
 
 ---
+
 *Documento exportado automaticamente para referência e governança do projeto.*

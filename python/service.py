@@ -1,10 +1,12 @@
 import asyncio
 import json
+import math
 import os
 import re
 import sys
 import threading
 import time
+import uuid
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,16 +22,23 @@ from corda import CordaEngine
 from batalha import BatalhaEngine
 from tiktools_handler import TikToolsHandler
 from tiktoklive_handler import TikTokLiveHandler
+from contexto_public import handle_public_command
 import db
 import tts
 
 TTS_AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "public", "tts-audio")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.br")
+CHAT_NARRATION_QUEUE_SIZE = 10
+CHAT_NARRATION_MAX_AGE_SECONDS = 10.0
+CHAT_NARRATION_STATS_INTERVAL = 30.0
 
 _gifts_sync_running = False
 
 
-from service_common import DEFAULT_SETTINGS, normalize_settings, get_rank_color, emit
+from service_common import (
+    DEFAULT_SETTINGS, normalize_settings, get_rank_color, emit,
+    bind_session_id, reset_session_id, set_active_session_id, clear_active_session_id,
+)
 
 
 async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
@@ -89,11 +98,20 @@ async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
     return f"Estou pensando em algo que tem relação com {word_a}, traz à mente {word_b} e se conecta com {word_c}. Você sabe o que é?"
 
 
-async def generate_tres_dicas(secret_word: str) -> list:
+async def generate_tres_dicas(secret_word: str, log_cb=None) -> list:
     """Gera 3 dicas progressivas (difícil → fácil) para a palavra secreta.
 
     Retorna uma lista de 3 strings. Fallback textual caso a API falhe.
     """
+    started_at = time.perf_counter()
+
+    def report(event, **details):
+        if log_cb:
+            try:
+                log_cb(event, details)
+            except Exception:
+                pass
+
     api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
     fallback = [
         "Ixi, a inteligência artificial foi lá tratar das cabras...",
@@ -101,10 +119,12 @@ async def generate_tres_dicas(secret_word: str) -> list:
         f"Rodada brinde para os rápidos! A palavra é: {secret_word.upper()}"
     ]
     if not api_key:
+        report("generation.fallback", reason="api_key_unavailable", duration_ms=round((time.perf_counter() - started_at) * 1000))
         return fallback
     import urllib.request
     root_norm = strip_accents(secret_word).lower()
     root_len = max(3, len(root_norm) - 2)
+    last_error_type = None
     for attempt in range(2):
         try:
             req_body = json.dumps({
@@ -173,15 +193,23 @@ async def generate_tres_dicas(secret_word: str) -> list:
                     cleaned = [strip_accents(d).lower() for d in dicas]
                     used_root = any(root_norm[:root_len] in c for c in cleaned)
                     if not used_root:
+                        report("generation.completed", attempts=attempt + 1,
+                               duration_ms=round((time.perf_counter() - started_at) * 1000))
                         return dicas[:3]
-        except Exception:
+        except Exception as exc:
+            last_error_type = type(exc).__name__
             continue
+    report("generation.fallback", reason=last_error_type or "invalid_provider_response",
+           attempts=2, duration_ms=round((time.perf_counter() - started_at) * 1000))
     return fallback
 
 
 class GameSession:
-    def __init__(self, tenant_id, username, api_key, history_path, gift_tags, engine="tiktools"):
+    def __init__(self, tenant_id, username, api_key, history_path, gift_tags, engine="tiktools", session_id=None, connect_trace_id=None):
         self.tenant_id = tenant_id
+        self.session_id = str(session_id or uuid.uuid4().hex)
+        self.connect_trace_id = str(connect_trace_id or "") or None
+        self.shutdown_trace_id = None
         self.username = username
         self.api_key = api_key
         self.engine = engine or "tiktools"
@@ -213,10 +241,29 @@ class GameSession:
             on_share=self.on_share,
             on_join=self.on_member,
             on_follow=self.on_follow,
+            on_level_up=self.on_level_up,
         )
         self.handler._emit_status = self.emit_status
         self.handler.log_cb = lambda text: emit(self.tenant_id, "log", text)
         self.queue = asyncio.create_task if False else asyncio.Queue()
+        self._chat_narration_queue = asyncio.Queue(maxsize=CHAT_NARRATION_QUEUE_SIZE)
+        self._chat_narration_task = None
+        self._chat_narration_epoch = 0
+        self._chat_narration_stats = {
+            "received": 0,
+            "filtered": 0,
+            "queued": 0,
+            "synthesized": 0,
+            "synthesized_characters": 0,
+            "synthesis_duration_ms": 0,
+            "stale": 0,
+            "failed": 0,
+            "dropped": 0,
+        }
+        self._chat_narration_stats_at = time.monotonic()
+        self._chat_narration_configs = set()
+        self._chat_narration_overflow_at = 0.0
+        self._chat_narration_error_at = 0.0
         self.task = None
         self.likes = {}
         self._likes_dirty = False
@@ -231,6 +278,7 @@ class GameSession:
         self.tap_meta_ready = False
         self._tap_meta_cooldown_until = 0
         self._preparing = False
+        self._last_logged_status = None
         self.settings = dict(DEFAULT_SETTINGS)
         try:
             db_settings = db.get_tenant_settings(tenant_id)
@@ -307,6 +355,39 @@ class GameSession:
             payload["meta"] = meta
         emit(self.tenant_id, "interaction", payload)
 
+    def _palavra_debug(self, event, **details):
+        """Log estruturado do fluxo Palavra Secreta; nunca inclui palavra secreta,
+        texto de charada ou comentário bruto."""
+        self._log_event(
+            category="diagnostic",
+            level="debug",
+            event="palavra." + str(event),
+            message="[debug][Palavra] " + str(event),
+            game="palavra",
+            game_id=details.pop("game_id", None),
+            trace_id=details.pop("trace_id", None),
+            code=details.pop("code", None),
+            duration_ms=details.pop("duration_ms", None),
+            details=details,
+        )
+
+    def _log_event(self, category, level, event, message, game="", game_id=None,
+                   trace_id=None, code=None, duration_ms=None, details=None):
+        """Emite um evento de log com metadados persistíveis e sem payload bruto."""
+        emit(self.tenant_id, "log", {
+            "text": str(message or ""),
+            "category": str(category or "system"),
+            "level": str(level or "info"),
+            "game": str(game or ""),
+            "event": str(event or "legacy.message"),
+            "source": "python",
+            "game_id": str(game_id) if game_id is not None else None,
+            "trace_id": str(trace_id) if trace_id else None,
+            "code": str(code) if code else None,
+            "duration_ms": duration_ms,
+            "details": details if details else None,
+        })
+
     def _ensure_room(self, room_id):
         """Detecta troca de sala. Nova sala => abre nova sessao de live e zera o
         ranking/acumulador de curtidas (dados sao por live). NAO encerra partidas."""
@@ -336,7 +417,7 @@ class GameSession:
         })
         emit(self.tenant_id, "log", f"[Live] Nova sala detectada ({rid}) — ranking de curtidas reiniciado")
 
-    def _track_levels(self, user, nickname, avatar, user_meta, room_id=None):
+    def _track_levels(self, user, nickname, avatar, user_meta, room_id=None, level_up_axis=None, event_id=None):
         """Observa os níveis do usuário (presenteador/fã-clube) e emite ao Node só
         quando há valor válido e mudou desde a última vista na sala. O Node decide
         se foi subida (Antes > Depois) e se deve animar."""
@@ -355,7 +436,7 @@ class GameSession:
         rid = str(room_id or self.current_room_id or "")
         key = (rid, str(user or ""))
         prev = self._viewer_levels.get(key)
-        if prev is not None and prev[0] == g and prev[1] == f:
+        if prev is not None and prev[0] == g and prev[1] == f and not level_up_axis:
             return
         self._viewer_levels[key] = (g, f)
         emit(self.tenant_id, "viewer_level", {
@@ -368,51 +449,240 @@ class GameSession:
             "gifter_grade": str(user_meta.get("gifter_grade") or ""),
             "fan_club_level": f or 0,
             "fan_club_name": str(user_meta.get("fan_club_name") or ""),
+            "level_up_axis": level_up_axis,
+            "event_id": str(event_id or ""),
             "ts": int(time.time() * 1000),
         })
 
+    async def on_level_up(self, user, nickname, avatar, user_meta=None, axis="fanclub", level=0, room_id=None, event_id=None):
+        """Promoção explícita de nível (barrage do TikTokLive): presenteador ou fã-clube."""
+        self._ensure_room(room_id)
+        meta = dict(user_meta or {})
+        key = "gifter_level" if axis == "gifter" else "fan_club_level"
+        try:
+            meta[key] = int(level or meta.get(key) or 0)
+        except (TypeError, ValueError):
+            meta[key] = 0
+        if meta[key] <= 0:
+            return
+        self._track_levels(user, nickname, avatar, meta, room_id, level_up_axis=axis, event_id=event_id)
+
     def _rate_value(self) -> float:
         try:
-            return float(self.settings.get("tts_rate") or 1.0)
+            rate = float(self.settings.get("tts_rate", 1.0))
+            return rate if math.isfinite(rate) else 1.0
         except (TypeError, ValueError):
             return 1.0
 
-    async def _tts_url(self, text: str) -> str:
-        """Gera áudio da charada com o motor Edge e retorna a URL pública (Edge-only)."""
+    def _tts_config_snapshot(self) -> dict:
+        return {
+            "voice_key": str(self.settings.get("tts_voice") or tts.VOICE_EDGE_ANTONIO),
+            "rate": self._rate_value(),
+        }
+
+    def _record_chat_narration(self, key: str, amount: int = 1):
+        stats = self._chat_narration_stats
+        stats[key] = int(stats.get(key, 0)) + int(amount)
+        now = time.monotonic()
+        if now - self._chat_narration_stats_at < CHAT_NARRATION_STATS_INTERVAL:
+            return
+        self._flush_chat_narration_stats(now)
+
+    def _flush_chat_narration_stats(self, now=None):
+        now = time.monotonic() if now is None else now
+        stats = self._chat_narration_stats
+        summary = {name: value for name, value in stats.items() if value}
+        if summary:
+            self._log_event(
+                "chat", "info", "chat.tts.batch", "Resumo agregado da narração do chat.",
+                details={
+                    **summary,
+                    "window_ms": round((now - self._chat_narration_stats_at) * 1000),
+                    "configurations": [
+                        {"voice": voice, "rate": rate}
+                        for voice, rate in sorted(self._chat_narration_configs)
+                    ],
+                    "queue_limit": CHAT_NARRATION_QUEUE_SIZE,
+                },
+            )
+            self._chat_narration_stats = {name: 0 for name in stats}
+            self._chat_narration_configs.clear()
+        self._chat_narration_stats_at = now
+
+    def _enqueue_chat_narration(self, user: str, text: str):
+        if not self.settings.get("chat_narr_enabled"):
+            return
+        self._record_chat_narration("received")
+        if str(user or "").lstrip("@").casefold() == str(self.username or "").lstrip("@").casefold():
+            self._record_chat_narration("filtered")
+            return
+
+        cleaned = tts.prepare_chat_text(
+            text,
+            mode=self.settings.get("chat_narr_mode", "all"),
+            marker=self.settings.get("chat_narr_char", "#"),
+        )
+        if not cleaned:
+            self._record_chat_narration("filtered")
+            return
+
+        item = {
+            "text": cleaned,
+            "queued_at": time.monotonic(),
+            "epoch": self._chat_narration_epoch,
+            **self._tts_config_snapshot(),
+        }
+        try:
+            self._chat_narration_queue.put_nowait(item)
+            self._chat_narration_configs.add((item["voice_key"], item["rate"]))
+            self._record_chat_narration("queued")
+        except asyncio.QueueFull:
+            self._record_chat_narration("dropped")
+            now = time.monotonic()
+            if now - self._chat_narration_overflow_at >= CHAT_NARRATION_STATS_INTERVAL:
+                self._chat_narration_overflow_at = now
+                self._log_event(
+                    "chat", "warning", "chat.tts.queue_full",
+                    "Fila de narração do chat cheia; novos comentários foram descartados.",
+                    code="TTS_CHAT_QUEUE_FULL",
+                    details={"queue_limit": CHAT_NARRATION_QUEUE_SIZE},
+                )
+
+    def _reset_chat_narration(self, enabled: bool):
+        self._chat_narration_epoch += 1
+        drained = 0
+        while True:
+            try:
+                self._chat_narration_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            else:
+                self._chat_narration_queue.task_done()
+                drained += 1
+        if drained:
+            self._record_chat_narration("stale", drained)
+        emit(self.tenant_id, "narrate", {"reset": True, "enabled": bool(enabled)})
+
+    async def _chat_narration_worker(self):
+        while True:
+            item = await self._chat_narration_queue.get()
+            synthesis_started = time.perf_counter()
+            try:
+                if (item["epoch"] != self._chat_narration_epoch
+                        or not self.settings.get("chat_narr_enabled")
+                        or time.monotonic() - item["queued_at"] > CHAT_NARRATION_MAX_AGE_SECONDS):
+                    self._record_chat_narration("stale")
+                    continue
+                audio_url = await self._tts_url(
+                    item["text"], voice_key=item["voice_key"], rate=item["rate"]
+                )
+                if audio_url:
+                    age = time.monotonic() - item["queued_at"]
+                    if (item["epoch"] != self._chat_narration_epoch
+                            or not self.settings.get("chat_narr_enabled")
+                            or age > CHAT_NARRATION_MAX_AGE_SECONDS):
+                        self._record_chat_narration("stale")
+                        continue
+                    # Usa o caminho daemon → Node → clientes de log já existente.
+                    emit(self.tenant_id, "narrate", {
+                        "url": audio_url,
+                        "expires_in_ms": max(0, round((CHAT_NARRATION_MAX_AGE_SECONDS - age) * 1000)),
+                    })
+                    self._record_chat_narration("synthesized")
+                    self._record_chat_narration("synthesized_characters", len(item["text"]))
+                    self._record_chat_narration(
+                        "synthesis_duration_ms",
+                        round((time.perf_counter() - synthesis_started) * 1000),
+                    )
+                else:
+                    self._record_chat_narration("failed")
+                    self._log_chat_narration_failure("EDGE_TTS_NO_AUDIO", item)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._record_chat_narration("failed")
+                self._log_chat_narration_failure(type(exc).__name__, item)
+            finally:
+                self._chat_narration_queue.task_done()
+
+    def _log_chat_narration_failure(self, reason: str, item: dict):
+        now = time.monotonic()
+        if now - self._chat_narration_error_at < 5.0:
+            return
+        self._chat_narration_error_at = now
+        self._log_event(
+            "error", "error", "chat.tts.failed",
+            "Não foi possível gerar o áudio de um comentário.", game="chat",
+            code="TTS_CHAT_SYNTHESIS_FAILED",
+            details={
+                "reason": str(reason)[:80],
+                "voice": str(item.get("voice_key") or "")[:40],
+                "rate": item.get("rate"),
+            },
+        )
+
+    async def _tts_url(self, text: str, voice_key: str = None, rate: float = None) -> str:
+        """Gera áudio pelo Edge com voz/taxa explícitas e retorna sua URL pública."""
         if not text:
             return None
-        voice_key = str(self.settings.get("tts_voice") or tts.VOICE_EDGE_ANTONIO)
+        cfg = self._tts_config_snapshot()
+        voice_key = str(voice_key or cfg["voice_key"])
+        rate = cfg["rate"] if rate is None else float(rate)
         audio_dir = os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id))
         try:
-            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
+            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, rate)
             if not audio_path:
                 # Edge e flaky: tenta mais uma vez (1ª falha pode ser transitoria)
                 await asyncio.sleep(0.8)
-                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, self._rate_value())
-        except Exception as e:
-            self._throttled_log("tts_err", f"[TTS] erro ao sintetizar '{voice_key}': {type(e).__name__}: {e}", game="tts", level="err")
+                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, rate)
+        except Exception:
             return None
         if not audio_path:
-            motivo = getattr(tts, "EDGE_LAST_ERROR", "") or ""
-            suffix = f" | motivo: {motivo}" if motivo else ""
-            self._throttled_log("tts_noaudio", f"[TTS] sem áudio (Edge falhou) para: '{text[:40]}'{suffix}", game="tts", level="warn", secs=5.0)
             return None
         return f"/tts-audio/{self.tenant_id}/{os.path.basename(audio_path)}"
 
-    async def _narrate_riddle_async(self, stage, riddle_text):
+    async def _narrate_riddle_async(self, stage, riddle_text, trace_id=None, tts_config=None):
         """Gera o áudio da charada em background (não trava a liberação na live)
         e emite 'riddle_audio' quando o mp3 fica pronto."""
+        config = dict(tts_config or self._tts_config_snapshot())
+        started = time.perf_counter()
+        self._palavra_debug(
+            "riddle.tts_started", game_id=self.game.game_id, trace_id=trace_id,
+            stage=stage, text_length=len(riddle_text or ""),
+            voice=config.get("voice_key"), rate=config.get("rate"),
+        )
         try:
-            audio_url = await self._tts_url(riddle_text)
+            audio_url = await self._tts_url(
+                riddle_text,
+                voice_key=config.get("voice_key"),
+                rate=config.get("rate"),
+            )
         except Exception as e:
-            emit(self.tenant_id, "log", f"[TTS] erro ao gerar audio em background: {type(e).__name__}: {e}", game="tts", level="err")
+            audio_url = None
+            error_type = type(e).__name__
+        else:
+            error_type = "EdgeUnavailable"
+        duration_ms = round((time.perf_counter() - started) * 1000)
+        if not audio_url:
+            self._log_event(
+                "error", "error", "tts.riddle_audio.failed",
+                "Não foi possível gerar o áudio da charada.", game="palavra",
+                game_id=getattr(self.game, "game_id", None), trace_id=trace_id,
+                code="TTS_RIDDLE_SYNTHESIS_FAILED", duration_ms=duration_ms,
+                details={"stage": stage, "error_type": error_type,
+                         "voice": config.get("voice_key"), "rate": config.get("rate")},
+            )
             return
-        if audio_url:
-            emit(self.tenant_id, "game", {
-                "type": "riddle_audio",
-                "stage": stage,
-                "audio_url": audio_url,
-            })
+        self._palavra_debug(
+            "riddle.tts_completed", game_id=self.game.game_id, trace_id=trace_id,
+            stage=stage, duration_ms=duration_ms,
+            voice=config.get("voice_key"), rate=config.get("rate"),
+        )
+        emit(self.tenant_id, "game", {
+            "type": "riddle_audio",
+            "stage": stage,
+            "audio_url": audio_url,
+        })
 
     def _command_prefix(self) -> str:
         p = self.settings.get("command_prefix")
@@ -420,7 +690,8 @@ class GameSession:
             return "#"
         return str(p)
 
-    def _throttled_log(self, key, text, game="sistema", level="info", secs=2.0):
+    def _throttled_log(self, key, text, game="sistema", level="info", secs=2.0,
+                       event=None, trace_id=None, details=None):
         """Log estruturado com throttle por chave (evita flood no diagnóstico)."""
         now = time.time()
         last = getattr(self, "_log_last", {})
@@ -428,7 +699,19 @@ class GameSession:
             return
         last[key] = now
         self._log_last = last
-        emit(self.tenant_id, "log", {"text": text, "game": game, "level": level})
+        game_id = str(game or "").strip().lower()
+        if game_id in ("sistema", "system"):
+            game_id = ""
+        event_scope = game_id or "system"
+        emit(self.tenant_id, "log", {
+            "text": text,
+            "game": game_id,
+            "level": level,
+            "event": event or f"{event_scope}.throttled",
+            "source": "python",
+            "trace_id": trace_id,
+            "details": details or None,
+        })
 
     def _stable_uid(self, user, user_meta=None):
         try:
@@ -472,7 +755,9 @@ class GameSession:
                 self._schedule_duelo_reset(delay)
                 emit(self.tenant_id, "log", f"[Duelo] KO por meta — nova batalha em {delay}s")
         except Exception as e:
-            emit(self.tenant_id, "log", f"[Duelo] Erro ao processar TAP: {e}")
+            self._log_event("error", "error", "duelo.tap.processing_failed",
+                            "[Duelo] Falha ao processar o TAP.", game="duelo",
+                            code="DUELO_TAP_PROCESSING_FAILED", details={"error_type": type(e).__name__})
 
     def _duelo_comment_team(self, user, raw, user_meta=None, avatar="", nickname=""):
         if not (self.duelo.active and self.duelo._is_hp_new()):
@@ -500,11 +785,13 @@ class GameSession:
                         "avatar_url": str(avatar or ""),
                     })
         except Exception as e:
-            emit(self.tenant_id, "log", f"[Duelo] Erro ao registrar equipe: {e}")
+            self._log_event("error", "error", "duelo.team_registration_failed",
+                            "[Duelo] Falha ao registrar a equipe.", game="duelo",
+                            code="DUELO_TEAM_REGISTRATION_FAILED", details={"error_type": type(e).__name__})
 
     async def on_share(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
-        self._track_levels(user, nickname, avatar, user_meta, room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         allowed, _ = self._check_access(user_meta)
@@ -513,14 +800,14 @@ class GameSession:
 
     async def on_follow(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
-        self._track_levels(user, nickname, avatar, user_meta, room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         self._emit_interaction("follow", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         emit(self.tenant_id, "log", f"[Follow] @{user} começou a seguir")
 
     async def on_like(self, user, nickname, avatar, like_count, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
-        self._track_levels(user, nickname, avatar, user_meta, room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         # BICHINHO VIRTUAL: likes dão energia/atacam o boss (independe do filtro de tap)
         if self.vpet.active:
             self.vpet.on_like(user, nickname, avatar, like_count)
@@ -672,13 +959,17 @@ class GameSession:
         """Prêmio da meta de tap: segue a porcentagem dica/charada da roleta."""
         if not self.game.secret_word or self.game.finished:
             return
+        trace_id = uuid.uuid4().hex
         best_rank = 1000
         if self.game.guesses:
             best_rank = min(g["rank"] for g in self.game.guesses)
         import math
         target_rank = best_rank - max(1, math.floor(best_rank * 0.1))
         emit(self.tenant_id, "game", {"type": "tap_meta_reached", "ready": False, "blocked": False})
-        emit(self.tenant_id, "log", "[Tap] Meta atingida! Liberando prêmio...")
+        self._log_event("game", "info", "palavra.tap_reward.dispatched",
+                        "[Palavra] Meta de curtidas atingida; prêmio enviado à roleta.",
+                        game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                        details={"target_rank": target_rank})
         await self._dispatch_reward(
             user="meta_tap",
             nickname="Meta de Tap",
@@ -686,6 +977,7 @@ class GameSession:
             gift=None,
             target_rank=target_rank,
             source="tap",
+            trace_id=trace_id,
         )
 
     def build_likes_ranking(self, limit: int = 5) -> list:
@@ -697,6 +989,11 @@ class GameSession:
             status["room_id"] = self.handler._room_id
         if extra:
             status.update(extra)
+        if state != self._last_logged_status:
+            self._log_event("connection", "info", "connection.status.changed",
+                            "Estado da conexão com a live alterado.", trace_id=self.connect_trace_id,
+                            details={"from": self._last_logged_status, "to": state, "engine": self.engine})
+            self._last_logged_status = state
         emit(self.tenant_id, "status", status)
 
     def _live_room_id(self) -> str:
@@ -716,7 +1013,13 @@ class GameSession:
     def _emit_tres(self, type_, payload):
         """Encaminha eventos do Jogo dos 3 Pontinhos para o node (game/browser) e logs."""
         if type_ == "log":
-            emit(self.tenant_id, "log", payload)
+            log_payload = dict(payload) if isinstance(payload, dict) else {"text": str(payload or "")}
+            log_payload.setdefault("category", "game")
+            log_payload.setdefault("level", "info")
+            log_payload.setdefault("game", "tres")
+            log_payload.setdefault("event", "tres.legacy.message")
+            log_payload.setdefault("source", "python")
+            emit(self.tenant_id, "log", log_payload)
         else:
             emit(self.tenant_id, "game", {"type": type_, **payload})
 
@@ -863,21 +1166,60 @@ class GameSession:
         except Exception:
             pass
 
-    async def _tres_next_round(self):
+    async def _tres_next_round(self, trace_id=None):
         """Provider do auto-reinício: sorteia nova palavra e gera novas dicas."""
+        next_round_id = int(getattr(self.tres, "round_id", 0) or 0) + 1
+        started_at = time.perf_counter()
+        self._log_event("diagnostic", "debug", "tres.round.preparation_started",
+                        "[3 Dicas] Preparação da próxima rodada iniciada.", game="tres",
+                        game_id=str(next_round_id), trace_id=trace_id,
+                        details={"source": "auto_round"})
         palavra = self._pick_tres_word()
         if not palavra:
+            self._log_event("notice", "warning", "tres.round.preparation_rejected",
+                            "[3 Dicas] Não há palavra disponível para a próxima rodada.", game="tres",
+                            game_id=str(next_round_id), trace_id=trace_id,
+                            code="TRES_WORD_UNAVAILABLE")
             return None, None
         self._mark_tres_played(palavra)
-        try:
-            dicas = await generate_tres_dicas(palavra)
-        except Exception:
-            dicas = []
+        def log_generation(event, details):
+            fallback = event.endswith("fallback")
+            self._log_event(
+                "notice" if fallback else "diagnostic",
+                "warning" if fallback else "debug",
+                "tres." + event,
+                "[3 Dicas] Dicas geradas pelo fallback." if fallback else "[3 Dicas] Dicas geradas.",
+                game="tres", game_id=str(next_round_id), trace_id=trace_id,
+                duration_ms=details.get("duration_ms"),
+                details={**details, "word_length": len(palavra), "source": "auto_round"},
+            )
+        dicas = await generate_tres_dicas(palavra, log_cb=log_generation)
         if not dicas or len(dicas) < 3:
+            received_clue_count = len(dicas or [])
             dicas = [f"Palavra com {len(palavra)} letras", "É uma palavra comum", "Última dica!"]
+            self._log_event("notice", "warning", "tres.round.clues_replaced",
+                            "[3 Dicas] Conjunto de dicas incompleto; aplicado fallback simples.", game="tres",
+                            game_id=str(next_round_id), trace_id=trace_id,
+                            code="TRES_CLUES_INCOMPLETE", duration_ms=round((time.perf_counter() - started_at) * 1000),
+                            details={"received_clue_count": received_clue_count, "word_length": len(palavra)})
         return palavra, dicas
 
-    async def start_game(self, hint_gifts=None, riddle_gifts=None, size_gift=None, letter_gift=None):
+    async def start_game(self, hint_gifts=None, riddle_gifts=None, size_gift=None, letter_gift=None, source="command", trace_id=None):
+        previous_active = bool(self.game.secret_word and not self.game.finished)
+        previous_game_id = getattr(self.game, "game_id", None)
+        previous_guesses = len(getattr(self.game, "guesses", []) or [])
+        started_at = time.perf_counter()
+        self._palavra_debug(
+            "start.begin",
+            source=source,
+            trace_id=trace_id,
+            previous_game_id=previous_game_id,
+            previous_status="running" if previous_active else ("finished" if getattr(self.game, "finished", False) else "idle"),
+            previous_guess_count=previous_guesses,
+            room_id=self.current_room_id or self._live_room_id() or None,
+            hint_gifts=len(hint_gifts or []),
+            riddle_gifts=len(riddle_gifts or []),
+        )
         self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift, build_pool=False)
         # Meta de tap: zera a cada partida e aplica o valor configurado
         self.tap_meta_current = 0
@@ -889,28 +1231,45 @@ class GameSession:
         # palavra nunca vista calcula similaridade do pool (~10-16s). Roda em thread
         # para NÃO travar a live; o jogo só é liberado quando o ranking fica pronto.
         self._preparing = True
-        emit(self.tenant_id, "log", "[Jogo] Preparando próxima partida…")
+        self._log_event("game", "info", "palavra.start.preparation_started",
+                        "[Palavra] Preparando nova partida.", game="palavra",
+                        game_id=self.game.game_id, trace_id=trace_id)
         emit(self.tenant_id, "game", {"type": "game_preparing"})
         try:
             await asyncio.to_thread(self.game._build_hint_pool)
         except Exception:
             pass
         self.game._pool_ready = bool(self.game.all_scored and self.game.hint_pool)
+        self._palavra_debug(
+            "start.pool_ready",
+            game_id=self.game.game_id,
+            trace_id=trace_id,
+            pool_ready=self.game._pool_ready,
+            scored_words=len(self.game.all_scored or []),
+            hint_pool_size=len(self.game.hint_pool or []),
+            elapsed_ms=round((time.perf_counter() - started_at) * 1000),
+        )
         if not self.game._pool_ready:
-            emit(self.tenant_id, "log", "[Jogo] [!] Não foi possível preparar o ranking de dicas — usando fallback simples", game="palavra", level="err")
+            self._log_event("error", "error", "palavra.start.pool_fallback",
+                            "[Palavra] Índice de proximidade indisponível; será usado o fallback simples.",
+                            game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_POOL_FALLBACK")
         self._preparing = False
         active_gift = self.game.get_active_gift()
-        emit(self.tenant_id, "log", f"[Jogo] Palavra secreta: {self.game.secret_word}")
+        emit(self.tenant_id, "log", {"text": "[Jogo] Partida preparada.", "category": "game",
+                                       "level": "info", "game": "palavra", "event": "palavra.game.prepared",
+                                       "source": "python", "game_id": self.game.game_id,
+                                       "trace_id": trace_id,
+                                       "details": {"hint_gift_count": len(self.game.hint_gifts or []),
+                                                   "riddle_gift_count": len(self.game.riddle_gifts or [])}})
         prefix = self._command_prefix()
-        if prefix:
-            emit(self.tenant_id, "log", f"[Jogo] Prefixo: '{prefix}' - chute {prefix}palavra no chat")
-        else:
-            emit(self.tenant_id, "log", "[Jogo] Sem prefixo - todo comentário do chat vira palpite")
-        emit(self.tenant_id, "log", f"[Jogo] Dicas liberadas por gifts: {', '.join(self.game.hint_gifts)}")
-        if self.game.riddle_gifts:
-            emit(self.tenant_id, "log", f"[Jogo] Presente revelador (Final Boss): {', '.join(self.game.riddle_gifts)}")
-        if self.game.size_gift:
-            emit(self.tenant_id, "log", f"[Jogo] Presente de tamanho: {self.game.size_gift} — tamanho oculto até ser enviado")
+        self._log_event("game", "info", "palavra.start.configuration_loaded",
+                        "[Palavra] Configuração da partida aplicada.", game="palavra",
+                        game_id=self.game.game_id, trace_id=trace_id,
+                        details={"prefix_required": bool(prefix), "hint_gift_count": len(self.game.hint_gifts or []),
+                                 "riddle_gift_count": len(self.game.riddle_gifts or []),
+                                 "size_gift_configured": bool(self.game.size_gift),
+                                 "letter_gift_configured": bool(self.game.letter_gift)})
         emit(self.tenant_id, "panel_word", self.game.secret_word)
         pub_tap = self._tap_meta_public()
         emit(self.tenant_id, "game", {
@@ -942,6 +1301,16 @@ class GameSession:
             "tap_meta_ready": pub_tap["tap_meta_ready"],
             "tap_meta_multiplier": pub_tap["tap_meta_multiplier"],
         })
+        self._palavra_debug(
+            "start.game_started",
+            game_id=self.game.game_id,
+            trace_id=trace_id,
+            status="running",
+            active_gift=active_gift,
+            hint_gifts=len(self.game.hint_gifts or []),
+            riddle_gifts=len(self.game.riddle_gifts or []),
+            secret_length=len(self.game.secret_word or ""),
+        )
 
     @staticmethod
     def _match_vpet_command(raw: str):
@@ -996,18 +1365,20 @@ class GameSession:
                 "nickname": nickname or user,
             })
 
-    async def on_member(self, user, nickname, room_id=None, event_id=None):
+    async def on_member(self, user, nickname, user_meta=None, room_id=None, event_id=None):
         """Um espectador entrou na live (JoinEvent — apenas motor TikTokLive)."""
         self._ensure_room(room_id)
+        self._track_levels(user, nickname, "", user_meta, room_id, event_id=event_id)
         self._emit_interaction("join", user, nickname, "", event_id=event_id, room_id=room_id)
         if self.vpet.active and self.vpet.state.get("assistant_mode"):
             self.vpet.greet_member(nickname or user)
 
     async def on_comment(self, user, nickname, avatar, text, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
-        self._track_levels(user, nickname, avatar, user_meta, room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         raw = text.strip()
-        self._throttled_log("chat_arrival", f"[Chat] {user}: {raw}"[:130], game="chat", level="chat", secs=1.0)
+        prefix = self._command_prefix()
+        self._enqueue_chat_narration(user, raw)
         emit(self.tenant_id, "game", {
             "type": "chat",
             "user": user,
@@ -1050,7 +1421,7 @@ class GameSession:
                     pass
                 self._emit_tres_weekly_refresh()
             # Sempre retorna quando o jogo está ativo: o chat é capturado pelo 3 Pontinhos
-            self._throttled_log("tres_capture", "[Chat] capturado pelo 3 Dicas (jogo ativo) — outros jogos não recebem", game="tres", level="warn", secs=2.0)
+            self._throttled_log("tres_capture", "[3 Dicas] Captura de chat exclusiva ativa; demais jogos não recebem comentários.", game="tres", level="warn", secs=2.0)
             return
 
         # ---------------------------------------------------------
@@ -1064,7 +1435,7 @@ class GameSession:
                     texto = falar_prefix.split(None, 1)[1].strip() if len(falar_prefix.split(None, 1)) > 1 else ""
                     if texto:
                         self.vpet.speak(texto)
-                        emit(self.tenant_id, "log", f"[Bichinho] Streamer falou: \"{texto}\"")
+                        emit(self.tenant_id, "log", f"[Bichinho] Streamer enviou fala ao mascote ({len(texto)} caracteres).")
                 else:
                     emit(self.tenant_id, "log", f"[Bichinho] @{user} tentou usar !falar (apenas o streamer)")
                 return
@@ -1083,18 +1454,21 @@ class GameSession:
                 return
 
         if not self.game.secret_word or self.game.finished:
-            self._throttled_log("palavra_nopartida", "[Palavra] comentário ignorado: jogo sem partida ativa ou finalizado", game="palavra", level="info", secs=2.0)
+            if prefix and raw.startswith(prefix):
+                self._palavra_debug("guess.ignored", reason="no_active_game", game_id=getattr(self.game, "game_id", None), user=user, trace_id=event_id)
             return
         if self._preparing:
+            if prefix and raw.startswith(prefix):
+                self._palavra_debug("guess.ignored", reason="game_preparing", game_id=self.game.game_id, user=user, trace_id=event_id)
             self._throttled_log("palavra_preparing", "[Palavra] Preparando próxima partida… palpites aguardam", game="palavra", level="warn", secs=3.0)
             return
-        prefix = self._command_prefix()
         if prefix and not raw.startswith(prefix):
             self._throttled_log("palavra_prefix", f"[Palavra] palpite ignorado: exige prefixo '{prefix}' no início do comentário", game="palavra", level="warn", secs=2.0)
             return
 
         body = raw[len(prefix):].strip() if prefix else raw.strip()
         if not body:
+            self._palavra_debug("guess.ignored", reason="empty_command", game_id=self.game.game_id, user=user, trace_id=event_id)
             return
 
         target_user = None
@@ -1111,6 +1485,8 @@ class GameSession:
         word = body.strip().lower()
         word = re.sub(r"\d+", "", word)
         if not word or len(word) < 2:
+            self._palavra_debug("guess.ignored", reason="invalid_word", game_id=self.game.game_id,
+                                user=user, input_length=len(body), trace_id=event_id)
             return
 
         final_user = target_user if target_user else user
@@ -1128,6 +1504,8 @@ class GameSession:
         # Filtros de engajamento (seguiu o canal e/ou heart-me ativo)
         allowed, reason = self._check_access(user_meta)
         if not allowed:
+            self._palavra_debug("guess.rejected", reason=reason, game_id=self.game.game_id,
+                                user=final_user, guess_count=len(self.game.guesses or []), trace_id=event_id)
             emit(self.tenant_id, "game", {
                 "type": "guess_rejected",
                 "user": final_user,
@@ -1135,15 +1513,23 @@ class GameSession:
                 "word": word,
                 "reason": reason,
             })
-            emit(self.tenant_id, "log", f"[Access] @{final_user} bloqueado ({reason}): '{word}' não subiu")
+            self._log_event("game", "warning", "palavra.guess.rejected",
+                            f"[Palavra] Palpite bloqueado pelo filtro de acesso ({reason}).", game="palavra",
+                            game_id=self.game.game_id, trace_id=event_id, code="PALAVRA_ACCESS_REJECTED",
+                            details={"user": final_user, "reason": reason})
             return
 
         db.record_guess(final_user, final_nickname, final_avatar)
 
+        previous_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
         result = self.game.process_guess(final_user, word, nickname=final_nickname, avatar=final_avatar)
         if result is None:
+            self._palavra_debug("guess.no_result", game_id=self.game.game_id, user=final_user,
+                                previous_best_rank=previous_best_rank, trace_id=event_id)
             return
         if result.get("duplicate"):
+            self._palavra_debug("guess.duplicate", game_id=self.game.game_id, user=final_user,
+                                rank=result.get("rank"), guess_count=len(self.game.guesses or []), trace_id=event_id)
             emit(self.tenant_id, "game", {
                 "type": "guess_duplicate",
                 "word": result["word"],
@@ -1151,7 +1537,10 @@ class GameSession:
                 "user": final_user,
                 "nickname": final_nickname,
             })
-            emit(self.tenant_id, "log", f"[Guess] {final_user}: '{result['word']}' já foi chutada (#duplicata)")
+            self._log_event("game", "info", "palavra.guess.duplicate",
+                            f"[Palavra] Palpite duplicado (#{result['rank']}).", game="palavra",
+                            game_id=self.game.game_id, trace_id=event_id,
+                            details={"user": final_user, "rank": int(result["rank"])})
             return
         color = get_rank_color(result["rank"])
         active_gift = self.game.get_active_gift()
@@ -1167,7 +1556,15 @@ class GameSession:
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
-        emit(self.tenant_id, "log", f"[Guess] {final_user}: {result['word']} -> #{result['rank']}")
+        self._log_event("game", "info", "palavra.guess.accepted",
+                        f"[Palavra] Palpite registrado no rank #{result['rank']}.", game="palavra",
+                        game_id=self.game.game_id, trace_id=event_id,
+                        details={"user": final_user, "rank": int(result["rank"])})
+        current_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
+        self._palavra_debug("guess.accepted", game_id=self.game.game_id, user=final_user,
+                            rank=int(result["rank"]), previous_best_rank=previous_best_rank,
+                            current_best_rank=current_best_rank, guess_count=len(self.game.guesses or []),
+                            trace_id=event_id)
         # Relatório: palpite válido (não duplicado).
         self._emit_interaction("guess", final_user, final_nickname, final_avatar,
                                value=int(result["rank"]), event_id=event_id, room_id=room_id,
@@ -1184,14 +1581,19 @@ class GameSession:
                 "total_guesses": len(self.game.guesses),
                 "post_game_summary": self.game.build_post_game_summary(100),
             })
+            self._palavra_debug("game.finished", game_id=self.game.game_id, cause="correct_guess",
+                                winner=final_user, guess_count=len(self.game.guesses or []), trace_id=event_id)
             self._emit_interaction("winner", final_user, final_nickname, final_avatar, value=1,
                                    room_id=room_id, meta={"word": self.game.secret_word})
-            emit(self.tenant_id, "log", f"[FIM] Vencedor: {final_user}! Palavra: {self.game.secret_word}")
+            self._log_event("game", "info", "palavra.game.finished",
+                            f"[FIM] Vencedor: {final_user}.", game="palavra", game_id=self.game.game_id,
+                            trace_id=event_id, code="PALAVRA_CORRECT_GUESS",
+                            details={"winner": final_user, "cause": "correct_guess"})
             self._schedule_auto_next_game()
 
     async def on_gift(self, user, nickname, avatar, gift_name, diamond_count, repeat_count=1, user_meta=None, gift_id="", room_id=None, event_id=None):
         self._ensure_room(room_id)
-        self._track_levels(user, nickname, avatar, user_meta, room_id)
+        self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         emit(self.tenant_id, "game", {
             "type": "gift_event",
             "user": user,
@@ -1211,16 +1613,14 @@ class GameSession:
             meta={"gift_id": str(gift_id or ""), "gift_name": str(gift_name or ""),
                   "repeat_count": max(1, int(repeat_count or 1)), "diamonds": int(diamond_count or 0)},
         )
-        # Diagnóstico do gift cru (id/nome/moedas): ajuda a desambiguar gifts com o
-        # MESMO nome e preços diferentes (ex.: dois "Heart", 1 e 10 moedas). Throttle
-        # por id para não floodar o log.
-        self._throttled_log(
-            f"gift_diag_{gift_id or gift_name}",
-            f"[Gift][diag] name='{gift_name}' id='{gift_id}' moedas={int(diamond_count or 0)}",
-            game="chat", level="chat", secs=10.0,
-        )
         combo_str = f" x{repeat_count}" if repeat_count > 1 else ""
-        emit(self.tenant_id, "log", f"[Gift] {user} enviou '{gift_name}'{combo_str} ({diamond_count} diamantes)")
+        emit(self.tenant_id, "log", {
+            "text": f"[Gift] Presente recebido{combo_str} ({int(diamond_count or 0)} diamantes).",
+            "category": "notice", "level": "info", "event": "live.gift.received", "source": "python",
+            "trace_id": event_id,
+            "details": {"user": user, "gift_name": str(gift_name or ""), "gift_id": str(gift_id or ""),
+                        "diamond_count": int(diamond_count or 0), "repeat_count": max(1, int(repeat_count or 1))},
+        })
 
         # 3 PONTINHOS: presente revela tamanho/letra, faz palpite VIP ou marca apoiador
         if self.tres.active and not self.tres.finished:
@@ -1237,7 +1637,10 @@ class GameSession:
                     "nickname": nickname or user,
                     "avatar": avatar or "",
                 })
-                emit(self.tenant_id, "log", f"[3 Dicas] @{user} liberou o chat! (Passe Livre)")
+                emit(self.tenant_id, "log", {"text": f"[3 Dicas] @{user} liberou o chat (Passe Livre).",
+                                              "category": "game", "level": "info", "game": "tres",
+                                              "event": "tres.ticket.granted", "source": "python",
+                                              "game_id": str(self.tres.round_id), "details": {"user": user}})
 
         # BICHINHO VIRTUAL: presente alimenta/choca/ataca o boss (não afeta o fluxo dos jogos)
         if self.vpet.active:
@@ -1277,16 +1680,32 @@ class GameSession:
 
         allowed, reason = self._check_access(user_meta)
         if not allowed:
-            emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): gift ignorado na BATALHA")
+            if self.game.secret_word and not self.game.finished:
+                self._palavra_debug("gift.ignored", game_id=self.game.game_id,
+                                    reason="access_denied", access_reason=reason, user=user,
+                                    trace_id=event_id)
+            self._log_event("game", "warning", "batalha.gift.rejected",
+                            f"[Batalha] Presente bloqueado pelo filtro de acesso ({reason}).", game="batalha",
+                            trace_id=event_id, code="BATALHA_GIFT_ACCESS_REJECTED",
+                            details={"user": user, "reason": reason})
             return
         self.battle.add_coins(user, nickname, avatar, int(diamond_count or 0) * max(1, repeat_count))
         if not self.game.secret_word or self.game.finished:
-            emit(self.tenant_id, "log", "[Gift] Nenhum jogo ativo ou já finalizado, ignorando gift")
+            self._log_event("notice", "info", "live.gift.ignored",
+                            "Presente ignorado porque não há partida da Palavra ativa.", code="NO_ACTIVE_GAME",
+                            trace_id=event_id, details={"user": user})
             return
+        self._palavra_debug("gift.received", game_id=self.game.game_id, user=user,
+                            gift_id=str(gift_id or ""), gift_name=str(gift_name or ""),
+                            diamonds=int(diamond_count or 0), repeat_count=max(1, int(repeat_count or 1)),
+                            guess_count=len(self.game.guesses or []), trace_id=event_id)
 
         # Presente de tamanho: revela o nº de letras da palavra secreta
         size_res = self.game.process_gift(user, gift_name, int(diamond_count or 0), nickname=nickname, avatar=avatar, gift_id=gift_id)
         if size_res and size_res.get("size_revealed"):
+            self._palavra_debug("gift.revealed_size", game_id=self.game.game_id, user=user,
+                                gift_id=str(gift_id or ""), secret_length=int(size_res.get("secret_length", 0)),
+                                trace_id=event_id)
             emit(self.tenant_id, "game", {
                 "type": "size_revealed",
                 "user": user,
@@ -1294,9 +1713,15 @@ class GameSession:
                 "avatar": avatar or "",
                 "secret_length": size_res.get("secret_length", 0),
             })
-            emit(self.tenant_id, "log", f"[Jogo] @{user} revelou o TAMANHO da palavra ({size_res.get('secret_length', 0)} letras)")
+            self._log_event("game", "info", "palavra.gift.revealed_size",
+                            f"[Palavra] @{user} revelou o tamanho da palavra ({size_res.get('secret_length', 0)} letras).",
+                            game="palavra", game_id=self.game.game_id, trace_id=event_id,
+                            details={"user": user, "word_length": int(size_res.get("secret_length", 0))})
             return
         if size_res and size_res.get("first_letter_revealed"):
+            self._palavra_debug("gift.revealed_first_letter", game_id=self.game.game_id, user=user,
+                                gift_id=str(gift_id or ""), secret_length=int(size_res.get("secret_length", 0)),
+                                trace_id=event_id)
             emit(self.tenant_id, "game", {
                 "type": "letter_revealed",
                 "user": user,
@@ -1305,12 +1730,20 @@ class GameSession:
                 "first_letter": size_res.get("first_letter", ""),
                 "secret_length": size_res.get("secret_length", 0),
             })
-            emit(self.tenant_id, "log", f"[Jogo] @{user} revelou a PRIMEIRA LETRA ('{size_res.get('first_letter', '')}')")
+            self._log_event("game", "info", "palavra.gift.revealed_first_letter",
+                            f"[Palavra] @{user} revelou a primeira letra.", game="palavra",
+                            game_id=self.game.game_id, trace_id=event_id,
+                            details={"user": user, "word_length": int(size_res.get("secret_length", 0))})
             return
 
         active_gift = self.game.get_active_gift()
         if not active_gift:
-            emit(self.tenant_id, "log", "[Gift] Nenhum presente ativo configurado")
+            self._palavra_debug("gift.ignored", game_id=self.game.game_id, reason="no_active_gift",
+                                gift_id=str(gift_id or ""), trace_id=event_id)
+            self._log_event("game", "warning", "palavra.gift.ignored",
+                            "Presente ignorado: não há presente ativo configurado.", game="palavra",
+                            game_id=self.game.game_id, trace_id=event_id, code="PALAVRA_NO_ACTIVE_GIFT",
+                            details={"gift_id": str(gift_id or "")})
             return
 
         # Match ID-first (catálogo) com fallback por nome/PT — aceita tanto o ID quanto o nome.
@@ -1318,20 +1751,32 @@ class GameSession:
         is_final_boss = bool(getattr(self.game, "is_final_boss", False))
         if is_final_boss:
             if not is_active:
-                emit(self.tenant_id, "log", f"[Gift] {gift_name} recebido, mas o presente revelador exigido é {active_gift}")
+                self._palavra_debug("gift.ignored", game_id=self.game.game_id, reason="wrong_final_boss_gift",
+                                    gift_id=str(gift_id or ""), gift_name=str(gift_name or ""), trace_id=event_id)
+                self._log_event("game", "info", "palavra.gift.ignored",
+                                "Presente não corresponde ao presente revelador ativo.", game="palavra",
+                                game_id=self.game.game_id, trace_id=event_id, code="PALAVRA_GIFT_NOT_ACTIVE",
+                                details={"gift_id": str(gift_id or ""), "reason": "wrong_final_boss_gift"})
                 return
         else:
             if not is_active and not self.game.is_gift_recently_active(gift_name, 5):
-                emit(self.tenant_id, "log", f"[Gift] {gift_name} recebido, mas o presente ativo exigido é {active_gift}")
+                self._palavra_debug("gift.ignored", game_id=self.game.game_id, reason="gift_not_active",
+                                    gift_id=str(gift_id or ""), gift_name=str(gift_name or ""), trace_id=event_id)
+                self._log_event("game", "info", "palavra.gift.ignored",
+                                "Presente não corresponde ao presente ativo.", game="palavra",
+                                game_id=self.game.game_id, trace_id=event_id, code="PALAVRA_GIFT_NOT_ACTIVE",
+                                details={"gift_id": str(gift_id or ""), "reason": "gift_not_active"})
                 return
             if not is_active:
-                emit(self.tenant_id, "log", f"[Gift] {gift_name} aceito (presente recente da roleta)")
+                self._log_event("game", "info", "palavra.gift.accepted_recent",
+                                "Presente recente da roleta aceito.", game="palavra", game_id=self.game.game_id,
+                                trace_id=event_id, details={"gift_id": str(gift_id or "")})
 
         # -------------------------------------------------------------
         # Scenario A: Final Boss Active
         # -------------------------------------------------------------
         if is_final_boss:
-            emit(self.tenant_id, "log", f"[Final Boss] {user} enviou o presente de revelação {active_gift}! Vitória decretada!")
+            emit(self.tenant_id, "log", f"[Final Boss] @{user} acionou a vitória instantânea.")
             
             self.game.finished = True
             self.game.winner = user
@@ -1349,6 +1794,13 @@ class GameSession:
                 "total_guesses": len(self.game.guesses),
                 "post_game_summary": self.game.build_post_game_summary(100),
             })
+            self._palavra_debug("game.finished", game_id=self.game.game_id, cause="final_boss_gift",
+                                winner=user, gift_id=str(gift_id or ""), guess_count=len(self.game.guesses or []),
+                                trace_id=event_id)
+            self._log_event("game", "info", "palavra.game.finished",
+                            f"[Final Boss] @{user} encerrou a partida.", game="palavra", game_id=self.game.game_id,
+                            trace_id=event_id, code="PALAVRA_FINAL_BOSS",
+                            details={"winner": user, "cause": "final_boss_gift"})
             self._schedule_auto_next_game()
             return
 
@@ -1366,7 +1818,15 @@ class GameSession:
         pct_dica = int(self.settings.get("pct_dica", 70))
         pct_charada = int(self.settings.get("pct_charada", 30))
         loop_n = max(1, repeat_count)
-        emit(self.tenant_id, "log", f"[Roleta] Presente {active_gift} x{loop_n} aceito. Alvo Rank #{target_rank} (Dica {pct_dica}%/Charada {pct_charada}%)")
+        self._palavra_debug("gift.accepted", game_id=self.game.game_id, user=user,
+                            gift_id=str(gift_id or ""), is_active=bool(is_active),
+                            final_boss=False, repeat_count=loop_n,
+                            hint_percent=pct_dica, riddle_percent=pct_charada, trace_id=event_id)
+        self._log_event("game", "info", "palavra.reward.accepted",
+                        f"[Palavra] Presente ativo aceito pela roleta (x{loop_n}).", game="palavra",
+                        game_id=self.game.game_id, trace_id=event_id,
+                        details={"target_rank": target_rank, "hint_percent": pct_dica,
+                                 "riddle_percent": pct_charada, "repeat_count": loop_n})
 
         riddle_done_in_combo = False
         for _ in range(loop_n):
@@ -1379,11 +1839,12 @@ class GameSession:
                 gift=active_gift, target_rank=target_rank,
                 choice=choice,
                 allow_riddle=not riddle_done_in_combo,
+                trace_id=event_id,
             )
             if choice == "riddle":
                 riddle_done_in_combo = True
 
-    async def _dispatch_reward(self, user, nickname, avatar, gift, target_rank, choice=None, allow_riddle=True, source="roleta"):
+    async def _dispatch_reward(self, user, nickname, avatar, gift, target_rank, choice=None, allow_riddle=True, source="roleta", trace_id=None):
         """Revela 1 palavra (dica) OU gera 1 charada, seguindo a porcentagem dica/charada.
 
         Reutilizado pela roleta de presentes e pela meta de tap.
@@ -1403,12 +1864,26 @@ class GameSession:
                 choice = random.choices(["hint", "riddle"], weights=[pct_dica, pct_charada], k=1)[0]
 
         protect = self.game._hint_protected()
+        self._palavra_debug("reward.begin", source=source, game_id=self.game.game_id,
+                            trace_id=trace_id,
+                            choice=choice, target_rank=target_rank,
+                            allow_riddle=bool(allow_riddle),
+                            riddle_stage=self.game.current_riddle_stage,
+                            guess_count=len(self.game.guesses or []),
+                            gift_present=bool(gift))
 
         if choice == "riddle" and allow_riddle:
             riddle_res = self.game.process_riddle_gift(user, gift, force=True)
             if riddle_res:
                 stage = riddle_res["stage"]
                 cluster_words = self.game.hint_cluster(target_rank)
+                riddle_trace_id = str(trace_id or uuid.uuid4().hex)
+                riddle_tts_config = self._tts_config_snapshot()
+                generation_started = time.perf_counter()
+                self._palavra_debug("riddle.generation_started", source=source,
+                                    game_id=self.game.game_id, stage=stage,
+                                    trace_id=riddle_trace_id,
+                                    target_rank=target_rank, clue_count=len(cluster_words))
 
                 emit(self.tenant_id, "game", {
                     "type": "roulette_drop",
@@ -1422,10 +1897,35 @@ class GameSession:
                     "tension_score": getattr(self.game, "tension_score", 0),
                     "is_final_boss": getattr(self.game, "is_final_boss", False),
                 })
-                emit(self.tenant_id, "log", f"[{source}] Charada do Estágio {stage} usando cluster: {', '.join(cluster_words)}...")
+                emit(self.tenant_id, "log", {"text": f"[{source}] Gerando charada do estágio {stage}.",
+                                              "category": "game", "level": "info", "game": "palavra",
+                                              "event": "palavra.riddle.generation_started", "source": "python",
+                                              "trace_id": riddle_trace_id,
+                                              "game_id": self.game.game_id,
+                                              "details": {"stage": stage, "clue_candidate_count": len(cluster_words)}})
 
-                riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
-                asyncio.create_task(self._narrate_riddle_async(stage, riddle_text))
+                try:
+                    riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
+                except Exception as exc:
+                    self._palavra_debug("riddle.generation_failed", source=source,
+                                        game_id=self.game.game_id, stage=stage,
+                                        trace_id=riddle_trace_id,
+                                        error_type=type(exc).__name__,
+                                        generation_ms=round((time.perf_counter() - generation_started) * 1000))
+                    self._log_event("error", "error", "palavra.riddle.generation_failed",
+                                    "[Palavra] Não foi possível gerar a charada.", game="palavra",
+                                    game_id=self.game.game_id, code="PALAVRA_RIDDLE_GENERATION_FAILED",
+                                    duration_ms=round((time.perf_counter() - generation_started) * 1000),
+                                    details={"stage": stage, "error_type": type(exc).__name__})
+                    return
+                asyncio.create_task(self._narrate_riddle_async(
+                    stage, riddle_text, trace_id=riddle_trace_id, tts_config=riddle_tts_config
+                ))
+                self._palavra_debug("riddle.generated", source=source,
+                                    game_id=self.game.game_id, stage=stage,
+                                    trace_id=riddle_trace_id,
+                                    text_length=len(riddle_text or ""),
+                                    generation_ms=round((time.perf_counter() - generation_started) * 1000))
 
                 emit(self.tenant_id, "game", {
                     "type": "roulette_drop",
@@ -1442,12 +1942,20 @@ class GameSession:
                     "tension_score": getattr(self.game, "tension_score", 0),
                     "is_final_boss": getattr(self.game, "is_final_boss", False),
                 })
-                emit(self.tenant_id, "log", f"[{source}] Estagio {stage} liberado! Charada: \"{riddle_text}\"")
+                emit(self.tenant_id, "log", f"[{source}] Charada do estágio {stage} liberada.")
+                self._palavra_debug("riddle.ready_sent", source=source,
+                                    game_id=self.game.game_id, stage=stage,
+                                    trace_id=riddle_trace_id,
+                                    text_length=len(riddle_text or ""))
                 return
 
         # choice == "hint" (ou charada convertida em dica pelo limite de 1 por combo)
         picked = self.game.pick_hint_word(target_rank)
         if picked is None:
+            self._palavra_debug("hint.ignored", source=source, reason="no_eligible_hint",
+                                game_id=self.game.game_id, target_rank=target_rank,
+                                protected=bool(protect), guess_count=len(self.game.guesses or []),
+                                trace_id=trace_id)
             if protect:
                 emit(self.tenant_id, "log", f"[{source}] Sem dica válida na zona protegida (não pode revelar rank 1-2 nem piorar o melhor rank)")
             else:
@@ -1455,6 +1963,7 @@ class GameSession:
             return
 
         best_word, hint_rank = picked
+        previous_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
         self.game.hints_given.append(best_word)
 
         entry = {"user": user, "word": best_word, "rank": hint_rank, "is_hint": True, "gift": gift}
@@ -1479,17 +1988,35 @@ class GameSession:
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
-        emit(self.tenant_id, "log", f"[{source}] Dica revelada: {best_word} (#{hint_rank})")
+        emit(self.tenant_id, "log", f"[{source}] Dica revelada (#{hint_rank}).")
+        current_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
+        self._palavra_debug("hint.revealed", source=source, game_id=self.game.game_id,
+                            rank=hint_rank, target_rank=target_rank,
+                            trace_id=trace_id,
+                            previous_best_rank=previous_best_rank, current_best_rank=current_best_rank,
+                            guess_count=len(self.game.guesses), protected=bool(protect))
         self._emit_interaction("hint", user, nickname, avatar, value=int(hint_rank),
                                meta={"word": best_word, "rank": int(hint_rank), "source": source})
 
-    async def end_game(self):
+    async def end_game(self, cause="manual", trace_id=None):
         if not self.game.secret_word or self.game.finished:
+            self._palavra_debug("end.noop", cause=cause, game_id=getattr(self.game, "game_id", None),
+                                finished=bool(getattr(self.game, "finished", False)), trace_id=trace_id)
             return
+        self._palavra_debug("end.begin", cause=cause, game_id=self.game.game_id,
+                            guess_count=len(self.game.guesses or []),
+                            room_id=self.current_room_id or self._live_room_id() or None,
+                            trace_id=trace_id)
         payload = self.game.finalize_game(room_id=self._live_room_id())
         if payload:
             emit(self.tenant_id, "game", payload)
-            emit(self.tenant_id, "log", f"[FIM] Partida encerrada manualmente pelo streamer. Palavra: {self.game.secret_word}")
+            self._palavra_debug("end.finished", cause=cause, game_id=self.game.game_id,
+                                winner=payload.get("winner"), guess_count=len(self.game.guesses or []),
+                                trace_id=trace_id)
+            self._log_event("game", "info", "palavra.game.finished",
+                            "[Palavra] Partida encerrada.", game="palavra", game_id=self.game.game_id,
+                            trace_id=trace_id, details={"cause": cause, "winner": payload.get("winner"),
+                                                        "guess_count": len(self.game.guesses or [])})
 
     def _stop_other_chat_games(self, keep=None):
         """Garante captura única de chat: desativa os demais jogos de captura (3 Dicas/Bichinho/Caça)."""
@@ -1502,7 +2029,7 @@ class GameSession:
                     eng.stop()
                 except Exception:
                     pass
-                self._throttled_log("stop_" + name, f"[Chat] captura única: {name} encerrado ao iniciar outro jogo", game=name, level="info")
+                self._throttled_log("stop_" + name, f"[Jogo] {name} encerrado para manter a captura exclusiva.", game=name, level="info")
 
     def _schedule_auto_next_game(self):
         """Agenda o auto-início da próxima partida da Palavra Secreta (se habilitado)."""
@@ -1523,18 +2050,30 @@ class GameSession:
                 riddle_gifts=self.game.riddle_gifts,
                 size_gift=self.game.size_gift,
                 letter_gift=self.game.letter_gift,
+                source="auto_round",
             )
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            emit(self.tenant_id, "log", f"[Jogo] Erro ao auto-iniciar partida: {e}")
+            self._log_event("error", "error", "palavra.auto_round.failed",
+                            "[Palavra] Não foi possível iniciar a próxima rodada automática.", game="palavra",
+                            code="PALAVRA_AUTO_ROUND_FAILED", details={"error_type": type(e).__name__})
 
-    async def manual_hint(self):
+    async def manual_hint(self, trace_id=None):
         if not self.game.secret_word or self.game.finished:
-            emit(self.tenant_id, "log", "[Manual] Nenhuma partida ativa para dar dica")
+            self._palavra_debug("hint.ignored", source="manual", reason="no_active_game",
+                                game_id=getattr(self.game, "game_id", None), finished=bool(self.game.finished),
+                                trace_id=trace_id)
+            self._log_event("notice", "warning", "palavra.hint.rejected", "[Palavra] Não há partida ativa para dar uma dica.",
+                            game="palavra", game_id=getattr(self.game, "game_id", None), trace_id=trace_id,
+                            code="PALAVRA_NO_ACTIVE_GAME")
             return
         if self._preparing:
-            emit(self.tenant_id, "log", "[Manual] Preparando próxima partida… aguarde a liberação")
+            self._palavra_debug("hint.ignored", source="manual", reason="game_preparing",
+                                game_id=self.game.game_id, trace_id=trace_id)
+            self._log_event("notice", "warning", "palavra.hint.rejected", "[Palavra] A partida ainda está sendo preparada.",
+                            game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_GAME_PREPARING")
             return
         best_rank = 1000
         if self.game.guesses:
@@ -1543,12 +2082,19 @@ class GameSession:
         target_rank = best_rank - max(1, math.floor(best_rank * 0.1))
         picked = self.game.pick_hint_word(target_rank)
         if picked is None:
+            self._palavra_debug("hint.ignored", source="manual", reason="no_eligible_hint",
+                                game_id=self.game.game_id, target_rank=target_rank,
+                                protected=bool(self.game._hint_protected()), trace_id=trace_id)
             if self.game._hint_protected():
-                emit(self.tenant_id, "log", "[Manual] Sem dica válida na zona protegida (não pode revelar rank 1-2 nem piorar o melhor rank)")
+                reason = "protected_zone"
             else:
-                emit(self.tenant_id, "log", "[Manual] Sem novas dicas no pool")
+                reason = "no_hint_available"
+            self._log_event("notice", "warning", "palavra.hint.rejected", "[Palavra] Nenhuma dica elegível neste momento.",
+                            game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_HINT_UNAVAILABLE", details={"reason": reason, "target_rank": target_rank})
             return
         best_word, hint_rank = picked
+        previous_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
         self.game.hints_given.append(best_word)
         entry = {"user": "streamer", "word": best_word, "rank": hint_rank, "is_hint": True}
         self.game.guesses.append(entry)
@@ -1567,26 +2113,54 @@ class GameSession:
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
-        emit(self.tenant_id, "log", f"[Manual] Dica inserida: {best_word} (#{hint_rank})")
+        self._log_event("game", "info", "palavra.hint.revealed", f"[Palavra] Dica revelada (#{hint_rank}).",
+                        game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                        details={"rank": hint_rank, "target_rank": target_rank})
+        current_best_rank = min((int(g.get("rank", 1000)) for g in self.game.guesses), default=1000)
+        self._palavra_debug("hint.revealed", source="manual", game_id=self.game.game_id,
+                            rank=hint_rank, target_rank=target_rank,
+                            previous_best_rank=previous_best_rank, current_best_rank=current_best_rank,
+                            guess_count=len(self.game.guesses), protected=bool(self.game._hint_protected()),
+                            trace_id=trace_id)
 
-    async def manual_riddle(self):
+    async def manual_riddle(self, trace_id=None):
         if not self.game.secret_word or self.game.finished:
-            emit(self.tenant_id, "log", "[Manual] Nenhuma partida ativa para gerar charada")
+            self._palavra_debug("riddle.ignored", source="manual", reason="no_active_game",
+                                game_id=getattr(self.game, "game_id", None), finished=bool(self.game.finished),
+                                trace_id=trace_id)
+            self._log_event("notice", "warning", "palavra.riddle.rejected", "[Palavra] Não há partida ativa para gerar charada.",
+                            game="palavra", game_id=getattr(self.game, "game_id", None), trace_id=trace_id,
+                            code="PALAVRA_NO_ACTIVE_GAME")
             return
         if self._preparing:
-            emit(self.tenant_id, "log", "[Manual] Preparando próxima partida… aguarde a liberação")
+            self._palavra_debug("riddle.ignored", source="manual", reason="game_preparing",
+                                game_id=self.game.game_id, trace_id=trace_id)
+            self._log_event("notice", "warning", "palavra.riddle.rejected", "[Palavra] A partida ainda está sendo preparada.",
+                            game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_GAME_PREPARING")
             return
         best_rank = 1000
         if self.game.guesses:
             best_rank = min(g["rank"] for g in self.game.guesses)
         import math
         target_rank = best_rank - max(1, math.floor(best_rank * 0.1))
+        trace_id = str(trace_id or uuid.uuid4().hex)
+        riddle_tts_config = self._tts_config_snapshot()
+        generation_started = time.perf_counter()
         riddle_res = self.game.process_riddle_gift("streamer", None, force=True)
         if not riddle_res:
-            emit(self.tenant_id, "log", "[Manual] Falha ao iniciar charada")
+            self._palavra_debug("riddle.ignored", source="manual", reason="stage_unavailable",
+                                game_id=self.game.game_id, current_stage=self.game.current_riddle_stage,
+                                trace_id=trace_id)
+            self._log_event("notice", "warning", "palavra.riddle.rejected", "[Palavra] Não há etapa de charada disponível.",
+                            game="palavra", game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_RIDDLE_STAGE_UNAVAILABLE",
+                            details={"current_stage": self.game.current_riddle_stage})
             return
         stage = riddle_res["stage"]
         cluster_words = self.game.hint_cluster(target_rank)
+        self._palavra_debug("riddle.generation_started", source="manual", game_id=self.game.game_id,
+                            stage=stage, target_rank=target_rank, clue_count=len(cluster_words), trace_id=trace_id)
         emit(self.tenant_id, "game", {
             "type": "roulette_drop",
             "reward_type": "riddle_started",
@@ -1599,9 +2173,28 @@ class GameSession:
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
-        emit(self.tenant_id, "log", f"[Manual] Gerando charada do Estágio {stage} usando cluster: {', '.join(cluster_words)}...")
-        riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
-        asyncio.create_task(self._narrate_riddle_async(stage, riddle_text))
+        self._log_event("game", "info", "palavra.riddle.generation_started",
+                        f"[Palavra] Geração de charada do estágio {stage} iniciada.", game="palavra",
+                        game_id=self.game.game_id, trace_id=trace_id,
+                        details={"stage": stage, "clue_candidate_count": len(cluster_words)})
+        try:
+            riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
+        except Exception as exc:
+            self._palavra_debug("riddle.generation_failed", source="manual",
+                                game_id=self.game.game_id, stage=stage,
+                                trace_id=trace_id,
+                                error_type=type(exc).__name__,
+                                generation_ms=round((time.perf_counter() - generation_started) * 1000))
+            self._log_event("error", "error", "palavra.riddle.generation_failed",
+                            "[Palavra] Não foi possível gerar a charada.", game="palavra",
+                            game_id=self.game.game_id, trace_id=trace_id,
+                            code="PALAVRA_RIDDLE_GENERATION_FAILED",
+                            duration_ms=round((time.perf_counter() - generation_started) * 1000),
+                            details={"stage": stage, "error_type": type(exc).__name__})
+            return
+        asyncio.create_task(self._narrate_riddle_async(
+            stage, riddle_text, trace_id=trace_id, tts_config=riddle_tts_config
+        ))
         emit(self.tenant_id, "game", {
             "type": "roulette_drop",
             "reward_type": "riddle_ready",
@@ -1617,7 +2210,15 @@ class GameSession:
             "tension_score": getattr(self.game, "tension_score", 0),
             "is_final_boss": getattr(self.game, "is_final_boss", False),
         })
-        emit(self.tenant_id, "log", f"[Manual] Estagio {stage} liberado! Charada: \"{riddle_text}\"")
+        self._log_event("game", "info", "palavra.riddle.ready",
+                        f"[Palavra] Charada do estágio {stage} liberada.", game="palavra",
+                        game_id=self.game.game_id, trace_id=trace_id,
+                        details={"stage": stage, "text_length": len(riddle_text or "")})
+        self._palavra_debug("riddle.generated", source="manual", game_id=self.game.game_id,
+                            stage=stage, text_length=len(riddle_text or ""),
+                            generation_ms=round((time.perf_counter() - generation_started) * 1000), trace_id=trace_id)
+        self._palavra_debug("riddle.ready_sent", source="manual", game_id=self.game.game_id,
+                            stage=stage, text_length=len(riddle_text or ""), trace_id=trace_id)
 
     def _emit_caca_found(self, w):
         emit(self.tenant_id, "game", {
@@ -1636,28 +2237,44 @@ class GameSession:
             emit(self.tenant_id, "game", {"type": "caca_finished", "found_count": st["found_count"], "total": st["total"]})
             emit(self.tenant_id, "log", "[CacaPalavras] Todas as palavras encontradas! Jogo encerrado.")
         else:
-            emit(self.tenant_id, "log", f"[CacaPalavras] {w['finder_nickname']} acertou '{w['text']}' ({w['start']}:{w['end']})")
+            emit(self.tenant_id, "log", f"[CacaPalavras] {w['finder_nickname']} encontrou uma palavra ({w['start']}:{w['end']}).")
 
     async def _command_loop(self):
         while True:
             cmd = await self.queue.get()
             c = cmd.get("cmd")
             if c == "new_game":
+                trace_id = str(cmd.get("trace_id") or "") or None
+                self._palavra_debug(
+                    "start.command_received",
+                    source="panel",
+                    trace_id=trace_id,
+                    game_id=getattr(self.game, "game_id", None),
+                    game_status="running" if self.game.secret_word and not self.game.finished else ("finished" if self.game.finished else "idle"),
+                    guess_count=len(self.game.guesses or []),
+                    room_id=self.current_room_id or self._live_room_id() or None,
+                )
                 self._stop_other_chat_games()
                 await self.start_game(
                     hint_gifts=cmd.get("hint_gifts"),
                     riddle_gifts=cmd.get("riddle_gifts"),
                     size_gift=cmd.get("size_gift") or "",
                     letter_gift=cmd.get("letter_gift") or "",
+                    source="panel",
+                    trace_id=trace_id,
                 )
             elif c == "end_game":
-                await self.end_game()
+                await self.end_game(cause="panel", trace_id=cmd.get("trace_id"))
             elif c == "manual_hint":
-                await self.manual_hint()
+                trace_id = cmd.get("trace_id")
+                self._palavra_debug("hint.command_received", source="panel", game_id=getattr(self.game, "game_id", None), trace_id=trace_id)
+                await self.manual_hint(trace_id=trace_id)
             elif c == "manual_riddle":
-                await self.manual_riddle()
+                trace_id = cmd.get("trace_id")
+                self._palavra_debug("riddle.command_received", source="panel", game_id=getattr(self.game, "game_id", None), trace_id=trace_id)
+                await self.manual_riddle(trace_id=trace_id)
             elif c == "caca_start":
-                await self.end_game()
+                await self.end_game(cause="switch_to_caca")
                 self._stop_other_chat_games(keep="caca")
                 self.caca.start(word_pool=self.game.word_pool, count=int(cmd.get("count") or 10))
                 emit(self.tenant_id, "game", {"type": "caca_state", **self.caca.state(public=False)})
@@ -1738,35 +2355,82 @@ class GameSession:
             elif c == "tres_start":
                 palavra = str(cmd.get("palavra") or "").strip()
                 dicas = cmd.get("dicas") or []
+                trace_id = str(cmd.get("trace_id") or "") or None
+                next_round_id = int(getattr(self.tres, "round_id", 0) or 0) + 1
+                preparation_started = time.perf_counter()
+                self._log_event("game", "info", "tres.start.command_received",
+                                "[3 Dicas] Solicitação de início recebida.", game="tres",
+                                game_id=str(next_round_id), trace_id=trace_id,
+                                details={"custom_word_supplied": bool(palavra), "custom_clues_supplied": len(dicas) >= 3})
                 if not palavra:
                     palavra = self._pick_tres_word()
-                if palavra:
+                if not palavra:
+                    self._log_event("notice", "warning", "tres.start.rejected",
+                                    "[3 Dicas] Não há palavra disponível para iniciar a rodada.", game="tres",
+                                    game_id=str(next_round_id), trace_id=trace_id,
+                                    code="TRES_WORD_UNAVAILABLE")
+                    continue
+                try:
                     self._mark_tres_played(palavra)
                     if not dicas or len(dicas) < 3:
-                        dicas = await generate_tres_dicas(palavra)
-                    await self.end_game()
+                        def log_generation(event, details):
+                            fallback = event.endswith("fallback")
+                            self._log_event(
+                                "notice" if fallback else "diagnostic",
+                                "warning" if fallback else "debug",
+                                "tres." + event,
+                                "[3 Dicas] Dicas geradas com fallback." if fallback else "[3 Dicas] Dicas geradas.",
+                                game="tres", game_id=str(next_round_id), trace_id=trace_id,
+                                duration_ms=details.get("duration_ms"),
+                                details={**details, "word_length": len(palavra)},
+                            )
+                        dicas = await generate_tres_dicas(palavra, log_cb=log_generation)
+                    await self.end_game(cause="switch_to_tres")
                     self._stop_other_chat_games(keep="tres")
-                    self.tres.start(palavra, dicas)
+                    self.tres.start(palavra, dicas, trace_id=trace_id)
+                    self._log_event("game", "info", "tres.start.accepted",
+                                    "[3 Dicas] Rodada preparada e iniciada.", game="tres",
+                                    game_id=str(self.tres.round_id), trace_id=trace_id,
+                                    duration_ms=round((time.perf_counter() - preparation_started) * 1000),
+                                    details={"word_length": len(palavra), "clue_count": len(dicas[:3])})
                     emit(self.tenant_id, "game", {"type": "tres_weekly", "weekly": db.get_tres_weekly(self.tenant_id, 10)})
-                else:
-                    emit(self.tenant_id, "log", "[3 Dicas] Sem palavra disponível")
+                except Exception as exc:
+                    self._log_event("error", "error", "tres.start.failed",
+                                    "[3 Dicas] Não foi possível iniciar a rodada.", game="tres",
+                                    game_id=str(next_round_id), trace_id=trace_id,
+                                    code="TRES_START_FAILED",
+                                    duration_ms=round((time.perf_counter() - preparation_started) * 1000),
+                                    details={"error_type": type(exc).__name__})
             elif c == "tres_stop":
+                self.tres.trace_id = str(cmd.get("trace_id") or self.tres.trace_id or "") or None
                 self.tres.stop()
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
             elif c == "tres_pause":
+                self.tres.trace_id = str(cmd.get("trace_id") or self.tres.trace_id or "") or None
                 self.tres.pause()
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
             elif c == "tres_resume":
+                self.tres.trace_id = str(cmd.get("trace_id") or self.tres.trace_id or "") or None
                 self.tres.resume()
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
             elif c == "tres_reset":
-                self.tres.reset()
+                self.tres.reset(trace_id=cmd.get("trace_id"))
                 emit(self.tenant_id, "game", {"type": "tres_state", **self.tres.state(public=False)})
             elif c == "tres_config":
                 self.tres.set_gift_config(cmd.get("config") or {})
-                emit(self.tenant_id, "log", "[3 Dicas] Configuração de presentes atualizada")
+                self._log_event("game", "info", "tres.config.updated",
+                                "[3 Dicas] Configuração da rodada atualizada.", game="tres",
+                                game_id=str(self.tres.round_id) if self.tres.round_id else None,
+                                trace_id=cmd.get("trace_id"),
+                                details={
+                                    "size_gift_configured": bool(self.tres.gift_config.get("size")),
+                                    "letter_gift_configured": bool(self.tres.gift_config.get("letter")),
+                                    "ticket_configured": bool(self.tres.gift_config.get("ticket")),
+                                    "stage_times": list(self.tres.stage_times.values()),
+                                    "stage_points": list(self.tres.stage_points.values()),
+                                })
             elif c == "vpet_start":
-                await self.end_game()
+                await self.end_game(cause="switch_to_vpet")
                 self._stop_other_chat_games(keep="vpet")
                 self.vpet.start()
                 emit(self.tenant_id, "game", {"type": "vpet_state", **self.vpet.public_state()})
@@ -1784,67 +2448,133 @@ class GameSession:
                 break
 
     async def run(self):
-        emit(self.tenant_id, "log", f"[Main] Aguardando @{self.username} ficar ao vivo e o comando 'new_game'...")
-        handler_task = asyncio.create_task(self.handler.run())
-        cmd_task = asyncio.create_task(self._command_loop())
-        self._likes_loop_task = asyncio.create_task(self._likes_loop())
-        self._vpet_task = asyncio.create_task(self.vpet.run())
-        self._corda_task = asyncio.create_task(self._corda_loop())
+        session_context = bind_session_id(self.session_id)
+        handler_task = None
+        cmd_task = None
+        narration_task = None
+        cancelled = False
         try:
+            self._log_event("connection", "info", "connection.session.waiting_live",
+                            "Sessão do daemon aguardando a live ficar disponível.",
+                            trace_id=self.connect_trace_id,
+                            details={"engine": self.engine})
+            handler_task = asyncio.create_task(self.handler.run())
+            cmd_task = asyncio.create_task(self._command_loop())
+            narration_task = asyncio.create_task(self._chat_narration_worker())
+            self._chat_narration_task = narration_task
+            self._likes_loop_task = asyncio.create_task(self._likes_loop())
+            self._vpet_task = asyncio.create_task(self.vpet.run())
+            self._corda_task = asyncio.create_task(self._corda_loop())
             await asyncio.wait({handler_task, cmd_task}, return_when=asyncio.FIRST_COMPLETED)
         except asyncio.CancelledError:
-            raise
+            cancelled = True
         finally:
-            for t in (handler_task, cmd_task):
-                t.cancel()
             try:
-                await asyncio.wait({handler_task, cmd_task}, timeout=5)
-            except asyncio.CancelledError:
-                pass
-            self.corda.stop()
-            if self._corda_task:
-                self._corda_task.cancel()
-                try:
-                    await self._corda_task
-                except asyncio.CancelledError:
-                    pass
-                self._corda_task = None
-            self.battle.stop()
-            if self._vpet_task:
-                self._vpet_task.cancel()
-                try:
-                    await self._vpet_task
-                except (Exception, asyncio.CancelledError):
-                    pass
+                tasks = [t for t in (
+                    handler_task, cmd_task, narration_task, self._likes_loop_task, self._vpet_task,
+                    self._corda_task, self._tres_task, self._duelo_reset_task,
+                    self._duelo_match_task, self._duelo_timer_task, self._duelo_round_result_task,
+                ) if t is not None and not t.done()]
+                for task in tasks:
+                    task.cancel()
+                if tasks:
+                    done, pending = await asyncio.wait(tasks, timeout=5)
+                    if pending:
+                        self._log_event("diagnostic", "warning", "connection.session.tasks_pending",
+                                        "Há tarefas de sessão pendentes durante o encerramento.",
+                                        trace_id=self.shutdown_trace_id or self.connect_trace_id,
+                                        code="SESSION_TASKS_PENDING", details={"pending_count": len(pending)})
+                        for task in pending:
+                            task.cancel()
+                        try:
+                            await asyncio.wait_for(asyncio.gather(*pending, return_exceptions=True), timeout=5)
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            self._log_event("notice", "warning", "connection.session.tasks_unconfirmed",
+                                            "Algumas tarefas não confirmaram o encerramento.",
+                                            trace_id=self.shutdown_trace_id or self.connect_trace_id,
+                                            code="SESSION_TASKS_UNCONFIRMED")
+
+                self._likes_loop_task = None
+                self._chat_narration_task = None
                 self._vpet_task = None
-            for loop_task in (self._likes_loop_task,):
-                if loop_task:
-                    loop_task.cancel()
-                    try:
-                        await loop_task
-                    except (Exception, asyncio.CancelledError):
-                        pass
-            if self.game and self.game.secret_word and not self.game.finished:
-                payload = self.game.finalize_game(room_id=self._live_room_id())
-                if payload:
-                    emit(self.tenant_id, "game", payload)
-                    emit(self.tenant_id, "log", f"[FIM] Partida encerrada devido a desconexão. Palavra: {self.game.secret_word}")
-            emit(self.tenant_id, "log", f"[Main] Sessao do tenant {self.tenant_id} encerrada")
-            emit(self.tenant_id, "status", {"state": "offline"})
+                self._corda_task = None
+                self._tres_task = None
+                self._duelo_reset_task = None
+                self._duelo_match_task = None
+                self._duelo_timer_task = None
+                self._duelo_round_result_task = None
+                self.corda.stop()
+                self.battle.stop()
+                if self.game and self.game.secret_word and not self.game.finished:
+                    self._palavra_debug("end.begin", cause="session_disconnect", game_id=self.game.game_id,
+                                        guess_count=len(self.game.guesses or []),
+                                        room_id=self.current_room_id or self._live_room_id() or None,
+                                        trace_id=self.shutdown_trace_id or self.connect_trace_id)
+                    payload = self.game.finalize_game(room_id=self._live_room_id())
+                    if payload:
+                        emit(self.tenant_id, "game", payload)
+                        self._palavra_debug("end.finished", cause="session_disconnect",
+                                            game_id=self.game.game_id, winner=payload.get("winner"),
+                                            guess_count=len(self.game.guesses or []),
+                                            trace_id=self.shutdown_trace_id or self.connect_trace_id)
+                        emit(self.tenant_id, "log", "[FIM] Partida encerrada devido à desconexão.")
+                self._reset_chat_narration(False)
+                self._flush_chat_narration_stats()
+                self._log_event("connection", "info", "connection.session.ended",
+                                "Sessão do daemon encerrada.",
+                                trace_id=self.shutdown_trace_id or self.connect_trace_id,
+                                details={"engine": self.engine})
+                emit(self.tenant_id, "status", {"state": "offline"})
+            finally:
+                clear_active_session_id(self.tenant_id, self.session_id)
+                reset_session_id(session_context)
+        if cancelled:
+            raise asyncio.CancelledError
 
 
 sessions = {}
 gift_tags = JogoContexto.load_default_gift_tags()
 
 
-async def stop_session_task(tid):
-    s = sessions.pop(tid, None)
-    if s and s.task:
-        s.task.cancel()
-        try:
-            await s.task
-        except (Exception, asyncio.CancelledError):
-            pass
+def emit_service_log(tenant_id, category, level, event, message, game="", trace_id=None, code=None, details=None):
+    emit(tenant_id, "log", {
+        "text": str(message or ""),
+        "category": category,
+        "level": level,
+        "event": event,
+        "source": "python",
+        "game": game or "",
+        "trace_id": trace_id or None,
+        "code": code or None,
+        "details": details or None,
+    })
+
+
+async def stop_session_task(tid, expected_session_id=None):
+    s = sessions.get(tid)
+    if not s:
+        return False
+    if expected_session_id and str(expected_session_id) != str(s.session_id):
+        return False
+    sessions.pop(tid, None)
+    try:
+        if s.task and not s.task.done():
+            # Stop cooperativamente para que GameSession.run drene os handlers
+            # filhos antes de permitir uma nova sessão para o mesmo tenant.
+            try:
+                s.queue.put_nowait({"cmd": "stop"})
+            except Exception:
+                pass
+            done, _ = await asyncio.wait({s.task}, timeout=8)
+            if not done:
+                s.task.cancel()
+                try:
+                    await asyncio.wait_for(asyncio.gather(s.task, return_exceptions=True), timeout=5)
+                except (Exception, asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+        return True
+    finally:
+        clear_active_session_id(tid, s.session_id)
 
 
 async def _run_gifts_sync(tid):
@@ -1872,7 +2602,9 @@ async def _run_gifts_sync(tid):
         emit(tid, "log", f"[Gifts] Catálogo atualizado: +{result.get('inserted', 0)} novos, "
                           f"{result.get('updated', 0)} atualizados, {result.get('unavailable', 0)} indisponíveis.")
     except Exception as e:
-        emit(tid, "log", f"[Gifts] Falha na sincronização: {type(e).__name__}: {e}")
+        emit(tid, "log", {"text": "[Gifts] Falha na sincronização do catálogo.", "category": "error",
+                            "level": "error", "event": "gifts.sync.failed", "source": "python",
+                            "code": "GIFTS_SYNC_FAILED", "details": {"error_type": type(e).__name__}})
         emit(tid, "gifts_synced", {"error": str(e)})
     finally:
         _gifts_sync_running = False
@@ -1884,6 +2616,10 @@ async def process_commands(queue):
         c = cmd.get("cmd")
         if c == "shutdown":
             break
+        # Comandos do jogo publico (site) nao tem tenant_id e nao usam sessao de live.
+        if c and c.startswith("public_"):
+            await handle_public_command(cmd)
+            continue
         tid = cmd.get("tenant_id")
         if not tid:
             continue
@@ -1891,6 +2627,8 @@ async def process_commands(queue):
         if c == "start":
             if tid in sessions:
                 await stop_session_task(tid)
+            session_id = str(cmd.get("session_id") or uuid.uuid4().hex)
+            set_active_session_id(tid, session_id)
             session = GameSession(
                 tenant_id=tid,
                 username=str(cmd.get("username", "")).lstrip("@"),
@@ -1898,6 +2636,8 @@ async def process_commands(queue):
                 history_path=cmd.get("history_path"),
                 gift_tags=gift_tags,
                 engine=str(cmd.get("engine", "tiktools") or "tiktools"),
+                session_id=session_id,
+                connect_trace_id=cmd.get("trace_id"),
             )
             settings = cmd.get("settings")
             if isinstance(settings, dict):
@@ -1910,10 +2650,20 @@ async def process_commands(queue):
                 session.caca_prefix = str(caca_config.get("prefix") or "").strip()
             sessions[tid] = session
             session.task = asyncio.create_task(session.run())
-            emit(tid, "log", f"[Service] Sessao iniciada para @{session.username} (motor {session.engine}) — voz={session.settings.get('tts_voice') or 'padrao'} {session.settings.get('tts_rate', 1.0)}x")
+            emit(tid, "log", {"text": "Sessão do daemon iniciada.", "category": "connection", "level": "info",
+                               "event": "connection.session.started", "source": "python",
+                               "session_id": session.session_id, "trace_id": session.connect_trace_id,
+                               "details": {"engine": session.engine,
+                                           "tts_voice_configured": bool(session.settings.get("tts_voice")),
+                                           "tts_rate": session.settings.get("tts_rate", 1.0)}})
 
         elif c == "stop":
-            await stop_session_task(tid)
+            expected = cmd.get("session_id")
+            existing_session = sessions.get(tid)
+            if existing_session:
+                existing_session.shutdown_trace_id = str(cmd.get("trace_id") or "") or None
+            await stop_session_task(tid, expected)
+            clear_active_session_id(tid, expected)
             s = sessions.get(tid)
             if s and getattr(s, "duelo", None):
                 s.duelo.reset_teams()
@@ -1926,74 +2676,101 @@ async def process_commands(queue):
             duration = int(cmd.get("duration") or 180)
             if s:
                 s.battle.start(duration, room_id=getattr(s.handler, "_room_id", None) or "")
-                emit(tid, "log", f"[Batalha] Rodada iniciada ({duration}s) - Top1 de Tap e Top1 de Moeda!")
+                emit_service_log(tid, "game", "info", "batalha.round.started",
+                                 "[Batalha] Rodada iniciada.", game="batalha",
+                                 trace_id=cmd.get("trace_id"), details={"duration_seconds": duration})
             else:
-                emit(tid, "log", "[Batalha] Sessao nao ativa (conecte a live primeiro)")
+                emit_service_log(tid, "notice", "warning", "batalha.start.rejected",
+                                 "[Batalha] Sessão não ativa; conecte a live primeiro.", game="batalha",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "battle_stop":
             s = sessions.get(tid)
             if s:
                 await s.battle.end_round()
-                emit(tid, "log", "[Batalha] Rodada finalizada")
+                emit_service_log(tid, "game", "info", "batalha.round.stopped",
+                                 "[Batalha] Rodada finalizada.", game="batalha", trace_id=cmd.get("trace_id"))
             else:
-                emit(tid, "log", "[Batalha] Sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "batalha.stop.rejected",
+                                 "[Batalha] Sessão não ativa.", game="batalha",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "new_game":
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", "[Service] new_game ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "palavra.start.rejected",
+                                 "[Palavra] Sessão não ativa para iniciar partida.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "end_game":
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", "[Service] end_game ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "palavra.end.rejected",
+                                 "[Palavra] Sessão não ativa para encerrar partida.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c in ("manual_hint", "manual_riddle"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", f"palavra.{c}.rejected",
+                                 "[Palavra] Sessão não ativa para executar a ação.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE", details={"command": c})
 
         elif c in ("caca_start", "caca_stop", "caca_reveal"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", f"caca.{c.removeprefix('caca_')}.rejected",
+                                 "[Caça Palavras] Sessão não ativa para executar a ação.", game="caca",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE", details={"command": c})
 
         elif c in ("tres_start", "tres_stop", "tres_pause", "tres_resume", "tres_reset", "tres_config"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", f"tres.{c.removeprefix('tres_')}.rejected",
+                                 "[3 Dicas] Sessão não ativa para executar a ação.", game="tres",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE", details={"command": c})
 
         elif c in ("corda_start", "corda_stop", "corda_new_match", "corda_test", "corda_target", "duelo_start", "duelo_stop", "duelo_config", "duelo_reset_round", "duelo_new_match"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+                target_game = "corda" if c.startswith("corda_") else "duelo"
+                emit_service_log(tid, "notice", "warning", f"{target_game}.{c.split('_', 1)[-1]}.rejected",
+                                 f"[{target_game.upper()}] Sessão não ativa para executar a ação.", game=target_game,
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE", details={"command": c})
 
         elif c in ("vpet_start", "vpet_stop", "vpet_battle_start", "vpet_assistant_mode"):
             s = sessions.get(tid)
             if s:
                 s.queue.put_nowait(cmd)
             else:
-                emit(tid, "log", f"[Service] {c} ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", f"vpet.{c.removeprefix('vpet_')}.rejected",
+                                 "[Bichinho] Sessão não ativa para executar a ação.", game="vpet",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE", details={"command": c})
 
         elif c == "caca_config":
             s = sessions.get(tid)
             if s:
                 s.caca_prefix = str(cmd.get("prefix") or "").strip()
-                emit(tid, "log", f"[Service] Caça Palavras configurado — prefixo: '{s.caca_prefix or '(nenhum)'}'")
+                emit_service_log(tid, "game", "info", "caca.config.applied",
+                                 "[Caça Palavras] Configuração aplicada.", game="caca",
+                                 trace_id=cmd.get("trace_id"), details={"prefix_enabled": bool(s.caca_prefix),
+                                                                        "prefix_length": len(s.caca_prefix)})
             else:
-                emit(tid, "log", "[Service] caca_config ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "caca.config.rejected",
+                                 "[Caça Palavras] Configuração não aplicada: sessão não ativa.", game="caca",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "update_gift_config":
             s = sessions.get(tid)
@@ -2004,14 +2781,39 @@ async def process_commands(queue):
                     s.game.size_gift = str(cmd.get("size_gift") or "")
                 if "letter_gift" in cmd:
                     s.game.letter_gift = str(cmd.get("letter_gift") or "")
-                emit(tid, "log", f"[Service] Gifts atualizados — Dicas: {', '.join(s.game.hint_gifts)} | Presente revelador: {', '.join(s.game.riddle_gifts)}" + (f" | Tamanho: {s.game.size_gift}" if s.game.size_gift else "") + (f" | 1ª letra: {s.game.letter_gift}" if s.game.letter_gift else ""))
+                emit_service_log(tid, "game", "info", "palavra.gift_config.applied",
+                                 "[Palavra] Configuração de presentes aplicada.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), details={
+                                     "hint_gift_count": len(s.game.hint_gifts or []),
+                                     "riddle_gift_count": len(s.game.riddle_gifts or []),
+                                     "size_gift_configured": bool(s.game.size_gift),
+                                     "letter_gift_configured": bool(s.game.letter_gift),
+                                 })
             else:
-                emit(tid, "log", "[Service] update_gift_config ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "palavra.gift_config.rejected",
+                                 "[Palavra] Configuração de presentes não aplicada: sessão não ativa.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "update_settings":
             s = sessions.get(tid)
             if s:
+                previous_tts_settings = (
+                    bool(s.settings.get("chat_narr_enabled")),
+                    s.settings.get("chat_narr_mode", "all"),
+                    s.settings.get("chat_narr_char", "#"),
+                    s.settings.get("tts_voice", ""),
+                    s.settings.get("tts_rate", 1.0),
+                )
                 s.settings = normalize_settings(cmd.get("settings"))
+                current_tts_settings = (
+                    bool(s.settings.get("chat_narr_enabled")),
+                    s.settings.get("chat_narr_mode", "all"),
+                    s.settings.get("chat_narr_char", "#"),
+                    s.settings.get("tts_voice", ""),
+                    s.settings.get("tts_rate", 1.0),
+                )
+                if previous_tts_settings != current_tts_settings:
+                    s._reset_chat_narration(bool(s.settings.get("chat_narr_enabled")))
                 s.game.boss_mode = bool(s.settings.get("boss_mode", True))
                 # Meta de tap: aplica em runtime preservando o progresso atual
                 s._tap_meta_x2 = False
@@ -2029,28 +2831,53 @@ async def process_commands(queue):
                         "tap_meta_multiplier": s_pub["tap_meta_multiplier"],
                     })
                     await s._check_tap_meta()
-                emit(tid, "log",
-                     f"[Service] Preferências atualizadas — Boss: {'sim' if s.settings['boss_mode'] else 'nao'} | "
-                     f"Seguidores: {'sim' if s.settings['apenas_seguidores'] else 'nao'} | "
-                     f"Heart-me: {'sim' if s.settings['apenas_heart_me'] else 'nao'} | "
-                     f"Dicas: {s.settings['pct_dica']}% / Charadas: {s.settings['pct_charada']}% | Meta de tap: {s.tap_meta_total}")
+                emit_service_log(tid, "game", "info", "palavra.settings.applied",
+                                 "[Palavra] Preferências aplicadas à sessão.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), details={
+                                     "boss_mode": bool(s.settings["boss_mode"]),
+                                     "followers_only": bool(s.settings["apenas_seguidores"]),
+                                     "heart_me_only": bool(s.settings["apenas_heart_me"]),
+                                     "hint_percent": int(s.settings["pct_dica"]),
+                                     "riddle_percent": int(s.settings["pct_charada"]),
+                                     "tap_target": int(s.tap_meta_total),
+                                 })
             else:
-                emit(tid, "log", "[Service] update_settings ignorado: sessao nao ativa")
+                emit_service_log(tid, "notice", "warning", "palavra.settings.rejected",
+                                 "[Palavra] Preferências não aplicadas: sessão não ativa.", game="palavra",
+                                 trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
 
         elif c == "tts_test":
             text = cmd.get("text") or "Olá! Esta é a voz para as charadas do jogo Contexto."
             rate = cmd.get("rate")
-            if not isinstance(rate, (int, float)):
+            if not isinstance(rate, (int, float)) or not math.isfinite(float(rate)):
                 rate = 1.0
             voice_key = str(cmd.get("voice") or tts.VOICE_EDGE_ANTONIO)
-            emit(tid, "log", {"text": f"[TTS] teste de voz '{voice_key}' (rate {rate})", "game": "tts", "level": "info"})
+            trace_id = str(cmd.get("trace_id") or uuid.uuid4().hex)
+            test_started = time.perf_counter()
+            emit_service_log(tid, "diagnostic", "debug", "tts.test.started",
+                             "Teste de síntese de voz iniciado.", game="tts", trace_id=trace_id,
+                             details={"voice": voice_key, "rate": float(rate)})
             audio_dir = os.path.join(TTS_AUDIO_ROOT, str(tid))
-            audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, float(rate))
+            try:
+                audio_path = await asyncio.to_thread(tts.synthesize_edge, text, audio_dir, voice_key, float(rate))
+            except Exception as exc:
+                emit_service_log(tid, "error", "error", "tts.test.failed",
+                                 "Não foi possível gerar o áudio de teste.", game="tts", trace_id=trace_id,
+                                 code="TTS_TEST_SYNTHESIS_FAILED",
+                                 details={"voice": voice_key, "rate": float(rate), "error_type": type(exc).__name__})
+                continue
             if audio_path:
                 emit(tid, "tts_test_ready", f"/tts-audio/{tid}/{os.path.basename(audio_path)}")
-                emit(tid, "log", {"text": f"[TTS] áudio de teste gerado: /tts-audio/{tid}/{os.path.basename(audio_path)}", "game": "tts", "level": "ok"})
+                emit_service_log(tid, "diagnostic", "debug", "tts.test.completed",
+                                 "Áudio de teste sintetizado.", game="tts", trace_id=trace_id,
+                                 details={"voice": voice_key, "rate": float(rate),
+                                          "duration_ms": round((time.perf_counter() - test_started) * 1000)})
             else:
-                emit(tid, "log", {"text": "[TTS] Falha ao gerar áudio de teste (edge indisponível)", "game": "tts", "level": "err"})
+                emit_service_log(tid, "error", "error", "tts.test.failed",
+                                 "Não foi possível gerar o áudio de teste.", game="tts", trace_id=trace_id,
+                                 code="TTS_TEST_SYNTHESIS_FAILED",
+                                 details={"voice": voice_key, "rate": float(rate),
+                                          "reason": "EDGE_TTS_NO_AUDIO"})
 
     for tid in list(sessions.keys()):
         await stop_session_task(tid)

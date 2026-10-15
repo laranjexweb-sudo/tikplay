@@ -1,54 +1,63 @@
-# Logs do TikPlay: estado atual e recomendação de backend
+# Logs do TikPlay — inventário de persistência e dependências
 
-Este documento descreve a interface de filtros implementada no painel e propõe uma evolução do backend. A proposta de backend não é um contrato existente: a outra IA deve verificar a arquitetura, autenticação e banco reais antes de implementá-la. O frontend deste projeto não chama endpoints de histórico e não simula persistência.
+O padrão obrigatório de produção e diagnóstico está em **`docs/PADRAO_DE_LOGS.md`**. Este documento é complementar: registra o inventário técnico, dependências e estado do replay/persistência. Em caso de divergência, prevalece o padrão oficial; recomendações abaixo não significam que a funcionalidade já esteja implementada.
 
 ## Comportamento e contrato atuais
 
-- O painel recebe mensagens `type: "log"` pelo WebSocket `/logs`. O envio existente aceita string legada ou objeto com `{ text, game, level }` (`node/lib/ws.js`, `broadcastLog`). O roteamento do daemon repassa esses três campos (`node/server.js`, `handleDaemonMessage`).
-- Ao conectar, `/logs` envia saudação e estados atuais, sem replay de linhas. No estado atual do código, alterações concorrentes já adicionaram `node/lib/logstore.js`, um hook em `broadcastLog` e `GET /api/logs` autenticado com `before`, `since`, `limit` e `{success, logs, limit, has_more}`. O frontend ainda não integra essa leitura. Não recriar esse endpoint nem tratar a recomendação antiga como inventário atualizado.
+- O painel recebe mensagens `type: "log"` pelo WebSocket `/logs`. O transporte ainda aceita string legada ou objeto `{ text, game, level }`; o contrato estruturado mais amplo está definido em `PADRAO_DE_LOGS.md`.
+- O backend persiste logs via `node/lib/logstore.js`/`broadcastLog` e oferece `GET /api/logs` autenticado, paginado por `before`/`since`/`limit`. O painel ainda não integra o replay ao vivo; **não criar outro endpoint**. A reconexão ao WebSocket não recupera por si só as linhas perdidas.
+- Logs operacionais Node/daemon sem tenant são JSON em stdout/stderr e não entram em `log_entries`; `console` do navegador também não é persistido nem enviado ao backend.
 - O navegador cria uma linha DOM por mensagem em `addLog`; não há persistência local das linhas. Recarregar perde a lista. A limpeza atual só substitui a lista visível do navegador.
 - O frontend entrega filtros de apresentação por categoria, sem remover nós do DOM: desmarcar oculta linhas; marcar novamente as mostra; `Limpar` continua como ação local separada. `Copiar` ainda copia as linhas presentes no DOM, inclusive as ocultas por filtro. Preferências dos checkboxes são salvas em `localStorage` (`tikplay.logCategories`), somente neste navegador, sem chamada ao backend.
-- A classificação usa primeiro `level` conhecido (`err`/`error`, `warn`/`warning`, `debug`/`trace`), depois `game` e marcadores textuais explícitos. Valores desconhecidos de `game` e linhas legadas sem metadados são apresentados em “Conexão/Sistema”. O frontend não garante classificação precisa até o produtor do log padronizar seus metadados.
-- Os valores de `level` observados no cliente incluem `err`, `warn`, `ok` e `chat`; o caminho do daemon aceita qualquer string e atualmente não impõe enum. Por isso, “diagnóstico detalhado” só captura `debug`/`trace` ou marcadores explícitos `[diag]`, `[diagnostico]`, `[debug]` e `[trace]`; não há evidência de que produtores atuais enviem esses níveis de forma consistente.
+- A categoria `chat` mantém o comentário real, limitado a 130 caracteres e throttle de 1 segundo. O texto não deve ser duplicado em Diagnóstico ou em logs técnicos.
+- A normalização agora usa as categorias canônicas `connection`, `chat`, `game`, `notice` e `error`, além de `diagnostic`; `system` permanece apenas como fallback legado. No próximo boot, uma migração redação/normalização corrige conteúdo privado e classifica somente registros antigos com origem confiável. O painel consome a categoria recebida e mantém a opção **Sistema (legado)**; aliases antigos de filtro são migrados no `localStorage`.
+- O daemon ainda aceita mensagens legadas; níveis `err`, `warn`, `ok` e `chat` são normalizados ao persistir. Na validação anterior da sessão de 2026-10-15 não foi encontrado `level=debug` nem `[debug][Palavra]`; a normalização, migração do schema e redação do histórico exigem o próximo boot do Node para validação em execução.
 
-## Contratos propostos para avaliar no backend
+## Contrato e dependências pendentes
 
-Os nomes abaixo são sugestões de desenho, não endpoints ou tabelas existentes.
+Os nomes canônicos e a política obrigatória estão em `PADRAO_DE_LOGS.md`. O schema estruturado e o adaptador de compatibilidade já estão no working tree; replay do painel e validação após o processo atualizado continuam pendentes.
 
 ### Registro estruturado
 
-Formato recomendado para um registro persistido e para o evento em tempo real:
+Formato lógico persistido/transportado por novos eventos estruturados, mantendo compatibilidade com o transporte legado:
 
 ```json
 {
   "id": "identificador-estavel",
-  "streamer_id": "id-do-tenant",
+  "tenant_id": "derivado da autenticação no servidor",
   "session_id": "id-da-sessao-live-ou-da-sessao-de-painel",
   "timestamp": "2026-10-12T15:14:27.123Z",
   "category": "chat",
   "level": "info",
+  "event": "chat.message.received",
+  "source": "python",
   "game": "batalha",
+  "game_id": "rodada-ou-partida",
+  "trace_id": "correlacao-da-acao",
+  "code": null,
+  "duration_ms": null,
+  "details": {},
   "message": "Mensagem segura e legível"
 }
 ```
 
-- `id` deve ser único e estável entre replay e entrega ao vivo, permitindo deduplicação.
+- `id` deve ser único e estável entre replay e entrega ao vivo, permitindo deduplicação. A persistência já armazena os campos do esquema lógico acima, incluindo contexto/correlação e detalhes redigidos.
 - `timestamp` deve ser atribuído no servidor em UTC; o cliente pode formatá-lo para o horário local.
-- `streamer_id` define o escopo de isolamento. `session_id` permite separar lives/sessões sem confundir histórico de streamers diferentes. Definir precisamente quando a sessão começa/termina é responsabilidade do domínio existente.
-- `category` sugerida: `connection`, `chat`, `game`, `notice`, `error`, `diagnostic`. `level` sugerido: `debug`, `info`, `notice`, `warning`, `error`. `game` pode ser opcional quando não houver jogo de origem.
+- `tenant_id` define o escopo de isolamento e deve ser derivado da autenticação no servidor. `session_id` separa lives/sessões; novos registros o recebem do daemon ou da sessão ativa do tenant.
+- `category`: usar os IDs canônicos `connection`, `chat`, `game`, `notice`, `error`, `diagnostic`. `level`: `debug`, `info`, `warning`, `error` ou `critical`. Ver detalhes e normalização legada no padrão oficial.
 - `message` deve ser texto seguro, sem credenciais, tokens, chaves de API ou URLs assinadas com segredo. Sanitizar antes de gravar e também antes de expor a clientes.
-- Normalizar eventos legados `{text, game, level}` em um adaptador no servidor. Evitar mudar o contrato de transporte até identificar todos os produtores; consumidores antigos devem continuar funcionando.
+- Eventos legados `{text, game, level}` são normalizados no servidor; produtores novos devem enviar metadados explícitos. Os campos adicionais no WebSocket são aditivos e preservam consumidores antigos.
 
 ### Recuperação e entrega ao vivo
 
-Adicionar uma leitura autenticada e paginada dos registros recentes por streamer/sessão. Escolher cursor opaco ou paginação por `(timestamp, id)` com ordenação estável; impor tamanho máximo de página e limite temporal. O cliente carrega uma página recente e em seguida recebe os eventos ao vivo, ou abre o WebSocket primeiro e reconcilia ambos por `id`/cursor para evitar lacunas. Deduplicar por `id` no cliente quando um registro aparecer tanto na página quanto no stream.
+Integrar o painel ao `GET /api/logs` existente. Carregar uma página recente e reconciliar com o WebSocket por `id`/cursor para evitar lacunas e duplicatas; não duplicar a rota. Manter paginação limitada, ordenação estável e escopo pelo tenant autenticado.
 
-O WebSocket `/logs` não recebe parâmetros de replay. O hook de persistência atual acrescenta `id`, `ts` e `category` quando consegue registrar o evento; em falha, continua transmitindo o evento legado, sem esses metadados. Não há reconciliação ou deduplicação no cliente. Esses recursos exigem desenho e implementação do backend. Reconexão hoje volta a receber apenas a saudação, estado atual e novos eventos.
+O WebSocket `/logs` não recebe parâmetros de replay. O hook acrescenta `id`, `ts` e metadados normalizados quando a persistência funciona; em falha, continua transmitindo o evento legado, sem esses metadados. A reconciliação e deduplicação no cliente permanecem pendentes de implementação.
 
 ### Preferências, retenção e autorização
 
 - Se as categorias marcadas precisarem sobreviver ao refresh, gravar preferências explícitas vinculadas ao usuário autenticado e ao streamer/tenant, de acordo com o modelo de permissões atual. Definir precedência para usuário que acessa mais de um streamer e valor padrão para novos usuários. O frontend já persiste filtros localmente; sincronização entre dispositivos é uma proposta separada.
-- Definir retenção por idade e/ou volume máximo por streamer, política de limpeza agendada, índices adequados e paginação limitada. Não reter logs indefinidamente por padrão. A política final depende dos requisitos operacionais e de privacidade do produto.
+- A retenção implementada no momento é de 7 dias, com teto de 20.000 linhas por tenant e poda periódica (`node/db.js`). Preservar limites até decisão documentada; validar volume real, índices e janela antes de alterá-los.
 - Derivar o streamer/tenant da identidade autenticada no servidor; não confiar em `streamer_id` arbitrário enviado pelo cliente. Verificar autorização em cada leitura e gravação, e cobrir isolamento contra acesso cruzado entre tenants.
 - Aplicar limites de taxa, tamanho de mensagem e volume por sessão. Excluir ou mascarar tokens, API keys, dados pessoais desnecessários, conteúdo privado e URLs com assinaturas.
 

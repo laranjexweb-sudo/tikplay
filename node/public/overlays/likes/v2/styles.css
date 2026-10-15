@@ -5,6 +5,13 @@
 
 html.overlay-document{background:transparent}
 
+/* Keep canvas placement independent from row content orientation. */
+body.overlay{width:100%;max-width:none;min-height:100vh}
+body.overlay .overlay-position{position:absolute;left:0;top:0;width:524px;max-width:100%;margin:0;transform-origin:top left}
+body.demo-preview .overlay-position{position:relative;left:auto;top:auto;width:100%;max-width:none;transform:none}
+body.overlay .rows .row>.details{width:100%;max-width:100%;min-width:0;overflow:hidden}
+body.overlay .rows .row>.details>.name{display:block;width:100%;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+
 /* Transform only the icon so the ranking columns stay fixed. */
 .heart svg {
   transform-box: view-box;
@@ -53,6 +60,29 @@ html.overlay-document{background:transparent}
 .ranking.photo-bottom .row .details { order:0; text-align:center; }
 .ranking.photo-bottom .row .avatar-slot { order:1; }
 .ranking:is(.photo-top,.photo-bottom) .row .meta { justify-content:center; }
+
+/* Keep long display names inside the space between portrait and likes. */
+body.overlay .rows .row { min-width:0; }
+body.overlay .rows .row .details {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+body.overlay .rows .row .name {
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  font-size:15px;
+  line-height:1.15;
+}
 
 /* Compact V2 rows: preserve the card while giving names room to breathe. */
 .row,.row.rank-1,.row.rank-2,.row.rank-3 { grid-template-columns:58px minmax(0,1fr); gap:5px; min-height:56px; padding:2px 9px; }
@@ -153,3 +183,11 @@ html.overlay-document,html.overlay-document body.overlay,html.overlay-document .
 .ranking.photo-right .row .meta { justify-content:flex-end; }
 .ranking.photo-right .row .total { text-align:right; }
 .ranking.photo-right .row.rank-1:before,.ranking.photo-right .row.rank-2:before,.ranking.photo-right .row.rank-3:before { left:auto; right:-1px; }
+
+/* Keep portrait shine/frame behind the heart and likes in the V2 ranking. */
+body.overlay .avatar-slot { z-index:0; isolation:isolate; }
+body.overlay .rows .row .details { position:relative; z-index:1; overflow:visible; }
+body.overlay .rows .row .name { overflow:hidden; }
+body.overlay .rows .row .meta { position:relative; z-index:2; overflow:visible; }
+body.overlay .rows .row .heart { position:relative; z-index:1; flex:0 0 12px; overflow:visible; }
+body.overlay .rows .row .heart svg { display:block; overflow:visible; }

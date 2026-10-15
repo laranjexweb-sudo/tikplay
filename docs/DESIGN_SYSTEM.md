@@ -1,8 +1,45 @@
 # TikPlay — Design System Oficial (tema reutilizável)
 
+> 2026-10-15: Login e cadastro adotam a composição do site e os controles compartilhados do Painel Streamer (botões, campos e indicador de aba), com `/register`/`/cadastro` abrindo o cadastro quando permitido. Fluxos de autenticação, convites e APIs preservados.
+
+> 2026-10-15: Ranking de diamantes V3 salva posição, escala e quantidade por conta; páginas públicas abertas carregam a preferência e recebem atualização via WebSocket. Prévia de Narração posiciona o marcador 1x conforme a escala linear real e oculta referências visíveis ao mecanismo de voz, preservando IDs internos.
+
+> 2026-10-15: Sons → Narração habilita leitura de comentários com Edge TTS e filtros persistidos, compartilhando voz/velocidade com as charadas. Mantidos componentes, autosave e contrato `/api/settings`; playback do painel serializado.
+
+> 2026-10-15: Áudio da charada removido da página pública/OBS; texto e apresentação visual permanecem. Narração automática e replay de áudio ficam no painel streamer.
+
+> 2026-10-15: Card público da charada permanece somente textual; removidos ícone de narração e botões de áudio, preservados o texto, o fechamento e as regras do jogo.
+
+> 2026-10-15: Ranking Dragonwilds removido da aba Sobreposições do painel a pedido do usuário. Arquivos standalone e assets permanecem preservados. Implementação anterior: fonte transparente, dois rankings independentes, molduras PNG sobre fotos no top 3 e posicionamento/escalas independentes; sem alterações de API/backend.
+
+> 2026-10-15: Central de Ajuda abre artigos diretamente pelos resultados e mostra carregamento/erro. Formulários de chamado, sugestão e resposta disparam também pelo clique direto do botão, validam com retorno visível no painel e mantêm categoria opcional como no contrato. API/backend preservados.
+
+> 2026-10-15: Nova overlay independente de diamantes em `/overlays/gifts/v3`, baseada somente na composição compacta do V3. Cada linha mostra foto, nome e ícone/total de diamantes; top 3 recebe moldura PNG. Sem caixas, fundos, medalhas de posição ou @TikTok. Painel tem prévia, limite de 3/5/10 pessoas, controles próprios de posição/escala e links públicos com ajustes embutidos; preferências ficam locais por conta, sem alterar backend nem as preferências de curtidas.
+> 2026-10-15: Overlay de diamantes V3 compactada horizontalmente; foto do top 3 ampliada e elevada dentro da moldura para remover o vão no topo. Ajuste somente visual, sem alteração no backend.
+> 2026-10-15: Overlay de moedas mostra o total abaixo do nome e usa ícone de moeda dourada com giro periódico suave, respeitando movimento reduzido.
+> 2026-10-15: Quantidade de moedas reduzida para equilibrar a hierarquia visual com o nome e a foto.
+> 2026-10-15: Giro das moedas usa duração e atraso aleatórios por item para evitar animação sincronizada.
+> 2026-10-15: Texto do valor de moedas igualado ao V3 de curtidas (13 px ao vivo, 16 px na prévia). Foto no V3 de curtidas deslocada para baixo para centralizar na abertura da moldura e eliminar o vão inferior; CSS versionado para limpar cache. Posição original correta da overlay de moedas preservada.
+> 2026-10-15: Ajuste fino adicional desce alguns pontos a foto emoldurada no V3 de curtidas.
+> 2026-10-15: Ranking de moedas mantém nas posições 4+ a altura, tipografia e diâmetro real da foto do top 3, sem aplicar as molduras.
+> 2026-10-15: Avatares simples das posições 4+ centralizados na coluna da foto, no preview e na overlay ao vivo.
+> 2026-10-15: Prévia do ranking de moedas passa a respeitar posição/escala enviados pelo painel; URL pública continua embutindo os ajustes atuais.
+
+> 2026-10-14: Relatorios do streamer consomem `summary.level_up` com total por eixo, filtram subidas por `gifter`/`fanclub` e exibem mensagem explicita quando `before` e desconhecido. CSS versionado para atualizar cache.
+
+> 2026-10-14: Jogo Contexto público em `/contexto` (página auto-contida com tokens `--tp-*`): palavra do dia pseudorrandômica por navegador/data, ilimitado com sorteio sem repetir acertos locais, 3 dicas, lista de palpites anônima e tensão. A interface e API não expõem o tamanho nem oferecem revelação; a palavra só aparece após acertar. Cache local no navegador; API `/api/contexto/*` reusa o daemon spaCy existente. O site institucional fica na raiz do apex `tikplay.com.br` (`node/public/site/`).
+
+> 2026-10-14: A fonte única de subida de nível agora identifica `gifter` e `fanclub`. A Jornada de Fã usa os seis escudos de capítulo e acento coral/laranja, com marcos 1/10/20/30/40/50; presenteador continua usando os diamantes originais. Painel mostra as duas prévias lado a lado, compartilha posição/escala e oferece testes visuais para ambos os eixos.
+
+> 2026-10-14: Captura de comunidade também escuta o evento explícito TikTokLive `FANS_LEVEL_UPGRADE` (`current_grade`), diferenciando-o da entrada no fã-clube. Promoções explícitas são registradas e difundidas mesmo quando o baseline local ainda não existe; níveis continuam persistidos e visíveis nos Relatórios.
+
+> 2026-10-14: Overlay de subida do nível de presenteador integrado em Sobreposições. A fonte pública consome `level_up` do eixo `gifter` pelo WebSocket autenticado, enfileira eventos, exibe os seis PNGs oficiais dos tiers e omite progresso quando o backend não o envia. O teste autenticado transmite apenas evento visual efêmero, sem persistência. A máquina de estados começa em quadro compacto, apresenta o membro, expande uma única vez e revela o nível; subida comum revela apenas o diamante atual, enquanto troca de faixa percorre a timeline sequencialmente antes do reveal central do novo diamante. Na conclusão, diamante, faixa, nível alcançado e mensagem ficam centralizados numa hierarquia única. A prévia do painel usa um estado final estático, centralizado e dimensionado conforme o contêiner, enquanto a fonte OBS mantém a animação. Canvas mestre fixo de 1040×820 px, com redução automática somente em viewports menores, posição/escala persistidas por conta e sincronizadas por REST + WebSocket. Transições refinadas com pausas maiores, curvas sem overshoot e brilho/escala mais contidos para valorizar a progressão sem flashes bruscos.
+
 > 2026-10-14: Botoes de acao do Painel Streamer e Super Admin centralizados em `ui/tikplay-admin-buttons.css`: alturas, bordas, tipografia, cores semanticas e estados hover/press/disabled/foco consistentes. Controles de navegacao e layout permanecem especificos.
 
 > 2026-10-14: Palpites ficam legiveis no topo por 1,2 s; a lista ordenada atualiza incrementalmente sem reconstruir as linhas. O novo item ocupa sua posicao e so desloca suavemente os itens abaixo, sem piscadas; repetidos recebem tom vermelho e mantem a etiqueta REPETIDA. Fila e eventos preservados.
+
+> 2026-10-14: Apos revelar o tamanho da palavra, o card lateral alterna em intervalos aleatorios entre o presente de dica/Boss e o presente da primeira letra, com slide discreto. Ciclo para quando a letra e revelada ou a partida termina; regras de presentes preservadas.
 
 > 2026-10-14: Preferências de posição, tipografia e sombra dos rankings V2/V3 agora se aplicam ao elemento correto nas prévias e overlays. Assets receberam nova versão de cache para carregar o suporte a configuração ao atualizar o painel.
 
@@ -17,6 +54,10 @@
 > 2026-10-14: Central de Ajuda e Suporte implementada no tema escuro atual em `/suporte` e `/ajuda`, com chamados, anexos autenticados, sugestões e gestão no Super Admin. A interface consome somente o contrato existente em `suporte-contrato-api.md`; nenhuma rota, banco ou regra do backend foi alterada.
 
 > 2026-10-14: Ajuda e Suporte implementados como interface nativa no DOM do Painel Streamer, sem iframe. A aba consome o contrato existente de artigos, chamados, anexos, respostas e sugestões; shell, navegação e console originais permanecem no mesmo painel.
+
+> 2026-10-14: Ajuda e Suporte fica disponível somente na seção Sistema da navegação do streamer; removidos os atalhos duplicados do topo e do menu principal.
+
+> 2026-10-14: Relatórios reposicionado logo abaixo de Conectar Live na navegação do Painel Streamer; tela e carregamento preservados.
 
 > 2026-10-14: Aba 3 Dicas migrada integralmente para `tikplay-3-dicas-novo.html`: cabecalho, grade responsiva, status/controles, configuracao, presentes e resumo/ranking lateral. IDs, handlers, autosave, catalogo e destino tecnico preservados; chips, autocomplete e botoes seguem o tema escuro atual.
 
@@ -70,7 +111,7 @@
 > overlays e jogos) deve seguir este documento. Antes de codar visual, leia a seção
 > **Status / Progresso** para saber o que já foi feito e o que falta.
 
-- **Última atualização:** 2026-10-14
+- **Última atualização:** 2026-10-15
 - **Escopo:** Node `node/public/*` (HTML/CSS/JS embutido) + `node/public/style.css`
 - **Regra de ouro:** refatoração **visual e estrutural de CSS/componentes**. Não alterar
   lógica de jogo, rotas, IDs, eventos, WebSockets, APIs, banco, auth, permissões, OBS,
@@ -502,6 +543,18 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-15 — Login/cadastro: composição do site, botões compartilhados, campos e alertas com contraste escuro, layout responsivo e seleção de aba pelo caminho amigável. Contratos e lógica de autenticação preservados.
+
+- 2026-10-15 — Sons → Narração: preferências persistidas para habilitar a fala do chat, selecionar filtro e caractere; Edge TTS usa voz/velocidade compartilhadas com charadas. Fila serial e playback no painel respeitam prioridade de charada.
+
+- 2026-10-15 — Charada pública: narração/controles de áudio removidos da página do jogo; texto preservado. O painel mantém voz, velocidade, reprodução automática e replay.
+
+- 2026-10-15 — Jogo Contexto público: card de charada sem reprodução de áudio; removidos controles/indicador TTS, mantendo texto e fechamento.
+
+- 2026-10-15 — Sobreposição Dragonwilds integrada à aba Sobreposições: dois exemplos lado a lado e seletor Diamantes/Curtidas que direciona setas e escala para cada fonte. Rankings dinâmicos usam likes ao vivo e agregados de gifts por `room_id`; itens mostram avatar, nome e @TikTok. Cada ranking tem posição/escala livres e independentes; link OBS inclui ambos os layouts. Sem alterações no backend; armazenamento local por conta no navegador.
+
+- 2026-10-14 — Jogo Contexto público (`/contexto`) + site institucional na raiz do apex. Palavra do dia por navegador/data; ilimitado com novas palavras após acerto, sem repetir acertos guardados localmente. Sem tamanho/revelação; palavra exibida só após acertar.
+
 - 2026-10-14 — Central de Ajuda e Suporte: hub do streamer, busca/categorias/artigos públicos, chamados com conversa e anexos via fetch autenticado, sugestões, e gestão administrativa de fila, status, respostas rápidas, categorias e artigos Markdown.
 
 - 2026-10-14 — 3 Dicas: estrutura e tema alinhados à referência em `ui/tikplay-threedicas-model.css`. Ranking continua vindo do serviço, resumo lateral reflete os valores configurados, presentes mantêm busca/seleção funcional e destino técnico continua usando link autenticado por sala. Controles usam a folha compartilhada de botões.
@@ -682,3 +735,17 @@ node/public/
 - 2026-10-13: Painel de Sobreposições organiza as prévias V2/V3 ao lado dos respectivos botões de posição e escala, com orientação para configurar a origem no TikTok Live Studio na resolução de saída da live; ajustes são salvos por streamer e enviados em tempo real às fontes abertas.
 
 - 2026-10-13: Quantidade exibida de participantes configurável separadamente para V2 e V3; cada escolha acompanha a posição e escala salvas por versão, atualiza a prévia e a fonte aberta em tempo real.
+
+- 2026-10-14: Super Admin recebe Monitor de Servidor nativo em `admin.html`, usando a sidebar com glifos da referência e CSS isolado. O monitor consome o contrato existente por polling + SSE autenticado via ticket, sem iframe, rotas adicionais ou dados demonstrativos; inclui wallboard, histórico de incidentes e ações administrativas de reconhecer, resolver e silenciar alertas.
+
+- 2026-10-14: Dashboard, Usuários, Convites, Regras globais e Operação local padronizados com cabeçalhos, campos, cartões, tabelas, ações e estados responsivos no tema do Super Admin; IDs e comportamento existentes preservados.
+
+- 2026-10-14: Tabela de Usuários refinada com colunas dimensionadas, atividade em grade label/valor, datas de criação e última atividade no mesmo formato pt-BR e ações com altura, espaçamento e hierarquia visual unificados.
+
+- 2026-10-14: Ações da tabela de Usuários condensadas em botões quadrados somente com ícones (status, senha e edição), com tooltip e rótulo acessível por conta; largura da coluna reduzida.
+- 2026-10-14: Tabela de Usuários ajustada após validação visual: coluna “Uso atual” ampliada e valores mantidos em linha única com reticências para evitar quebra e desalinhamento; data e ações preservadas.
+- 2026-10-14: Ações da tabela de Usuários isoladas do padding horizontal do sistema compartilhado de botões; ícones mantêm caixas quadradas de tamanho fixo e a coluna tem largura para as três ações.
+- 2026-10-14: Posição X/Y/escala dos rankings V2/V3 separada da orientação foto/nome em um contêiner externo; selecionar foto à direita reorganiza apenas as linhas e preserva a posição configurada na tela OBS. Assets versionados para invalidar cache.
+- 2026-10-14: Nomes longos nos rankings V2/V3 limitados a uma linha com reticências dentro da coluna disponível; nome integral preservado em tooltip e rótulo acessível.
+- 2026-10-14: Quantidade de participantes dos rankings V2/V3 controlada pela preferência salva no painel, não pelo link. Prévia atualiza por postMessage sem recarga; fonte pública carrega a configuração antes do ranking e recebe mudanças ao vivo por WebSocket.
+- 2026-10-14: Relatórios do streamer exibem níveis de fã-clube e presenteador por participante (global ou por live selecionada) e permitem filtrar/detalhar subidas de nível no histórico de interações.

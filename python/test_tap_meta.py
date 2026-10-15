@@ -7,7 +7,8 @@
 # pública, prêmio despachado apenas sem Boss, valores públicos corretos e o
 # Modo Boss opcional (boss_mode): sem boss, rank <= 3 não ativa o Final Boss,
 # a meta de tap dobra (x2) uma única vez mantendo o progresso e a zona fica
-# protegida para dicas (sem revelar rank 1-2).
+# protegida para dicas (sem revelar rank 1-2 e sem revelar rank pior/igual ao
+# melhor já exibido — pick_hint_word/hint_cluster).
 
 import asyncio
 import os
@@ -146,6 +147,41 @@ async def main():
     applied3 = s._apply_tap_meta_x2()
     check("boss ON bloqueia x2", applied3 is False and s.tap_meta_total == 1000, f"total={s.tap_meta_total}")
     check("multiplier publico = 1 com boss", s._tap_meta_public()["tap_meta_multiplier"] == 1, f"pub={s._tap_meta_public()}")
+
+    # all_scored ordenado por proximidade: índice i => rank i+2 (rank 1 = secreta, fora da lista)
+    def _pool(model, size=20):
+        model.all_scored = [f"w{i}" for i in range(size)]
+        model.hints_given = []
+        return model
+
+    print("[10] Zona protegida: dica nunca piora o melhor rank")
+    s.game.boss_mode = False
+    s.game.finished = False
+    s.game.secret_word = "teste"
+    _pool(s.game)
+    s.game.guesses = [{"word": "w1", "rank": 3}]  # melhor rank = 3 (rank 3 já saiu)
+    picked = s.game.pick_hint_word(2)
+    check("zona protegida: nenhuma dica (só sobra rank 1-2)", picked is None, f"picked={picked}")
+
+    print("[11] Dica nunca revela rank maior que o melhor já exibido")
+    # melhor rank 3, rank 3 já em guesses: qualquer candidato >= 3 deve ser recusado
+    s.game.hints_given = []
+    picked = s.game.pick_hint_word(2)
+    check("não cai em rank 4+ (evita o caso do 13)", picked is None, f"picked={picked}")
+
+    print("[12] Fora da zona: dica continua revelando rank melhor")
+    _pool(s.game)
+    s.game.guesses = [{"word": "w3", "rank": 5}]  # melhor rank 5 (fora da zona)
+    picked = s.game.pick_hint_word(4)
+    check("fora da zona: revela rank 4 (melhor)", picked is not None and picked[1] == 4, f"picked={picked}")
+
+    print("[13] Cluster da charada na zona protegida não contém rank 1-2")
+    _pool(s.game)
+    s.game.guesses = [{"word": "w1", "rank": 3}]
+    cluster = s.game.hint_cluster(2)
+    cluster_ranks = [s.game.all_scored.index(w) + 2 for w in cluster]
+    check("cluster sem rank 1-2", cluster and all(r > 2 for r in cluster_ranks), f"cluster={cluster} ranks={cluster_ranks}")
+    check("cluster não vazio na zona", len(cluster) > 0, f"cluster={cluster}")
 
     print(f"\nResultado: {passed} passaram, {failed} falharam.")
     sys.exit(1 if failed else 0)

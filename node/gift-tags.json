@@ -120,6 +120,10 @@
     "diamond_count": 1
   },
   {
+    "name": "Pumpkin",
+    "diamond_count": 1
+  },
+  {
     "name": "Red Lightning",
     "diamond_count": 1
   },
@@ -280,6 +284,10 @@
     "diamond_count": 10
   },
   {
+    "name": "Little Ghost",
+    "diamond_count": 10
+  },
+  {
     "name": "Magic Feather",
     "diamond_count": 10
   },
@@ -382,6 +390,10 @@
   {
     "name": "Single Strike",
     "diamond_count": 70
+  },
+  {
+    "name": "Small Ghost",
+    "diamond_count": 88
   },
   {
     "name": "Bloom Melody",
@@ -524,6 +536,10 @@
     "diamond_count": 100
   },
   {
+    "name": "Haunted Houseparty",
+    "diamond_count": 100
+  },
+  {
     "name": "Heart My Earthling",
     "diamond_count": 100
   },
@@ -613,6 +629,10 @@
   },
   {
     "name": "Raving Snail",
+    "diamond_count": 149
+  },
+  {
+    "name": "Sweetheart Macaron",
     "diamond_count": 149
   },
   {
@@ -745,6 +765,10 @@
   },
   {
     "name": "Smile Latte",
+    "diamond_count": 199
+  },
+  {
+    "name": "Spider",
     "diamond_count": 199
   },
   {
@@ -904,6 +928,10 @@
     "diamond_count": 299
   },
   {
+    "name": "Cherry Scoop",
+    "diamond_count": 299
+  },
+  {
     "name": "Come On!",
     "diamond_count": 299
   },
@@ -1012,6 +1040,10 @@
     "diamond_count": 299
   },
   {
+    "name": "Trick or Treat",
+    "diamond_count": 299
+  },
+  {
     "name": "Tropical Mask",
     "diamond_count": 299
   },
@@ -1085,6 +1117,10 @@
   },
   {
     "name": "Mom's Bonnet",
+    "diamond_count": 349
+  },
+  {
+    "name": "Munch Monster",
     "diamond_count": 349
   },
   {
@@ -1496,6 +1532,10 @@
     "diamond_count": 500
   },
   {
+    "name": "Cosmic DJ",
+    "diamond_count": 500
+  },
+  {
     "name": "Cozy Xmas Set",
     "diamond_count": 500
   },
@@ -1625,6 +1665,10 @@
   },
   {
     "name": "Starry Fluff",
+    "diamond_count": 500
+  },
+  {
+    "name": "Trick or Treats",
     "diamond_count": 500
   },
   {
@@ -1992,6 +2036,10 @@
     "diamond_count": 1999
   },
   {
+    "name": "Spooktacular",
+    "diamond_count": 1999
+  },
+  {
     "name": "Star of Red Carpet",
     "diamond_count": 1999
   },
@@ -2026,6 +2074,10 @@
   {
     "name": "Sage's Coinbot",
     "diamond_count": 2199
+  },
+  {
+    "name": "Haunted House",
+    "diamond_count": 2200
   },
   {
     "name": "Wave Lights",
@@ -2156,6 +2208,10 @@
     "diamond_count": 3350
   },
   {
+    "name": "Candy Party",
+    "diamond_count": 3999
+  },
+  {
     "name": "LIVE Ranking Party",
     "diamond_count": 3999
   },
@@ -2260,6 +2316,10 @@
     "diamond_count": 5000
   },
   {
+    "name": "Scarecrow",
+    "diamond_count": 5000
+  },
+  {
     "name": "Seaside Romance",
     "diamond_count": 5000
   },
@@ -2269,6 +2329,10 @@
   },
   {
     "name": "Unicorn Fantasy",
+    "diamond_count": 5000
+  },
+  {
+    "name": "Witch",
     "diamond_count": 5000
   },
   {
@@ -2485,6 +2549,10 @@
   },
   {
     "name": "Leopard",
+    "diamond_count": 15000
+  },
+  {
+    "name": "Nightshade Kingdom",
     "diamond_count": 15000
   },
   {

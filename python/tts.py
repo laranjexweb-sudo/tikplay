@@ -4,6 +4,7 @@ Remove gTTS, Piper e Kokoro. Dependência única: `edge-tts` (v7+).
 """
 import asyncio
 import hashlib
+import math
 import os
 import re
 import threading
@@ -33,6 +34,7 @@ EDGE_VOICE_MAP = {
 _EDGE_LOCK = threading.Lock()
 
 EDGE_LAST_ERROR = ""
+MAX_AUDIO_CACHE_FILES_PER_TENANT = 500
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts_models")
 
@@ -74,6 +76,28 @@ def clean_text(text: str, max_len: int = 200) -> str:
     return t
 
 
+def prepare_chat_text(text: str, mode: str = "all", marker: str = "#", max_len: int = 200) -> str:
+    """Aplica os filtros de narração e prepara um comentário para o TTS.
+
+    `only` fala apenas comentários com o marcador inicial e remove o marcador
+    antes da síntese. `exclude` omite esses comentários. O texto resultante
+    passa pela limpeza compartilhada, que remove emojis e conteúdo não falável.
+    """
+    raw = str(text or "").strip()
+    marker = str(marker or "#")[:1]
+    mode = "exclude" if mode == "no_guesses" else str(mode or "all")
+    starts_with_marker = bool(marker and raw.startswith(marker))
+
+    if mode == "only":
+        if not starts_with_marker:
+            return ""
+        raw = raw[len(marker):].lstrip()
+    elif mode == "exclude" and starts_with_marker:
+        return ""
+
+    return clean_text(raw, max_len=max_len)
+
+
 def _cleanup(path):
     try:
         if os.path.exists(path):
@@ -82,9 +106,35 @@ def _cleanup(path):
         pass
 
 
+def _prune_audio_cache(out_dir: str, max_files: int = MAX_AUDIO_CACHE_FILES_PER_TENANT) -> int:
+    """Mantém o cache de MP3 limitado sem remover os áudios mais recentes."""
+    try:
+        entries = [
+            entry for entry in os.scandir(out_dir)
+            if entry.is_file() and entry.name.lower().endswith(".mp3")
+        ]
+        entries.sort(key=lambda entry: entry.stat().st_mtime_ns)
+    except (FileNotFoundError, OSError):
+        return 0
+    removed = 0
+    for entry in entries[:max(0, len(entries) - max(0, int(max_files)))]:
+        try:
+            os.remove(entry.path)
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def _edge_rate_str(rate: float) -> str:
-    pct = round((float(rate) - 1.0) * 100)
-    return f"+{pct}%" if pct >= 0 else f"{pct}%"
+    try:
+        value = float(rate)
+    except (TypeError, ValueError):
+        value = 1.0
+    if not math.isfinite(value):
+        value = 1.0
+    pct = round((value - 1.0) * 100)
+    return f"{pct:+d}%"
 
 
 def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
@@ -102,6 +152,7 @@ def synthesize_edge(text: str, out_dir: str, voice_key: str, rate: float = 1.0):
         EDGE_LAST_ERROR = f"voz desconhecida: {voice_key}"
         return None
     os.makedirs(out_dir, exist_ok=True)
+    _prune_audio_cache(out_dir)
     fname = f"edge_{_hash(text, f'{voice_key}|{round(float(rate), 3)}')}.mp3"
     out_path = os.path.join(out_dir, fname)
     if os.path.exists(out_path) and os.path.getsize(out_path) > 0:

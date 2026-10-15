@@ -8,6 +8,7 @@ import json
 import random
 import re
 import time
+import uuid
 
 from service_common import GIFT_PT_MAP, strip_accents
 from gifts_catalog import get_catalog
@@ -50,12 +51,26 @@ class TresPontinhos:
         self.task = None
         self._last_emit = 0
         self._last_wrong_emit = 0
+        self.wrong_guess_count = 0
+        self.trace_id = None
 
     def _emit(self, type_, payload):
         self._emit_cb(type_, payload)
 
-    def _emit_log(self, text):
-        self._emit("log", text)
+    def _emit_log(self, event, text, level="info", **details):
+        self._emit("log", {
+            "text": str(text),
+            "category": "error" if level in ("error", "critical") else "game",
+            "level": level,
+            "game": "tres",
+            "event": f"tres.{event}",
+            "source": "python",
+            "game_id": str(self.round_id) if self.round_id else None,
+            "trace_id": self.trace_id,
+            "code": details.pop("code", None),
+            "duration_ms": details.pop("duration_ms", None),
+            "details": details or None,
+        })
 
     # -------------------------------------------------------------
     # Configuração (presentes A/B/C por nome)
@@ -82,7 +97,7 @@ class TresPontinhos:
     # -------------------------------------------------------------
     # Controle de rodada
     # -------------------------------------------------------------
-    def start(self, palavra: str, dicas: list):
+    def start(self, palavra: str, dicas: list, trace_id=None):
         self.active = True
         self.paused = False
         self.finished = False
@@ -99,11 +114,18 @@ class TresPontinhos:
         self.stage = 0
         self.stage_remaining = 0
         self.winner = None
+        self.wrong_guess_count = 0
+        self.trace_id = str(trace_id or "") or None
         self.size_revealed = False
         self.first_letter_revealed = False
         self.supporter_users = set()
         self._emit("tres_state", self.state(public=False))
-        self._emit_log(f"[3 Dicas] Rodada {self.round_id} em {TRES_COUNTDOWN}s... preparem-se!")
+        self._emit_log(
+            "round.started",
+            f"[3 Dicas] Rodada {self.round_id} iniciada; dica 1 em {TRES_COUNTDOWN}s.",
+            countdown_seconds=TRES_COUNTDOWN,
+            clue_count=len(self.dicas),
+        )
         if not self.task:
             try:
                 loop = asyncio.get_running_loop()
@@ -120,26 +142,32 @@ class TresPontinhos:
             self.task.cancel()
             self.task = None
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Dicas] Jogo parado")
+        self._emit_log("game.stopped", "[3 Dicas] Jogo parado.", round_id=self.round_id)
 
     def pause(self):
         self.paused = True
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Dicas] Pausado")
+        self._emit_log("game.paused", "[3 Dicas] Jogo pausado.", phase=self.phase, stage=self.stage)
 
     def resume(self):
         self.paused = False
         self._emit("tres_state", self.state(public=False))
-        self._emit_log("[3 Dicas] Retomado")
+        self._emit_log("game.resumed", "[3 Dicas] Jogo retomado.", phase=self.phase, stage=self.stage)
 
-    def reset(self):
+    def reset(self, trace_id=None):
+        if trace_id:
+            self.trace_id = str(trace_id)
         self.stop()
         self.round_id = 0
         self.palavra = ""
         self.dicas = []
         self.stage = 0
         self.stage_remaining = 0
+        self.wrong_guess_count = 0
+        if trace_id:
+            self.trace_id = str(trace_id)
         self._emit("tres_state", self.state(public=False))
+        self._emit_log("round.reset", "[3 Dicas] Estado da rodada resetado.")
 
     # -------------------------------------------------------------
     # Palpite
@@ -157,6 +185,7 @@ class TresPontinhos:
         if not norm_guess or len(norm_guess) < 2:
             return None
         if norm_guess != self._norm(self.palavra):
+            self.wrong_guess_count += 1
             # Aviso de palpite errado (anti-spam: throttle ~0.8s)
             now = time.time()
             if now - self._last_wrong_emit > 0.8:
@@ -184,7 +213,15 @@ class TresPontinhos:
         }
         self._emit("tres_winner", self.winner)
         self._emit("tres_state", self.state(public=False))
-        self._emit_log(f"[3 Dicas] 🎉 @{user} acertou '{self.palavra}' na Dica {self.stage} ({pontos} pts{' 2x' if mult == 2 else ''})")
+        self._emit_log(
+            "round.won",
+            f"[3 Dicas] @{user} acertou na Dica {self.stage} ({pontos} pts{' 2x' if mult == 2 else ''}).",
+            user=user,
+            stage=self.stage,
+            points=pontos,
+            multiplier=mult,
+            wrong_guess_count=self.wrong_guess_count,
+        )
         return self.winner
 
     # -------------------------------------------------------------
@@ -230,13 +267,16 @@ class TresPontinhos:
         if self._gift_matches(n, cfg.get("size"), gift_id) and not self.size_revealed:
             self.size_revealed = True
             self._emit("tres_reveal_size", {"user": user, "nickname": nickname or user, "len": len(self.palavra)})
-            self._emit_log(f"[3 Dicas] @{user} revelou o TAMANHO ({len(self.palavra)} letras)")
+            self._emit_log("gift.revealed_size", f"[3 Dicas] @{user} revelou o tamanho da palavra.", user=user,
+                           word_length=len(self.palavra))
         elif self._gift_matches(n, cfg.get("letter"), gift_id) and self.size_revealed and not self.first_letter_revealed:
             self.first_letter_revealed = True
             self._emit("tres_reveal_letter", {"user": user, "nickname": nickname or user, "letter": self.palavra[0] if self.palavra else "", "palavra_len": len(self.palavra)})
-            self._emit_log(f"[3 Dicas] @{user} revelou a PRIMEIRA LETRA")
+            self._emit_log("gift.revealed_first_letter", f"[3 Dicas] @{user} revelou a primeira letra.",
+                           user=user, word_length=len(self.palavra))
         elif self._gift_matches(n, cfg.get("letter"), gift_id) and not self.size_revealed:
-            self._emit_log(f"[3 Dicas] @{user} enviou o presente da 1ª letra, mas o TAMANHO ainda não foi revelado")
+            self._emit_log("gift.ignored", f"[3 Dicas] Presente da primeira letra ignorado: revele o tamanho antes.",
+                           user=user, reason="size_not_revealed")
 
     # -------------------------------------------------------------
     # Loop asyncio (1s)
@@ -269,15 +309,21 @@ class TresPontinhos:
         try:
             if not self._palavra_provider:
                 return
-            res = self._palavra_provider()
+            trace_id = uuid.uuid4().hex
+            res = self._palavra_provider(trace_id)
             if asyncio.iscoroutine(res):
                 res = await res
             palavra, dicas = res
             if palavra:
-                self.start(palavra, dicas)
-                self._emit_log("[3 Dicas] Nova rodada iniciada automaticamente")
+                self.start(palavra, dicas, trace_id=trace_id)
+                self._emit_log("round.auto_started", "[3 Dicas] Próxima rodada iniciada automaticamente.",
+                               round_id=self.round_id)
+            else:
+                self._emit_log("round.auto_start_rejected", "[3 Dicas] Rodada automática não iniciada: palavra indisponível.",
+                               level="warning", code="TRES_WORD_UNAVAILABLE")
         except Exception as e:
-            self._emit_log(f"[3 Dicas] Erro ao auto-iniciar rodada: {e}")
+            self._emit_log("round.auto_start_failed", "[3 Dicas] Falha ao preparar a próxima rodada.",
+                           level="error", code="TRES_AUTO_START_FAILED", error_type=type(e).__name__)
 
     def _tick_timer(self):
         # Fase countdown: espera antes de revelar a Dica 1
@@ -288,28 +334,39 @@ class TresPontinhos:
                 self.phase = "play"
                 self.stage = 1
                 self.stage_remaining = self.stage_times[1]
+                self.wrong_guess_count = 0
                 self._emit("tres_state", self.state(public=False))
                 self._emit("tres_dica", {"stage": 1, "dica": self.dicas[0], "remaining": self.stage_remaining, "points": self.stage_points[1]})
-                self._emit_log(f"[3 Dicas] Dica 1: {self.dicas[0]} ({self.stage_times[1]}s, {self.stage_points[1]} pts)")
+                self._emit_log("clue.revealed", f"[3 Dicas] Dica 1 liberada ({self.stage_times[1]}s, {self.stage_points[1]} pts).",
+                               stage=1, seconds=self.stage_times[1], points=self.stage_points[1])
             return
         self.stage_remaining -= 1
         # Tick visual a cada segundo (cronômetro fluido)
         self._emit("tres_tick", {"phase": "play", "stage": self.stage, "remaining": self.stage_remaining})
         if self.stage_remaining <= 0:
             if self.stage < 3:
+                previous_stage = self.stage
+                wrong_guess_count = self.wrong_guess_count
                 self.stage += 1
                 self.stage_remaining = self.stage_times[self.stage]
+                self.wrong_guess_count = 0
                 self._emit("tres_dica", {"stage": self.stage, "dica": self.dicas[self.stage - 1], "remaining": self.stage_remaining, "points": self.stage_points[self.stage]})
-                self._emit_log(f"[3 Dicas] Dica {self.stage}: {self.dicas[self.stage - 1]} ({self.stage_times[self.stage]}s, {self.stage_points[self.stage]} pts)")
+                self._emit_log("clue.revealed", f"[3 Dicas] Dica {self.stage} liberada ({self.stage_times[self.stage]}s, {self.stage_points[self.stage]} pts).",
+                               stage=self.stage, previous_stage=previous_stage,
+                               seconds=self.stage_times[self.stage], points=self.stage_points[self.stage],
+                               wrong_guess_count=wrong_guess_count)
             else:
                 # Tempo esgotado coletivamente
+                wrong_guess_count = self.wrong_guess_count
                 self.timeout = True
                 self.finished = True
                 self.phase = "pause"
                 self.pause_remaining = TRES_PAUSE_AFTER_END
                 self._emit("tres_timeout", {"palavra": self.palavra})
                 self._emit("tres_state", self.state(public=False))
-                self._emit_log(f"[3 Dicas] ⏰ TEMPO ESGOTADO — a palavra era '{self.palavra}'")
+                self._emit_log("round.timed_out", "[3 Dicas] Tempo esgotado; rodada encerrada.",
+                               stage=self.stage, wrong_guess_count=wrong_guess_count,
+                               word_length=len(self.palavra))
 
     # -------------------------------------------------------------
     # Estado público

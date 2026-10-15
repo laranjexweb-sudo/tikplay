@@ -47,4 +47,9 @@ h1 { letter-spacing: 0; font-size: 54px; }
 #tab-sons .btn-primary,#tab-sons .btn-primary:is(:hover,:active,:focus) { background: linear-gradient(135deg,#26d8ff,#1591ff); color: #00131a; border-color: transparent; box-shadow: 0 10px 28px rgba(38,216,255,.16); }
 #tab-sons .btn:disabled { transform: none; cursor: default; }
 @media(max-width:720px) { #tab-sons h1 { font-size: 34px; } }
+#tab-sons .tts-rate-markers { position: relative; display: block; height: 1.2em; }
+#tab-sons .tts-rate-markers span { position: absolute; top: 0; transform: translateX(-50%); }
+#tab-sons .tts-rate-markers span:first-child { left: 0; transform: none; }
+#tab-sons .tts-rate-markers span:nth-child(2) { left: calc(8px + (100% - 16px) / 3); }
+#tab-sons .tts-rate-markers span:last-child { right: 0; transform: none; }
 

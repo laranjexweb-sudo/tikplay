@@ -35,17 +35,28 @@ async def main():
         if cmd.lower() == "sair":
             break
         if cmd.lower() == "gift":
-            r = game.process_gift("viewer1", "Rose", 1)
-            if r and r["hint"]:
+            best_rank = 1000
+            if game.guesses:
+                best_rank = min(g["rank"] for g in game.guesses)
+            target_rank = best_rank - max(1, best_rank // 10)
+            picked = game.pick_hint_word(target_rank)
+            if picked:
+                hint_word, hint_rank = picked
+                game.hints_given.append(hint_word)
+                game.guesses.append({
+                    "user": "viewer1", "word": hint_word, "rank": hint_rank,
+                    "is_hint": True, "gift": "Rose",
+                })
+                game.guesses.sort(key=lambda x: x["rank"])
                 await web.send("gift_hint", {
-                    "user": r["user"],
+                    "user": "viewer1",
                     "nickname": "Viewer 1",
                     "avatar": "https://via.placeholder.com/50",
-                    "gift": r["gift"],
-                    "hint_word": r["hint"],
-                    "hint_rank": r["rank"],
+                    "gift": "Rose",
+                    "hint_word": hint_word,
+                    "hint_rank": hint_rank,
                 })
-                print(f"  Dica revelada: {r['hint']} (#{r['rank']})")
+                print(f"  Dica revelada: {hint_word} (#{hint_rank})")
             else:
                 print("  Nenhuma dica nova disponivel")
             continue

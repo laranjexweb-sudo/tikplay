@@ -202,14 +202,32 @@
 .tp-overlay-row { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:var(--tp-space-4); align-items:stretch; }
 .tp-overlay-card { margin:0; min-width:0; display:flex; flex-direction:column; }
 .tp-overlay-card h3 { font-size:1.1rem; font-weight:900; }
-.tp-overlay-preview { width:100%; max-width:400px; height:220px; padding:var(--tp-space-3); background:var(--tp-surface-soft); border:var(--tp-line) solid var(--tp-border); border-radius:var(--tp-radius-sm); margin-bottom:var(--tp-space-3); }
+.tp-overlay-preview { width:100%; max-width:400px; height:280px; padding:var(--tp-space-3); background:var(--tp-surface-soft); border:var(--tp-line) solid var(--tp-border); border-radius:var(--tp-radius-sm); margin-bottom:var(--tp-space-3); overflow:hidden; }
+.tp-level-overlays-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--tp-space-4); align-items:stretch; }
+.tp-presenter-level-card .tp-overlay-preview { position:relative; max-width:none; height:360px; padding:0; }
+.tp-presenter-level-card .tp-overlay-preview iframe { position:absolute; inset:0; width:100% !important; height:100% !important; transform:none; }
+.tp-presenter-level-controls { grid-column:auto; min-height:0; }
+.tp-presenter-level-card .tp-level-test-button { padding:6px 9px; font-size:.72rem; line-height:1.15; }
+.tp-presenter-level-controls .tp-overlay-controls-toolbar { grid-template-columns:minmax(0,1fr) auto; }
+.tp-presenter-level-controls .tp-overlay-adjust { flex:1; min-height:280px; }
+.tp-presenter-level-controls .tp-overlay-layout-readout { border-top:var(--tp-line) solid var(--tp-border); padding-top:var(--tp-space-3); }
+.tp-presenter-level-actions { display:flex; flex-wrap:wrap; gap:var(--tp-space-2); margin-top:var(--tp-space-2); }
+.tp-gift-ranking-controls .tp-overlay-count-control { margin-left:auto; }
+.tp-gift-ranking-controls .tp-overlay-adjust { min-height:190px; }
+.tp-gift-ranking-controls .tp-gift-ranking-actions { display:flex; flex-wrap:wrap; gap:var(--tp-space-2); }
+.tp-gift-ranking-controls [data-gift-ranking-status] { color:var(--tp-text-muted); font-size:.8rem; }
+@media(max-width:1100px) { .tp-level-overlays-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .tp-presenter-level-controls { grid-column:1/-1; } }
+@media(max-width:850px) { .tp-level-overlays-grid { grid-template-columns:minmax(0,1fr); } .tp-presenter-level-controls { grid-column:auto; } .tp-presenter-level-card .tp-overlay-preview { height:360px; } }
+@media(max-width:600px) { .tp-presenter-level-card .tp-overlay-preview { height:300px; } }
 .tp-overlay-card .d-flex { margin-top:auto; }
-.tp-overlay-controls-card { margin:0; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:var(--tp-space-3); }
-.tp-overlay-controls-toolbar { display:flex; align-items:center; justify-content:space-between; gap:var(--tp-space-3); flex-wrap:wrap; }
-.tp-overlay-controls-card h3 { margin:0; font-size:1.05rem; font-weight:900; }
+.tp-overlay-controls-card { margin:0; min-width:0; align-self:start; display:flex; flex-direction:column; justify-content:flex-start; gap:var(--tp-space-2); padding:16px; }
+.tp-overlay-controls-card[data-overlay-controls] .tp-overlay-adjust { flex:0 0 auto; min-height:220px; }
+.tp-overlay-controls-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:8px; }
+.tp-overlay-controls-card h3 { margin:0; min-width:0; font-size:.9rem; line-height:1.2; font-weight:900; }
 .tp-overlay-count-control { display:flex; align-items:center; gap:var(--tp-space-2); }
 .tp-overlay-count-control .form-label { margin:0; white-space:nowrap; }
-.tp-overlay-count-control .form-select { min-width:8rem; }
+.tp-overlay-count-control .form-select { min-width:7rem; width:7rem; }
+.tp-overlay-controls-toolbar [data-overlay-reset] { white-space:nowrap; padding-inline:10px; font-size:.75rem; }
 .tp-overlay-adjust { display:flex; align-items:center; justify-content:center; gap:var(--tp-space-4); flex-wrap:wrap; }
 .tp-overlay-dpad { display:grid; grid-template-columns:repeat(3,2.4rem); grid-template-rows:repeat(3,2.2rem); gap:var(--tp-space-1); }
 .tp-overlay-dpad .btn { padding:0; }
@@ -217,6 +235,7 @@
 .tp-overlay-layout-readout { font-weight:800; color:var(--tp-text); }
 .tp-overlay-layout-readout span { display:inline-block; margin-right:var(--tp-space-3); }
 @media(max-width:1050px) { .tp-overlay-adjust { justify-content:flex-start; } }
+@media(max-width:700px) { .tp-overlay-controls-toolbar { grid-template-columns:minmax(0,1fr) auto; } .tp-overlay-controls-toolbar h3 { grid-column:1/-1; } .tp-overlay-controls-toolbar [data-overlay-reset] { grid-column:2; grid-row:2; } }
 @media(max-width:850px) { .tp-overlay-row { grid-template-columns:1fr; } }
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
@@ -228,7 +247,7 @@
 <link rel="stylesheet" href="/ui/tikplay-threedicas-model.css?v=20261014">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-native1">
-<link rel="stylesheet" href="/ui/tikplay-reports.css?v=20261014-v3">
+<link rel="stylesheet" href="/ui/tikplay-reports.css?v=20261014-v4">
 
 </head>
 <body class="tp-panel-streamer">
@@ -253,7 +272,6 @@
         <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
         <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none">Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
-        <button class="btn btn-nb btn-dark btn-sm" onclick="switchTab('support')">Ajuda e Suporte</button>
         <button type="button" class="btn btn-nb btn-dark btn-sm" id="streamerLogsOpen">Logs</button>
         <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
       </div>
@@ -263,14 +281,13 @@
   <div class="nb-card mb-3 p-0 tp-card tp-panel-nav">
     <div class="tab-nav d-flex flex-wrap">
       <button type="button" class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><span aria-hidden="true">&#9707;</span>Visão geral</button>
-      <button type="button" class="tab-btn" data-tab="reports" onclick="switchTab('reports')"><span class="tp-model-nav-icon" aria-hidden="true">▥</span>Relatórios</button>
       <button type="button" class="tab-btn active" data-tab="connect" onclick="switchTab('connect')"><span class="tp-model-nav-icon" aria-hidden="true">&#9673;</span>Conectar Live</button>
+      <button type="button" class="tab-btn" data-tab="reports" onclick="switchTab('reports')"><span class="tp-model-nav-icon" aria-hidden="true">▥</span>Relatórios</button>
       <button type="button" class="tab-btn" data-tab="sons" onclick="switchTab('sons')"><span class="tp-model-nav-icon" aria-hidden="true">&#9834;</span>Sons</button>
       <button type="button" class="tab-btn" data-tab="overlays" onclick="switchTab('overlays')"><span class="tp-model-nav-icon" aria-hidden="true">&#9635;</span>Sobreposições</button>
       <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')"><span class="tp-model-nav-icon" aria-hidden="true">&#8984;</span>Palavra Secreta</button>
       <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5c-.9.7-1.3 1.4-1.5 2.5h-4c-.2-1.1-.6-1.8-1.5-2.5Z"></path><path d="M12 2v2M4.9 5l1.4 1.4M19.1 5l-1.4 1.4"></path></svg>3 Dicas</button>
       <button type="button" class="tab-btn" data-tab="corda" onclick="switchTab('corda')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12c3-6 6 6 9 0s6 6 9 0M3 9v6M21 9v6"></path></svg>CORDA</button>
-      <button type="button" class="tab-btn" data-tab="support" onclick="switchTab('support')"><span class="tp-model-nav-icon" aria-hidden="true">?</span>Ajuda e Suporte</button>
       <details class="tp-extra-games" id="extraGamesNav">
         <summary class="tp-extra-games-trigger" aria-expanded="false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>Mais jogos</summary>
         <div class="tp-extra-games-menu">
@@ -324,7 +341,8 @@
           <label>Live<select id="reportRoom"><option value="">Todas as lives</option></select></label>
           <label>De<input type="date" id="reportFrom" required></label>
           <label>Até<input type="date" id="reportTo" required></label>
-          <label>Interação<select id="reportType"><option value="">Todas</option><option value="like">Curtidas</option><option value="gift">Presentes</option><option value="comment">Comentários</option><option value="follow">Novos seguidores</option><option value="share">Compartilhamentos</option><option value="join">Entradas</option><option value="guess">Palpites</option><option value="hint">Dicas</option><option value="winner">Vitórias</option></select></label>
+          <label>Interação<select id="reportType"><option value="">Todas</option><option value="like">Curtidas</option><option value="gift">Presentes</option><option value="comment">Comentários</option><option value="follow">Novos seguidores</option><option value="share">Compartilhamentos</option><option value="join">Entradas</option><option value="guess">Palpites</option><option value="hint">Dicas</option><option value="winner">Vitórias</option><option value="level_up">Subidas de nível</option></select></label>
+          <label id="reportAxisFilter" hidden>Eixo<select id="reportAxis"><option value="">Todos os eixos</option><option value="gifter">Presenteador</option><option value="fanclub">Comunidade</option></select></label>
           <button class="btn btn-nb btn-primary" type="submit">Atualizar</button>
         </form>
         <p id="reportNotice" class="tp-report-notice" role="status" aria-live="polite"></p>
@@ -334,11 +352,13 @@
           <article><span>Curtidas</span><strong id="reportLikes">—</strong></article>
           <article><span>Presentes · diamantes</span><strong id="reportGifts">—</strong></article>
           <article><span>Comentários</span><strong id="reportComments">—</strong></article>
+          <article><span>Subidas de nível</span><strong id="reportLevelUps">—</strong><small id="reportLevelUpsByAxis">Presenteador — · Comunidade —</small></article>
         </div>
         <div class="tp-report-grid">
           <section class="tp-report-panel"><header><div><h2>Atividade no período</h2><p>Volume de interações ao longo do tempo.</p></div><label>Intervalo<select id="reportBucket"><option value="minute">Minuto</option><option value="hour" selected>Hora</option><option value="day">Dia</option></select></label></header><div id="reportSeries" class="tp-report-series" role="img" aria-label="Gráfico de interações"></div></section>
           <section class="tp-report-panel"><header><div><h2>Participantes</h2><p id="reportRankingCaption">Destaques por interação.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>#</th><th>Usuário</th><th>Eventos</th><th>Valor</th></tr></thead><tbody id="reportRanking"></tbody></table></div></section>
         </div>
+        <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Níveis dos participantes</h2><p>Últimos níveis conhecidos; selecione uma live para consultar o registro daquela transmissão.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>#</th><th>Participante</th><th>Nível de fã-clube</th><th>Nível de presenteador</th><th>Atualizado</th></tr></thead><tbody id="reportLevels"></tbody></table></div></section>
         <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Interações recentes</h2><p>Eventos registrados nesta seleção.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>Horário</th><th>Tipo</th><th>Participante</th><th>Detalhes</th><th>Valor</th></tr></thead><tbody id="reportEvents"></tbody></table></div><button type="button" class="btn btn-nb btn-dark" id="reportLoadMore" hidden>Carregar mais</button></section>
       </section>
       <div class="tab-page" id="tab-connect">
@@ -399,16 +419,26 @@
     <section class="content-grid">
       <div class="stack">
         <section class="card page-section tp-sound-section" data-feature-section="chat" data-section="voice" id="tab-chat">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz do narrador</h2><p>Usada na narração automática da charada da Palavra Secreta.</p></div></div></div>
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz do narrador</h2><p>Compartilhada pela narração do chat e pelas charadas da Palavra Secreta.</p></div></div></div>
           <div class="card-body">
             <div class="voice-preview"><div class="voice-avatar">◖</div><div><strong>Prévia da narração</strong><span>Teste a voz e ajuste a velocidade antes de iniciar a live.</span></div></div>
             <div class="form-grid">
-              <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Edge — Antonio (servidor)</option><option value="edge_francisca" selected>Edge — Francisca (servidor)</option></select><small>Selecione a voz usada na charada.</small></div>
-              <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
+              <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio (servidor)</option><option value="edge_francisca" selected>Francisca (servidor)</option></select><small>Aplicada ao chat e às charadas.</small></div>
+              <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
+            </div>
+            <div class="divider"></div>
+            <label class="switch-row" for="chatNarrEnabled">
+              <input type="checkbox" id="chatNarrEnabled" onchange="onSettingsChanged()">
+              <span class="switch"></span>
+              <div><b>Ler mensagens do chat em voz alta</b><small>Os comentários são sintetizados e reproduzidos em sequência no painel.</small></div>
+            </label>
+            <div class="form-grid">
+              <div class="field"><label for="chatNarrMode">Comentários narrados</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos</option><option value="exclude">Todos, exceto os que começam com o caractere</option><option value="only">Somente os que começam com o caractere</option></select></div>
+              <div class="field"><label for="chatNarrChar">Caractere de filtro</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado nos modos de filtro; o caractere não é falado.</small></div>
             </div>
             <div class="row-actions"><button class="btn btn-primary" type="button" onclick="testPanelVoice()">Testar voz</button></div>
             <div class="divider"></div>
-            <div class="info-card"><strong>Importante:</strong> no fluxo atual, somente a charada da Palavra Secreta usa o motor de voz. O chat não é narrado automaticamente.</div>
+            <div class="info-card"><strong>Importante:</strong> voz e velocidade são compartilhadas. A opção de narração automática da charada continua independente da leitura do chat.</div>
           </div>
         </section>
 
@@ -428,7 +458,7 @@
       </div>
 
       <aside class="stack">
-        <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">◉</div><div><h2>Status do áudio</h2><p>Resumo rápido da configuração atual.</p></div></div></div><div class="card-body"><div class="status-list"><div class="status-item"><div><span>Motor de voz</span><strong>Edge TTS</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Voz selecionada</span><strong id="voiceStatus">—</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Salvamento</span><strong>Automático</strong></div><i class="status-dot"></i></div></div><div class="mini-stat-grid"><div class="mini-stat"><span>ALERTAS</span><strong id="soundsAlertCount">—</strong></div><div class="mini-stat"><span>COM ÁUDIO</span><strong id="soundsAudioCount">—</strong></div></div></div></section>
+        <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">◉</div><div><h2>Status do áudio</h2><p>Resumo rápido da configuração atual.</p></div></div></div><div class="card-body"><div class="status-list"><div class="status-item"><div><span>Motor de voz</span><strong>Síntese de voz</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Voz selecionada</span><strong id="voiceStatus">—</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Salvamento</span><strong>Automático</strong></div><i class="status-dot"></i></div></div><div class="mini-stat-grid"><div class="mini-stat"><span>ALERTAS</span><strong id="soundsAlertCount">—</strong></div><div class="mini-stat"><span>COM ÁUDIO</span><strong id="soundsAudioCount">—</strong></div></div></div></section>
         <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione a voz e teste a narração.<br><br><strong>2.</strong> Escolha um presente do catálogo.<br><br><strong>3.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>4.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
       </aside>
     </section>
@@ -440,19 +470,52 @@
           <div class="alert alert-warning" role="note"><strong>Configuração no TikTok Live Studio:</strong> na fonte do navegador, escolha resolução personalizada e informe a mesma resolução de saída configurada para sua live. O posicionamento e a escala abaixo são ajustados nessa tela real.</div>
           <div class="tp-overlay-grid">
             <div class="tp-overlay-row">
-              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V2</h3><p class="text-secondary">Lista compacta com acabamento neon.</p><p class="text-secondary">Prévia de exemplo</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V2 com dados de exemplo" src="/overlays/likes/v2/overlay.html?demo=1&amp;count=3&amp;rev=preferences-20261014-4" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v2',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v2',true)">Copiar link público / OBS</button></div><p id="likesOverlayV2Status" class="text-secondary mt-2" role="status"></p></div>
+              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V2</h3><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V2 com dados de exemplo" src="/overlays/likes/v2/overlay.html?demo=1&amp;rev=preview-four-items-20261014" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v2',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v2',true)">Copiar link público / OBS</button></div><p id="likesOverlayV2Status" class="text-secondary mt-2" role="status"></p></div>
               <section class="nb-card tp-overlay-controls-card" data-overlay-controls="v2" aria-labelledby="likesOverlayV2ControlsTitle"><div class="tp-overlay-controls-toolbar"><h3 id="likesOverlayV2ControlsTitle">Controle de posição e escala · V2</h3><div class="tp-overlay-count-control"><label class="form-label" for="likesOverlayCountV2">Exibir</label><select class="form-select form-select-sm" id="likesOverlayCountV2" data-overlay-count><option value="1">1 pessoa</option><option value="2">2 pessoas</option><option value="3">3 pessoas</option><option value="4">4 pessoas</option><option value="5">5 pessoas</option><option value="6">6 pessoas</option><option value="7">7 pessoas</option><option value="8">8 pessoas</option><option value="9">9 pessoas</option><option value="10">10 pessoas</option></select></div></div><div class="tp-overlay-adjust"><div class="tp-overlay-dpad" role="group" aria-label="Mover ranking V2"><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="up" aria-label="Mover ranking V2 para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="left" aria-label="Mover ranking V2 para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="right" aria-label="Mover ranking V2 para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="down" aria-label="Mover ranking V2 para baixo">↓</button><span></span></div><div class="tp-overlay-adjust-actions" role="group" aria-label="Escala V2"><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="down" aria-label="Diminuir escala V2">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="up" aria-label="Aumentar escala V2">+</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-step aria-pressed="false">Passo: 1%</button><button type="button" class="btn btn-nb btn-warning btn-sm" data-overlay-reset>Resetar</button></div></div><p class="tp-overlay-layout-readout mt-3 mb-1" data-overlay-layout-readout aria-live="polite">X: 0% · Y: 0% · Escala: 100%</p><div class="tp-overlay-style-controls"><label>Foto<select data-overlay-setting="photo_position"></select></label><div class="tp-overlay-color-field"><span>Cor do texto</span><div class="tp-color-picker" data-color-picker><div class="tp-color-control"><button type="button" class="tp-color-preview" data-color-toggle aria-label="Abrir seletor de cor" aria-expanded="false"></button></div><div class="tp-color-popover" data-color-popover hidden><div class="tp-color-sv" data-color-sv role="slider" tabindex="0" aria-label="Saturação e brilho"><span data-color-cursor></span></div><div class="tp-color-hue-label"><span>Matiz</span><input type="range" data-color-hue min="0" max="359" value="0" aria-label="Matiz da cor"></div><div class="tp-color-hex-row"><span>HEX</span><input type="text" inputmode="text" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" placeholder="#FFFFFF" data-overlay-setting="font_color" aria-label="Cor do texto em hexadecimal"></div><span class="tp-color-presets" role="group" aria-label="Cores sugeridas"><button type="button" data-overlay-color="#ffffff" aria-label="Selecionar #ffffff" title="#ffffff" style="--tp-color-swatch:#ffffff"></button><button type="button" data-overlay-color="#22d3ee" aria-label="Selecionar #22d3ee" title="#22d3ee" style="--tp-color-swatch:#22d3ee"></button><button type="button" data-overlay-color="#38bdf8" aria-label="Selecionar #38bdf8" title="#38bdf8" style="--tp-color-swatch:#38bdf8"></button><button type="button" data-overlay-color="#8b5cf6" aria-label="Selecionar #8b5cf6" title="#8b5cf6" style="--tp-color-swatch:#8b5cf6"></button><button type="button" data-overlay-color="#34d399" aria-label="Selecionar #34d399" title="#34d399" style="--tp-color-swatch:#34d399"></button><button type="button" data-overlay-color="#f472b6" aria-label="Selecionar #f472b6" title="#f472b6" style="--tp-color-swatch:#f472b6"></button><button type="button" data-overlay-color="#fbbf24" aria-label="Selecionar #fbbf24" title="#fbbf24" style="--tp-color-swatch:#fbbf24"></button><button type="button" data-overlay-color="#f87171" aria-label="Selecionar #f87171" title="#f87171" style="--tp-color-swatch:#f87171"></button></span></div></div></div><label>Sombra<select data-overlay-setting="shadow"></select></label></div><p class="text-secondary mb-0" data-overlay-layout-status role="status" aria-live="polite">Carregando ajustes…</p></section>
             </div>
             <div class="tp-overlay-row">
-              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V3</h3><p class="text-secondary">Lista neon com molduras de ouro, prata e bronze no pódio.</p><p class="text-secondary">Prévia de exemplo</p><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V3 com dados de exemplo" src="/overlays/likes/v3/overlay.html?demo=1&amp;count=3&amp;rev=preferences-20261014-4" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v3',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v3',true)">Copiar link público / OBS</button></div><p id="likesOverlayV3Status" class="text-secondary mt-2" role="status"></p></div>
+              <div class="nb-card tp-overlay-card"><h3>Ranking de curtidas V3</h3><div class="tp-overlay-preview"><iframe title="Prévia ranking de curtidas V3 com dados de exemplo" src="/overlays/likes/v3/overlay.html?demo=1&amp;rev=preview-four-items-20261014" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('v3',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('v3',true)">Copiar link público / OBS</button></div><p id="likesOverlayV3Status" class="text-secondary mt-2" role="status"></p></div>
               <section class="nb-card tp-overlay-controls-card" data-overlay-controls="v3" aria-labelledby="likesOverlayV3ControlsTitle"><div class="tp-overlay-controls-toolbar"><h3 id="likesOverlayV3ControlsTitle">Controle de posição e escala · V3</h3><div class="tp-overlay-count-control"><label class="form-label" for="likesOverlayCountV3">Exibir</label><select class="form-select form-select-sm" id="likesOverlayCountV3" data-overlay-count><option value="1">1 pessoa</option><option value="2">2 pessoas</option><option value="3">3 pessoas</option><option value="4">4 pessoas</option><option value="5">5 pessoas</option><option value="6">6 pessoas</option><option value="7">7 pessoas</option><option value="8">8 pessoas</option><option value="9">9 pessoas</option><option value="10">10 pessoas</option></select></div></div><div class="tp-overlay-adjust"><div class="tp-overlay-dpad" role="group" aria-label="Mover ranking V3"><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="up" aria-label="Mover ranking V3 para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="left" aria-label="Mover ranking V3 para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="right" aria-label="Mover ranking V3 para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-overlay-move="down" aria-label="Mover ranking V3 para baixo">↓</button><span></span></div><div class="tp-overlay-adjust-actions" role="group" aria-label="Escala V3"><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="down" aria-label="Diminuir escala V3">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-scale="up" aria-label="Aumentar escala V3">+</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-overlay-step aria-pressed="false">Passo: 1%</button><button type="button" class="btn btn-nb btn-warning btn-sm" data-overlay-reset>Resetar</button></div></div><p class="tp-overlay-layout-readout mt-3 mb-1" data-overlay-layout-readout aria-live="polite">X: 0% · Y: 0% · Escala: 100%</p><div class="tp-overlay-style-controls"><label>Foto<select data-overlay-setting="photo_position"></select></label><div class="tp-overlay-color-field"><span>Cor do texto</span><div class="tp-color-picker" data-color-picker><div class="tp-color-control"><button type="button" class="tp-color-preview" data-color-toggle aria-label="Abrir seletor de cor" aria-expanded="false"></button></div><div class="tp-color-popover" data-color-popover hidden><div class="tp-color-sv" data-color-sv role="slider" tabindex="0" aria-label="Saturação e brilho"><span data-color-cursor></span></div><div class="tp-color-hue-label"><span>Matiz</span><input type="range" data-color-hue min="0" max="359" value="0" aria-label="Matiz da cor"></div><div class="tp-color-hex-row"><span>HEX</span><input type="text" inputmode="text" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" placeholder="#FFFFFF" data-overlay-setting="font_color" aria-label="Cor do texto em hexadecimal"></div><span class="tp-color-presets" role="group" aria-label="Cores sugeridas"><button type="button" data-overlay-color="#ffffff" aria-label="Selecionar #ffffff" title="#ffffff" style="--tp-color-swatch:#ffffff"></button><button type="button" data-overlay-color="#22d3ee" aria-label="Selecionar #22d3ee" title="#22d3ee" style="--tp-color-swatch:#22d3ee"></button><button type="button" data-overlay-color="#38bdf8" aria-label="Selecionar #38bdf8" title="#38bdf8" style="--tp-color-swatch:#38bdf8"></button><button type="button" data-overlay-color="#8b5cf6" aria-label="Selecionar #8b5cf6" title="#8b5cf6" style="--tp-color-swatch:#8b5cf6"></button><button type="button" data-overlay-color="#34d399" aria-label="Selecionar #34d399" title="#34d399" style="--tp-color-swatch:#34d399"></button><button type="button" data-overlay-color="#f472b6" aria-label="Selecionar #f472b6" title="#f472b6" style="--tp-color-swatch:#f472b6"></button><button type="button" data-overlay-color="#fbbf24" aria-label="Selecionar #fbbf24" title="#fbbf24" style="--tp-color-swatch:#fbbf24"></button><button type="button" data-overlay-color="#f87171" aria-label="Selecionar #f87171" title="#f87171" style="--tp-color-swatch:#f87171"></button></span></div></div></div><label>Sombra<select data-overlay-setting="shadow"></select></label></div><p class="text-secondary mb-0" data-overlay-layout-status role="status" aria-live="polite">Carregando ajustes…</p></section>
             </div>
+            <div class="tp-overlay-row" data-gift-ranking>
+              <section class="nb-card tp-overlay-card"><h3>Ranking de diamantes V3</h3><div class="tp-overlay-preview"><iframe title="Prévia do ranking de diamantes com molduras" src="/overlays/gifts/v3/overlay.html?demo=1&amp;rev=gift-ranking-v3-7" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><p class="tp-gift-ranking-actions"><button class="btn btn-nb btn-dark" type="button" data-gift-ranking-open>Abrir sobreposição</button><button class="btn btn-nb btn-primary" type="button" data-gift-ranking-copy>Copiar link público / OBS</button></p><p class="text-secondary mb-0" data-gift-ranking-status role="status" aria-live="polite"></p></section>
+              <section class="nb-card tp-overlay-controls-card tp-gift-ranking-controls" aria-labelledby="giftRankingControlsTitle"><div class="tp-overlay-controls-toolbar"><h3 id="giftRankingControlsTitle">Posição e escala · Ranking de diamantes</h3><div class="tp-overlay-count-control"><label class="form-label" for="giftRankingCount">Exibir</label><select class="form-select form-select-sm" id="giftRankingCount"><option value="3">3 pessoas</option><option value="5">5 pessoas</option><option value="10" selected>10 pessoas</option></select></div><button type="button" class="btn btn-nb btn-dark btn-sm" data-gift-ranking-reset>Resetar</button></div><div class="tp-overlay-adjust"><div class="tp-overlay-dpad" role="group" aria-label="Mover ranking de diamantes"><span></span><button type="button" class="btn btn-nb btn-dark" data-gift-ranking-move="up" aria-label="Mover para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-gift-ranking-move="left" aria-label="Mover para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-gift-ranking-move="right" aria-label="Mover para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-gift-ranking-move="down" aria-label="Mover para baixo">↓</button><span></span></div><div class="tp-overlay-adjust-actions" role="group" aria-label="Ajustar escala do ranking de diamantes"><button type="button" class="btn btn-nb btn-dark btn-sm" data-gift-ranking-scale="down" aria-label="Diminuir escala">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-gift-ranking-scale="up" aria-label="Aumentar escala">+</button></div></div><p class="tp-overlay-layout-readout mb-1" data-gift-ranking-readout aria-live="polite">X: 0% · Y: 0% · Escala: 100%</p><p class="mb-0" data-gift-ranking-status-note>Ajustes aplicados à fonte e salvos para esta conta.</p></section>
+            </div>
             <div class="tp-overlay-row tp-floating-row" data-floating-likes>
-              <section class="nb-card tp-overlay-card tp-floating-likes-card"><h3>Curtidas flutuantes</h3><p class="text-secondary">Corações e avatares de quem curtir sobem sobre a live, sem filtro de ranking.</p><p class="text-secondary">Prévia animada · link usa curtidas reais</p><div class="tp-overlay-preview"><iframe title="Prévia de corações e avatares flutuantes" src="/overlays/likes/fountain/overlay.html?demo=1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('fountain',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('fountain',true)">Copiar link público / OBS</button></div><p id="likesOverlayFountainStatus" class="text-secondary mt-2" role="status"></p></section>
+              <section class="nb-card tp-overlay-card tp-floating-likes-card"><h3>Curtidas flutuantes</h3><div class="tp-overlay-preview"><iframe title="Prévia de corações e avatares flutuantes" src="/overlays/likes/fountain/overlay.html?demo=1" loading="lazy" style="width:100%;height:100%;border:0;pointer-events:none"></iframe></div><div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark" onclick="likesOverlayLink('fountain',false)">Abrir sobreposição</button><button class="btn btn-nb btn-primary" onclick="likesOverlayLink('fountain',true)">Copiar link público / OBS</button></div><p id="likesOverlayFountainStatus" class="text-secondary mt-2" role="status"></p></section>
               <section class="nb-card tp-overlay-controls-card tp-floating-controls-card" aria-labelledby="floatingLikesControlsTitle"><div class="tp-overlay-controls-toolbar"><h3 id="floatingLikesControlsTitle">Controles · Curtidas flutuantes</h3></div><div class="tp-floating-controls"><label>Animação<select class="form-select" data-floating-setting="animation"></select></label><fieldset><legend>Cores dos corações</legend><div class="tp-heart-colors" id="floatingHeartColors"></div><button class="btn btn-nb btn-dark btn-sm" type="button" id="addHeartColor">Adicionar cor</button></fieldset></div><p id="floatingConfigStatus" class="text-secondary mb-0" role="status" aria-live="polite">Carregando ajustes…</p></section>
             </div>
+            <div class="tp-level-overlays-grid">
+              <section class="nb-card tp-overlay-card tp-presenter-level-card">
+                <h3>Subida de nível · Presenteador</h3>
+                <p class="text-secondary">Celebre a evolução do nível de presenteador durante a live.</p>
+                <div class="tp-overlay-preview"><iframe class="tp-presenter-level-preview-frame" title="Prévia de subida de nível do presenteador" src="/overlays/presenter-level/overlay.html?demo=1&amp;preview=1&amp;axis=gifter&amp;from=29&amp;to=30&amp;rev=community-axis-20261014" loading="lazy" style="border:0;pointer-events:none"></iframe></div>
+                <div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark btn-sm tp-level-test-button" id="presenterLevelSameTierTestButton" onclick="testPresenterLevelOverlay('same-tier')" title="Envia o teste visual 23 → 24 sem trocar o diamante">Testar nível · 23 → 24</button><button class="btn btn-nb btn-dark btn-sm tp-level-test-button" id="presenterLevelTierChangeTestButton" onclick="testPresenterLevelOverlay('tier-change')" title="Envia o teste visual 29 → 30 com troca de diamante">Testar diamante · 29 → 30</button></div>
+                <p id="presenterLevelSameTierStatus" class="text-secondary mt-2" role="status" aria-live="polite"></p>
+                <p id="presenterLevelTierChangeStatus" class="text-secondary mt-2" role="status" aria-live="polite"></p>
+                <p id="presenterLevelOverlayStatus" class="text-secondary mt-2" role="status" aria-live="polite"></p>
+              </section>
+              <section class="nb-card tp-overlay-card tp-presenter-level-card tp-community-level-card">
+                <h3>Subida de nível · Comunidade</h3>
+                <p class="text-secondary">Celebre a Jornada de Fã e os capítulos da comunidade durante a live.</p>
+                <div class="tp-overlay-preview"><iframe class="tp-presenter-level-preview-frame" title="Prévia de subida de nível da comunidade" src="/overlays/presenter-level/overlay.html?demo=1&amp;preview=1&amp;axis=fanclub&amp;from=29&amp;to=30&amp;rev=community-axis-20261014" loading="lazy" style="border:0;pointer-events:none"></iframe></div>
+                <div class="d-flex gap-2 flex-wrap"><button class="btn btn-nb btn-dark btn-sm tp-level-test-button" id="communityLevelSameTierTestButton" onclick="testPresenterLevelOverlay('same-tier','fanclub')" title="Testa a subida de nível sem mudar de capítulo">Testar nível · 23 → 24</button><button class="btn btn-nb btn-dark btn-sm tp-level-test-button" id="communityLevelTierChangeTestButton" onclick="testPresenterLevelOverlay('tier-change','fanclub')" title="Testa o desbloqueio de um novo capítulo">Testar capítulo · 29 → 30</button></div>
+                <p id="communityLevelSameTierStatus" class="text-secondary mt-2" role="status" aria-live="polite"></p>
+                <p id="communityLevelTierChangeStatus" class="text-secondary mt-2" role="status" aria-live="polite"></p>
+              </section>
+              <section class="nb-card tp-overlay-controls-card tp-presenter-level-controls" data-presenter-level-controls aria-labelledby="presenterLevelControlsTitle">
+                <div class="tp-overlay-controls-toolbar"><h3 id="presenterLevelControlsTitle">Posição e escala · Subida de nível</h3><button type="button" class="btn btn-nb btn-dark btn-sm" data-presenter-reset>Resetar</button></div>
+                <div class="tp-overlay-adjust">
+                  <div class="tp-overlay-dpad" role="group" aria-label="Mover animação de subida de nível"><span></span><button type="button" class="btn btn-nb btn-dark" data-presenter-move="up" aria-label="Mover para cima">↑</button><span></span><button type="button" class="btn btn-nb btn-dark" data-presenter-move="left" aria-label="Mover para a esquerda">←</button><span></span><button type="button" class="btn btn-nb btn-dark" data-presenter-move="right" aria-label="Mover para a direita">→</button><span></span><button type="button" class="btn btn-nb btn-dark" data-presenter-move="down" aria-label="Mover para baixo">↓</button><span></span></div>
+                  <div class="tp-overlay-adjust-actions" role="group" aria-label="Ajustar escala da animação"><button type="button" class="btn btn-nb btn-dark btn-sm" data-presenter-scale="down" aria-label="Diminuir escala">−</button><button type="button" class="btn btn-nb btn-dark btn-sm" data-presenter-scale="up" aria-label="Aumentar escala">+</button></div>
+                </div>
+                <p class="tp-overlay-layout-readout mb-1" data-presenter-readout aria-live="polite">X: 50% · Y: 50% · Escala: 100%</p>
+                <p class="text-secondary mb-0" data-presenter-status role="status" aria-live="polite">Carregando ajustes…</p>
+                <div class="tp-presenter-level-actions"><button type="button" class="btn btn-nb btn-dark" onclick="presenterLevelOverlayLink(false)">Abrir sobreposição</button><button type="button" class="btn btn-nb btn-primary" onclick="presenterLevelOverlayLink(true)">Copiar link público / OBS</button></div>
+                <p class="text-secondary mb-0">A mesma fonte pública identifica automaticamente as subidas de nível de presenteador e da comunidade durante a live.</p>
+              </section>
+            </div>
           </div>
-          <p class="text-secondary mt-3">Os efeitos de curtidas flutuantes acompanham a resolução de saída da sua live.</p>
         </div>
       </div>
 
@@ -1340,7 +1403,7 @@
             </section>
             <section data-support-screen="article" hidden>
               <div class="tp-help-toolbar"><button type="button" class="tp-help-btn" data-support-view="articles">Todos os artigos</button></div>
-              <header class="tp-help-heading"><span class="tp-help-eyebrow" id="nativeArticleCategory">ARTIGO</span><h1 id="nativeArticleTitle"></h1><p id="nativeArticleSummary"></p></header>
+              <header class="tp-help-heading"><span class="tp-help-eyebrow" id="nativeArticleCategory">ARTIGO</span><h1 id="nativeArticleTitle"></h1><p id="nativeArticleSummary"></p></header><p id="nativeArticleStatus" class="tp-help-notice" role="status"></p>
               <article id="nativeArticleContent" class="tp-help-panel tp-help-article-content"></article>
               <div class="tp-help-panel tp-help-spaced"><h2>Ainda precisa de ajuda?</h2><p class="tp-help-muted">Envie os detalhes para nossa equipe.</p><button id="nativeArticleTicket" type="button" class="tp-help-btn tp-help-btn-primary">Abrir chamado sobre este artigo</button></div>
             </section>
@@ -1370,13 +1433,14 @@
         </div>
         <div id="logSettings" class="tp-log-settings" hidden aria-label="Categorias exibidas nos logs">
           <div class="tp-log-settings-title">Exibir categorias</div>
-          <label><input type="checkbox" data-log-category="conexao" checked onchange="setLogCategories(true)"> Conexão</label>
+          <label><input type="checkbox" data-log-category="connection" checked onchange="setLogCategories(true)"> Conexão</label>
           <label><input type="checkbox" data-log-category="chat" checked onchange="setLogCategories(true)"> Chat</label>
-          <label><input type="checkbox" data-log-category="jogos" checked onchange="setLogCategories(true)"> Eventos dos jogos</label>
-          <label><input type="checkbox" data-log-category="avisos" checked onchange="setLogCategories(true)"> Avisos</label>
-          <label><input type="checkbox" data-log-category="erros" checked onchange="setLogCategories(true)"> Erros</label>
-          <label><input type="checkbox" data-log-category="diagnostico" checked onchange="setLogCategories(true)"> Diagnóstico detalhado</label>
-          <div class="tp-log-settings-note">Classificação baseada nos campos game/level disponíveis e em marcadores explícitos da mensagem. Logs legados sem origem identificável aparecem como Sistema.</div>
+          <label><input type="checkbox" data-log-category="game" checked onchange="setLogCategories(true)"> Eventos dos jogos</label>
+          <label><input type="checkbox" data-log-category="notice" checked onchange="setLogCategories(true)"> Avisos</label>
+          <label><input type="checkbox" data-log-category="error" checked onchange="setLogCategories(true)"> Erros</label>
+          <label><input type="checkbox" data-log-category="diagnostic" checked onchange="setLogCategories(true)"> Diagnóstico detalhado</label>
+          <label><input type="checkbox" data-log-category="system" checked onchange="setLogCategories(true)"> Sistema (legado)</label>
+          <div class="tp-log-settings-note">Categorias recebidas do servidor são a fonte principal; mensagens antigas sem origem permanecem em Sistema (legado).</div>
         </div>
         <div class="log-area" id="logArea">
           <div class="log-line log-info">[Painel] Pronto. Configure e clique em Conectar.</div>
@@ -1395,7 +1459,9 @@ window.addEventListener('message', event => {
   if(Number.isFinite(height) && height>0 && height<50000)frame.style.height=Math.ceil(height)+'px';
 });
 if (!token) location.href = "/login";
-try { console.log("[PAINEL] build v75_25 — configs 75% esquerda, log 25% direita"); } catch (e) {}
+if (window.TIKPLAY_DEBUG_LOGS === true) {
+  try { console.debug({ category: "diagnostic", level: "debug", event: "panel.build.loaded", source: "browser", version: "v75_25" }); } catch (e) {}
+}
 
 function switchTab(tab) {
   const menuTab = (tab === "chat" || tab === "alerts") ? "sons" : tab;
@@ -1452,6 +1518,7 @@ async function nativeSupportInit() {
   nativeSupportReady = true;
   const root = document.getElementById('tab-support');
   const $ = id => document.getElementById(`native${id}`);
+  [['TicketForm','TicketCategory'],['SuggestionForm','SuggestionType'],['TicketReplyForm','TicketReply'],['HelpSearchForm','HelpSearch']].forEach(([formId,fieldId])=>{const form=$(formId),button=form?.querySelector('button');if(form){form.noValidate=true;}if(button)button.type='submit';const field=$(fieldId);if(formId==='TicketForm'&&field)field.required=false;});
   const supportToken = localStorage.getItem('token');
   const statusNames = {novo:'Novo',em_atendimento:'Em atendimento',aguardando_usuario:'Aguardando você',resolvido:'Resolvido',fechado:'Fechado',recebida:'Recebida',em_avaliacao:'Em avaliação',planejada:'Planejada',em_desenvolvimento:'Em desenvolvimento',implementada:'Implementada',nao_planejada:'Não planejada'};
   const typeNames = {nova_funcionalidade:'Nova funcionalidade',melhoria:'Melhoria',novo_jogo:'Novo jogo',melhoria_jogo:'Melhoria de jogo',interface:'Interface',integracao:'Integração',outro:'Outro'};
@@ -1466,7 +1533,9 @@ async function nativeSupportInit() {
     if (!response.ok || data?.success === false) throw new Error(data?.error || `Não foi possível concluir (${response.status}).`);
     return data;
   };
+  const bindSubmitButton = formId => { const form=$(formId),button=form?.querySelector('button[type="submit"]'); if(!form||!button)return; button.addEventListener('click',event=>{event.preventDefault();form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}); };
   const notice = (id, message, error = false) => { const el=$(id); if(!el)return; el.textContent=message || ''; el.classList.toggle('tp-help-error',error); };
+  const validateForm = (form, id) => { const firstInvalid=form.querySelector(':invalid'); if(!firstInvalid)return true; notice(id,firstInvalid.validationMessage||'Confira os campos obrigatórios antes de enviar.',true); firstInvalid.focus(); return false; };
   const setOptions = (id, values, labels, first) => { const select=$(id); if(!select)return; const old=select.value; select.innerHTML=`<option value="">${first}</option>`+(values||[]).map(v=>`<option value="${escText(v)}">${escText(labels?.[v]||v)}</option>`).join(''); if((values||[]).includes(old))select.value=old; };
   const date = value => { if(!value)return '—'; const d=new Date(String(value).replace(' ','T')+(String(value).includes('Z')?'':'Z')); return Number.isNaN(d.getTime())?String(value):new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(d); };
   const statusBadge = status => `<span class="tp-help-badge" data-status="${escText(status)}">${escText(statusNames[status]||status||'—')}</span>`;
@@ -1505,6 +1574,7 @@ async function nativeSupportInit() {
       const query=($('HelpSearch')?.value||'').trim().toLocaleLowerCase('pt-BR'), category=catSelect.value, game=gameSelect.value;
       const filtered=all.filter(a=>(!query||`${a.title} ${a.summary||''}`.toLocaleLowerCase('pt-BR').includes(query))&&(!category||String(a.category_id)===category)&&(!game||a.game_id===game));
       $('HelpArticles').innerHTML=filtered.length?filtered.map(a=>`<button type="button" class="tp-help-row" data-native-article="${escText(a.slug)}"><span><strong>${escText(a.title)}</strong><p>${escText(a.summary||'')}</p><p>${escText(a.category_name||categoryMap.get(String(a.category_id))||'Central de Ajuda')}${a.game_id?` · ${escText(a.game_name||a.game_id)}`:''}</p></span><span aria-hidden="true">›</span></button>`).join(''):'<div class="tp-help-panel"><h2>Nenhum artigo encontrado</h2><p class="tp-help-muted">Tente outros termos ou filtros.</p></div>';
+      $('HelpArticles').querySelectorAll('[data-native-article]').forEach(button=>button.addEventListener('click',()=>{void openArticle(button.dataset.nativeArticle);}));
       notice('HelpStatus',`${filtered.length} artigo(s)`);
     } catch(e) { $('HelpArticles').replaceChildren(); notice('HelpStatus',e.message,true); }
   }
@@ -1516,8 +1586,10 @@ async function nativeSupportInit() {
     close(); return out.join('');
   }
   async function openArticle(slug) {
-    try {const {article:a}=await api(`/api/help/articles/${encodeURIComponent(slug)}`,{},false);nativeSupportArticleSource=a.slug;$('ArticleTitle').textContent=a.title;$('ArticleSummary').textContent=a.summary||'';$('ArticleCategory').textContent=a.category_name||'CENTRAL DE AJUDA';$('ArticleContent').innerHTML=markdown(a.content||'');setView('article');}
-    catch(e){notice('HelpStatus',e.message,true);setView('articles');}
+    setView('article');
+    $('ArticleTitle').textContent='Carregando artigo…';$('ArticleSummary').textContent='';$('ArticleCategory').textContent='CENTRAL DE AJUDA';$('ArticleContent').replaceChildren();notice('ArticleStatus','Buscando conteúdo…');
+    try {const {article:a}=await api(`/api/help/articles/${encodeURIComponent(slug)}`,{},false);nativeSupportArticleSource=a.slug;$('ArticleTitle').textContent=a.title;$('ArticleSummary').textContent=a.summary||'';$('ArticleCategory').textContent=a.category_name||'CENTRAL DE AJUDA';$('ArticleContent').innerHTML=markdown(a.content||'');notice('ArticleStatus','');}
+    catch(e){$('ArticleTitle').textContent='Não foi possível abrir este artigo';$('ArticleSummary').textContent='Tente novamente ou volte à lista de artigos.';$('ArticleContent').replaceChildren();notice('ArticleStatus',e.message,true);}
   }
   async function loadTickets() {
     notice('TicketNotice','Carregando chamados…');
@@ -1543,7 +1615,6 @@ async function nativeSupportInit() {
   function renderPreviews(){nativeSupportPreviewUrls.forEach(URL.revokeObjectURL);nativeSupportPreviewUrls=[];$('TicketPreviews').replaceChildren();nativeSupportFiles.forEach((file,index)=>{const url=URL.createObjectURL(file);nativeSupportPreviewUrls.push(url);const item=document.createElement('div');item.className='tp-help-preview';item.innerHTML=`<img src="${url}" alt="Prévia ${index+1}"><button type="button" aria-label="Remover ${escText(file.name)}" data-native-remove-file="${index}">×</button>`;$('TicketPreviews').append(item);});}
   root.addEventListener('click', async event=>{
     const view=event.target.closest('[data-support-view]')?.dataset.supportView;if(view){event.preventDefault();setView(view);return;}
-    const article=event.target.closest('[data-native-article]');if(article){openArticle(article.dataset.nativeArticle);return;}
     const ticket=event.target.closest('[data-native-ticket]');if(ticket){setView('ticket',{id:ticket.dataset.nativeTicket});return;}
     const remove=event.target.closest('[data-native-remove-file]');if(remove){nativeSupportFiles.splice(Number(remove.dataset.nativeRemoveFile),1);renderPreviews();}
   });
@@ -1552,9 +1623,10 @@ async function nativeSupportInit() {
   $('TicketStatus').addEventListener('change',loadTickets);$('SuggestionStatus').addEventListener('change',loadSuggestions);
   $('ArticleTicket').addEventListener('click',()=>{setView('new-ticket');setTimeout(()=>{if(nativeSupportArticleSource)$('TicketForm').dataset.sourceArticleSlug=nativeSupportArticleSource;},0);});
   $('TicketFiles').addEventListener('change',()=>{const incoming=Array.from($('TicketFiles').files||[]),combined=[...nativeSupportFiles,...incoming],exts=new Set(['png','jpg','jpeg','gif','webp','bmp','heic','heif']);$('TicketFiles').value='';if(combined.length>5){notice('TicketFormNotice','Selecione no máximo 5 imagens por chamado.',true);return;}const invalid=combined.find(f=>!exts.has(f.name.split('.').pop().toLowerCase())||!f.type.startsWith('image/'));if(invalid){notice('TicketFormNotice',`${invalid.name}: formato de imagem não aceito.`,true);return;}const large=combined.find(f=>f.size>5*1024*1024);if(large){notice('TicketFormNotice',`${large.name} excede o limite de 5 MB.`,true);return;}nativeSupportFiles=combined;notice('TicketFormNotice','');renderPreviews();});
-  $('TicketForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notice('TicketFormNotice','Enviando chamado…');try{const payload={subject:$('TicketSubject').value.trim(),message:$('TicketMessage').value.trim(),category_id:$('TicketCategory').value||undefined,game_id:$('TicketGame').value||'',priority:$('TicketPriority').value};if(nativeSupportArticleSource)payload.source_article_slug=nativeSupportArticleSource;const {ticket}=await api('/api/support/tickets',{method:'POST',body:JSON.stringify(payload)});let warning='';if(nativeSupportFiles.length){const form=new FormData();nativeSupportFiles.forEach(f=>form.append('files',f));try{await api(`/api/support/tickets/${ticket.id}/attachments`,{method:'POST',body:form});}catch(err){warning=` O chamado foi aberto, mas os anexos falharam: ${err.message}`;}}$('SupportSuccessTitle').textContent='Chamado aberto';$('SupportSuccessText').textContent=`Chamado #${ticket.id} · ${ticket.subject}.${warning}`;nativeSupportFiles=[];nativeSupportArticleSource='';renderPreviews();setView('success');loadTickets();}catch(err){notice('TicketFormNotice',err.message,true);}finally{button.disabled=false;}});
-  $('SuggestionForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notice('SuggestionFormNotice','Enviando sugestão…');try{const {suggestion}=await api('/api/support/suggestions',{method:'POST',body:JSON.stringify({type:$('SuggestionType').value,game_id:$('SuggestionGame').value||'',title:$('SuggestionTitle').value.trim(),description:$('SuggestionDescription').value.trim()})});$('SupportSuccessTitle').textContent='Sugestão enviada';$('SupportSuccessText').textContent=`“${suggestion.title}” · Status: ${statusNames[suggestion.status]||'Recebida'}.`;setView('success');loadSuggestions();}catch(err){notice('SuggestionFormNotice',err.message,true);}finally{button.disabled=false;}});
-  $('TicketReplyForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api(`/api/support/tickets/${encodeURIComponent(nativeSupportTicketId)}/messages`,{method:'POST',body:JSON.stringify({message:$('TicketReply').value.trim()})});$('TicketReply').value='';await loadTicket(nativeSupportTicketId);}catch(err){notice('TicketDetailNotice',err.message,true);}finally{button.disabled=false;}});
+  $('TicketForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter||e.currentTarget.querySelector('button[type="submit"],button:not([type])');if(!button)return;if(!validateForm(e.currentTarget,'TicketFormNotice'))return;button.disabled=true;notice('TicketFormNotice','Enviando chamado…');try{const payload={subject:$('TicketSubject').value.trim(),message:$('TicketMessage').value.trim(),category_id:$('TicketCategory').value||undefined,game_id:$('TicketGame').value||'',priority:$('TicketPriority').value};if(nativeSupportArticleSource)payload.source_article_slug=nativeSupportArticleSource;const {ticket}=await api('/api/support/tickets',{method:'POST',body:JSON.stringify(payload)});let warning='';if(nativeSupportFiles.length){const form=new FormData();nativeSupportFiles.forEach(f=>form.append('files',f));try{await api(`/api/support/tickets/${ticket.id}/attachments`,{method:'POST',body:form});}catch(err){warning=` O chamado foi aberto, mas os anexos falharam: ${err.message}`;}}$('SupportSuccessTitle').textContent='Chamado aberto';$('SupportSuccessText').textContent=`Chamado #${ticket.id} · ${ticket.subject}.${warning}`;nativeSupportFiles=[];nativeSupportArticleSource='';renderPreviews();setView('success');loadTickets();}catch(err){notice('TicketFormNotice',err.message,true);}finally{button.disabled=false;}});
+  $('SuggestionForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter||e.currentTarget.querySelector('button[type="submit"],button:not([type])');if(!button)return;if(!validateForm(e.currentTarget,'SuggestionFormNotice'))return;button.disabled=true;notice('SuggestionFormNotice','Enviando sugestão…');try{const {suggestion}=await api('/api/support/suggestions',{method:'POST',body:JSON.stringify({type:$('SuggestionType').value,game_id:$('SuggestionGame').value||'',title:$('SuggestionTitle').value.trim(),description:$('SuggestionDescription').value.trim()})});$('SupportSuccessTitle').textContent='Sugestão enviada';$('SupportSuccessText').textContent=`“${suggestion.title}” · Status: ${statusNames[suggestion.status]||'Recebida'}.`;setView('success');loadSuggestions();}catch(err){notice('SuggestionFormNotice',err.message,true);}finally{button.disabled=false;}});
+  $('TicketReplyForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter||e.currentTarget.querySelector('button[type="submit"],button:not([type])');if(!button)return;if(!validateForm(e.currentTarget,'TicketDetailNotice'))return;button.disabled=true;try{await api(`/api/support/tickets/${encodeURIComponent(nativeSupportTicketId)}/messages`,{method:'POST',body:JSON.stringify({message:$('TicketReply').value.trim()})});$('TicketReply').value='';await loadTicket(nativeSupportTicketId);}catch(err){notice('TicketDetailNotice',err.message,true);}finally{button.disabled=false;}});
+  ['TicketForm','SuggestionForm','TicketReplyForm'].forEach(bindSubmitButton);
   $('CloseTicket').addEventListener('click',async()=>{if(!confirm('Fechar este chamado? Não será possível enviar novas respostas.'))return;try{await api(`/api/support/tickets/${encodeURIComponent(nativeSupportTicketId)}/close`,{method:'POST',body:'{}'});await loadTicket(nativeSupportTicketId);}catch(e){notice('TicketDetailNotice',e.message,true);}});
   try{const data=await api('/api/support/tickets?page=1&pageSize=100');$('OpenTicketCount').textContent=`${(data.items||[]).filter(t=>!['resolvido','fechado'].includes(t.status)).length} em aberto`;}catch(_){$('OpenTicketCount').textContent='Indisponível';}
   try { await loadGameOptions(); } catch (_) {}
@@ -1565,7 +1637,11 @@ let ws = null;
 let wsRetry = 0;
 let roomCode = "";
 let gameActive = false;
+let gameStartPending = false;
+let gameStartPendingTimer = null;
 let panelRiddleState = "hidden";
+let panelRiddleAudioUrl = "";
+let lastPanelRiddleAutoAudioUrl = "";
 
 function apiFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
@@ -1591,11 +1667,13 @@ function connectLogs() {
 
   ws.onopen = () => {
     wsRetry = 0;
+    clearChatNarrationPlayback();
     setStatus(true, "Conectado ao servidor");
     syncGameState();
   };
 
   ws.onclose = () => {
+    clearChatNarrationPlayback();
     setStatus(false, "Desconectado do servidor - reconectando...");
     const delay = Math.min(1000 * Math.pow(2, wsRetry), 10000);
     wsRetry++;
@@ -1613,17 +1691,30 @@ function connectLogs() {
       const el = document.getElementById("currentWord");
       if (el) el.textContent = msg.word || "-";
     } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
+      panelRiddleAudioUrl = msg.audio_url || "";
       renderPanelRiddle(msg.text, msg.stage);
-      if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
+      if (panelRiddleAudioUrl && savedSettings.riddle_auto_narrate !== false) {
+        playPanelRiddleAudio(panelRiddleAudioUrl, true);
+      }
     } else if (msg.type === "riddle_audio") {
-      if (msg.audio_url) playTikPlayAudio(msg.audio_url, "tts");
+      panelRiddleAudioUrl = msg.audio_url || "";
+      if (panelRiddleAudioUrl && savedSettings.riddle_auto_narrate !== false) {
+        playPanelRiddleAudio(panelRiddleAudioUrl, true);
+      }
       updatePanelRiddleControls();
+    } else if (msg.type === "chat_narrate") {
+      if (msg.reset) clearChatNarrationPlayback();
+      else if (msg.url) playTikPlayAudio(msg.url, "chat", false, false, msg.expires_in_ms);
     } else if (msg.type === "riddle_started" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_started")) {
+      panelRiddleAudioUrl = "";
+      lastPanelRiddleAutoAudioUrl = "";
       renderPanelRiddle("Gerando charada…", msg.stage);
     } else if (msg.type === "display_action" && msg.action === "close_riddle") {
       clearPanelRiddle();
     } else if (msg.type === "game_start") {
       gameActive = true;
+      gameStartPending = false;
+      clearTimeout(gameStartPendingTimer);
       startWordRoundClock(msg.game_id,true);
       clearPanelRiddle();
       setDisplayControlsEnabled(true);
@@ -1638,7 +1729,7 @@ function connectLogs() {
       setPostGameButtonsEnabled(!!(msg.post_game_summary && msg.post_game_summary.palavras));
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
-      playTikPlayAudio(msg.url, "tts", true);
+      playTikPlayAudio(msg.url, "tts", true, true);
     } else if (msg.type === "gift_event") {
       streamerGiftCount += Math.max(1, Number(msg.repeat_count) || 1);
       document.getElementById('streamerDashGifts').textContent = streamerGiftCount.toLocaleString('pt-BR');
@@ -1684,6 +1775,8 @@ let soundEffectGapTimer = null;
 const CONNECT_SOUND_KEY = "__connect__";
 let connectSoundSeenOnce = false;
 let lastConnectState = null;
+let connectSoundPending = false;
+let connectAudioContext = null;
 
 function playConnectSound() {
   const entry = soundAlerts[CONNECT_SOUND_KEY];
@@ -1693,22 +1786,26 @@ function playConnectSound() {
   }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AC();
-    const now = ctx.currentTime;
-    [880, 1175].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      const t = now + i * 0.18;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.2);
-    });
-    setTimeout(() => { try { ctx.close(); } catch {} }, 800);
+    if (!AC) return;
+    const ctx = connectAudioContext || (connectAudioContext = new AC());
+    const play = () => {
+      const now = ctx.currentTime;
+      [880, 1175].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const t = now + i * 0.18;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.2);
+      });
+    };
+    if (ctx.state === "suspended") ctx.resume().then(play).catch(() => {});
+    else play();
   } catch {}
 }
 
@@ -2516,7 +2613,6 @@ function handleTresMsg(msg) {
     tresPanelState.stage = msg.stage;
     tresPanelState.stage_remaining = msg.remaining;
     renderTres();
-    addLog(`[3 Dicas] Dica ${msg.stage}: ${msg.dica} (${msg.points} pts)`);
   } else if (msg.type === "tres_tick") {
     tresPanelState.stage_remaining = msg.remaining;
     renderTres();
@@ -2559,36 +2655,37 @@ async function tresLoadState() {
   } catch (e) {}
 }
 
+function logTresUi(event, message, level = "info", code = null) {
+  addLog({ text: message, category: level === "error" ? "error" : "game", level,
+    game: "tres", event: `tres.ui.${event}`, source: "browser", code });
+}
+
 async function tresStart() {
   try {
     const data = await apiFetch("/api/tres/start", { method: "POST" });
-    if (data.success) addLog("[3 Dicas] Jogo iniciado!");
-    else addLog(`[3 Dicas] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+    if (!data.success && !data.trace_id) logTresUi("start.failed", `[3 Dicas] ${data.error || "Falha ao solicitar início."}`, "error", "TRES_START_REQUEST_FAILED");
+  } catch { logTresUi("start.network_failed", "[3 Dicas] Falha de rede ao solicitar o início.", "error", "TRES_START_NETWORK_FAILED"); }
 }
 
 async function tresPause() {
   try {
     const data = await apiFetch("/api/tres/pause", { method: "POST" });
-    if (data.success) addLog("[3 Dicas] Pausado.");
-    else addLog(`[3 Dicas] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+    if (!data.success && !data.trace_id) logTresUi("pause.failed", `[3 Dicas] ${data.error || "Falha ao solicitar pausa."}`, "error", "TRES_PAUSE_REQUEST_FAILED");
+  } catch { logTresUi("pause.network_failed", "[3 Dicas] Falha de rede ao solicitar pausa.", "error", "TRES_PAUSE_NETWORK_FAILED"); }
 }
 
 async function tresStop() {
   try {
     const data = await apiFetch("/api/tres/stop", { method: "POST" });
-    if (data.success) addLog("[3 Dicas] Jogo parado.");
-    else addLog(`[3 Dicas] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+    if (!data.success && !data.trace_id) logTresUi("stop.failed", `[3 Dicas] ${data.error || "Falha ao solicitar parada."}`, "error", "TRES_STOP_REQUEST_FAILED");
+  } catch { logTresUi("stop.network_failed", "[3 Dicas] Falha de rede ao solicitar parada.", "error", "TRES_STOP_NETWORK_FAILED"); }
 }
 
 async function tresReset() {
   try {
     const data = await apiFetch("/api/tres/reset", { method: "POST" });
-    if (data.success) addLog("[3 Dicas] Resetado.");
-    else addLog(`[3 Dicas] [!] ${data.error}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+    if (!data.success && !data.trace_id) logTresUi("reset.failed", `[3 Dicas] ${data.error || "Falha ao solicitar reset."}`, "error", "TRES_RESET_REQUEST_FAILED");
+  } catch { logTresUi("reset.network_failed", "[3 Dicas] Falha de rede ao solicitar reset.", "error", "TRES_RESET_NETWORK_FAILED"); }
 }
 
 async function tresTest(action, extra) {
@@ -2598,9 +2695,8 @@ async function tresTest(action, extra) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.assign({ action }, extra || {})),
     });
-    if (data.success) addLog(`[3 Dicas] Teste visual '${action}' enviado.`);
-    else addLog(`[3 Dicas] [!] ${(data && data.error) || "Falha ao testar"}`);
-  } catch (err) { addLog(`[3 Dicas] [!] Erro de rede: ${err.message}`); }
+    if (!data.success && !data.trace_id) logTresUi("test.failed", `[3 Dicas] ${(data && data.error) || "Falha ao testar"}`, "error", "TRES_TEST_FAILED");
+  } catch { logTresUi("test.network_failed", "[3 Dicas] Falha de rede ao enviar teste visual.", "error", "TRES_TEST_NETWORK_FAILED"); }
 }
 
 async function saveTresConfig() { return tresSaver.flush(); }
@@ -2608,6 +2704,16 @@ async function saveTresConfig() { return tresSaver.flush(); }
 function syncPanelNewGameButton(stateStr) {
   const btn = document.getElementById("btnNewGame");
   if (!btn) return;
+
+  if (gameStartPending && !gameActive) {
+    btn.disabled = true;
+    btn.textContent = "Iniciando partida…";
+    btn.className = "btn btn-success btn-main";
+    btn.onclick = startNewGameFromPanel;
+    setManualButtonsEnabled(false);
+    setDisplayControlsEnabled(false);
+    return;
+  }
 
   const isLiveActive = ["connected"].includes(stateStr);
   if (!isLiveActive && !gameActive) {
@@ -2663,7 +2769,16 @@ function updatePanelRiddleControls() {
   const close = document.getElementById("btnCloseRiddle");
   const replay = document.getElementById("btnReplayRiddle");
   if (close) close.disabled = !visible;
-  if (replay) replay.disabled = !(visible && panelRiddleState === "ready");
+  if (replay) replay.disabled = !(visible && panelRiddleState === "ready" && panelRiddleAudioUrl);
+}
+
+function playPanelRiddleAudio(url, automatic = false) {
+  if (!url) return;
+  if (automatic) {
+    if (savedSettings.riddle_auto_narrate === false || lastPanelRiddleAutoAudioUrl === url) return;
+    lastPanelRiddleAutoAudioUrl = url;
+  }
+  playTikPlayAudio(url, "tts", false, true);
 }
 
 let liveUserLocked = sessionStorage.getItem('tikplayLiveUserLocked') === '1';
@@ -2686,8 +2801,9 @@ function setRunningUI(running) {
   document.getElementById("btnStop").textContent = "Desconectar da TikTok Live";
 }
 
-function formatTime() {
-  const d = new Date();
+function formatTime(timestamp) {
+  const parsed = timestamp == null ? NaN : Number(timestamp);
+  const d = Number.isFinite(parsed) ? new Date(parsed) : new Date();
   const p = (n) => String(n).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
@@ -2731,8 +2847,9 @@ function updateStatus(s) {
     rateEl.textContent = `erro: ${s.rate.error}`;
   }
 
-  if (s.state === "connected" && lastConnectState !== "connected" && connectSoundSeenOnce) {
+  if (s.state === "connected" && ((lastConnectState !== "connected" && connectSoundSeenOnce) || connectSoundPending)) {
     playConnectSound();
+    connectSoundPending = false;
   }
   lastConnectState = s.state;
   connectSoundSeenOnce = true;
@@ -2746,18 +2863,34 @@ function normLogGame(g) {
   return s || "sistema";
 }
 
-function classifyLog(text, game, level) {
+function classifyLog(text, game, level, category) {
+  const categoryAliases = { conexao: "connection", jogos: "game", avisos: "notice", erros: "error", diagnostico: "diagnostic", sistema: "system" };
+  const explicitCategory = String(category || "").toLowerCase();
+  if (["connection", "chat", "game", "notice", "error", "diagnostic", "system"].includes(explicitCategory)) return explicitCategory;
+  if (categoryAliases[explicitCategory]) return categoryAliases[explicitCategory];
   const normalizedLevel = String(level || "").toLowerCase();
   const normalizedGame = normLogGame(game);
   const content = String(text || "").toLowerCase();
-  if (normalizedLevel === "err" || normalizedLevel === "error" || /\[!\]|\berro\b|\berror\b|\[stderr\]/i.test(text)) return "erros";
-  if (normalizedLevel === "warn" || normalizedLevel === "warning" || /\bwarning\b|\baviso\b|\batencao\b|\[warn\]/i.test(text)) return "avisos";
-  if (normalizedLevel === "debug" || normalizedLevel === "trace" || /\[diag(?:nostico)?\]|\[debug\]|\[trace\]/i.test(text)) return "diagnostico";
+  if (["err", "error", "critical"].includes(normalizedLevel) || /\berro\b|\berror\b|\[stderr\]/i.test(text)) return "error";
+  if (["debug", "trace"].includes(normalizedLevel) || /\[diag(?:nostico)?\]|\[debug\]|\[trace\]/i.test(text)) return "diagnostic";
   if (normalizedLevel === "chat" || normalizedGame === "chat" || /^\s*\[chat\]/i.test(text)) return "chat";
-  if (LOG_GAMES.includes(normalizedGame)) return "jogos";
-  if (/\[(?:live|conexao|painel)\]/i.test(text) || /conectad[oa]|desconectad[oa]|reconectando|conex[aã]o/i.test(content)) return "conexao";
-  // O protocolo legado pode enviar somente texto. Mantém o padrão antigo: origem desconhecida vira Sistema.
-  return "conexao";
+  if (LOG_GAMES.includes(normalizedGame)) return "game";
+  if (/^\[(?:jogo|palavra|guess|fim|final boss|roleta|tap|manual|tts)\]/i.test(text)) return "game";
+  if (/^\[3\s*dicas\]/i.test(text) || /^\[(?:batalha|duelo|corda|cacapalavras|bichinho)\]/i.test(text)) return "game";
+  if (/^\[(?:gift|access)\]/i.test(text)) return "notice";
+  if (["warn", "warning"].includes(normalizedLevel) || /\bwarning\b|\baviso\b|\batencao\b|\[warn\]|\[!\]/i.test(text)) return "notice";
+  if (/\[(?:live|conexao|painel|main|service|daemon|tiktoktools|tiktoklive|gifts)\]/i.test(text) || /conectad[oa]|desconectad[oa]|reconectando|conex[aã]o/i.test(content)) return "connection";
+  if (/^\[(?:nivel|nível|follow)\]/i.test(text)) return "notice";
+  return "system";
+}
+
+function normalizeLogLevel(level) {
+  const value = String(level || "").toLowerCase();
+  if (value === "err") return "error";
+  if (value === "warn") return "warning";
+  if (value === "ok" || value === "chat" || !value) return "info";
+  if (value === "trace") return "debug";
+  return ["debug", "info", "warning", "error", "critical", "unknown"].includes(value) ? value : "unknown";
 }
 
 function setLogCategories(persist = false) {
@@ -2786,29 +2919,33 @@ function addLog(item) {
   line.className = "log-line";
   const text = (typeof item === "string" ? item : (item && item.text)) || "";
   const game = (item && item.game) || "sistema";
-  const level = (item && item.level) || "";
+  const rawLevel = (item && item.level) || "";
+  const level = normalizeLogLevel(rawLevel);
   line.dataset.game = normLogGame(game);
-  line.dataset.level = level || "info";
-  line.dataset.category = classifyLog(text, game, level);
+  line.dataset.level = level;
+  line.dataset.category = classifyLog(text, game, rawLevel, item && item.category);
+  line.dataset.event = (item && typeof item === "object" && item.event) || "legacy.message";
+  line.dataset.source = (item && typeof item === "object" && item.source) || "browser";
+  line.dataset.traceId = (item && typeof item === "object" && item.trace_id) || "";
 
-  if (level === "err" || text.includes("ERRO") || text.includes("Error")) {
+  if (["error", "critical"].includes(level) || (item && item.category === "error") || text.includes("ERRO") || text.includes("Error")) {
     line.classList.add("log-err");
   } else if (text.includes("[Guess]")) {
     line.classList.add("log-guess");
-  } else if (level === "chat" || text.startsWith("[Chat]")) {
+  } else if (rawLevel === "chat" || text.startsWith("[Chat]")) {
     line.classList.add("log-chat");
   } else if (text.includes("[Hint]") || text.includes("dica")) {
     line.classList.add("log-hint");
-  } else if (level === "ok" || text.includes("OK") || text.includes("Conectado") || text.includes("ao vivo")) {
+  } else if (rawLevel === "ok" || text.includes("OK") || text.includes("Conectado") || text.includes("ao vivo")) {
     line.classList.add("log-ok");
-  } else if (level === "warn" || text.includes("ATENCAO") || text.includes("Warning")) {
+  } else if (level === "warning" || text.includes("ATENCAO") || text.includes("Warning")) {
     line.classList.add("log-warn");
   } else {
     line.classList.add("log-info");
   }
 
   const timestamp = document.createElement('span');
-  timestamp.className = 'tp-console-time'; timestamp.textContent = `[${formatTime()}] `;
+  timestamp.className = 'tp-console-time'; timestamp.textContent = `[${formatTime(item && typeof item === "object" ? (item.ts || item.timestamp) : null)}] `;
   line.append(timestamp);
   const category = text.match(/^\[[^\]]+\]/);
   if(category) { const label = document.createElement('span'); label.className = 'tp-console-category'; label.textContent = category[0]; line.append(label,document.createTextNode(text.slice(category[0].length))); }
@@ -2820,6 +2957,11 @@ function addLog(item) {
 
 let audioUnlocked = false;
 function unlockAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC && !connectAudioContext) connectAudioContext = new AC();
+    if (connectAudioContext?.state === "suspended") connectAudioContext.resume().catch(() => {});
+  } catch (e) {}
   if (audioUnlocked) return;
   audioUnlocked = true;
   try {
@@ -2832,16 +2974,112 @@ function unlockAudio() {
   window.addEventListener(ev, unlockAudio, { passive: true })
 );
 
-function playTikPlayAudio(url, game, diag) {
+const TTS_PLAYBACK_QUEUE_LIMIT = 10;
+const ttsPlaybackQueue = [];
+let ttsPlaybackActive = false;
+let ttsPlaybackDrops = 0;
+let ttsPlaybackOverflowAt = 0;
+let ttsPlaybackErrorAt = 0;
+let ttsPlaybackCurrentItem = null;
+let ttsPlaybackCurrentAudio = null;
+let ttsPlaybackCurrentFinish = null;
+
+function playTikPlayAudio(url, game, diag, priority = false, expiresInMs = 0) {
   if (!url) return;
+  const expiry = Number(expiresInMs) || 0;
+  const item = {
+    url,
+    game: game || "tts",
+    diag: !!diag,
+    priority: !!priority,
+    expiresAt: expiry > 0 ? Date.now() + expiry : 0,
+  };
+  if (ttsPlaybackQueue.length >= TTS_PLAYBACK_QUEUE_LIMIT) {
+    if (priority) {
+      let discardIndex = -1;
+      for (let i = ttsPlaybackQueue.length - 1; i >= 0; i--) {
+        if (!ttsPlaybackQueue[i].priority) { discardIndex = i; break; }
+      }
+      if (discardIndex >= 0) ttsPlaybackQueue.splice(discardIndex, 1);
+      else { logTtsPlaybackDrop(); return; }
+    } else {
+      logTtsPlaybackDrop();
+      return;
+    }
+  }
+  if (priority) ttsPlaybackQueue.unshift(item);
+  else ttsPlaybackQueue.push(item);
+  playNextTikPlayAudio();
+}
+
+function clearChatNarrationPlayback() {
+  for (let i = ttsPlaybackQueue.length - 1; i >= 0; i--) {
+    if (ttsPlaybackQueue[i].game === "chat") {
+      ttsPlaybackQueue.splice(i, 1);
+      ttsPlaybackDrops++;
+    }
+  }
+  if (ttsPlaybackCurrentItem && ttsPlaybackCurrentItem.game === "chat" && ttsPlaybackCurrentAudio) {
+    try {
+      ttsPlaybackCurrentAudio.pause();
+      ttsPlaybackCurrentAudio.currentTime = 0;
+    } catch (e) {}
+    if (ttsPlaybackCurrentFinish) ttsPlaybackCurrentFinish();
+  }
+}
+
+function logTtsPlaybackDrop() {
+  ttsPlaybackDrops++;
+  const now = Date.now();
+  if (now - ttsPlaybackOverflowAt < 30000) return;
+  ttsPlaybackOverflowAt = now;
+  addLog({ text: `[Áudio] Narrações antigas/excedentes descartadas: ${ttsPlaybackDrops}.`, game: "tts", level: "warn" });
+  ttsPlaybackDrops = 0;
+}
+
+function playNextTikPlayAudio() {
+  if (ttsPlaybackActive || !ttsPlaybackQueue.length) return;
+  while (ttsPlaybackQueue.length && ttsPlaybackQueue[0].expiresAt && ttsPlaybackQueue[0].expiresAt <= Date.now()) {
+    ttsPlaybackQueue.shift();
+    logTtsPlaybackDrop();
+  }
+  if (!ttsPlaybackQueue.length) return;
   unlockAudio();
-  const a = new Audio(url);
-  a.preload = "auto";
-  a.onerror = () => addLog({ text: `[Áudio] ERRO (load) ${url}`, game: game || "tts", level: "err" });
-  const p = a.play();
-  if (p && p.catch) p.catch((e) => addLog({ text: `[Áudio] ERRO (play ${(e && e.name) || e}) ${url}`, game: game || "tts", level: "warn" }));
-  else if (diag) addLog({ text: `[Áudio] tocando ${url}`, game: game || "tts", level: "ok" });
-  return a;
+  const item = ttsPlaybackQueue.shift();
+  const audio = new Audio(item.url);
+  let finished = false;
+  ttsPlaybackActive = true;
+  ttsPlaybackCurrentItem = item;
+  ttsPlaybackCurrentAudio = audio;
+  audio.preload = "auto";
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    ttsPlaybackActive = false;
+    if (ttsPlaybackCurrentAudio === audio) {
+      ttsPlaybackCurrentItem = null;
+      ttsPlaybackCurrentAudio = null;
+      ttsPlaybackCurrentFinish = null;
+    }
+    setTimeout(playNextTikPlayAudio, 0);
+  };
+  ttsPlaybackCurrentFinish = finish;
+  const fail = () => {
+    const now = Date.now();
+    if (now - ttsPlaybackErrorAt >= 5000) {
+      ttsPlaybackErrorAt = now;
+      addLog({ text: "[Áudio] Falha ao reproduzir uma narração TTS.", game: item.game, level: "warn" });
+    }
+    finish();
+  };
+  audio.onended = finish;
+  audio.onerror = fail;
+  let promise;
+  try { promise = audio.play(); }
+  catch (e) { fail(); return; }
+  if (promise && promise.catch) promise.catch(fail);
+  if (item.diag) addLog({ text: "[Áudio] Reprodução TTS iniciada.", game: item.game, level: "info" });
+  return audio;
 }
 
 function copyAllLogs() {
@@ -2908,13 +3146,13 @@ async function startGame() {
     return;
   }
 
+  unlockAudio();
+  connectSoundPending = true;
   lockLiveUser(true);
 
   const btn = document.getElementById("btnConnect");
   btn.disabled = true;
   btn.textContent = "Conectando à TikTok Live…";
-
-  addLog(`[Painel] Solicitando conexão com @${username}...`);
 
   try {
     await saveCredentials();
@@ -2924,15 +3162,16 @@ async function startGame() {
       body: JSON.stringify({}),
     });
     if (data.success) {
-      addLog("[Painel] Jogo iniciado com sucesso!");
       setRunningUI(true);
     } else {
-      addLog(`[Painel] [!] ${data.error}`);
+      connectSoundPending = false;
+      if (!data.trace_id) addLog({ text: `[Painel] ${data.error || "Conexão não iniciada."}`, category: "notice", level: "warning", event: "connection.start.rejected", source: "browser", code: "CONNECTION_START_REJECTED" });
       btn.disabled = false;
       btn.textContent = "Conectar à TikTok Live";
     }
   } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    connectSoundPending = false;
+    addLog({ text: "[Painel] Falha de rede ao solicitar conexão.", category: "error", level: "error", event: "connection.start.network_failed", source: "browser", code: "CONNECTION_START_NETWORK_FAILED" });
     btn.disabled = false;
     btn.textContent = "Conectar à TikTok Live";
   }
@@ -2946,14 +3185,13 @@ async function stopGame() {
   try {
     const data = await apiFetch("/stop-game", { method: "POST" });
     if (data.success) {
-      addLog("[Painel] Jogo encerrado");
       lockLiveUser(false);
       setRunningUI(false);
     } else {
-      addLog(`[Painel] [!] ${data.error}`);
+      if (!data.trace_id) addLog({ text: `[Painel] ${data.error || "Desconexão não concluída."}`, category: "error", level: "error", event: "connection.stop.failed", source: "browser", code: "CONNECTION_STOP_FAILED" });
     }
   } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    addLog({ text: "[Painel] Falha de rede ao solicitar desconexão.", category: "error", level: "error", event: "connection.stop.network_failed", source: "browser", code: "CONNECTION_STOP_NETWORK_FAILED" });
   }
 
   if(liveUserLocked) {btn.disabled=false;btn.textContent="Desconectar da TikTok Live";}
@@ -2961,17 +3199,26 @@ async function stopGame() {
 
 async function startNewGameFromPanel() {
   const btn = document.getElementById("btnNewGame");
+  if (gameStartPending || gameActive) return;
+  gameStartPending = true;
   btn.disabled = true;
-  btn.textContent = "Iniciando...";
+  btn.textContent = "Iniciando partida…";
+  syncPanelNewGameButton(window.lastStateStr || 'offline');
   try {
     const res = await apiFetch(`/api/new-game`, { method: "POST" });
-    if (res.success) {
-      addLog("[Painel] Nova partida iniciada com sucesso!");
+    if (!res.success) {
+      gameStartPending = false;
+      if (!res.trace_id) addLog({ text: `[Painel] ${res.error || "Falha ao solicitar partida."}`, category: "error", level: "error", event: "palavra.start.request_failed", source: "browser", code: "PALAVRA_START_REQUEST_FAILED" });
     } else {
-      addLog(`[Painel] [!] Erro ao iniciar partida: ${res.error}`);
+      gameStartPendingTimer = setTimeout(() => {
+        gameStartPending = false;
+        syncPanelNewGameButton(window.lastStateStr || 'offline');
+      }, 30000);
+      await syncGameState();
     }
   } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    gameStartPending = false;
+    addLog({ text: "[Painel] Falha de rede ao solicitar nova partida.", category: "error", level: "error", event: "palavra.start.network_failed", source: "browser", code: "PALAVRA_START_NETWORK_FAILED" });
   }
   syncPanelNewGameButton(window.lastStateStr || 'offline');
 }
@@ -2982,13 +3229,9 @@ async function endGameFromPanel() {
   btn.textContent = "Finalizando...";
   try {
     const res = await apiFetch(`/api/end-game`, { method: "POST" });
-    if (res.success) {
-      addLog("[Painel] Partida finalizada manualmente!");
-    } else {
-      addLog(`[Painel] [!] Erro ao finalizar partida: ${res.error}`);
-    }
+    if (!res.success && !res.trace_id) addLog({ text: `[Painel] ${res.error || "Falha ao solicitar encerramento."}`, category: "error", level: "error", event: "palavra.end.request_failed", source: "browser", code: "PALAVRA_END_REQUEST_FAILED" });
   } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    addLog({ text: "[Painel] Falha de rede ao solicitar encerramento da partida.", category: "error", level: "error", event: "palavra.end.network_failed", source: "browser", code: "PALAVRA_END_NETWORK_FAILED" });
   }
   syncPanelNewGameButton(window.lastStateStr || 'offline');
 }
@@ -3001,13 +3244,9 @@ async function manualActionFromPanel(action) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
-    if (res.success) {
-      addLog(`[Painel] ${label} manual enviada ao jogo!`);
-    } else {
-      addLog(`[Painel] [!] Erro ao enviar ${label}: ${res.error}`);
-    }
+    if (!res.success && !res.trace_id) addLog({ text: `[Painel] Falha ao solicitar ${label.toLowerCase()}: ${res.error || "erro desconhecido"}.`, category: "error", level: "error", event: "palavra.manual_action.request_failed", source: "browser", code: "PALAVRA_MANUAL_ACTION_FAILED" });
   } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+    addLog({ text: `[Painel] Falha de rede ao solicitar ${label.toLowerCase()}.`, category: "error", level: "error", event: "palavra.manual_action.network_failed", source: "browser", code: "PALAVRA_MANUAL_ACTION_NETWORK_FAILED" });
   }
 }
 
@@ -3016,18 +3255,11 @@ function manualRiddleFromPanel() { manualActionFromPanel("riddle"); }
 
 async function replayRiddleFromPanel() {
   const btn = document.getElementById("btnReplayRiddle");
-  if (btn) btn.disabled = true;
-  try {
-    const res = await apiFetch(`/api/play-riddle`, { method: "POST" });
-    if (res.success) {
-      addLog("[Painel] Reproduzindo audio da charada...");
-    } else {
-      addLog(`[Painel] [!] Erro ao reproduzir charada: ${res.error}`);
-    }
-  } catch (err) {
-    addLog(`[Painel] [!] Erro de rede: ${err.message}`);
+  if (!panelRiddleAudioUrl) {
+    if (btn) btn.disabled = true;
+    return;
   }
-  updatePanelRiddleControls();
+  playPanelRiddleAudio(panelRiddleAudioUrl);
 }
 
 // Gift config
@@ -3066,6 +3298,9 @@ const pctCharadaInput = document.getElementById("pctCharada");
 const ttsRateInput = document.getElementById("ttsRate");
 const ttsRateLabel = document.getElementById("ttsRateLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
+const chatNarrEnabledInput = document.getElementById("chatNarrEnabled");
+const chatNarrModeInput = document.getElementById("chatNarrMode");
+const chatNarrCharInput = document.getElementById("chatNarrChar");
 let currentTtsVoice = "";
 
 // Gift translation dictionary (EN -> PT-BR)
@@ -3609,7 +3844,7 @@ function createPreferenceSaver({ statusId, ready = () => true, read, send, commi
 const preferencePost = (path, body) => apiFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function preferenceHydration(scope, loaded, error = "") {
-  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
+  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#chatNarrEnabled,#chatNarrMode,#chatNarrChar,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
   document.querySelectorAll(selectors[scope]).forEach(el => { if (el.matches("input,select,textarea")) el.disabled = !loaded; else el.inert = !loaded; });
   const statusId = {settings:"settingsSaveStatus",gifts:"giftSaveStatus",tres:"tresSaveStatus",duelo:"dueloSaveStatus"}[scope];
   const el = document.getElementById(statusId); if(el) el.textContent = loaded ? "Preferências salvas automaticamente após alterações." : (error || "Carregando preferências…");
@@ -3628,6 +3863,9 @@ function readPanelSettings() {
     command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
     pct_dica: Math.max(0, Math.min(100, Number(pctDicaInput.value))),
     tts_rate: Number(ttsRateInput.value) || 1, tts_voice: currentTtsVoice,
+    chat_narr_enabled: chatNarrEnabledInput.checked,
+    chat_narr_mode: chatNarrModeInput.value,
+    chat_narr_char: (chatNarrCharInput.value || "#").slice(0, 1),
     auto_round: document.getElementById("autoRound").checked,
     auto_round_pause: Number(document.getElementById("autoRoundPause").value) || 20,
     tap_meta: Number(document.getElementById("tapMeta").value) || 1000,
@@ -3722,6 +3960,9 @@ function applySettingsUI(settings) {
   ttsRateInput.value = rate;
   if (ttsRateLabel) ttsRateLabel.textContent = `${rate.toFixed(1).replace(/\.0$/, "")}x`;
   currentTtsVoice = s.tts_voice || "";
+  chatNarrEnabledInput.checked = !!s.chat_narr_enabled;
+  chatNarrModeInput.value = ["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all";
+  chatNarrCharInput.value = (s.chat_narr_char || "#").slice(0, 1);
   const autoRoundEl = document.getElementById("autoRound");
   if (autoRoundEl) autoRoundEl.checked = !!s.auto_round;
   const autoRoundPauseEl = document.getElementById("autoRoundPause");
@@ -3759,8 +4000,8 @@ function loadPanelVoices() {
 function refreshPanelVoices() {
   if (!ttsVoiceSelect) return;
   const current = (currentTtsVoice || "").trim();
-  let options = '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>Edge — Antonio (servidor)</option>';
-  options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>Edge — Francisca (servidor)</option>';
+  let options = '<option value="edge_antonio"' + (current === "edge_antonio" ? " selected" : "") + '>Antonio (servidor)</option>';
+  options += '<option value="edge_francisca"' + (current === "edge_francisca" ? " selected" : "") + '>Francisca (servidor)</option>';
   ttsVoiceSelect.innerHTML = options;
 }
 
@@ -3777,13 +4018,24 @@ function onPanelVoicePick(value) {
   onSettingsChanged();
 }
 
-function testPanelVoice() {
-  const rate = parseFloat(ttsRateInput.value) || 1;
-  apiFetch("/api/tts/test", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rate, voice: currentTtsVoice }),
-  }).catch(() => {});
+async function testPanelVoice() {
+  const button = document.querySelector('button[onclick="testPanelVoice()"]');
+  if (button) button.disabled = true;
+  try {
+    await settingsSaver.flush();
+    const rate = parseFloat(ttsRateInput.value) || 1;
+    const result = await apiFetch("/api/tts/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rate, voice: currentTtsVoice }),
+    });
+    if (!result || !result.success) throw new Error((result && result.error) || "serviço de voz indisponível");
+    addLog({ text: "[TTS] Solicitação de teste enviada.", category: "notice", level: "info", event: "tts.test.requested", source: "browser" });
+  } catch (error) {
+    addLog({ text: "[TTS] Não foi possível iniciar o teste de voz. Confira a conexão com o servidor e tente novamente.", category: "error", level: "error", event: "tts.test.request_failed", source: "browser", code: "TTS_TEST_REQUEST_FAILED" });
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 async function loadSettings() {
@@ -3829,6 +4081,9 @@ function isSettingsDirty() {
     dica !== (savedSettings.pct_dica ?? 70) ||
     Math.abs(rate - (savedSettings.tts_rate || 1)) > 0.001 ||
     (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
+    chatNarrEnabledInput.checked !== !!savedSettings.chat_narr_enabled ||
+    chatNarrModeInput.value !== (savedSettings.chat_narr_mode || "all") ||
+    chatNarrCharInput.value !== ((savedSettings.chat_narr_char || "#").slice(0, 1)) ||
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
     Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
     Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000) ||
@@ -3896,6 +4151,8 @@ function renderPanelRiddle(text, stage) {
 
 function clearPanelRiddle() {
   panelRiddleState = "hidden";
+  panelRiddleAudioUrl = "";
+  lastPanelRiddleAutoAudioUrl = "";
   const el = document.getElementById("panelRiddle");
   if (el) el.textContent = new URLSearchParams(location.search).get('riddlePreview') === '1'
     ? 'EXEMPLO DE FORMATAÇÃO\n\nTenho folhas, mas não sou uma árvore.\nGuardo histórias e conhecimento, mas não consigo falar.\nQuando você me abre, pode viajar sem sair do lugar.\n\nO que sou eu?'
@@ -3909,6 +4166,10 @@ async function syncGameState() {
     renderWordGuessPreview(data.guesses);
     renderWordCurrentGift(data.active && !data.finished ? data.active_gift : null);
     gameActive = data.active && !data.finished;
+    if (gameActive) {
+      gameStartPending = false;
+      clearTimeout(gameStartPendingTimer);
+    }
     if(gameActive) startWordRoundClock(data.game_id,false);
     else stopWordRoundClock();
     setDisplayControlsEnabled(gameActive);
@@ -5099,26 +5360,144 @@ function copyRoomUrl() {
   }).catch(() => {});
 }
 
-const REPORT_TYPE_LABELS={like:'Curtidas',gift:'Presente',comment:'Comentário',follow:'Novo seguidor',share:'Compartilhamento',join:'Entrada',guess:'Palpite',hint:'Dica',winner:'Vitória',size_reveal:'Revelação de tamanho',letter_reveal:'Revelação de letra'};
+const REPORT_TYPE_LABELS={like:'Curtidas',gift:'Presente',comment:'Comentário',follow:'Novo seguidor',share:'Compartilhamento',join:'Entrada',guess:'Palpite',hint:'Dica',winner:'Vitória',level_up:'Subida de nível',size_reveal:'Revelação de tamanho',letter_reveal:'Revelação de letra'};
 let reportRequestRevision=0,reportEventCursor=null;
 function reportDateValue(id){const value=document.getElementById(id).value;if(!value)return null;const [y,m,d]=value.split('-').map(Number);return new Date(y,m-1,d,id==='reportTo'?23:0,id==='reportTo'?59:0,id==='reportTo'?59:0,id==='reportTo'?999:0).getTime();}
-function reportQuery({includeType=true}={}){const params=new URLSearchParams(),from=reportDateValue('reportFrom'),to=reportDateValue('reportTo'),room=document.getElementById('reportRoom').value,type=document.getElementById('reportType').value;if(from!=null)params.set('from',String(from));if(to!=null)params.set('to',String(to));if(room)params.set('room_id',room);if(includeType&&type)params.set('type',type);return params;}
+function reportQuery({includeType=true}={}){const params=new URLSearchParams(),from=reportDateValue('reportFrom'),to=reportDateValue('reportTo'),room=document.getElementById('reportRoom').value,type=document.getElementById('reportType').value;if(from!=null)params.set('from',String(from));if(to!=null)params.set('to',String(to));if(room)params.set('room_id',room);if(includeType&&type){params.set('type',type);if(type==='level_up'){const axis=document.getElementById('reportAxis').value;if(axis)params.set('axis',axis);}}return params;}
 function reportDateLabel(value){const n=Number(value),date=new Date(Number.isFinite(n)&&n>0?(n<1e11?n*1000:n):String(value||''));return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date);}
 function reportNumber(value){return Math.max(0,Number(value)||0).toLocaleString('pt-BR');}
 function reportNotice(message,error=false){const node=document.getElementById('reportNotice');node.textContent=message||'';node.dataset.error=String(error);}
+function reportLevelQuery(){const params=new URLSearchParams(),room=document.getElementById('reportRoom').value;if(room)params.set('room_id',room);params.set('limit','100');return params;}
+function renderReportLevels(rows){const body=document.getElementById('reportLevels');body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='report-empty';cell.textContent='Nenhum nível registrado para estes participantes.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr');for(const value of [String(index+1),item.nickname||item.user_id||'—',Number(item.fan_club_level)>0?reportNumber(item.fan_club_level):'—',Number(item.gifter_level)>0?reportNumber(item.gifter_level):'—',reportDateLabel(item.updated_at)]){const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}body.append(row);}}
 async function loadReportSessions(revision){const params=reportQuery({includeType:false});params.set('limit','100');const data=await apiFetch('/api/live-sessions?'+params);if(revision!==reportRequestRevision)return;const select=document.getElementById('reportRoom'),selected=select.value,sessions=Array.isArray(data.sessions)?data.sessions:[];select.innerHTML='<option value="">Todas as lives</option>'+sessions.map(session=>{const label=[reportDateLabel(session.started_at),session.username?'@'+session.username:'Live',session.ended_at?'Encerrada':'Em andamento'].join(' · ');return `<option value="${esc(session.room_id)}">${esc(label)}</option>`;}).join('');if(sessions.some(session=>String(session.room_id)===selected))select.value=selected;}
 function renderReportSeries(points){const root=document.getElementById('reportSeries');root.replaceChildren();const list=(Array.isArray(points)?points:[]).slice(-48);if(!list.length){root.innerHTML='<div class="tp-report-series-empty">Sem interações neste período.</div>';return;}const maximum=Math.max(1,...list.map(point=>Number(point.count)||0));for(const point of list){const item=document.createElement('div');item.className='tp-report-bar';item.title=`${reportDateLabel(point.t)} · ${reportNumber(point.count)} interações`;const track=document.createElement('div');track.className='tp-report-bar-track';const fill=document.createElement('div');fill.className='tp-report-bar-fill';fill.style.height=`${Math.max(2,(Number(point.count)||0)/maximum*100)}%`;track.append(fill);const time=document.createElement('time');time.dateTime=new Date(Number(point.t)).toISOString();time.textContent=new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',...(document.getElementById('reportBucket').value==='day'?{day:'2-digit',month:'2-digit'}:{})}).format(new Date(Number(point.t)));item.append(track,time);root.append(item);}}
 function renderReportRows(id,rows,kind){const body=document.getElementById(id);body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=kind==='events'?5:4;cell.className='report-empty';cell.textContent='Nenhum registro para estes filtros.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr'),cells=kind==='events'?[reportDateLabel(item.ts),REPORT_TYPE_LABELS[item.type]||item.type,item.nickname||item.username||item.user_id||'—',reportEventDetails(item),reportNumber(item.value)]:[String(index+1),item.nickname||item.username||item.user_id||'—',reportNumber(item.count),reportNumber(item.value_sum)];for(const value of cells){const cell=document.createElement('td');cell.textContent=String(value??'—');row.append(cell);}body.append(row);}}
-function reportEventDetails(item){let meta={};try{meta=typeof item.meta==='string'?JSON.parse(item.meta||'{}'):(item.meta||{});}catch{};return meta.text||meta.gift_name||meta.gift||meta.word||meta.hint_word||meta.label||'—';}
+function reportEventDetails(item){let meta={};try{meta=typeof item.meta==='string'?JSON.parse(item.meta||'{}'):(item.meta||{});}catch{};if(item.type==='level_up'){const axis=(item.axis||meta.axis)==='fanclub'?'Comunidade':(item.axis||meta.axis)==='gifter'?'Presenteador':'usuário',before=item.before??meta.before,after=item.after??meta.after;if(after!=null&&before==null)return `Nível anterior não identificado · ${axis}: ${reportNumber(after)}`;if(before!=null&&after!=null)return `${axis}: ${reportNumber(before)} → ${reportNumber(after)}`;}return meta.text||meta.gift_name||meta.gift||meta.word||meta.hint_word||meta.label||'—';}
 async function loadReportEvents({append=false,revision=reportRequestRevision}={}){const params=reportQuery();params.set('limit','50');if(append&&reportEventCursor)params.set('cursor',String(reportEventCursor));const data=await apiFetch('/api/reports/events?'+params);if(revision!==reportRequestRevision)return;const body=document.getElementById('reportEvents'),items=Array.isArray(data.events)?data.events:[];if(append){body.querySelector('.report-empty')?.closest('tr')?.remove();renderReportRowsInto(body,items);}else renderReportRows('reportEvents',items,'events');reportEventCursor=data.next_cursor||null;document.getElementById('reportLoadMore').hidden=!reportEventCursor;}
 function renderReportRowsInto(body,rows){for(const item of rows){const row=document.createElement('tr');for(const value of [reportDateLabel(item.ts),REPORT_TYPE_LABELS[item.type]||item.type,item.nickname||item.username||item.user_id||'—',reportEventDetails(item),reportNumber(item.value)]){const cell=document.createElement('td');cell.textContent=String(value??'—');row.append(cell);}body.append(row);}}
-async function loadStreamerReports(){const revision=++reportRequestRevision;reportNotice('Carregando relatórios…');try{if(!document.getElementById('reportFrom').value){const today=new Date(),start=new Date(today);start.setDate(start.getDate()-6);document.getElementById('reportFrom').value=`${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;document.getElementById('reportTo').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;}await loadReportSessions(revision);if(revision!==reportRequestRevision)return;const params=reportQuery(),seriesParams=new URLSearchParams(params),rankingParams=new URLSearchParams(params),eventsParams=new URLSearchParams(params);seriesParams.set('bucket',document.getElementById('reportBucket').value);rankingParams.set('limit','10');eventsParams.set('limit','50');const [summary,series,ranking,events]=await Promise.all([apiFetch('/api/reports/summary?'+params),apiFetch('/api/reports/series?'+seriesParams),apiFetch('/api/reports/ranking?'+rankingParams),apiFetch('/api/reports/events?'+eventsParams)]);if(revision!==reportRequestRevision)return;const types=summary.by_type||{},likes=types.like||{},gifts=types.gift||{},comments=types.comment||{};document.getElementById('reportTotal').textContent=reportNumber(summary.events);document.getElementById('reportPeople').textContent=reportNumber(summary.people);document.getElementById('reportLikes').textContent=reportNumber(likes.value_sum??likes.count);document.getElementById('reportGifts').textContent=reportNumber(gifts.value_sum);document.getElementById('reportComments').textContent=reportNumber(comments.count);renderReportSeries(series.points);document.getElementById('reportRankingCaption').textContent=document.getElementById('reportType').value?`Por ${REPORT_TYPE_LABELS[document.getElementById('reportType').value]||'interação'}.`:'Destaques por interação.';renderReportRows('reportRanking',ranking.ranking||[],'ranking');renderReportRows('reportEvents',events.events||[],'events');reportEventCursor=events.next_cursor||null;document.getElementById('reportLoadMore').hidden=!reportEventCursor;reportNotice(`${reportNumber(summary.events)} interações · ${summary.room_id?'live selecionada':'período selecionado'}`);}catch(error){if(revision===reportRequestRevision)reportNotice(`Não foi possível carregar os relatórios: ${error.message}`,true);}}
+async function loadStreamerReports(){const revision=++reportRequestRevision;reportNotice('Carregando relatórios…');try{if(!document.getElementById('reportFrom').value){const today=new Date(),start=new Date(today);start.setDate(start.getDate()-6);document.getElementById('reportFrom').value=`${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;document.getElementById('reportTo').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;}await loadReportSessions(revision);if(revision!==reportRequestRevision)return;const params=reportQuery(),seriesParams=new URLSearchParams(params),rankingParams=new URLSearchParams(params),eventsParams=new URLSearchParams(params),levelParams=reportLevelQuery();seriesParams.set('bucket',document.getElementById('reportBucket').value);rankingParams.set('limit','10');eventsParams.set('limit','50');const [summary,series,ranking,events,levels]=await Promise.all([apiFetch('/api/reports/summary?'+params),apiFetch('/api/reports/series?'+seriesParams),apiFetch('/api/reports/ranking?'+rankingParams),apiFetch('/api/reports/events?'+eventsParams),apiFetch('/api/reports/levels?'+levelParams)]);if(revision!==reportRequestRevision)return;const types=summary.by_type||{},likes=types.like||{},gifts=types.gift||{},comments=types.comment||{},levelUps=summary.level_up||{};document.getElementById('reportTotal').textContent=reportNumber(summary.events);document.getElementById('reportPeople').textContent=reportNumber(summary.people);document.getElementById('reportLikes').textContent=reportNumber(likes.value_sum??likes.count);document.getElementById('reportGifts').textContent=reportNumber(gifts.value_sum);document.getElementById('reportComments').textContent=reportNumber(comments.count);document.getElementById('reportLevelUps').textContent=reportNumber(levelUps.total);document.getElementById('reportLevelUpsByAxis').textContent=`Presenteador ${reportNumber(levelUps.gifter)} · Comunidade ${reportNumber(levelUps.fanclub)}`;renderReportSeries(series.points);document.getElementById('reportRankingCaption').textContent=document.getElementById('reportType').value?`Por ${REPORT_TYPE_LABELS[document.getElementById('reportType').value]||'interação'}.`:'Destaques por interação.';renderReportRows('reportRanking',ranking.ranking||[],'ranking');renderReportRows('reportEvents',events.events||[],'events');renderReportLevels(levels.levels||[]);reportEventCursor=events.next_cursor||null;document.getElementById('reportLoadMore').hidden=!reportEventCursor;reportNotice(`${reportNumber(summary.events)} interações · ${summary.room_id?'live selecionada':'período selecionado'}`);}catch(error){if(revision===reportRequestRevision)reportNotice(`Não foi possível carregar os relatórios: ${error.message}`,true);}}
 document.getElementById('reportFilters').addEventListener('submit',event=>{event.preventDefault();loadStreamerReports();});
 document.getElementById('reportBucket').addEventListener('change',loadStreamerReports);
 document.getElementById('reportRoom').addEventListener('change',loadStreamerReports);
-document.getElementById('reportType').addEventListener('change',loadStreamerReports);
+document.getElementById('reportType').addEventListener('change',()=>{const isLevelUp=document.getElementById('reportType').value==='level_up';document.getElementById('reportAxisFilter').hidden=!isLevelUp;if(!isLevelUp)document.getElementById('reportAxis').value='';loadStreamerReports();});
+document.getElementById('reportAxis').addEventListener('change',loadStreamerReports);
 document.getElementById('reportLoadMore').addEventListener('click',()=>loadReportEvents({append:true}));
 
+const presenterLevelPreviewFrames=[...document.querySelectorAll('.tp-presenter-level-preview-frame')];
+
+const presenterLevelDefaults={x:50,y:50,scale:1};
+const presenterLevelLayout={...presenterLevelDefaults};
+let presenterLevelLayoutReady=false;
+let presenterLevelLayoutTimer=0;
+let presenterLevelLayoutRevision=0;
+let presenterLevelSaveQueue=Promise.resolve();
+function paintPresenterLevelLayout(){
+  const panel=document.querySelector('[data-presenter-level-controls]');
+  if(!panel)return;
+  const readout=panel.querySelector('[data-presenter-readout]');
+  if(readout)readout.textContent=`X: ${presenterLevelLayout.x}% · Y: ${presenterLevelLayout.y}% · Escala: ${Math.round(presenterLevelLayout.scale*100)}%`;
+  presenterLevelPreviewFrames.forEach(frame=>frame.contentWindow?.postMessage({type:'presenter-level-layout',layout:{...presenterLevelLayout}},location.origin));
+}
+function setPresenterLevelLayout(next,save=true){
+  presenterLevelLayout.x=Math.round(Math.max(0,Math.min(100,Number(next.x)||0)));
+  presenterLevelLayout.y=Math.round(Math.max(0,Math.min(100,Number(next.y)||0)));
+  presenterLevelLayout.scale=Math.round(Math.max(.5,Math.min(2,Number(next.scale)||1))*100)/100;
+  paintPresenterLevelLayout();
+  if(save&&presenterLevelLayoutReady){
+    const status=document.querySelector('[data-presenter-status]');
+    status.textContent='Salvando ajustes…';
+    const revision=++presenterLevelLayoutRevision;
+    clearTimeout(presenterLevelLayoutTimer);
+    presenterLevelLayoutTimer=setTimeout(()=>savePresenterLevelLayout(revision),120);
+  }
+}
+async function savePresenterLevelLayout(revision){
+  const snapshot={...presenterLevelLayout};
+  presenterLevelSaveQueue=presenterLevelSaveQueue.catch(()=>{}).then(async()=>{
+    try{
+      const data=await apiFetch('/api/presenter-level/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:snapshot})});
+      if(!data?.success)throw Error(data?.error||'Não foi possível salvar.');
+      if(revision===presenterLevelLayoutRevision)document.querySelector('[data-presenter-status]').textContent='Ajustes salvos para esta conta e aplicados à fonte.';
+    }catch{
+      if(revision===presenterLevelLayoutRevision)document.querySelector('[data-presenter-status]').textContent='Não foi possível salvar. Verifique a conexão com o servidor.';
+    }
+  });
+  return presenterLevelSaveQueue;
+}
+async function loadPresenterLevelLayout(){
+  const status=document.querySelector('[data-presenter-status]');
+  try{
+    const data=await apiFetch('/api/presenter-level/layout');
+    if(!data?.success)throw Error(data?.error||'Não foi possível carregar.');
+    setPresenterLevelLayout({...presenterLevelDefaults,...data.defaults,...data.layout},false);
+    presenterLevelLayoutReady=true;
+    status.textContent='Ajustes salvos para esta conta e aplicados à fonte.';
+  }catch{
+    status.textContent='Ajustes indisponíveis. Verifique a conexão com o servidor.';
+  }
+}
+function nudgePresenterLevelPosition(direction){
+  const next={...presenterLevelLayout};
+  if(direction==='left')next.x-=1;
+  if(direction==='right')next.x+=1;
+  if(direction==='up')next.y-=1;
+  if(direction==='down')next.y+=1;
+  setPresenterLevelLayout(next);
+}
+const presenterLevelControls=document.querySelector('[data-presenter-level-controls]');
+if(presenterLevelControls){
+  presenterLevelControls.querySelectorAll('[data-presenter-move]').forEach(button=>{
+    let repeatTimer=0;
+    const stopMoving=()=>{clearInterval(repeatTimer);repeatTimer=0;};
+    button.addEventListener('pointerdown',event=>{
+      if(event.button!==0&&event.pointerType==='mouse')return;
+      event.preventDefault();button.setPointerCapture(event.pointerId);
+      nudgePresenterLevelPosition(button.dataset.presenterMove);
+      repeatTimer=setInterval(()=>nudgePresenterLevelPosition(button.dataset.presenterMove),90);
+    });
+    button.addEventListener('pointerup',stopMoving);
+    button.addEventListener('pointercancel',stopMoving);
+    button.addEventListener('lostpointercapture',stopMoving);
+    button.addEventListener('click',event=>{if(event.detail===0)nudgePresenterLevelPosition(button.dataset.presenterMove);});
+  });
+  presenterLevelControls.querySelector('[data-presenter-scale="down"]').addEventListener('click',()=>setPresenterLevelLayout({...presenterLevelLayout,scale:presenterLevelLayout.scale-.05}));
+  presenterLevelControls.querySelector('[data-presenter-scale="up"]').addEventListener('click',()=>setPresenterLevelLayout({...presenterLevelLayout,scale:presenterLevelLayout.scale+.05}));
+  presenterLevelControls.querySelector('[data-presenter-reset]').addEventListener('click',()=>setPresenterLevelLayout(presenterLevelDefaults));
+  presenterLevelPreviewFrames.forEach(frame=>frame.addEventListener('load',paintPresenterLevelLayout));
+  void loadPresenterLevelLayout();
+}
+
+async function presenterLevelOverlayLink(copy) {
+  const status=document.getElementById('presenterLevelOverlayStatus');
+  const opened=copy?null:window.open('about:blank','_blank');if(opened)opened.opener=null;
+  status.textContent='Preparando link público…';
+  try {
+    const data=await apiFetch('/api/game/room-link',{method:'POST'});
+    if(!data.success)throw Error(data.error||'Não foi possível gerar o link.');
+    const url=new URL('/overlays/presenter-level/overlay.html',location.origin);
+    url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);url.searchParams.set('demo','0');
+    if(copy){await navigator.clipboard.writeText(url.href);status.textContent='Link público copiado. Cole na fonte de navegador.';}
+    else if(opened){opened.location.href=url.href;status.textContent='Sobreposição aberta.';}
+    else status.textContent='Permita abrir a janela ou use Copiar link público.';
+  }catch(error){if(opened)opened.close();status.textContent=error.message;}
+}
+async function testPresenterLevelOverlay(scenario,axis='gifter') {
+  const sameTier=scenario==='same-tier';
+  const prefix=axis==='fanclub'?'communityLevel':'presenterLevel';
+  const button=document.getElementById(`${prefix}${sameTier?'SameTier':'TierChange'}TestButton`);
+  const status=document.getElementById(`${prefix}${sameTier?'SameTier':'TierChange'}Status`);
+  button.disabled=true;status.textContent='Enviando teste visual…';
+  try {
+    const data=await apiFetch('/api/presenter-level/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario,axis})});
+    if(!data.success)throw Error(data.error||'Não foi possível enviar o teste.');
+    const transition=sameTier?'23 → 24':'29 → 30';
+    const description=axis==='fanclub'
+      ? (sameTier?`Subida na comunidade sem trocar capítulo (${transition})`:`Novo capítulo da comunidade (${transition})`)
+      : (sameTier?`Subida sem troca de diamante (${transition})`:`Subida com troca de diamante (${transition})`);
+    status.textContent=`${description} enviada para ${data.delivered} fonte(s). Confira o OBS.`;
+  }catch(error){status.textContent=error.message;}
+  finally{button.disabled=false;}
+}
 async function likesOverlayLink(version,copy) {
   const statusId={v2:'likesOverlayV2Status',v3:'likesOverlayV3Status',fountain:'likesOverlayFountainStatus'}[version];
   const status=document.getElementById(statusId);
@@ -5128,7 +5507,7 @@ async function likesOverlayLink(version,copy) {
     const data=await apiFetch('/api/game/room-link',{method:'POST'});
     if(!data.success)throw Error(data.error || 'Não foi possível gerar o link.');
     const url=new URL('/overlays/likes/'+version+'/overlay.html',location.origin);
-    url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);if(version!=='fountain'){url.searchParams.set('count',String(likesOverlayLayouts[version].count));url.searchParams.set('rev','preferences-20261014-4');}
+    url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);if(version!=='fountain')url.searchParams.set('rev','preferences-20261014-7');
     if(copy){await navigator.clipboard.writeText(url.href);status.textContent='Link público copiado. Cole na fonte de navegador.';}
     else if(opened){opened.location.href=url.href;status.textContent='Sobreposição aberta.';}
     else status.textContent='Permita abrir a janela ou use Copiar link público.';
@@ -5150,12 +5529,12 @@ function paintLikesOverlayLayout(version) {
   const countSelect=panel.querySelector('[data-overlay-count]');
   if(countSelect&&countSelect.value!==String(layout.count))countSelect.value=String(layout.count);
   const preview=panel.closest('.tp-overlay-row')?.querySelector('.tp-overlay-preview iframe');
-  if(preview){preview.parentElement.style.height=Math.max(280,layout.count*62+50)+'px';const previewUrl=new URL(preview.src,location.origin);if(previewUrl.searchParams.get('count')!==String(layout.count)){previewUrl.searchParams.set('count',String(layout.count));preview.src=previewUrl.href;}}
+  if(preview)preview.parentElement.style.height='280px';
   const readout=panel.querySelector('[data-overlay-layout-readout]');
   if(readout)readout.textContent=`X: ${layout.x}% · Y: ${layout.y}% · Escala: ${Math.round(layout.scale*100)}%`;
   panel.querySelectorAll('[data-overlay-setting]').forEach(input=>{const key=input.dataset.overlaySetting;if(layout[key]!==undefined&&input.value!==String(layout[key]))input.value=layout[key];});const colorPreview=panel.querySelector('[data-color-preview]'),colorPicker=panel.querySelector('[data-color-picker]');if(colorPreview&&colorPicker){const hsv=likesColorToHsv(layout.font_color);colorPreview.style.setProperty('--tp-color-swatch',layout.font_color);colorPicker.style.setProperty('--tp-picker-hue',`hsl(${hsv.h} 100% 50%)`);colorPicker.querySelector('[data-color-hue]').value=String(Math.round(hsv.h));const area=colorPicker.querySelector('[data-color-sv]');area.style.setProperty('--tp-color-saturation',`${hsv.s*100}%`);const cursor=colorPicker.querySelector('[data-color-cursor]');cursor.style.left=`${hsv.s*100}%`;cursor.style.top=`${(1-hsv.v)*100}%`;}
   const previewFrame=panel.closest('.tp-overlay-row')?.querySelector('.tp-overlay-card iframe');
-  if(previewFrame)previewFrame.contentWindow?.postMessage({type:'likes-overlay-preview-config',layout:{...layout}},location.origin);
+  if(previewFrame)previewFrame.contentWindow?.postMessage({type:'likes-overlay-preview-config',layout:{...layout,count:4}},location.origin);
   if(version==='v3')paintFloatingLikesPreview(layout);
 }
 function setLikesOverlayLayout(version,next,save=true) {
@@ -5192,7 +5571,7 @@ async function loadLikesOverlayLayout(version) {
 const likesOverlayOptionLabels={photo_position:{left:'Foto à esquerda',right:'Foto à direita',top:'Foto acima',bottom:'Foto abaixo'},shadow:{none:'Sem sombra',soft:'Suave',medium:'Média',strong:'Forte'},animation:{float:'Flutuação suave',rise:'Subida',pop:'Pulsar',sway:'Balanço'} };
 function fillOverlaySelect(select,values,labels){const current=select.value;select.replaceChildren(...values.map(value=>{const option=document.createElement('option');option.value=value;option.textContent=labels?.[value]||value;return option;}));if(values.includes(current))select.value=current;}
 function populateLikesOverlayOptions(version,data){const panel=document.querySelector(`[data-overlay-controls="${version}"]`);for(const select of panel.querySelectorAll('[data-overlay-setting]')){const key=select.dataset.overlaySetting;fillOverlaySelect(select,data.options?.[key]||[],likesOverlayOptionLabels[key]);}if(version==='v3'){const animation=document.querySelector('[data-floating-setting="animation"]');fillOverlaySelect(animation,data.options?.animation||[],likesOverlayOptionLabels.animation);paintHeartColorInputs(likesOverlayLayouts.v3.heart_colors);}}
-function paintLikesOverlayPreviewFrame(frame,layout){frame?.contentWindow?.postMessage({type:'likes-overlay-preview-config',layout:{...layout}},location.origin);}
+function paintLikesOverlayPreviewFrame(frame,layout){if(!frame||!layout)return;const isRankingPreview=Boolean(frame.closest('.tp-overlay-row'));frame.contentWindow?.postMessage({type:'likes-overlay-preview-config',layout:{...layout,...(isRankingPreview?{count:4}:{})}},location.origin);}
 function paintFloatingLikesPreview(layout){const frame=document.querySelector('[data-floating-likes] .tp-overlay-preview iframe');paintLikesOverlayPreviewFrame(frame,layout);}
 function paintHeartColorInputs(colors){
   const root=document.getElementById('floatingHeartColors');if(!root)return;root.replaceChildren();
@@ -5275,6 +5654,91 @@ function initLikesOverlayLayout() {
   Promise.all([loadLikesOverlayLayout('v2'),loadLikesOverlayLayout('v3')]).then(()=>{const fountainStatus=document.getElementById('floatingConfigStatus');if(fountainStatus)fountainStatus.textContent='Preferências salvas nesta conta.';});
 }
 initLikesOverlayLayout();
+const giftRankingDefaults={x:0,y:0,scale:1,count:10};
+let giftRankingLayoutReady=false,giftRankingSaveTimer=0,giftRankingSaveRevision=0,giftRankingSaveQueue=Promise.resolve();
+function giftRankingStorageKey(){
+  try{const payload=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return `tikplay.gift-ranking.v3.${payload.sub||payload.id||'account'}`;}catch{return 'tikplay.gift-ranking.v3.account';}
+}
+let giftRankingLayout={...giftRankingDefaults};
+function paintGiftRankingLayout(){
+  const panel=document.querySelector('[data-gift-ranking]');if(!panel)return;
+  const iframe=panel.querySelector('iframe'),readout=panel.querySelector('[data-gift-ranking-readout]'),count=panel.querySelector('#giftRankingCount');
+  readout.textContent=`X: ${Math.round(giftRankingLayout.x)}% · Y: ${Math.round(giftRankingLayout.y)}% · Escala: ${Math.round(giftRankingLayout.scale*100)}%`;
+  count.value=String(giftRankingLayout.count);
+  iframe?.contentWindow?.postMessage({type:'gift-ranking-preview-config',layout:giftRankingLayout},location.origin);
+  try{localStorage.setItem(giftRankingStorageKey(),JSON.stringify(giftRankingLayout));}catch{}
+}
+function saveGiftRankingLayout(){
+  const panel=document.querySelector('[data-gift-ranking]'),status=panel.querySelector('[data-gift-ranking-status]');
+  const revision=++giftRankingSaveRevision,snapshot={...giftRankingLayout};
+  status.textContent='Salvando ajustes…';
+  giftRankingSaveQueue=giftRankingSaveQueue.catch(()=>{}).then(async()=>{
+    try{
+      const data=await apiFetch('/api/gift-ranking/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout:snapshot})});
+      if(!data?.success)throw new Error(data?.error||'Não foi possível salvar.');
+      try{localStorage.setItem(`${giftRankingStorageKey()}.migrated`,'1');}catch{}
+      if(revision===giftRankingSaveRevision)status.textContent='Ajustes salvos para esta conta e aplicados à fonte.';
+    }catch(error){if(revision===giftRankingSaveRevision)status.textContent='Não foi possível salvar os ajustes. Verifique a conexão.';}
+  });
+}
+function updateGiftRankingLayout(next){
+  giftRankingLayout={x:Math.max(0,Math.min(100,Number(next.x)||0)),y:Math.max(0,Math.min(100,Number(next.y)||0)),scale:Math.max(.5,Math.min(2,Number(next.scale)||1)),count:Math.max(1,Math.min(10,Number(next.count)||10))};
+  paintGiftRankingLayout();
+  if(giftRankingLayoutReady){clearTimeout(giftRankingSaveTimer);giftRankingSaveTimer=setTimeout(saveGiftRankingLayout,150);}
+}
+function giftRankingPublicUrl(data){
+  const url=new URL('/overlays/gifts/v3/overlay.html',location.origin);
+  url.searchParams.set('room',data.room);url.searchParams.set('tk',data.token);url.searchParams.set('x',giftRankingLayout.x);url.searchParams.set('y',giftRankingLayout.y);url.searchParams.set('scale',giftRankingLayout.scale);url.searchParams.set('count',giftRankingLayout.count);url.searchParams.set('rev','gift-ranking-v3-7');
+  return url.href;
+}
+async function giftRankingLink(copy){
+  const panel=document.querySelector('[data-gift-ranking]'),status=panel.querySelector('[data-gift-ranking-status]');
+  const opened=copy?null:window.open('about:blank','_blank');if(opened)opened.opener=null;
+  status.textContent='Preparando link público…';
+  try{
+    const data=await apiFetch('/api/game/room-link',{method:'POST'});if(!data.success)throw Error(data.error||'Não foi possível gerar o link.');
+    const url=giftRankingPublicUrl(data);
+    if(copy){await navigator.clipboard.writeText(url);status.textContent='Link público copiado. Cole na fonte de navegador.';}
+    else if(opened){opened.location.href=url;status.textContent='Sobreposição aberta.';}
+    else status.textContent='Permita abrir a janela ou use Copiar link público.';
+  }catch(error){if(opened)opened.close();status.textContent=error.message;}
+}
+function initGiftRankingOverlay(){
+  const panel=document.querySelector('[data-gift-ranking]');if(!panel)return;
+  try{const saved=JSON.parse(localStorage.getItem(giftRankingStorageKey())||'null');if(saved)giftRankingLayout={...giftRankingDefaults,...saved};}catch{}
+  panel.querySelector('[data-gift-ranking-open]').addEventListener('click',()=>giftRankingLink(false));
+  panel.querySelector('[data-gift-ranking-copy]').addEventListener('click',()=>giftRankingLink(true));
+  panel.querySelector('#giftRankingCount').addEventListener('change',event=>updateGiftRankingLayout({...giftRankingLayout,count:Number(event.currentTarget.value)}));
+  panel.querySelectorAll('[data-gift-ranking-move]').forEach(button=>{
+    let timer=0;const move=()=>{const delta=button.dataset.giftRankingMove==='left'?{x:-1}:button.dataset.giftRankingMove==='right'?{x:1}:button.dataset.giftRankingMove==='up'?{y:-1}:{y:1};updateGiftRankingLayout({...giftRankingLayout,...delta,x:giftRankingLayout.x+(delta.x||0),y:giftRankingLayout.y+(delta.y||0)});};
+    const stop=()=>{clearInterval(timer);timer=0;};
+    button.addEventListener('pointerdown',event=>{if(event.button!==0&&event.pointerType==='mouse')return;event.preventDefault();button.setPointerCapture(event.pointerId);move();timer=setInterval(move,90);});
+    button.addEventListener('pointerup',stop);button.addEventListener('pointercancel',stop);button.addEventListener('lostpointercapture',stop);button.addEventListener('click',event=>{if(event.detail===0)move();});
+  });
+  panel.querySelector('[data-gift-ranking-scale="down"]').addEventListener('click',()=>updateGiftRankingLayout({...giftRankingLayout,scale:giftRankingLayout.scale-.05}));
+  panel.querySelector('[data-gift-ranking-scale="up"]').addEventListener('click',()=>updateGiftRankingLayout({...giftRankingLayout,scale:giftRankingLayout.scale+.05}));
+  panel.querySelector('[data-gift-ranking-reset]').addEventListener('click',()=>updateGiftRankingLayout(giftRankingDefaults));
+  panel.querySelector('iframe').addEventListener('load',paintGiftRankingLayout);
+  paintGiftRankingLayout();
+  const status=panel.querySelector('[data-gift-ranking-status]');status.textContent='Carregando ajustes salvos…';
+  apiFetch('/api/gift-ranking/layout').then(async data=>{
+    if(!data?.success)throw new Error(data?.error||'Não foi possível carregar.');
+    const saved=JSON.parse(localStorage.getItem(giftRankingStorageKey())||'null');
+    const migrated=localStorage.getItem(`${giftRankingStorageKey()}.migrated`)==='1';
+    const serverLayout={...giftRankingDefaults,...(data.layout||{})};
+    if(!migrated&&saved&&!data.configured){
+      giftRankingLayout={...giftRankingDefaults,...saved};
+      paintGiftRankingLayout();
+      giftRankingLayoutReady=true;
+      saveGiftRankingLayout();
+      return;
+    }
+    giftRankingLayout=serverLayout;paintGiftRankingLayout();giftRankingLayoutReady=true;
+    try{localStorage.setItem(`${giftRankingStorageKey()}.migrated`,'1');}catch{}
+    status.textContent='Ajustes salvos para esta conta e aplicados à prévia.';
+  }).catch(()=>{giftRankingLayoutReady=true;status.textContent='Ajustes locais ativos. Não foi possível sincronizar com a fonte.';});
+}
+initGiftRankingOverlay();
 async function copyRoomLink(path, statusId = "") {
   const status = statusId ? document.getElementById(statusId) : null;
   if (status) status.textContent = "Preparando URL…";
@@ -5409,7 +5873,7 @@ async function loadWordHistory(page) {
     document.getElementById("whPrev").disabled = res.games.page <= 1;
     document.getElementById("whNext").disabled = res.games.page * res.games.pageSize >= total;
   } catch (err) {
-    console.error("Erro ao carregar histórico completo:", err);
+    addLog({ text: "[Histórico] Não foi possível carregar o histórico de partidas.", category: "error", level: "error", event: "history.games.load_failed", source: "browser", code: "GAME_HISTORY_LOAD_FAILED" });
   }
 }
 function fetchHistoryAll() { loadWordHistory(1); }
@@ -5664,7 +6128,16 @@ for (const type of ["input", "change"]) document.addEventListener(type, event =>
     dueloSaver.schedule(type === "change" ? 0 : 500);
   }
 });
-try { const filters = JSON.parse(localStorage.getItem("tikplay.logCategories")); if (Array.isArray(filters)) document.querySelectorAll("[data-log-category]").forEach(el => { el.checked = filters.includes(el.dataset.logCategory); }); } catch (e) {}
+try {
+  const filters = JSON.parse(localStorage.getItem("tikplay.logCategories"));
+  if (Array.isArray(filters)) {
+    const aliases = { conexao: "connection", jogos: "game", avisos: "notice", erros: "error", diagnostico: "diagnostic", sistema: "system" };
+    const migrated = [...new Set(filters.map(value => aliases[value] || value))];
+    if (filters.includes("conexao") && !migrated.includes("system")) migrated.push("system");
+    document.querySelectorAll("[data-log-category]").forEach(el => { el.checked = migrated.includes(el.dataset.logCategory); });
+    try { localStorage.setItem("tikplay.logCategories", JSON.stringify(migrated)); } catch (e) {}
+  }
+} catch (e) {}
 setLogCategories();
 for (const scope of ["settings","gifts","tres","duelo"]) preferenceHydration(scope, false);
 </script>

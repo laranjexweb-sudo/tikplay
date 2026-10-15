@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TikPlay transforma sua live em uma experiência interativa com jogos, ranking, presentes, chat e cenas para OBS." />
+  <title>TikPlay — Sua live vira jogo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/site/styles.css" />
+</head>
+<body>
+  <div class="page-glow glow-one"></div>
+  <div class="page-glow glow-two"></div>
+
+  <header class="topbar" id="inicio">
+    <div class="container nav-wrap">
+      <a class="brand" href="#inicio" aria-label="TikPlay">
+        <span class="brand-mark"><span></span></span>
+        <span class="brand-name">Tik<span>Play</span></span>
+      </a>
+
+      <nav class="nav" id="nav">
+        <a href="/contexto">Jogar</a>
+        <a href="#jogos">Jogos</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#planos">Planos</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="btn btn-ghost desktop-only" href="/login">Entrar</a>
+        <a class="btn btn-primary desktop-only" href="/register">Criar conta</a>
+        <button class="menu-button" id="menuButton" aria-label="Abrir menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero section-pad">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <div class="eyebrow"><i></i> FEITO PARA LIVES INTERATIVAS</div>
+          <h1>Sua live deixa de ser só transmissão.<br><span>Ela vira jogo.</span></h1>
+          <p class="hero-text">Crie partidas em tempo real, transforme comentários, presentes e interações do público em ações dentro do jogo e entregue uma experiência que prende a audiência.</p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-large" href="/register">Começar agora <span>→</span></a>
+            <a class="btn btn-dark btn-large" href="#jogos"><span class="play-icon">▶</span> Conhecer os jogos</a>
+          </div>
+
+          <div class="hero-points">
+            <span><b>✓</b> Sem instalação complexa</span>
+            <span><b>✓</b> Pronto para OBS</span>
+            <span><b>✓</b> Configuração pelo navegador</span>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal delay-1">
+          <div class="dashboard-shell">
+            <div class="dash-top">
+              <div class="mini-brand"><span class="brand-mark small"><span></span></span> TikPlay</div>
+              <div class="status"><i></i> AO VIVO</div>
+            </div>
+            <div class="dash-body">
+              <aside class="dash-side">
+                <div class="side-dot active"></div><div class="side-dot"></div><div class="side-dot"></div><div class="side-dot"></div>
+              </aside>
+              <div class="game-stage">
+                <div class="stage-head">
+                  <span>PALAVRA SECRETA</span>
+                  <span class="round">RODADA 04</span>
+                </div>
+                <div class="word-area">
+                  <span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="hint-card">
+                  <small>DICA ATUAL</small>
+                  <strong>É algo que você usa todos os dias.</strong>
+                </div>
+                <div class="live-feed">
+                  <div><i class="avatar a1"></i><p><b>@ana_live</b><span>mandou Rosa</span></p><em>+1 letra</em></div>
+                  <div><i class="avatar a2"></i><p><b>@bruno22</b><span>palpite: celular</span></p><em class="cyan">CHAT</em></div>
+                  <div><i class="avatar a3"></i><p><b>@mariagames</b><span>entrou no TOP 3</span></p><em class="violet">RANK</em></div>
+                </div>
+              </div>
+              <div class="rank-panel">
+                <small>RANKING AO VIVO</small>
+                <div class="rank-item first"><b>1</b><i class="avatar a1"></i><span>Ana Live</span><strong>920</strong></div>
+                <div class="rank-item"><b>2</b><i class="avatar a3"></i><span>Maria</span><strong>760</strong></div>
+                <div class="rank-item"><b>3</b><i class="avatar a2"></i><span>Bruno</span><strong>610</strong></div>
+                <div class="mini-card"><span>INTERAÇÕES</span><strong>1.284</strong><small>+18% nesta rodada</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="float-chip chip-left"><span>🎁</span><div><small>PRESENTE RECEBIDO</small><strong>Ação no jogo!</strong></div></div>
+          <div class="float-chip chip-right"><span>⚡</span><div><small>INTERAÇÃO</small><strong>Tempo real</strong></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-strip">
+      <div class="container">
+        <p>UMA PLATAFORMA PARA QUEM QUER TRANSFORMAR AUDIÊNCIA EM PARTICIPAÇÃO</p>
+        <div class="trust-items"><span>LIVE</span><i></i><span>CHAT</span><i></i><span>PRESENTES</span><i></i><span>RANKING</span><i></i><span>OBS</span><i></i><span>JOGOS</span></div>
+      </div>
+    </section>
+
+    <section class="section-pad" id="jogos">
+      <div class="container">
+        <div class="section-heading reveal">
+          <div class="eyebrow"><i></i> JOGOS TIKPLAY</div>
+          <h2>Escolha o jogo.<br><span>O público faz o resto.</span></h2>
+          <p>Experiências feitas para gerar comentários, competição, presentes e retenção durante a live.</p>
+        </div>
+
+        <div class="games-grid">
+          <article class="game-card secret reveal">
+            <div class="game-art">
+              <div class="game-badge">MAIS JOGADO</div>
+              <div class="secret-box"><span>?</span></div>
+              <div class="floating-letter l1">A</div><div class="floating-letter l2">?</div><div class="floating-letter l3">R</div>
+            </div>
+            <div class="game-info">
+              <div><span class="category">CHAT + PRESENTES</span><span class="online-dot">Ativo</span></div>
+              <h3>Palavra Secreta</h3>
+              <p>O público tenta descobrir a palavra escondida. Comentários viram palpites e presentes podem revelar letras e alterar a rodada.</p>
+              <div class="tags"><span>Ranking</span><span>Dicas</span><span>Presentes</span></div>
+            </div>
+          </article>
+
+          <article class="game-card tips reveal delay-1">
+            <div class="game-art">
+              <div class="three-number"><span>3</span><b>DICAS</b></div>
+              <div class="tip-line t1">01 <span></span></div><div class="tip-line t2">02 <span></span></div><div class="tip-line t3">03 <span></span></div>
+            </div>
+            <div class="game-info">
+              <div><span class="category">DESAFIO RÁPIDO</span><span class="online-dot">Ativo</span></div>
+              <h3>3 Dicas</h3>
+              <p>Três pistas progressivas. Quanto antes o participante acertar pelo chat, maior a pontuação conquistada.</p>
+              <div class="tags"><span>Rodadas</span><span>Pontos</span><span>Chat</span></div>
+            </div>
+          </article>
+
+          <article class="game-card duel reveal">
+            <div class="game-art duel-art">
+              <div class="fighter blue">A</div><div class="versus">VS</div><div class="fighter red">B</div>
+              <div class="health hp1"><span></span></div><div class="health hp2"><span></span></div>
+              <div class="impact">✦</div>
+            </div>
+            <div class="game-info">
+              <div><span class="category">BATALHA AO VIVO</span><span class="online-dot beta">Destaque</span></div>
+              <h3>Duelo 1x1</h3>
+              <p>Dois lados, uma arena e a torcida decidindo cada ataque. Presentes, combos e efeitos especiais controlam o confronto.</p>
+              <div class="tags"><span>Combos</span><span>Times</span><span>Especiais</span></div>
+            </div>
+          </article>
+
+          <article class="game-card voice reveal delay-1">
+            <div class="game-art voice-art">
+              <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="chat-bubble">Olá, live! <span>🔊</span></div>
+            </div>
+            <div class="game-info">
+              <div><span class="category">AUTOMAÇÃO</span><span class="online-dot">Ativo</span></div>
+              <h3>Narração de Chat</h3>
+              <p>Transforme mensagens selecionadas do chat em voz para deixar a transmissão mais dinâmica e próxima do público.</p>
+              <div class="tags"><span>Voz</span><span>Chat</span><span>Automático</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="features-section section-pad" id="recursos">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <div class="eyebrow"><i></i> TUDO NO MESMO PAINEL</div>
+          <h2>Você controla a experiência.<br><span>O TikPlay cuida da interação.</span></h2>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card reveal"><div class="icon-box">◫</div><h3>Links públicos prontos</h3><p>Copie os links do jogo, ranking e tela pública direto do painel e use no OBS ou compartilhe com sua equipe.</p></article>
+          <article class="feature-card reveal delay-1"><div class="icon-box">⚡</div><h3>Eventos em tempo real</h3><p>Comentários, presentes e ações do público aparecem no jogo sem precisar atualizar a tela.</p></article>
+          <article class="feature-card reveal delay-2"><div class="icon-box">⌘</div><h3>Controle da partida</h3><p>Inicie, pause, finalize rodadas, altere configurações e dispare ações especiais pelo painel do streamer.</p></article>
+          <article class="feature-card reveal"><div class="icon-box">◎</div><h3>Ranking e competição</h3><p>Crie disputas entre participantes com pontuação ao vivo, classificação e resultados de cada partida.</p></article>
+          <article class="feature-card reveal delay-1"><div class="icon-box">🎁</div><h3>Presentes configuráveis</h3><p>Escolha quais presentes geram ações, golpes, vantagens, revelações ou efeitos em cada jogo.</p></article>
+          <article class="feature-card reveal delay-2"><div class="icon-box">▣</div><h3>Feito para OBS</h3><p>Telas limpas para browser source, fundos transparentes quando necessário e composição simples na transmissão.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps-section section-pad" id="como-funciona">
+      <div class="container steps-grid">
+        <div class="section-heading sticky reveal">
+          <div class="eyebrow"><i></i> SIMPLES DE USAR</div>
+          <h2>Do painel para a live<br><span>em poucos passos.</span></h2>
+          <p>Sem fluxos confusos. O streamer escolhe o jogo, configura a partida e leva a tela para a transmissão.</p>
+          <a class="text-link" href="/docs">Ver documentação <span>→</span></a>
+        </div>
+        <div class="steps-list">
+          <article class="step reveal"><b>01</b><div><span>ESCOLHA</span><h3>Abra um jogo no painel</h3><p>Selecione o jogo que combina com sua live e deixe as regras do jeito que você quer.</p></div></article>
+          <article class="step reveal"><b>02</b><div><span>CONFIGURE</span><h3>Defina presentes e ações</h3><p>Associe interações a efeitos do jogo e ajuste pontuação, tempo, metas e outras regras.</p></div></article>
+          <article class="step reveal"><b>03</b><div><span>TRANSMITA</span><h3>Adicione a tela no OBS</h3><p>Copie o link público do jogo, adicione como fonte de navegador e posicione na sua cena.</p></div></article>
+          <article class="step reveal"><b>04</b><div><span>JOGUE</span><h3>Seu público assume o controle</h3><p>Comentários e presentes passam a influenciar a partida em tempo real.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="creator-section section-pad">
+      <div class="container creator-card reveal">
+        <div class="creator-copy">
+          <div class="eyebrow light"><i></i> MAIS INTERAÇÃO, MENOS TELA PARADA</div>
+          <h2>Crie momentos que o público<br><span>quer assistir até o fim.</span></h2>
+          <p>O TikPlay foi pensado para transformar espectadores em participantes. Mais ação no chat, mais disputa, mais motivo para continuar na live.</p>
+          <div class="metric-row"><div><strong>+ interação</strong><span>ações conectadas à audiência</span></div><div><strong>+ retenção</strong><span>rodadas e metas mantêm o ritmo</span></div><div><strong>+ dinâmica</strong><span>eventos visuais em tempo real</span></div></div>
+        </div>
+        <div class="pulse-visual"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="pulse-core"><span class="brand-mark"><span></span></span></div><div class="orbit o1">💬</div><div class="orbit o2">🎁</div><div class="orbit o3">🏆</div></div>
+      </div>
+    </section>
+
+    <section class="pricing-section section-pad" id="planos">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <div class="eyebrow"><i></i> PLANOS</div>
+          <h2>Comece simples.<br><span>Cresça com sua live.</span></h2>
+          <p>Estrutura preparada para oferecer acesso gratuito e recursos avançados conforme o canal evolui.</p>
+        </div>
+        <div class="pricing-grid">
+          <article class="price-card reveal"><span class="plan-label">FREE</span><h3>Para experimentar</h3><div class="price"><strong>R$ 0</strong><span>/mês</span></div><p>Entre no TikPlay e conheça a experiência com os recursos essenciais.</p><ul><li>Jogos selecionados</li><li>Painel do streamer</li><li>Links para OBS</li><li>Interações básicas</li></ul><a class="btn btn-dark btn-full" href="/register">Começar grátis</a></article>
+          <article class="price-card featured reveal delay-1"><div class="popular">RECOMENDADO</div><span class="plan-label">PRO</span><h3>Para lives frequentes</h3><div class="price"><strong>Em breve</strong></div><p>Mais liberdade de configuração e acesso aos recursos avançados do TikPlay.</p><ul><li>Todos os jogos disponíveis</li><li>Configuração avançada de presentes</li><li>Mais opções de ranking e partidas</li><li>Recursos especiais e novidades</li></ul><a class="btn btn-primary btn-full" href="/register">Quero usar o TikPlay</a></article>
+          <article class="price-card reveal delay-2"><span class="plan-label">CRIADOR</span><h3>Para projetos maiores</h3><div class="price"><strong>Personalizado</strong></div><p>Para quem precisa de operação especial, maior escala ou experiências personalizadas.</p><ul><li>Recursos sob demanda</li><li>Configuração dedicada</li><li>Suporte prioritário</li><li>Possibilidades de personalização</li></ul><a class="btn btn-dark btn-full" href="mailto:contato@tikplay.com.br">Falar com a equipe</a></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq-section section-pad" id="faq">
+      <div class="container faq-grid">
+        <div class="section-heading reveal"><div class="eyebrow"><i></i> DÚVIDAS FREQUENTES</div><h2>Antes de entrar<br><span>na partida.</span></h2><p>As respostas principais para quem está começando no TikPlay.</p></div>
+        <div class="faq-list">
+          <details class="faq-item reveal" open><summary>O TikPlay funciona com OBS Studio?<span>+</span></summary><p>Sim. Os jogos possuem telas públicas pensadas para serem adicionadas ao OBS como fonte de navegador.</p></details>
+          <details class="faq-item reveal"><summary>Preciso instalar algum programa?<span>+</span></summary><p>O controle principal é feito pelo navegador. Dependendo do fluxo da transmissão, basta copiar o link do jogo e adicioná-lo ao seu software de live.</p></details>
+          <details class="faq-item reveal"><summary>Os presentes podem causar ações diferentes?<span>+</span></summary><p>Sim. Cada jogo pode ter regras próprias para presentes, como revelar letras, aplicar golpes, reforçar escudos ou disparar eventos especiais.</p></details>
+          <details class="faq-item reveal"><summary>Posso controlar a partida manualmente?<span>+</span></summary><p>Sim. O painel do streamer permite acompanhar e controlar a partida mesmo quando parte das ações acontece automaticamente.</p></details>
+          <details class="faq-item reveal"><summary>O TikPlay tem mais jogos chegando?<span>+</span></summary><p>Sim. A plataforma foi estruturada para receber novos formatos de jogos e ferramentas de interação.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="container cta-box reveal">
+        <div><span class="mini-label">PRONTO PARA JOGAR?</span><h2>Coloque sua audiência<br><span>dentro da live.</span></h2><p>Abra sua conta e prepare a próxima partida no TikPlay.</p></div>
+        <a class="btn btn-primary btn-large" href="/register">Criar minha conta <span>→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-main">
+      <div class="footer-brand"><a class="brand" href="#inicio"><span class="brand-mark"><span></span></span><span class="brand-name">Tik<span>Play</span></span></a><p>Jogos e experiências interativas para transformar lives em participação.</p></div>
+      <div class="footer-links"><div><strong>Plataforma</strong><a href="#jogos">Jogos</a><a href="#recursos">Recursos</a><a href="#planos">Planos</a></div><div><strong>Ajuda</strong><a href="/docs">Documentação</a><a href="#faq">FAQ</a><a href="mailto:contato@tikplay.com.br">Contato</a></div><div><strong>Conta</strong><a href="/login">Entrar</a><a href="/register">Criar conta</a></div></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 TikPlay. Todos os direitos reservados.</span><div><a href="#">Termos de Uso</a><a href="#">Privacidade</a></div></div>
+  </footer>
+  <script src="/site/script.js"></script>
+</body>
+</html>

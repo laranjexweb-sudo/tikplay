@@ -621,7 +621,7 @@ class VPetEngine:
                 try:
                     await self._tick()
                 except Exception as e:
-                    self._emit_log(f"[Bichinho] ERRO no tick: {type(e).__name__}: {e}")
+                    self._emit_log(f"[Bichinho] ERRO no tick ({type(e).__name__}).")
         except asyncio.CancelledError:
             self._save()
             raise

@@ -126,9 +126,6 @@
         <div class="riddle-header">
           <div class="riddle-title">CHARADA</div>
           <div class="riddle-right">
-            <span class="riddle-narrating" id="riddleNarrating" style="display:none" title="Narrando">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
-            </span>
             <button class="riddle-close-btn" id="btnCloseRiddle" onclick="closeRiddleCard()">✕ Fechar</button>
           </div>
         </div>
@@ -137,10 +134,6 @@
         </div>
         <div class="riddle-body" id="riddleBody" style="display:none">
           <div class="riddle-text" id="riddleText"></div>
-        </div>
-        <div class="riddle-footer" id="riddleFooter" style="display:none">
-          <button class="btn-riddle-tts" id="btnPlayRiddle" onclick="triggerPlayRiddle()" style="display:none">Ouvir</button>
-          <button class="btn-riddle-tts" id="btnRepeatRiddle" onclick="speakCurrentRiddle()" style="display:none">Repetir</button>
         </div>
       </div>
 
@@ -195,6 +188,12 @@
 </div>
 
 <script>
+function reportWebGameError(event, message, error) {
+  const record = { category: "error", level: "error", event, source: "browser", message,
+    details: { error_type: (error && error.name) || "ClientError" } };
+  try { console.error(record); } catch (e) {}
+}
+
 const q = new URLSearchParams(location.search);
 const token = q.get("tk") || localStorage.getItem("token");
 if (!token) location.href = "/login";
@@ -232,11 +231,6 @@ function connectWS() {
 
 connectWS();
 
-let currentRiddleText = "";
-let currentRiddleAudioUrl = "";
-let riddleAudio = null;
-let lastNarratedRiddleKey = "";
-let riddleClosed = false;
 let riddleHideTimeout = null;
 let shakeInterval = null;
 
@@ -320,6 +314,7 @@ function handleMessage(msg) {
       state.sizeRevealAnim = true;
       renderBoxes();
       startLetterGiftPromptCycle();
+      renderActiveGift(state.activeGift);
       if (msg.nickname || msg.user) {
         showNotification(`? @${msg.nickname || msg.user} revelou o tamanho! (${msg.secret_length} letras)`, "#a78bfa");
       }
@@ -331,6 +326,7 @@ function handleMessage(msg) {
       if (msg.secret_length) state.secretLength = msg.secret_length;
       renderBoxes();
       stopLetterGiftPromptCycle();
+      renderActiveGift(state.activeGift);
       if (msg.nickname || msg.user) {
         showNotification(`🔤 @${msg.nickname || msg.user} revelou a 1ª letra!`, "#a78bfa");
       }
@@ -342,14 +338,6 @@ function handleMessage(msg) {
 
     case "riddle_ready":
       handleRiddleReady(msg);
-      break;
-
-    case "riddle_audio":
-      handleRiddleAudio(msg);
-      break;
-
-    case "riddle_play":
-      playRiddleSfxAndTimer();
       break;
 
     case "display_action":
@@ -365,6 +353,7 @@ function handleMessage(msg) {
 }
 
 function applyGameStart(msg) {
+  stopSidebarGiftPromptCycle();
   resetRiddleCard();
   guessHighlightQueue = [];
   guessHighlightShowing = false;
@@ -375,9 +364,6 @@ function applyGameStart(msg) {
   rouletteShowing = false;
   dicaQueue = [];
   dicaShowing = false;
-  currentRiddleText = "";
-  currentRiddleAudioUrl = "";
-  lastNarratedRiddleKey = "";
 
   state.secretLength = msg.secret_length;
   state.currentGameId = msg.game_id;
@@ -465,14 +451,75 @@ function renderActiveGift(giftName) {
     return;
   }
   if (section) section.style.display = "block";
+  syncSidebarGiftPrompt();
+}
+
+let sidebarGiftPromptTimer = null;
+let sidebarGiftPromptSlide = "hint";
+let sidebarGiftPromptAnimationToken = 0;
+
+function sidebarLetterGiftEligible() {
+  return !!state.currentGameId && state.sizeRevealed && !!state.letterGift && !state.firstLetterRevealed && !state.finished;
+}
+
+function stopSidebarGiftPromptCycle() {
+  if (sidebarGiftPromptTimer) {
+    clearTimeout(sidebarGiftPromptTimer);
+    sidebarGiftPromptTimer = null;
+  }
+  sidebarGiftPromptSlide = "hint";
+  sidebarGiftPromptAnimationToken++;
+}
+
+function scheduleSidebarGiftPromptCycle() {
+  if (sidebarGiftPromptTimer || !sidebarLetterGiftEligible()) return;
+  const delay = 4200 + Math.random() * 3000;
+  sidebarGiftPromptTimer = setTimeout(() => {
+    sidebarGiftPromptTimer = null;
+    if (!sidebarLetterGiftEligible()) {
+      sidebarGiftPromptSlide = "hint";
+      renderSidebarGiftPrompt("hint");
+      return;
+    }
+    if (rouletteShowing || state.display.riddleVisible) {
+      scheduleSidebarGiftPromptCycle();
+      return;
+    }
+    sidebarGiftPromptSlide = sidebarGiftPromptSlide === "hint" ? "letter" : "hint";
+    renderSidebarGiftPrompt(sidebarGiftPromptSlide, true);
+    scheduleSidebarGiftPromptCycle();
+  }, delay);
+}
+
+function syncSidebarGiftPrompt() {
+  if (!sidebarLetterGiftEligible()) {
+    stopSidebarGiftPromptCycle();
+  } else {
+    scheduleSidebarGiftPromptCycle();
+  }
+  if (rouletteShowing || state.display.riddleVisible) return;
+  renderSidebarGiftPrompt(sidebarGiftPromptSlide);
+}
+
+function renderSidebarGiftPrompt(slide, animate = false) {
   const img = document.getElementById("rouletteGiftImg");
   const riddleIcon = document.getElementById("rouletteRiddleIcon");
   const iconBox = document.querySelector("#rouletteStandardView .roulette-gift-icon");
   const titleEl = document.getElementById("rouletteTitle");
   const subEl = document.getElementById("rouletteSub");
   const card = document.getElementById("rouletteCard");
+  const line = document.querySelector("#rouletteStandardView .roulette-line");
 
+  const isLetter = slide === "letter" && sidebarLetterGiftEligible();
+  const giftName = isLetter ? state.letterGift : state.activeGift;
+  const isBoss = !isLetter && state.isFinalBoss;
   const filename = giftImageMap[giftName];
+  const animationToken = ++sidebarGiftPromptAnimationToken;
+
+  if (line) {
+    line.classList.remove("gift-prompt-enter");
+    if (animate) void line.offsetWidth;
+  }
   if (img) {
     img.src = filename ? `/gift-images/${filename}` : "";
     img.style.display = filename ? "block" : "none";
@@ -482,8 +529,7 @@ function renderActiveGift(giftName) {
     iconBox.style.display = filename ? "flex" : "none";
   }
 
-  // Final Boss UI mutation
-  if (state.isFinalBoss) {
+  if (isBoss) {
     if (card) card.classList.add("boss-mode");
     if (titleEl) {
       titleEl.textContent = "🔥 BOSS";
@@ -500,17 +546,23 @@ function renderActiveGift(giftName) {
   } else {
     if (card) card.classList.remove("boss-mode");
     if (titleEl) {
-      titleEl.textContent = "DICA";
+      titleEl.textContent = isLetter ? "1ª LETRA" : "DICA";
       titleEl.style.color = "#cc88ff";
       titleEl.style.textShadow = "0 0 8px rgba(167, 139, 250, 0.6)";
     }
     if (subEl) {
-      subEl.textContent = "Envie para liberar dica";
+      subEl.textContent = isLetter ? "Envie para revelar a primeira letra" : "Envie para liberar dica";
     }
     if (card) {
       card.style.borderColor = "rgba(167, 139, 250, 0.4)";
       card.style.boxShadow = "0 0 20px rgba(167, 139, 250, 0.15), inset 0 0 12px rgba(167, 139, 250, 0.08)";
     }
+  }
+
+  if (animate && line) {
+    requestAnimationFrame(() => {
+      if (animationToken === sidebarGiftPromptAnimationToken) line.classList.add("gift-prompt-enter");
+    });
   }
 }
 
@@ -769,7 +821,6 @@ function processRouletteQueue() {
 
 function handleRiddleStarted(msg) {
   if (riddleHideTimeout) { clearTimeout(riddleHideTimeout); riddleHideTimeout = null; }
-  riddleClosed = false;
   state.display.riddleVisible = true;
   state.currentRiddleStage = msg.stage || state.currentRiddleStage;
   const panel = document.getElementById("riddlePanel");
@@ -778,93 +829,22 @@ function handleRiddleStarted(msg) {
   panel.style.display = "block";
   document.getElementById("riddleLoading").style.display = "flex";
   document.getElementById("riddleBody").style.display = "none";
-  document.getElementById("riddleFooter").style.display = "none";
 }
 
-function handleRiddleReady(msg, opts) {
+function handleRiddleReady(msg) {
   if (riddleHideTimeout) { clearTimeout(riddleHideTimeout); riddleHideTimeout = null; }
-  riddleClosed = false;
   state.currentRiddleStage = msg.stage;
-  currentRiddleText = msg.text;
-  currentRiddleAudioUrl = msg.audio_url || "";
   state.display.riddleVisible = true;
   stopLetterGiftPromptCycle();
 
   document.getElementById("riddleLoading").style.display = "none";
   document.getElementById("riddleBody").style.display = "block";
-  document.getElementById("riddleFooter").style.display = "flex";
 
   // Typewriter effect
   typewriterText("riddleText", msg.text, 30);
-
-  // Show play button, hide repeat button initially
-  document.getElementById("btnPlayRiddle").style.display = "inline-block";
-  document.getElementById("btnRepeatRiddle").style.display = "none";
-
-  // Narração automática (sem clique — ideal para OBS), com dedup por gameId:stage
-  const rkey = `${state.currentGameId || ""}:${msg.stage || 0}`;
-  const auto = (state.ttsSettings ? state.ttsSettings.riddle_auto_narrate !== false : true);
-  if (auto && msg.audio_url && (!opts || opts.narrate !== false) && rkey !== lastNarratedRiddleKey) {
-    lastNarratedRiddleKey = rkey;
-    speakCurrentRiddle();
-  } else {
-    setRiddleNarrating(false);
-  }
-}
-
-function handleRiddleAudio(msg) {
-  if (!msg.audio_url) return;
-  currentRiddleAudioUrl = msg.audio_url;
-  const rkey = `${state.currentGameId || ""}:${msg.stage || 0}`;
-  const auto = (state.ttsSettings ? state.ttsSettings.riddle_auto_narrate !== false : true);
-  if (!riddleClosed && auto && rkey !== lastNarratedRiddleKey) {
-    lastNarratedRiddleKey = rkey;
-    speakCurrentRiddle();
-  } else {
-    setRiddleNarrating(false);
-  }
-}
-
-function setRiddleNarrating(on) {
-  const el = document.getElementById("riddleNarrating");
-  if (el) el.style.display = on ? "inline-block" : "none";
-}
-
-function stopRiddleAudio() {
-  // Áudio por arquivo (mp3)
-  if (riddleAudio) {
-    try {
-      riddleAudio.pause();
-      riddleAudio.src = "";
-      riddleAudio.load();
-    } catch (e) {}
-    riddleAudio = null;
-  }
-  // TTS do navegador (speechSynthesis)
-  if ('speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.pause();
-    } catch (e) {}
-  }
-  setRiddleNarrating(false);
-}
-
-function playRiddleSfxAndTimer() {
-  if (riddleClosed) { stopRiddleAudio(); return; }
-  const playBtn = document.getElementById("btnPlayRiddle");
-  if (playBtn) playBtn.style.display = "none";
-  const repeatBtn = document.getElementById("btnRepeatRiddle");
-  if (repeatBtn) repeatBtn.style.display = "inline-block";
-
-  // Speech TTS
-  setRiddleNarrating(true);
-  speakCurrentRiddle();
 }
 
 function closeRiddleCard() {
-  riddleClosed = true;
-  stopRiddleAudio();
   if (typewriterInterval) {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
@@ -886,8 +866,6 @@ function closeRiddleCard() {
 }
 
 function resetRiddleCard() {
-  riddleClosed = true;
-  stopRiddleAudio();
   if (typewriterInterval) {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
@@ -896,9 +874,6 @@ function resetRiddleCard() {
     clearTimeout(riddleHideTimeout);
     riddleHideTimeout = null;
   }
-  currentRiddleText = "";
-  currentRiddleAudioUrl = "";
-  lastNarratedRiddleKey = "";
   state.currentRiddleStage = 0;
   state.display.riddleVisible = false;
   const panel = document.getElementById("riddlePanel");
@@ -910,14 +885,8 @@ function resetRiddleCard() {
   if (loading) loading.style.display = "flex";
   const body = document.getElementById("riddleBody");
   if (body) body.style.display = "none";
-  const footer = document.getElementById("riddleFooter");
-  if (footer) footer.style.display = "none";
   const text = document.getElementById("riddleText");
   if (text) text.textContent = "";
-  for (const id of ["btnPlayRiddle", "btnRepeatRiddle"]) {
-    const button = document.getElementById(id);
-    if (button) button.style.display = "none";
-  }
 }
 
 function handleDisplayAction(msg) {
@@ -930,14 +899,6 @@ function handleDisplayAction(msg) {
     openPostGameModal();
   } else if (msg.action === "close_postgame") {
     closePostGameModal();
-  }
-}
-
-async function triggerPlayRiddle() {
-  try {
-    await authFetch(`/api/play-riddle`, { method: "POST" });
-  } catch (err) {
-    console.error("Erro ao iniciar charada:", err);
   }
 }
 
@@ -958,27 +919,6 @@ function typewriterText(elementId, text, speed) {
       typewriterInterval = null;
     }
   }, speed);
-}
-
-function playRiddleAudio() {
-  if (!currentRiddleAudioUrl) return;
-  if (riddleAudio) riddleAudio.pause();
-  setRiddleNarrating(true);
-  riddleAudio = new Audio(currentRiddleAudioUrl);
-  riddleAudio.onended = () => setRiddleNarrating(false);
-  riddleAudio.onerror = () => setRiddleNarrating(false);
-  riddleAudio.play().catch(() => setRiddleNarrating(false));
-}
-
-function speakCurrentRiddle() {
-  if (riddleClosed) { stopRiddleAudio(); return; }
-  if (currentRiddleAudioUrl) {
-    playRiddleAudio();
-    return;
-  }
-  // Sem mp3 do Edge (voz do servidor/menu) a narração fica de fora:
-  // fallback com speechSynthesis usava voz aleatória do navegador, ignorando o menu.
-  setRiddleNarrating(false);
 }
 
 function fitSecretLetterGrid(container) {
@@ -1182,6 +1122,8 @@ let guessHighlightQueue = [];
 let guessHighlightShowing = false;
 
 function renderGameOver(winner, html) {
+  stopSidebarGiftPromptCycle();
+  if (!rouletteShowing && !state.display.riddleVisible) renderSidebarGiftPrompt("hint");
   const incomingSlot = document.getElementById("guessIncomingSlot");
   if (incomingSlot) { incomingSlot.replaceChildren(); incomingSlot.style.display = "none"; }
   const banner = document.getElementById("gameOverBanner");
@@ -1754,7 +1696,7 @@ async function loadGameState() {
       if (disp.ranking_view) state.display.rankingView = disp.ranking_view;
       setRankingMode(state.display.rankingView);
       if (gs.current_riddle && gs.current_riddle.text && state.display.riddleVisible) {
-        handleRiddleReady(gs.current_riddle, { narrate: false });
+        handleRiddleReady(gs.current_riddle);
       } else {
         resetRiddleCard();
       }
@@ -1769,6 +1711,7 @@ async function loadGameState() {
       state.letterGift = gs.letter_gift || "";
       state.firstLetterRevealed = !!gs.first_letter_revealed;
       state.firstLetter = gs.first_letter || "";
+      renderActiveGift(state.activeGift);
       state.tapMetaCurrent = gs.tap_meta_current || 0;
       state.tapMetaTotal = gs.tap_meta_total || 0;
       state.tapMetaReady = !!gs.tap_meta_ready;
@@ -2004,8 +1947,8 @@ function showDicaOverlay(giftName, user, hintWord) {
     dicaQueue.push({ giftName, user, hintWord });
     processDicaQueue();
   } catch (err) {
-    console.error("Erro em showDicaOverlay:", err);
-    showNotification("Erro na Dica: " + err.message, "red");
+    reportWebGameError("webgame.hint_overlay.failed", "Falha ao exibir a sobreposição de dica.", err);
+    showNotification("Não foi possível exibir a dica.", "red");
   }
 }
 
@@ -2063,8 +2006,8 @@ function processDicaQueue() {
       }, 500);
     }, 2500);
   } catch (err) {
-    console.error("Erro em processDicaQueue:", err);
-    showNotification("Erro no processamento da Dica: " + err.message, "red");
+    reportWebGameError("webgame.hint_queue.failed", "Falha ao processar a fila de dicas.", err);
+    showNotification("Não foi possível processar a fila de dicas.", "red");
     dicaShowing = false;
   }
 }

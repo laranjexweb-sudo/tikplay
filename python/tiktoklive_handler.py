@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 
 from TikTokLive import TikTokLiveClient
@@ -12,7 +13,9 @@ from TikTokLive.events import (
     JoinEvent,
     ShareEvent,
     FollowEvent,
+    BarrageEvent,
 )
+from TikTokLiveProto.v3.webcast.im import BarrageMessageBarrageType
 
 
 class TikTokLiveHandler:
@@ -23,7 +26,7 @@ class TikTokLiveHandler:
     pois o TikTokLive nao exige chave.
     """
 
-    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None):
+    def __init__(self, username: str, api_key: str = "", on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None, on_level_up=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
@@ -32,12 +35,14 @@ class TikTokLiveHandler:
         self.on_join_cb = on_join
         self.on_share_cb = on_share
         self.on_follow_cb = on_follow
+        self.on_level_up_cb = on_level_up
         self.log_cb = None
         self._room_id = None
         self._connected = False
         self.client = None
         self._last_like_total = {}
         self._connected_at = None
+        self._diag_last = {}
 
     def log(self, text: str):
         if self.log_cb:
@@ -84,15 +89,53 @@ class TikTokLiveHandler:
                 cur = getattr(cur, a, None)
             return cur
 
+        def first_level(*values):
+            for value in values:
+                try:
+                    level = int(value)
+                except (TypeError, ValueError):
+                    continue
+                if level > 0:
+                    return level
+            return 0
+
+        # v3: fans_club.prefer_data é dict[int, FansClubData] — pega o maior nível.
+        prefer = deep(user, "fans_club", "prefer_data")
+        prefer_level = 0
+        prefer_name = ""
+        if isinstance(prefer, dict):
+            for v in prefer.values():
+                try:
+                    lv = int(getattr(v, "level", 0) or 0)
+                except (TypeError, ValueError):
+                    lv = 0
+                if lv > prefer_level:
+                    prefer_level = lv
+                    prefer_name = str(getattr(v, "club_name", "") or "")
+
+        fan_level = first_level(
+            deep(user, "fans_club", "data", "level"),
+            prefer_level,
+            deep(user, "fans_club_info", "fans_level"),
+            getattr(user, "member_level", None),
+            getattr(user, "member_rank", None),
+        )
+        fan_name = (
+            deep(user, "fans_club", "data", "club_name")
+            or prefer_name
+            or deep(user, "fans_club_info", "fans_club_name")
+            or ""
+        )
+
         return {
             "follow_role": getattr(user, "follow_role", None) if hasattr(user, "follow_role") else (1 if getattr(user, "is_follower", False) else None),
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
             "is_follower": getattr(user, "is_follower", False) or getattr(user, "follow_info", None) is not None,
-            # Níveis: presenteador (pay_grade) e membro/fã-clube (fans_club.data.level).
-            "gifter_level": deep(user, "pay_grade", "level"),
+            # Níveis: presenteador (pay_grade) e membro/fã-clube (fans_club no v3).
+            "gifter_level": first_level(deep(user, "pay_grade", "level"), getattr(user, "gifter_level", None)),
             "gifter_grade": deep(user, "pay_grade", "grade_describe"),
-            "fan_club_level": deep(user, "fans_club", "data", "level"),
-            "fan_club_name": deep(user, "fans_club", "data", "club_name"),
+            "fan_club_level": fan_level,
+            "fan_club_name": fan_name,
             "badges": [
                 {"name": str(getattr(b, "name", "") or ""), "level": getattr(b, "level", None)}
                 for b in (getattr(user, "badges", None) or [])
@@ -100,6 +143,31 @@ class TikTokLiveHandler:
             ],
             "user_id": str(getattr(user, "id", None) or ""),
         }
+
+    def _diag_log(self, key, text, secs=10.0):
+        """Log de diagnóstico com throttle (temporário)."""
+        if str(os.environ.get("TIKTOK_LEVEL_DIAGNOSTICS", "")).lower() not in ("1", "true", "yes"):
+            return
+        now = time.time()
+        if now - self._diag_last.get(key, 0) < secs:
+            return
+        self._diag_last[key] = now
+        self.log(text)
+
+    def _meta_for(self, user, kind):
+        """_user_meta + diagnóstico throttled dos níveis observados."""
+        meta = self._user_meta(user)
+        try:
+            uid = str(getattr(user, "id", None) or self._display_name(user))
+            self._diag_log(
+                f"nivel_{kind}_{uid}",
+                f"[nivel] {kind} @{self._display_name(user)} gifter={meta.get('gifter_level')} "
+                f"fan={meta.get('fan_club_level')} club={meta.get('fan_club_name') or '-'}",
+                secs=20.0,
+            )
+        except Exception:
+            pass
+        return meta
 
     @staticmethod
     def _event_create_time(event) -> int:
@@ -171,7 +239,7 @@ class TikTokLiveHandler:
             nickname=self._nickname(user),
             avatar=self._avatar(user),
             text=str(getattr(event, "comment", "") or getattr(event, "content", "")),
-            user_meta=self._user_meta(user),
+            user_meta=self._meta_for(user, "evt"),
             room_id=rid or self._room_id,
             event_id=mid,
         )
@@ -202,7 +270,7 @@ class TikTokLiveHandler:
             gift_id=gift_id,
             diamond_count=diamond_count,
             repeat_count=repeat_count,
-            user_meta=self._user_meta(user),
+            user_meta=self._meta_for(user, "evt"),
             room_id=rid or self._room_id,
             event_id=mid,
         )
@@ -224,6 +292,48 @@ class TikTokLiveHandler:
                 await self.on_follow_cb(user=self._display_name(user), nickname=self._nickname(user),
                                         avatar=self._avatar(user), user_meta=self._user_meta(user),
                                         room_id=rid or self._room_id, event_id=mid)
+
+    async def _on_barrage(self, event: BarrageEvent):
+        msg_type = int(getattr(event, "msg_type", 0) or 0)
+        flp = getattr(event, "fans_level_param", None)
+        ugp = getattr(event, "user_grade_param", None)
+        if msg_type in (4, 7, 8, 9, 10, 11, 13):  # subscribe/upgrades/entradas/galeria
+            self._diag_log(
+                f"barrage_{msg_type}",
+                f"[nivel][barrage] type={msg_type} "
+                f"fans_grade={getattr(flp, 'current_grade', None) if flp else None} "
+                f"gifter_grade={getattr(ugp, 'current_grade', None) if ugp else None}",
+                secs=10.0,
+            )
+        if not self.on_level_up_cb or self._is_backlog(event):
+            return
+        axis = None
+        param = None
+        if msg_type == int(BarrageMessageBarrageType.USER_UPGRADE):
+            axis = "gifter"          # nível de presenteador (pay grade)
+            param = getattr(event, "user_grade_param", None)
+        elif msg_type == int(BarrageMessageBarrageType.FANS_LEVEL_UPGRADE):
+            axis = "fanclub"         # nível de membro/fã-clube
+            param = getattr(event, "fans_level_param", None)
+        if axis is None:
+            return
+        level = int(getattr(param, "current_grade", 0) or 0) if param else 0
+        user = (getattr(param, "user", None) if param else None) or getattr(event, "user", None)
+        if level <= 0 or user is None:
+            return
+        rid, mid = self._event_ids(event)
+        meta = self._meta_for(user, f"barrage_{axis}")
+        meta["gifter_level" if axis == "gifter" else "fan_club_level"] = level
+        await self.on_level_up_cb(
+            user=self._display_name(user),
+            nickname=self._nickname(user),
+            avatar=self._avatar(user),
+            user_meta=meta,
+            axis=axis,
+            level=level,
+            room_id=rid or self._room_id,
+            event_id=mid,
+        )
 
     async def _on_like(self, event: LikeEvent):
         if not self.on_like_cb:
@@ -258,7 +368,7 @@ class TikTokLiveHandler:
             nickname=self._nickname(user),
             avatar=self._avatar(user),
             like_count=like_count,
-            user_meta=self._user_meta(user),
+            user_meta=self._meta_for(user, "evt"),
             room_id=rid or self._room_id,
             event_id=mid,
         )
@@ -271,6 +381,7 @@ class TikTokLiveHandler:
         await self.on_join_cb(
             user=self._display_name(user),
             nickname=self._nickname(user),
+            user_meta=self._meta_for(user, "evt"),
             room_id=rid or self._room_id,
             event_id=mid,
         )
@@ -295,6 +406,7 @@ class TikTokLiveHandler:
             client.add_listener(CommentEvent, self._on_comment)
             client.add_listener(ShareEvent, self._on_share)
             client.add_listener(FollowEvent, self._on_follow)
+            client.add_listener(BarrageEvent, self._on_barrage)
             client.add_listener(GiftEvent, self._on_gift)
             client.add_listener(LikeEvent, self._on_like)
             client.add_listener(JoinEvent, self._on_join)
@@ -319,7 +431,15 @@ class TikTokLiveHandler:
                 self._emit_status("waiting")
                 self.log(f"[TikTokLive] @{self.username} nao esta ao vivo. Verificando novamente em {backoff}s...")
             except Exception as e:
-                self.log(f"[TikTokLive] ERRO: {type(e).__name__}: {e}")
+                self.log({
+                    "text": "[TikTokLive] Falha na conexão com o provedor.",
+                    "category": "error",
+                    "level": "error",
+                    "event": "tiktoklive.connection.failed",
+                    "source": "python",
+                    "code": "TIKTOKLIVE_CONNECTION_FAILED",
+                    "details": {"error_type": type(e).__name__},
+                })
                 self._connected = False
                 self._emit_status("waiting")
             finally:

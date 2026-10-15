@@ -5,6 +5,35 @@ Extrações: get_rank_color, DEFAULT_SETTINGS, normalize_settings, emit.
 """
 import json
 import unicodedata
+from contextvars import ContextVar
+
+
+_SESSION_ID = ContextVar("tikplay_daemon_session_id", default=None)
+_ACTIVE_SESSION_IDS = {}
+
+
+def bind_session_id(session_id):
+    """Vincula session_id à task atual e às tasks filhas (asyncio context)."""
+    return _SESSION_ID.set(str(session_id) if session_id else None)
+
+
+def reset_session_id(token):
+    _SESSION_ID.reset(token)
+
+
+def set_active_session_id(tenant_id, session_id):
+    if tenant_id is None:
+        return
+    if session_id:
+        _ACTIVE_SESSION_IDS[tenant_id] = str(session_id)
+    else:
+        _ACTIVE_SESSION_IDS.pop(tenant_id, None)
+
+
+def clear_active_session_id(tenant_id, expected_session_id=None):
+    current = _ACTIVE_SESSION_IDS.get(tenant_id)
+    if current is not None and (expected_session_id is None or current == str(expected_session_id)):
+        _ACTIVE_SESSION_IDS.pop(tenant_id, None)
 
 
 def get_rank_color(rank: int) -> str:
@@ -97,8 +126,13 @@ def normalize_settings(raw) -> dict:
     return settings
 
 
-def emit(tenant_id, type_, payload):
+def emit(tenant_id, type_, payload, session_id=None):
     out = {"tenant_id": tenant_id, "type": type_}
+    sid = session_id or _SESSION_ID.get()
+    if not sid and tenant_id is not None:
+        sid = _ACTIVE_SESSION_IDS.get(tenant_id)
+    if sid:
+        out["session_id"] = str(sid)
     if type_ == "status":
         out["status"] = payload
     elif type_ == "game":
@@ -106,8 +140,12 @@ def emit(tenant_id, type_, payload):
     elif type_ in ("interaction", "live_session", "viewer_level"):
         out[type_] = payload
     elif type_ == "log" and isinstance(payload, dict):
-        # Log estruturado: {text, game?, level?} — diagnóstico por jogo no painel
+        # Compatível com o legado; logs estruturados preservam categoria/evento/origem.
         out.update(payload)
+        out.setdefault("source", "python")
+    elif type_ == "log":
+        out["text"] = payload
+        out["source"] = "python"
     else:
         out["text"] = payload
     print(json.dumps(out, ensure_ascii=False), flush=True)

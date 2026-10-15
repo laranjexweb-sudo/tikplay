@@ -1,6 +1,7 @@
 // Daemon Python (spawn/IO/vida) — extraído de server.js na Fase B da separação estrutural.
 // Sem mudança de comportamento: mesmo spawn, parsing de stdout (JSON), stderr, backoff e respawn.
 const { spawn } = require("child_process");
+const { processLog } = require("./process-log");
 
 class Daemon {
   /**
@@ -23,6 +24,8 @@ class Daemon {
     this.pid = null;
     this.backoff = 1000;
     this.timer = null;
+    this.lastInvalidStdoutLogAt = 0;
+    this.invalidStdoutCount = 0;
   }
 
   start() {
@@ -54,6 +57,15 @@ class Daemon {
           try {
             msg = JSON.parse(line);
           } catch {
+            this.invalidStdoutCount++;
+            const now = Date.now();
+            if (now - this.lastInvalidStdoutLogAt >= 5000) {
+              processLog({ category: "diagnostic", level: "warning", event: "daemon.stdout.invalid_json",
+                message: "Linhas não JSON do daemon foram descartadas.", code: "DAEMON_STDOUT_INVALID_JSON",
+                details: { dropped_count: this.invalidStdoutCount, last_line_length: line.length } });
+              this.invalidStdoutCount = 0;
+              this.lastInvalidStdoutLogAt = now;
+            }
             continue;
           }
           if (this.onMessage) this.onMessage(msg);
@@ -69,7 +81,9 @@ class Daemon {
       });
 
       proc.on("error", (err) => {
-        console.error("[Daemon] Erro ao iniciar:", err.message);
+        processLog({ category: "error", level: "error", event: "daemon.spawn.failed",
+          message: "Não foi possível iniciar o daemon Python.", code: "DAEMON_SPAWN_FAILED",
+          details: { error_type: err && err.name || "Error" } });
         this.proc = null;
         this.pid = null;
         if (this.onDown) this.onDown();
@@ -77,14 +91,18 @@ class Daemon {
       });
 
       proc.on("close", (code) => {
-        console.log(`[Daemon] Encerrado (codigo: ${code})`);
+        processLog({ category: "connection", level: "warning", event: "daemon.process.closed",
+          message: "Processo do daemon Python encerrado.", code: "DAEMON_PROCESS_CLOSED",
+          details: { exit_code: code } });
         this.proc = null;
         this.pid = null;
         if (this.onDown) this.onDown();
         this.schedule();
       });
     } catch (e) {
-      console.error("[Daemon] Falha ao iniciar:", e.message);
+      processLog({ category: "error", level: "error", event: "daemon.spawn.exception",
+        message: "Erro ao iniciar o daemon Python.", code: "DAEMON_SPAWN_EXCEPTION",
+        details: { error_type: e && e.name || "Error" } });
       this.schedule();
     }
   }

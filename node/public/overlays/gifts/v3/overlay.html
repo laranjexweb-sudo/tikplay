@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR" class="overlay-document">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TikPlay · Ranking de diamantes V3</title>
+  <link rel="stylesheet" href="/ui/tikplay-theme.css">
+  <link rel="stylesheet" href="/overlays/likes/v3/styles.css?v=preferences-20261015-03">
+  <style>
+    html, body { width:100%; min-height:100%; margin:0; overflow:hidden; background:transparent!important; }
+    body.overlay { width:100%; max-width:none; min-height:100vh; }
+    .gift-position { position:absolute; left:0; top:0; width:360px; max-width:100%; transform-origin:top left; }
+    .gift-ranking { width:360px; max-width:100%; color:#f7f9ff; }
+    .gift-ranking .rows { display:grid; gap:8px; }
+    .gift-ranking .row { display:grid; grid-template-columns:58px minmax(0,1fr); gap:10px; min-height:48px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+    .gift-ranking .row.rank-1,.gift-ranking .row.rank-2,.gift-ranking .row.rank-3 { width:max-content; max-width:100%; grid-template-columns:74px minmax(0,170px)!important; grid-auto-flow:column; min-height:68px; border:0; }
+    .gift-ranking .row.rank-1>.gift-avatar-frame,.gift-ranking .row.rank-2>.gift-avatar-frame,.gift-ranking .row.rank-3>.gift-avatar-frame { grid-column:1; grid-row:1; }
+    .gift-ranking .row.rank-1>.details,.gift-ranking .row.rank-2>.details,.gift-ranking .row.rank-3>.details { grid-column:2; grid-row:1; }
+    .gift-ranking .row.rank-1 { --rank-accent:#f2c75e; }
+    .gift-ranking .row.rank-2 { --rank-accent:#c5d5e8; }
+    .gift-ranking .row.rank-3 { --rank-accent:#d98a50; }
+    .gift-ranking .rank-1,.gift-ranking .rank-2,.gift-ranking .rank-3 { color:var(--rank-accent); }
+    .gift-ranking .rank-1:before,.gift-ranking .rank-2:before,.gift-ranking .rank-3:before { display:none; }
+    .gift-avatar-frame { position:relative; display:block; width:70px; height:70px; justify-self:center; }
+    .gift-avatar-frame .avatar { position:absolute; left:18%; top:17%; width:64%; height:64%; border-radius:50%; object-fit:cover; filter:none; }
+    .gift-avatar-frame .avatar-fallback { display:grid; place-items:center; background:#243b59; color:#fff; font-weight:900; }
+    .gift-avatar-frame .metal-frame { position:absolute; inset:0; z-index:1; width:100%; height:100%; object-fit:contain; }
+    .gift-ranking .details { min-width:0; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+    .gift-ranking .name { display:block; min-width:0; overflow:hidden; color:#fff; font-size:18px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+    .gift-ranking .username { overflow:hidden; color:#b8c5d4; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+    .gift-ranking .total-wrap { display:flex; flex-direction:row; justify-content:flex-start; align-items:center; gap:5px; width:max-content; white-space:nowrap; flex-wrap:nowrap; }
+    .gift-ranking .coin-icon { width:16px; height:16px; flex:none; color:#ffd166; filter:drop-shadow(0 0 4px #f6b83f88); transform-origin:center; animation:coin-turn var(--coin-duration,4.5s) ease-in-out var(--coin-delay,0s) infinite; }
+    .gift-ranking .total { color:#fff; font-size:13px; font-weight:700; line-height:1.1; letter-spacing:0; }
+    @keyframes coin-turn { 0%,72%,100% { transform:rotateY(0) scale(1); filter:drop-shadow(0 0 3px #f6b83f66); } 84% { transform:rotateY(180deg) scale(1.12); filter:drop-shadow(0 0 8px #ffd166); } 92% { transform:rotateY(360deg) scale(1); filter:drop-shadow(0 0 4px #f6b83f88); } }
+    .gift-ranking .rank-1 .total { color:#f2c75e; }
+    .gift-ranking .rank-2 .total { color:#dce8f7; }
+    .gift-ranking .rank-3 .total { color:#e8a06b; }
+    .gift-ranking .metric-label { display:none; }
+    .gift-ranking .position { display:none; }
+    .gift-ranking .row:not(.rank-1):not(.rank-2):not(.rank-3) { grid-template-columns:74px minmax(0,170px); min-height:68px; }
+    .gift-ranking .plain-avatar { display:block; width:45px; height:45px; padding:0; justify-self:center; align-self:center; overflow:hidden; border-radius:50%; }
+    .gift-ranking .plain-avatar .avatar { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+    .gift-ranking .plain-avatar .avatar-fallback { display:grid; place-items:center; color:#fff; background:#243b59; font-weight:900; }
+    .gift-empty { padding:14px 0; color:#dce5f1; font-size:14px; text-shadow:0 1px 4px #000; }
+    body.demo-preview { width:100%; min-height:100%; background:transparent!important; }
+    body.demo-preview .gift-position { position:relative; left:auto; top:auto; width:100%; max-width:none; transform:none; }
+    body.demo-preview .gift-ranking { width:100%; max-width:none; }
+    body.demo-preview .gift-ranking .rows { gap:5px; }
+    body.demo-preview .gift-ranking .row { min-height:54px; grid-template-columns:58px minmax(0,130px); gap:6px; padding:0; border-radius:0; }
+    body.demo-preview .gift-ranking .row.rank-1,body.demo-preview .gift-ranking .row.rank-2,body.demo-preview .gift-ranking .row.rank-3 { width:max-content; max-width:100%; min-height:54px; grid-template-columns:58px minmax(0,130px)!important; }
+    body.demo-preview .gift-ranking .row.rank-1>.gift-avatar-frame,body.demo-preview .gift-ranking .row.rank-2>.gift-avatar-frame,body.demo-preview .gift-ranking .row.rank-3>.gift-avatar-frame { grid-column:1; grid-row:1; }
+    body.demo-preview .gift-ranking .row.rank-1>.details,body.demo-preview .gift-ranking .row.rank-2>.details,body.demo-preview .gift-ranking .row.rank-3>.details { grid-column:2; grid-row:1; }
+    body.demo-preview .gift-avatar-frame { width:54px; height:54px; }
+    body.demo-preview .gift-ranking .name { font-size:12px; }
+    body.demo-preview .gift-ranking .username { font-size:9px; }
+    body.demo-preview .gift-ranking .total { font-size:16px; }
+    body.demo-preview .gift-ranking .coin-icon { width:11px; height:11px; }
+    body.demo-preview .gift-ranking .row:not(.rank-1):not(.rank-2):not(.rank-3) { grid-template-columns:58px minmax(0,130px); min-height:54px; }
+    body.demo-preview .gift-ranking .plain-avatar { width:35px; height:35px; padding:0; justify-self:center; align-self:center; }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+  </style>
+</head>
+<body class="overlay">
+  <div class="gift-position" data-gift-position>
+    <main class="gift-ranking" aria-label="Ranking de diamantes"><ol class="rows" data-gift-rows></ol></main>
+  </div>
+  <script src="ranking.js?v=gift-ranking-v3-7"></script>
+</body>
+</html>

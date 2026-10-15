@@ -5,6 +5,13 @@
 
 html.overlay-document{background:transparent}
 
+/* Keep canvas placement independent from row content orientation. */
+body.overlay{width:100%;max-width:none;min-height:100vh}
+body.overlay .overlay-position{position:absolute;left:0;top:0;width:524px;max-width:100%;margin:0;transform-origin:top left}
+body.demo-preview .overlay-position{position:relative;left:auto;top:auto;width:100%;max-width:none;transform:none}
+body.overlay .rows .row>.details{width:100%;max-width:100%;min-width:0;overflow:hidden}
+body.overlay .rows .row>.details>.name{display:block;width:100%;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+
 /* Transform only the icon so the ranking columns stay fixed. */
 .heart svg {
   transform-box: view-box;
@@ -55,7 +62,7 @@ html.overlay-document{background:transparent}
 .avatar-slot { display:grid; width:49px; height:49px; place-items:center; }
 .avatar-slot>.avatar { grid-area:1/1; width:43px; height:43px; border-radius:50%; }
 .podium-avatar { grid-area:1/1; position:relative; display:block; width:52px; height:52px; }
-.podium-avatar .avatar { position:absolute; left:19%; top:30%; width:62%; height:62%; border-radius:50%; }
+.podium-avatar .avatar { position:absolute; left:18%; top:25%; width:64%; height:64%; border-radius:50%; }
 .metal-frame { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
 .details { min-width:0; display:grid; gap:1px; align-content:center; }
 .name { color:#5fa5ff; font-size:15px; line-height:1.18; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -176,3 +183,91 @@ body.overlay .meta,body.overlay .total {
 .ranking.photo-bottom .row .details { order:0; text-align:center; }
 .ranking.photo-bottom .row .avatar-slot { order:1; }
 .ranking:is(.photo-top,.photo-bottom) .row .meta { justify-content:center; }
+
+/* Keep long display names inside the space between portrait and likes. */
+body.overlay .rows .row { min-width:0; }
+body.overlay .rows .row .details {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+body.overlay .rows .row .name {
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  font-size:15px;
+  line-height:1.15;
+}
+
+/* V3 source canvas is fixed; rows and detail cells must share that reference. */
+body.overlay .overlay-position,
+body.overlay .ranking,
+body.overlay .rows {
+  width:430px;
+  max-width:100%;
+  min-width:0;
+}
+body.overlay .rows .row,
+body.overlay .rows .row.rank-1,
+body.overlay .rows .row.rank-2,
+body.overlay .rows .row.rank-3 {
+  display:grid;
+  width:100%;
+  min-width:0;
+  grid-template-columns:52px minmax(0,1fr);
+  column-gap:6px;
+}
+body.overlay .rows .row .avatar-slot { min-width:0; }
+body.overlay .rows .row .details { justify-self:stretch; }
+body.overlay .rows .row .meta { min-width:0; }
+
+body.overlay .ranking.photo-right .rows .row,
+body.overlay .ranking.photo-right .rows .row.rank-1,
+body.overlay .ranking.photo-right .rows .row.rank-2,
+body.overlay .ranking.photo-right .rows .row.rank-3 {
+  grid-template-columns:minmax(0,1fr) 52px;
+}
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row,
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-1,
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-2,
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-3 {
+  grid-template-columns:minmax(0,1fr);
+}
+
+/* Keep V3 tied to its configured overlay canvas instead of the browser viewport. */
+body.overlay .overlay-position,body.overlay .ranking,body.overlay .rows { width:430px; max-width:430px; min-width:0; }
+body.overlay .rows .row,body.overlay .rows .row.rank-1,body.overlay .rows .row.rank-2,body.overlay .rows .row.rank-3 { width:100%; min-width:0; grid-template-columns:52px minmax(0,1fr); column-gap:6px; }
+body.overlay .rows .row .details { display:grid; grid-template-columns:minmax(0,1fr); justify-self:stretch; width:100%; max-width:100%; min-width:0; overflow:hidden; }
+body.overlay .rows .row .name { display:block; width:100%; max-width:100%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; overflow-wrap:normal; font-size:15px; line-height:1.15; }
+body.overlay .rows .row .meta,body.overlay .rows .row .total { min-width:0; }
+body.overlay .rows .row .total { white-space:nowrap; }
+body.overlay .ranking.photo-right .rows .row,body.overlay .ranking.photo-right .rows .row.rank-1,body.overlay .ranking.photo-right .rows .row.rank-2,body.overlay .ranking.photo-right .rows .row.rank-3 { grid-template-columns:minmax(0,1fr) 52px; }
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row,body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-1,body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-2,body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row.rank-3 { grid-template-columns:minmax(0,1fr); }
+
+/* Keep podium portrait shine/frame from covering the pulsing heart. */
+body.overlay .avatar-slot { z-index:0; isolation:isolate; }
+body.overlay .rows .row .details { position:relative; z-index:1; overflow:visible; }
+body.overlay .rows .row .name { overflow:hidden; }
+body.overlay .rows .row .meta { position:relative; z-index:2; overflow:visible; }
+body.overlay .rows .row .heart { position:relative; z-index:1; flex:0 0 12px; overflow:visible; }
+body.overlay .rows .row .heart svg { display:block; overflow:visible; }
+
+
+/* V3: make streamer names compact and bound them to the actual content column. */
+body.overlay .rows .row .details { width:min(100%,190px); max-width:190px; min-width:0; justify-self:start; }
+body.overlay .rows .row .name { width:100%; max-width:100%; min-width:0; font-size:12px; line-height:1.1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+body.overlay .ranking.photo-right .rows .row .details { justify-self:end; }
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row .details { width:min(100%,190px); justify-self:center; }
+
+/* Tuned V3 name size and content width. */
+body.overlay .rows .row .details { width:min(100%,170px); max-width:170px; }
+body.overlay .rows .row .name { font-size:14px; line-height:1.12; }
+body.overlay .ranking:is(.photo-top,.photo-bottom) .rows .row .details { width:min(100%,170px); }

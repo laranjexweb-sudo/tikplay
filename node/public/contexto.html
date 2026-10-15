@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contexto TikPlay — Jogo do Dia</title>
+<style>
+  :root{
+    --tp-yellow:#fec90f; --tp-yellow-hover:#edb800;
+    --tp-black:#111315; --tp-black-2:#171a1f; --tp-black-3:#22262d;
+    --tp-surface:#ffffff; --tp-text:#e8eaf0; --tp-text-soft:#9aa1ae; --tp-text-muted:#6b7280;
+    --tp-border:#2a2f3a; --tp-red:#ff6b6b; --tp-green:#3ddc84; --tp-blue:#5b8cff;
+    --tp-radius-sm:8px; --tp-radius-md:12px; --tp-radius-lg:16px;
+    --rank-green:#10B981; --rank-lime:#84CC16; --rank-yellow:#FBBF24; --rank-orange:#F97316; --rank-red:#EF4444;
+    --tp-font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--tp-font);background:radial-gradient(1200px 600px at 50% -10%, #1b1f2a 0%, var(--tp-black) 55%);color:var(--tp-text);min-height:100vh}
+  a{color:var(--tp-yellow)}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;font-size:1.15rem}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--tp-yellow);display:inline-flex;align-items:center;justify-content:center;color:#111;font-weight:900}
+  .brand span b{color:var(--tp-yellow)}
+  .top .links{font-size:.85rem;color:var(--tp-text-soft)}
+  .tabs{display:flex;gap:8px;background:var(--tp-black-2);border:2px solid var(--tp-border);border-radius:var(--tp-radius-md);padding:6px;margin-bottom:16px}
+  .tabs button{flex:1;min-height:40px;border:2px solid transparent;border-radius:var(--tp-radius-sm);background:transparent;color:var(--tp-text-soft);font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;transition:120ms ease}
+  .tabs button:hover{color:var(--tp-text)}
+  .tabs button.active{background:var(--tp-yellow);border-color:#111;color:#111}
+  .card{background:var(--tp-black-2);border:2px solid var(--tp-border);border-radius:var(--tp-radius-lg);padding:18px;margin-bottom:16px}
+  .word-label{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--tp-text-muted);font-weight:700;margin-bottom:10px;text-align:center}
+  .stats{display:flex;gap:18px;justify-content:center;margin-top:14px;font-size:.82rem;color:var(--tp-text-soft)}
+  .stats b{color:var(--tp-text)}
+  .tension{margin-top:14px}
+  .tension .lbl{display:flex;justify-content:space-between;font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--tp-text-muted);font-weight:700;margin-bottom:6px}
+  .bar{height:12px;border-radius:99px;background:var(--tp-black-3);border:1px solid var(--tp-border);overflow:hidden}
+  .bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#5b8cff,#fec90f,#ff6b6b);transition:width .45s ease}
+  .row{display:flex;gap:10px}
+  input[type=text]{flex:1;min-height:46px;padding:0 14px;border:2px solid var(--tp-border);border-radius:var(--tp-radius-sm);background:#0e1116;color:var(--tp-text);font-size:1rem;font-family:inherit}
+  input[type=text]:focus-visible{outline:none;border-color:var(--tp-yellow);box-shadow:0 0 0 3px rgba(254,201,15,.18)}
+  button.btn{min-height:46px;padding:0 16px;border:2px solid #111;border-radius:var(--tp-radius-sm);background:var(--tp-yellow);color:#111;font-weight:800;font-family:inherit;cursor:pointer;transition:120ms ease}
+  button.btn:hover{background:var(--tp-yellow-hover)}
+  button.btn:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--tp-text);border-color:var(--tp-border)}
+  button.ghost:hover{background:var(--tp-black-3)}
+  .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .msg{min-height:20px;font-size:.85rem;color:var(--tp-text-soft);margin-top:8px;text-align:center}
+  .msg.err{color:var(--tp-red)}
+  .list{margin-top:4px}
+  .guess{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--tp-radius-sm);background:var(--tp-black-3);border-left:4px solid var(--tp-border);margin-bottom:8px;animation:fade .25s ease}
+  .guess .rk{font-weight:800;color:var(--tp-text-soft);min-width:52px;font-variant-numeric:tabular-nums}
+  .guess .wd{font-weight:700;text-transform:capitalize;flex:1}
+  .guess .tag{font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tp-yellow);border:1px solid var(--tp-yellow);border-radius:99px;padding:2px 8px}
+  .guess.rank-green{border-left-color:var(--rank-green)} .guess.rank-green .rk{color:var(--rank-green)}
+  .guess.rank-lime{border-left-color:var(--rank-lime)} .guess.rank-lime .rk{color:var(--rank-lime)}
+  .guess.rank-yellow{border-left-color:var(--rank-yellow)} .guess.rank-yellow .rk{color:var(--rank-yellow)}
+  .guess.rank-orange{border-left-color:var(--rank-orange)} .guess.rank-orange .rk{color:var(--rank-orange)}
+  .guess.rank-red{border-left-color:var(--rank-red)} .guess.rank-red .rk{color:var(--rank-red)}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .empty{color:var(--tp-text-muted);text-align:center;padding:18px;font-size:.9rem}
+  .banner{border-radius:var(--tp-radius-md);padding:14px;text-align:center;font-weight:700;margin-bottom:14px;display:none}
+  .banner.win{background:rgba(61,220,132,.12);border:2px solid var(--tp-green);color:#a8f5cd}
+  .um-stats{font-size:.8rem;color:var(--tp-text-soft);text-align:center;margin-top:6px}
+  .loading{display:none;text-align:center;color:var(--tp-yellow);font-size:.85rem;margin-top:8px}
+  .loading.on{display:block}
+  @media (max-width:520px){.brand{font-size:1rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="dot">▶</span><span>Tik<b>Play</b></span></div>
+    <div class="links"><a href="/">‹ Voltar ao site</a></div>
+  </header>
+
+  <div class="tabs">
+    <button id="tabDaily" class="active" type="button">Jogo do Dia</button>
+    <button id="tabUnlimited" type="button">Ilimitado</button>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="card">
+    <div class="word-label" id="wordLabel">Palavra secreta</div>
+    <div class="stats">
+      <span>PALPITES: <b id="statGuesses">0</b></span>
+      <span>DICAS: <b id="statHints">0/3</b></span>
+    </div>
+    <div class="tension">
+      <div class="lbl"><span>Tensão</span><span id="tensionVal">0</span></div>
+      <div class="bar"><i id="tensionFill"></i></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="guessInput" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite um palpite e pressione Enter" aria-label="Palpite">
+      <button class="btn" id="guessBtn" type="button">Chutar</button>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="hintBtn" type="button">Usar dica (3)</button>
+    </div>
+    <div class="loading" id="loading">Carregando a palavra… (a 1ª vez pode levar alguns segundos)</div>
+    <div class="msg" id="msg"></div>
+    <div class="um-stats" id="umStats" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="word-label">Seus palpites</div>
+    <div class="list" id="list"><div class="empty">Nenhum palpite ainda.</div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_DAILY = "tp_contexto_daily_v1";
+  var LS_UNLIM = "tp_contexto_unlimited_v1";
+  var MAX_HINTS = 3;
+  var mode = "daily";
+  var today = "";
+  var busy = false;
+  var clientId = getClientId();
+
+  var sessions = {
+    daily: { guesses:[], hintsUsed:0, solved:false, secret:"" },
+    unlimited: { roundId:null, guesses:[], hintsUsed:0, solved:false, secret:"" }
+  };
+  var umStats = { played:0, solved:0, streak:0, solvedWords:[] };
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  function getClientId(){
+    var key = "tp_contexto_client_id_v1";
+    try {
+      var existing = localStorage.getItem(key);
+      if (existing && /^[a-zA-Z0-9-]{16,64}$/.test(existing)) return existing;
+      var generated = window.crypto && typeof window.crypto.randomUUID === "function"
+        ? window.crypto.randomUUID()
+        : Array.from(window.crypto.getRandomValues(new Uint8Array(16)), function(b){return b.toString(16).padStart(2,"0");}).join("");
+      localStorage.setItem(key, generated);
+      return generated;
+    } catch(e) {
+      return "browser-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+  }
+
+  function rankColor(r){
+    if (r === 1) return "rank-green";
+    if (r <= 50) return "rank-lime";
+    if (r <= 300) return "rank-yellow";
+    if (r <= 1000) return "rank-orange";
+    return "rank-red";
+  }
+  function norm(w){
+    return (w||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  }
+  function setMsg(t, err){ var m=$("msg"); m.textContent=t||""; m.className="msg" + (err?" err":""); }
+  function setLoading(on){ $("loading").classList.toggle("on", !!on); }
+
+  function api(path, body){
+    var opt = { method: body ? "POST" : "GET", headers:{ "Content-Type":"application/json" } };
+    if (body) opt.body = JSON.stringify(body);
+    return fetch(path, opt).then(function(r){ return r.json().catch(function(){ return {ok:false,error:"resposta inválida"}; }); })
+      .then(function(j){ if (!j.ok) throw new Error(j.error || "erro"); return j; });
+  }
+
+  function sess(){ return sessions[mode]; }
+
+  function saveDaily(){
+    if (mode !== "daily") return;
+    var s = sessions.daily;
+    try {
+      localStorage.setItem(LS_DAILY, JSON.stringify({
+        date: today, clientId: clientId, guesses: s.guesses, hintsUsed: s.hintsUsed,
+        solved: s.solved, secret: s.solved ? s.secret : ""
+      }));
+    } catch(e){}
+  }
+  function loadDaily(){
+    try {
+      var raw = localStorage.getItem(LS_DAILY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (!d || d.date !== today || d.clientId !== clientId) return; // dia/navegador diferentes -> jogo novo
+      sessions.daily = {
+        guesses: d.guesses || [], hintsUsed: d.hintsUsed || 0,
+        solved: !!d.solved, secret: d.solved ? (d.secret || "") : ""
+      };
+    } catch(e){}
+  }
+  function saveUmStats(){ try { localStorage.setItem(LS_UNLIM, JSON.stringify(umStats)); } catch(e){} }
+  function loadUmStats(){ try { var d=JSON.parse(localStorage.getItem(LS_UNLIM)||"{}"); if(d&&typeof d==="object"){ umStats.played=d.played||0; umStats.solved=d.solved||0; umStats.streak=d.streak||0; umStats.solvedWords=Array.isArray(d.solvedWords)?d.solvedWords.filter(function(w){return typeof w==="string";}).slice(0,1500):[]; } } catch(e){} }
+
+  function tension(s){
+    if (!s.guesses.length) return 0;
+    var best = s.guesses.reduce(function(a,g){ return Math.min(a, g.rank||99999); }, 99999);
+    var q = Math.min(s.guesses.length/60, 1) * 50;
+    var r = Math.max((100-best)/100, 0) * 50;
+    return Math.round(q + r);
+  }
+
+  function render(){
+    var s = sess();
+    var done = s.solved;
+    // banner
+    var banner = $("banner");
+    if (s.solved) {
+      banner.className = "banner win"; banner.style.display = "block";
+      banner.textContent = "Você acertou! A palavra era “" + (s.secret || "?").toUpperCase() + "”.";
+    } else {
+      banner.style.display = "none";
+    }
+    $("statGuesses").textContent = s.guesses.length;
+    $("statHints").textContent = s.hintsUsed + "/" + MAX_HINTS;
+
+    var t = tension(s);
+    $("tensionFill").style.width = t + "%";
+    $("tensionVal").textContent = t;
+
+    // actions
+    $("guessInput").disabled = done || busy;
+    $("guessBtn").disabled = done || busy;
+    $("hintBtn").disabled = done || busy || s.hintsUsed >= MAX_HINTS;
+    $("hintBtn").textContent = "Usar dica (" + (MAX_HINTS - s.hintsUsed) + ")";
+
+    // list
+    var list = $("list");
+    var gs = s.guesses.slice().sort(function(a,b){ return (a.rank||0)-(b.rank||0); });
+    if (!gs.length){
+      list.innerHTML = '<div class="empty">Nenhum palpite ainda.</div>';
+    } else {
+      list.innerHTML = "";
+      gs.forEach(function(g){
+        var el = document.createElement("div");
+        el.className = "guess " + rankColor(g.rank);
+        var rk = document.createElement("div"); rk.className="rk"; rk.textContent = "#" + g.rank;
+        var wd = document.createElement("div"); wd.className="wd"; wd.textContent = g.word;
+        el.appendChild(rk); el.appendChild(wd);
+        if (g.hint){ var tag=document.createElement("span"); tag.className="tag"; tag.textContent="dica"; el.appendChild(tag); }
+        list.appendChild(el);
+      });
+    }
+
+    // unlimited stats
+    if (mode === "unlimited") {
+      $("umStats").style.display = "block";
+      $("umStats").textContent = "Ilimitado: " + umStats.solved + " acerto(s) em " + umStats.played + " jogo(s).";
+    } else {
+      $("umStats").style.display = "none";
+    }
+  }
+
+  async function newRound(){
+    if (busy) return;
+    busy = true; setLoading(true); setMsg("Sorteando palavra…"); render();
+    try {
+      var d = await api("/api/contexto/new-round", { exclude: umStats.solvedWords });
+      sessions.unlimited.roundId = d.roundId;
+      sessions.unlimited.guesses = [];
+      sessions.unlimited.hintsUsed = 0;
+      sessions.unlimited.solved = false;
+      sessions.unlimited.secret = "";
+      setMsg("");
+    } catch(e){ setMsg(e.message, true); }
+    busy = false; setLoading(false); render();
+    $("guessInput").focus();
+  }
+
+  async function submitGuess(){
+    if (busy) return;
+    var input = $("guessInput");
+    var word = (input.value || "").trim();
+    if (!word) return;
+    var s = sess();
+    if (s.solved) return;
+    var n = norm(word.split(/\s+/)[0]);
+    if (s.guesses.some(function(g){ return norm(g.word) === n; })) {
+      setMsg("Você já tentou “" + word + "”.", true);
+      input.value = ""; return;
+    }
+    busy = true; setLoading(true); setMsg("Calculando proximidade…"); render();
+    var autoAdvanceRoundId = null;
+    try {
+      var body = { mode: mode, word: word };
+      if (mode === "unlimited") body.roundId = s.roundId;
+      else body.clientId = clientId;
+      var d = await api("/api/contexto/guess", body);
+      s.guesses.push({ word: d.word, rank: d.rank, hint:false });
+      if (d.finished) { s.solved = true; s.secret = d.secret_word || d.word; }
+      if (mode === "daily") saveDaily();
+      if (mode === "unlimited" && d.finished) {
+        umStats.played++; umStats.solved++;
+        var solvedWord = norm(d.secret_word || d.word);
+        if (solvedWord && umStats.solvedWords.indexOf(solvedWord) === -1) umStats.solvedWords.push(solvedWord);
+        saveUmStats();
+        autoAdvanceRoundId = s.roundId;
+      }
+      setMsg("");
+    } catch(e){ setMsg(e.message, true); }
+    busy = false; setLoading(false); input.value = ""; render(); input.focus();
+    if (autoAdvanceRoundId) {
+      window.setTimeout(function(){
+        if (mode === "unlimited" && sessions.unlimited.roundId === autoAdvanceRoundId && sessions.unlimited.solved) newRound();
+      }, 2200);
+    }
+  }
+
+  async function useHint(){
+    if (busy) return;
+    var s = sess();
+    if (s.solved || s.hintsUsed >= MAX_HINTS) return;
+    var idx = s.hintsUsed + 1;
+    var avoid = s.guesses.map(function(g){ return g.word; });
+    busy = true; setLoading(true); setMsg("Buscando uma dica…"); render();
+    try {
+      var body = { mode: mode, index: idx, avoid: avoid };
+      if (mode === "unlimited") body.roundId = s.roundId;
+      else body.clientId = clientId;
+      var d = await api("/api/contexto/hint", body);
+      if (d.word) s.guesses.push({ word: d.word, rank: d.rank, hint:true });
+      s.hintsUsed++;
+      if (mode === "daily") saveDaily();
+      setMsg("");
+    } catch(e){ setMsg(e.message, true); }
+    busy = false; setLoading(false); render();
+  }
+
+  function switchMode(m){
+    if (mode === m) return;
+    mode = m;
+    $("tabDaily").classList.toggle("active", m === "daily");
+    $("tabUnlimited").classList.toggle("active", m === "unlimited");
+    setMsg("");
+    render();
+    if (m === "unlimited" && (!sessions.unlimited.roundId || sessions.unlimited.solved)) { newRound(); return; }
+    $("guessInput").focus();
+  }
+
+  async function boot(){
+    loadUmStats();
+    try {
+      var d = await api("/api/contexto/daily?clientId=" + encodeURIComponent(clientId));
+      today = d.date;
+    } catch(e){
+      setMsg("Não foi possível carregar o jogo do dia. " + e.message, true);
+    }
+    loadDaily();
+    render();
+    $("tabDaily").addEventListener("click", function(){ switchMode("daily"); });
+    $("tabUnlimited").addEventListener("click", function(){ switchMode("unlimited"); });
+    $("guessBtn").addEventListener("click", submitGuess);
+    $("hintBtn").addEventListener("click", useHint);
+    $("guessInput").addEventListener("keydown", function(ev){ if (ev.key === "Enter") submitGuess(); });
+    $("guessInput").focus();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

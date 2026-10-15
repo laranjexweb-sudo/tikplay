@@ -10,6 +10,7 @@
 // No motor TikTools não há event_id/room_id por evento → best-effort.
 
 const db = require("../db");
+const { processLog } = require("./process-log");
 
 function intEnv(name, def) {
   const v = parseInt(process.env[name], 10);
@@ -19,6 +20,7 @@ function intEnv(name, def) {
 const DETAIL_RETENTION_DAYS = intEnv("INTERACTIONS_DETAIL_RETENTION_DAYS", 90);
 const COMMENT_TEXT_RETENTION_DAYS = intEnv("INTERACTIONS_COMMENT_TEXT_RETENTION_DAYS", 7);
 const AGG_RETENTION_DAYS = intEnv("INTERACTIONS_AGG_RETENTION_DAYS", 730); // 24 meses
+const LEVEL_UPS_RETENTION_DAYS = intEnv("LEVEL_UPS_RETENTION_DAYS", 730);  // subidas: 24 meses
 const DAY_MS = 86400000;
 
 const FLUSH_MS = 250;
@@ -88,7 +90,9 @@ function flush() {
     return { inserted };
   } catch (e) {
     // não relança para não derrubar o caminho quente; loga e descarta o lote
-    console.error("[Interactions] falha ao gravar lote:", e && e.message);
+    processLog({ category: "error", level: "error", event: "interactions.persistence.failed",
+      message: "Falha ao gravar o lote de interações.", code: "INTERACTIONS_WRITE_FAILED",
+      details: { error_type: e && e.name || "Error", batch_size: items.length } });
     return { inserted: 0, error: e && e.message };
   }
 }
@@ -130,11 +134,14 @@ function openSession(tenant, payload) {
 }
 
 function prune(now = Date.now()) {
-  return db.pruneInteractions({
+  const res = db.pruneInteractions({
     detailCutoff: now - DETAIL_RETENTION_DAYS * DAY_MS,
     commentTextCutoff: now - COMMENT_TEXT_RETENTION_DAYS * DAY_MS,
     aggCutoff: now - AGG_RETENTION_DAYS * DAY_MS,
   });
+  // Subidas têm retenção própria (mais longa que os detalhes de interação).
+  res.level_ups = db.pruneLevelUps(now - LEVEL_UPS_RETENTION_DAYS * DAY_MS);
+  return res;
 }
 
 let _retentionTimer = null;
@@ -153,6 +160,7 @@ module.exports = {
   DETAIL_RETENTION_DAYS,
   COMMENT_TEXT_RETENTION_DAYS,
   AGG_RETENTION_DAYS,
+  LEVEL_UPS_RETENTION_DAYS,
   FLUSH_MS,
   MAX_BATCH,
   ALLOWED_TYPES,

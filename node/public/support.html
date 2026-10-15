@@ -101,6 +101,9 @@
   const panelEmbed = new URLSearchParams(location.search).get('embed') === 'panel';
   if (panelEmbed) document.body.classList.add('tp-help-embedded');
   const $ = (id) => document.getElementById(id);
+  $('newTicketCategory').required=false;
+  $('ticketSubmit').type='submit';
+  ['ticketForm','suggestionForm','ticketReplyForm'].forEach(id=>{if($(id))$(id).noValidate=true;});
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const statusNames = { novo:'Novo', em_atendimento:'Em atendimento', aguardando_usuario:'Aguardando você', resolvido:'Resolvido', fechado:'Fechado', recebida:'Recebida', em_avaliacao:'Em avaliação', planejada:'Planejada', em_desenvolvimento:'Em desenvolvimento', implementada:'Implementada', nao_planejada:'Não planejada' };
   const typeNames = { nova_funcionalidade:'Nova funcionalidade', melhoria:'Melhoria', novo_jogo:'Novo jogo', melhoria_jogo:'Melhoria de jogo', interface:'Interface', integracao:'Integração', outro:'Outro' };
@@ -141,6 +144,7 @@
   }
   function statusBadge(status) { return `<span class="tp-help-badge" data-status="${esc(status)}">${esc(statusNames[status] || status || '—')}</span>`; }
   function setNotice(id, text, error = false) { const el = $(id); el.textContent = text || ''; el.classList.toggle('tp-help-error',error); el.classList.toggle('tp-help-success',!error && !!text); }
+  function validateForm(form, noticeId) { const firstInvalid=form.querySelector(':invalid'); if(!firstInvalid)return true; setNotice(noticeId,firstInvalid.validationMessage||'Confira os campos obrigatórios antes de enviar.',true); firstInvalid.focus(); return false; }
   async function loadHomeCount() {
     try { const data = await api('/api/support/tickets?page=1&pageSize=100'); const open = (data.items || []).filter(x => !['resolvido','fechado'].includes(x.status)).length; $('openTicketCount').textContent = `${open} em aberto`; }
     catch (e) { $('openTicketCount').textContent = 'Indisponível'; }
@@ -222,7 +226,7 @@
   });
   $('newTicketPreviews').addEventListener('click',e => { const button=e.target.closest('[data-remove-file]'); if (!button) return; files.splice(Number(button.dataset.removeFile),1); renderPreviews(); });
   $('ticketForm').addEventListener('submit',async e => {
-    e.preventDefault(); const button=$('ticketSubmit'); button.disabled=true; setNotice('ticketFormNotice','Enviando chamado…');
+    e.preventDefault(); if(!validateForm(e.currentTarget,'ticketFormNotice'))return; const button=$('ticketSubmit'); button.disabled=true; setNotice('ticketFormNotice','Enviando chamado…');
     try {
       const payload={subject:$('newTicketSubject').value.trim(),message:$('newTicketMessage').value.trim(),category_id:$('newTicketCategory').value || undefined,game_id:$('newTicketGame').value || '',priority:$('newTicketPriority').value};
       const source = $('ticketForm').dataset.sourceArticleSlug || new URLSearchParams(location.search).get('artigo'); if (source) payload.source_article_slug=source;
@@ -235,15 +239,16 @@
     finally { button.disabled=false; }
   });
   $('suggestionForm').addEventListener('submit',async e => {
-    e.preventDefault(); const button=$('suggestionForm').querySelector('button[type=submit]'); button.disabled=true; setNotice('suggestionFormNotice','Enviando sugestão…');
+    e.preventDefault(); if(!validateForm(e.currentTarget,'suggestionFormNotice'))return; const button=$('suggestionForm').querySelector('button[type=submit]'); if(!button)return; button.disabled=true; setNotice('suggestionFormNotice','Enviando sugestão…');
     try { const data=await api('/api/support/suggestions',{method:'POST',body:JSON.stringify({type:$('suggestionType').value,game_id:$('suggestionGame').value || '',title:$('suggestionTitle').value.trim(),description:$('suggestionDescription').value.trim()})}); $('suggestionSuccessSummary').textContent=`Sugestão “${data.suggestion.title}” enviada. Status: ${statusNames[data.suggestion.status] || 'Recebida'}.`; history.pushState({},'', `/support.html?view=suggestion-success${panelEmbed?'&embed=panel':''}`); renderView('suggestion-success'); }
     catch(err) { setNotice('suggestionFormNotice',err.message,true); } finally { button.disabled=false; }
   });
   $('ticketReplyForm').addEventListener('submit',async e => {
-    e.preventDefault(); const button=$('ticketReplyForm').querySelector('button'); button.disabled=true;
+    e.preventDefault(); if(!validateForm(e.currentTarget,'ticketDetailNotice'))return; const button=$('ticketReplyForm').querySelector('button[type=submit],button:not([type])'); if(!button)return; button.disabled=true;
     try { await api(`/api/support/tickets/${encodeURIComponent(currentTicketId)}/messages`,{method:'POST',body:JSON.stringify({message:$('ticketReply').value.trim()})}); $('ticketReply').value=''; await loadTicket(currentTicketId); }
     catch(err) { setNotice('ticketDetailNotice',err.message,true); } finally { button.disabled=false; }
   });
+  ['ticketForm','suggestionForm','ticketReplyForm'].forEach(id=>{const form=$(id),button=form?.querySelector('button[type="submit"]');if(!form||!button)return;button.addEventListener('click',event=>{event.preventDefault();form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});});
   $('closeTicketBtn').addEventListener('click',() => { $('closeTicketNotice').textContent=''; $('closeTicketDialog').showModal(); });
   $('confirmCloseTicket').addEventListener('click',async () => { const button=$('confirmCloseTicket'); button.disabled=true; $('closeTicketNotice').textContent=''; try { await api(`/api/support/tickets/${encodeURIComponent(currentTicketId)}/close`,{method:'POST',body:'{}'}); $('closeTicketDialog').close(); await loadTicket(currentTicketId); } catch(e) { $('closeTicketNotice').textContent=e.message; } finally { button.disabled=false; } });
   $('closeTicketDialog').addEventListener('click',e => { if (e.target.matches('[data-action="cancel-close"]')) $('closeTicketDialog').close(); });

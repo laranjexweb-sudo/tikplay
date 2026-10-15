@@ -94,36 +94,77 @@ estendido. Validação Python do shape dos eventos e do reset por sala.
 
 ## 7. Níveis do usuário (presenteador / membro da comunidade)
 
-Detecta **subida de nível** por live. Duas dimensões:
-- **Presenteador** (`gifter`): nível de gasto — `user.pay_grade.level` (`gifter_grade`).
-- **Membro/comunidade** (`fanclub`): nível de fã-clube — `user.fans_club.data.level` (`fan_club_name`).
+Coleta **subidas de nível** por live, em **dois eixos explícitos** (nunca misturados):
+- **Presenteador** (`axis: "gifter"`): nível de gasto — `user.pay_grade.level` (`gifter_grade`),
+  com fallback ao helper `ExtendedUser.gifter_level`.
+- **Membro/comunidade** (`axis: "fanclub"`): nível de fã-clube — `fans_club_info.fans_level`
+  (fallback `fans_club.data.level` / `ExtendedUser.member_level`), com `fan_club_name`.
 
-**Regra de animação:** na **1ª aparição** do usuário na live o nível é apenas
-**sincronizado** (baseline + nível global conhecido), **sem evento/animacao** —
-mesmo que ele tenha subido em outra live. Só quando o nível **aumenta durante a
-nossa live** (acima do baseline da própria sala) é que há evento.
+**Regras (definidas com o produto):**
+- **Entrada na live = sincronização silenciosa** (baseline + nível global), **sem evento**,
+  mesmo que o usuário já esteja num nível alto vindo de outra live.
+- **Conta-se apenas subida ocorrida durante a live.**
+- **`before: null` quando não há baseline confiável na live** — não inventamos `after-1` nem
+  usamos um nível global possivelmente antigo. A subida ainda é registrada com o novo nível.
+- Sinais: **explícito** (barrage) + **diff** (observação). O daemon trata os barrages
+  `USER_UPGRADE` (presenteador) e `FANS_LEVEL_UPGRADE` (comunidade) — `FANS_LEVEL_ENTRANCE`
+  não é subida.
 
-**Armazenamento:**
+**Armazenamento (dedicado, com retenção maior que os detalhes):**
 - `viewer_levels` — nível global conhecido por usuário `(tenant_id, user_id)`.
 - `live_viewer_levels` — baseline por live `(tenant_id, room_id, user_id)`.
-- Subida vira **interação** `level_up` em `interactions`:
-  `value = after`, `meta = {axis:"gifter"|"fanclub", before, after}`. A divergência
-  de entrada **não** gera interação.
+- **`level_ups`** — uma linha por subida: `tenant_id, room_id, session_id, user_id, username,
+  nickname, avatar, axis, level_before (nullable), level_after, event_id, ts`.
+  - **Dedupe** por `UNIQUE(tenant_id, room_id, user_id, axis, level_after)` e por
+    `UNIQUE(tenant_id, event_id) WHERE event_id <> ''` (robusto a evento atrasado/reinício).
+  - Retenção própria: `LEVEL_UPS_RETENTION_DAYS` (default **730** = 24 meses), maior que os
+    90d dos detalhes de `interactions`.
 
-**Fluxo:** daemon emite `viewer_level` (só quando o nível é válido e mudou desde a
-última vista na sala); o **Node** compara com o baseline e, em aumento, persiste o
-`level_up` e **difunde** aos clientes.
+**Fluxo:** o daemon emite `viewer_level` (com `level_up_axis` e `event_id` quando for barrage);
+o **Node** (`lib/levels.js`) compara com o baseline (ou usa a promoção explícita), grava em
+`level_ups` (dedupe) e **difunde** aos clientes só o que for novo.
 
-**Tempo real (WS):** `{"type":"level_up","axis":"gifter"|"fanclub","before":N,"after":N,
+**Tempo real (WS):** `{"type":"level_up","axis":"gifter"|"fanclub","before":N|null,"after":N,
 "user","nickname","avatar","room_id"}` para overlays (`browserClients`) e painel (`logClients`).
 
-**APIs:** histórico por `/api/reports/events?type=level_up` (resumo/série/ranking por
-tipo também valem) e níveis atuais por `GET /api/reports/levels?room_id=` —
-com `room_id` usa o baseline da live; sem, o global. Autenticadas e escopadas por
-`req.user.id`.
+**APIs (autenticadas, escopadas por `req.user.id`):**
+- `GET /api/reports/events?type=level_up&axis=gifter|fanclub&from&to&room_id&cursor&limit`
+  (serve de `level_ups`, com filtro por eixo).
+- `GET /api/reports/summary` agora inclui `level_up: { total, gifter, fanclub, by_axis }`.
+- `GET /api/reports/levels?room_id=` — níveis atuais (baseline da live ou global).
 
-**Limites:** só ao vivo; nível ausente/`0` ignorado (não sobrescreve); fã-clube usa
-`data` principal; TikTools é best-effort (sem nível por evento na maioria dos casos).
+**Painel do streamer:** mostrar data/hora, usuário, live, eixo e **antes → depois**; quando
+`before` for `null`, exibir **“nível anterior não identificado”**.
 
-**Dependência de front-end:** escutar `level_up` para o alerta "Antes > Depois" por
-eixo; usar `/api/reports/levels` para nível atual (sem animação).
+**Limites:** só ao vivo; nível ausente/`0` ignorado (não sobrescreve); TikTools é best-effort.
+
+## 8. Geração de sessão daemon e eventos atrasados
+
+Cada `/start-game` cria `session_id` único por tenant. O daemon o anexa às mensagens
+emitidas durante a sessão (ContextVar herdado pelas tasks). O Node mantém
+`activeDaemonSessionId` e descarta mensagens de sessão antiga ou sem identidade
+que alterariam estado (status/game/interactions/live). Assim, um `waiting` atrasado
+de um username anterior não sobrescreve o `connected` atual.
+
+- Início repetido com o mesmo username/motor enquanto a sessão está armada é
+  idempotente (não cria outro handler).
+- Troca de username substitui a geração; mensagens atrasadas da geração anterior
+  são ignoradas.
+- `/stop-game` invalida a geração imediatamente; Python recebe stop cooperativo,
+  encerra/aguarda handlers filhos e só então libera a sessão para outra conexão.
+- `TIKTOK_LEVEL_DIAGNOSTICS=1` é opcional para log throttled de status atrasado.
+
+Testes: `node/tests/session-guard.test.js`, `python/tests/test_session_emission.py`
+e `python/tests/test_session_lifecycle.py`.
+
+### Diagnóstico temporário de níveis
+
+Para investigar uma live sem captura, definir `TIKTOK_LEVEL_DIAGNOSTICS=1` no
+`node/.env` e reiniciar Node/daemon **entre lives**. O handler registra (throttle
+20s por usuário) os níveis extraídos de eventos de usuário e (throttle 10s por
+tipo) barrages de upgrade/entrada; o Node registra cada `viewer_level` recebido
+e cada `level_up` persistido/difundido. Os logs permitem distinguir: (1) barrage
+ausente; (2) barrage sem `current_grade`/usuário; (3) níveis ausentes no objeto
+`user`; (4) observação recebida, mas subida descartada por baseline/dedupe.
+Desativar removendo a variável ou usando `TIKTOK_LEVEL_DIAGNOSTICS=0` após o
+diagnóstico; o processo atual só lê a variável no boot.

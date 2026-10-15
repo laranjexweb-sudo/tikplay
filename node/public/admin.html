@@ -27,26 +27,30 @@
 <link rel="stylesheet" href="/ui/tikplay-admin-site.css">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
+<link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261014-v1">
 
 </head>
 <body class="tp-super-admin">
 <aside class="tp-admin-sidebar">
   <a class="tp-admin-logo" href="/admin"><span class="tp-admin-brand-mark" aria-hidden="true"><span></span></span><span class="tp-admin-brand-name">Tik<span>Play</span></span></a>
   <div class="tp-admin-workspace"><span class="tp-admin-workspace-avatar">TP</span><div><small>WORKSPACE</small><strong>Super Admin</strong></div></div>
-  <span class="tp-admin-caption">ADMINISTRAÇÃO</span>
+  <span class="tp-admin-caption">GESTÃO</span>
   <nav class="tp-admin-nav" aria-label="Seções do Super Admin">
-    <a href="#adminDashboard">Dashboard</a>
-    <a href="#adminAccounts">Contas e permissões</a>
-    <a href="#adminInvites">Convites</a>
-    <a href="#adminRules">Regras globais</a>
-    <a href="#adminOperations">Operação local</a>
+    <a href="#adminDashboard"><span aria-hidden="true">◫</span>Dashboard</a>
+    <a href="#adminAccounts"><span aria-hidden="true">◎</span>Usuários</a>
+    <a href="#adminInvites"><span aria-hidden="true">◆</span>Convites</a>
+    <a href="#adminRules"><span aria-hidden="true">⚙</span>Regras globais</a>
+    <a href="#adminOperations"><span aria-hidden="true">⌁</span>Operação local</a>
+    <span class="tp-admin-caption">INFRAESTRUTURA</span>
+    <a href="#adminMonitor"><span aria-hidden="true">⌁</span>Monitor de Servidor</a>
+    <a href="#adminMonitor/incidents" data-admin-section="adminMonitor"><span aria-hidden="true">⚠</span>Incidentes</a>
     <span class="tp-admin-caption">SUPORTE</span>
-    <a href="#adminSupportOverview">Visão geral</a>
-    <a href="#adminSupportTickets">Chamados</a>
-    <a href="#adminSupportSuggestions">Sugestões</a>
-    <a href="#adminSupportCategories">Categorias</a>
-    <a href="#adminSupportReplies">Respostas rápidas</a>
-    <a href="#adminHelpManager">Central de Ajuda</a>
+    <a href="#adminSupportOverview"><span aria-hidden="true">?</span>Visão geral</a>
+    <a href="#adminSupportTickets"><span aria-hidden="true">◷</span>Chamados</a>
+    <a href="#adminSupportSuggestions"><span aria-hidden="true">◆</span>Sugestões</a>
+    <a href="#adminSupportCategories"><span aria-hidden="true">▦</span>Categorias</a>
+    <a href="#adminSupportReplies"><span aria-hidden="true">▤</span>Respostas rápidas</a>
+    <a href="#adminHelpManager"><span aria-hidden="true">?</span>Central de Ajuda</a>
   </nav>
   <a class="tp-admin-back" href="/painel">Painel do streamer &#8599;</a>
 </aside>
@@ -69,7 +73,7 @@
   </div>
   <div class="tp-dashboard-games"><h2>Uso por jogo</h2><div id="dashboardGameList" class="tp-dashboard-game-list"><p class="text-secondary">Dados de uso indisponíveis.</p></div></div>
   <div class="tp-admin-dashboard-heading"><h2>Atividade dos clientes</h2><label class="tp-dashboard-search" for="dashboardSearch">Buscar cliente<input id="dashboardSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label></div>
-  <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="7">Carregando contas…</td></tr></tbody></table></div>
+  <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="7">Carregando contas…</td></tr></tbody></table></div>
 </section>
 <div class="tp-admin-metrics" aria-label="Resumo de contas">
   <div><span>Total de contas</span><strong id="metricTotal">—</strong></div>
@@ -77,50 +81,41 @@
   <div><span>Planos Pro</span><strong id="metricPro">—</strong></div>
   <div><span>Contas desativadas</span><strong id="metricDisabled">—</strong></div>
 </div>
-<div class="nb-card tp-card mb-3 tp-admin-section" id="adminRules">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="m-0">Palavras Banidas <span id="bannedCount" class="badge text-bg-dark"></span></h2>
-  </div>
-  <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-    Palavras que nunca devem ser sorteadas no Palavra Secreta e no 3 Dicas (global, vale para todos os clientes). Uma palavra por linha.
-  </div>
-  <textarea id="bannedWordsInput" rows="8" class="form-control" placeholder="exemplo&#10;palavra2&#10;termo3" style="font-family:monospace;font-size:0.85rem"></textarea>
-  <div class="d-flex gap-2 mt-2 align-items-center">
+<section class="tp-admin-section tp-admin-management" id="adminRules" aria-labelledby="adminRulesHeading">
+  <header class="tp-admin-section-heading">
+    <div><h2 id="adminRulesHeading">Regras globais</h2><p>Palavras que não devem ser sorteadas em Palavra Secreta e 3 Dicas. A regra vale para todos os clientes.</p></div>
+    <span class="tp-admin-count" id="bannedCount" aria-label="Quantidade de palavras banidas">0</span>
+  </header>
+  <label class="tp-admin-field" for="bannedWordsInput">Palavras banidas <span>Uma palavra por linha</span>
+    <textarea id="bannedWordsInput" rows="8" class="form-control tp-admin-monospace" placeholder="exemplo&#10;palavra2&#10;termo3"></textarea>
+  </label>
+  <div class="tp-admin-feedback" id="bannedMsg" role="status" aria-live="polite"></div>
+</section>
 
-    <span class="text-secondary" style="font-size:0.75rem" id="bannedMsg" role="status" aria-live="polite"></span>
-  </div>
-</div>
-
-<div class="nb-card tp-card mb-3 tp-admin-section" id="adminInvites">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="m-0">Convites de Cadastro</h2>
-    <div class="d-flex gap-2 align-items-center">
-      <label class="text-secondary" style="font-size:0.8rem">Validade:
-        <input type="number" id="inviteDays" value="7" min="0" max="365" style="width:70px">
-        dias (0 = sem expiração)
-      </label>
-      <button class="btn btn-nb btn-success" onclick="generateInvite()">Gerar novo convite</button>
+<section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
+  <header class="tp-admin-section-heading tp-admin-section-heading-wrap">
+    <div><h2 id="adminInvitesHeading">Convites</h2><p>Gerencie convites de uso único. Sem um convite válido, o cadastro permanece bloqueado.</p></div>
+    <div class="tp-admin-inline-controls">
+      <label class="tp-admin-field tp-admin-field-compact" for="inviteDays">Validade <span>0 = sem expiração</span><input type="number" id="inviteDays" value="7" min="0" max="365"></label>
+      <button type="button" class="btn btn-nb btn-success" onclick="generateInvite()">Gerar convite</button>
     </div>
-  </div>
-  <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">
-    Cada convite é de uso único. Compartilhe o link com a pessoa; sem convite o cadastro fica bloqueado.
-  </div>
+  </header>
   <div class="table-responsive">
-    <table class="table table-striped align-middle">
+    <table class="table table-striped align-middle tp-admin-table">
       <thead>
         <tr><th>Status</th><th>Criado em</th><th>Expira</th><th>Usado por</th><th>Ações</th></tr>
       </thead>
-      <tbody id="inviteTable"></tbody>
+      <tbody id="inviteTable"><tr><td colspan="5">Carregando convites…</td></tr></tbody>
     </table>
   </div>
-  <div class="text-secondary" style="font-size:0.8rem" id="inviteMsg"></div>
-</div>
+  <div class="tp-admin-feedback" id="inviteMsg" role="status" aria-live="polite"></div>
+</section>
 
-<div class="nb-card tp-card tp-admin-section" id="adminAccounts">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="m-0">Clientes <span id="userCount" class="badge text-bg-dark"></span></h2>
-    <button class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar Conta</button>
-  </div>
+<section class="tp-admin-section tp-admin-management" id="adminAccounts" aria-labelledby="adminAccountsHeading">
+  <header class="tp-admin-section-heading tp-admin-section-heading-wrap">
+    <div><h2 id="adminAccountsHeading">Usuários <span id="userCount" class="tp-admin-count">0</span></h2><p>Contas, permissões, plano e atividade dos clientes.</p></div>
+    <button type="button" class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar conta</button>
+  </header>
 
   <div class="tp-admin-toolbar">
     <label for="adminSearch">Buscar cliente<input id="adminSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label>
@@ -128,48 +123,48 @@
     <button type="button" class="btn btn-nb btn-dark" id="adminRefresh">Atualizar</button>
     <span id="adminLoadMsg" role="status" aria-live="polite"></span>
   </div>
-  <div id="userFormCard" class="mb-3 p-3 bg-light border border-dark rounded" style="display:none">
-    <div id="userFormTitle" style="font-weight:800;margin-bottom:8px">Nova conta</div>
+  <div id="userFormCard" class="tp-admin-user-form" style="display:none">
+    <div id="userFormTitle" class="tp-admin-form-title">Nova conta</div>
     <div class="row g-2">
-      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Nome</label><input type="text" class="form-control form-control-sm" id="uName"></div>
-      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Email</label><input type="email" class="form-control form-control-sm" id="uEmail"></div>
-      <div class="col-md-4"><label class="form-label mb-0" style="font-size:0.8rem">Senha (min 8)</label><input type="password" class="form-control form-control-sm" id="uPassword" autocomplete="new-password"></div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Plano</label>
+      <div class="col-md-4"><label class="form-label mb-0" for="uName">Nome</label><input type="text" class="form-control form-control-sm" id="uName"></div>
+      <div class="col-md-4"><label class="form-label mb-0" for="uEmail">E-mail</label><input type="email" class="form-control form-control-sm" id="uEmail"></div>
+      <div class="col-md-4"><label class="form-label mb-0" for="uPassword">Senha <span>(mínimo 8 caracteres)</span></label><input type="password" class="form-control form-control-sm" id="uPassword" autocomplete="new-password"></div>
+      <div class="col-md-3"><label class="form-label mb-0" for="uPlan">Plano</label>
         <select class="form-select form-select-sm" id="uPlan">
           <option value="free">free</option>
           <option value="pro_mensal">pro_mensal</option>
           <option value="pro_anual">pro_anual</option>
         </select>
       </div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">Role</label>
+      <div class="col-md-3"><label class="form-label mb-0" for="uRole">Permissão</label>
         <select class="form-select form-select-sm" id="uRole">
           <option value="user">user</option>
           <option value="admin">admin</option>
         </select>
       </div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">TikTok</label><input type="text" class="form-control form-control-sm" id="uTikTok"></div>
-      <div class="col-md-3"><label class="form-label mb-0" style="font-size:0.8rem">API Key Tik.Tools</label><input type="text" class="form-control form-control-sm" id="uApiKey"></div>
+      <div class="col-md-3"><label class="form-label mb-0" for="uTikTok">Usuário TikTok</label><input type="text" class="form-control form-control-sm" id="uTikTok"></div>
+      <div class="col-md-3"><label class="form-label mb-0" for="uApiKey">Chave da API Tik.Tools</label><input type="text" class="form-control form-control-sm" id="uApiKey"></div>
     </div>
-    <div class="mt-3 p-2 bg-white border border-dark rounded">
+    <div class="tp-admin-feature-box">
       <div class="d-flex justify-content-between align-items-center mb-1">
-        <span style="font-weight:800;font-size:0.85rem">Funcionalidades liberadas</span>
+        <span class="tp-admin-form-title">Funcionalidades liberadas</span>
         <span>
           <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(true)">Todas</button>
           <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(false)">Nenhuma</button>
         </span>
       </div>
       <div class="d-flex flex-wrap gap-3" id="featuresBox"></div>
-      <div class="text-secondary" style="font-size:0.72rem;margin-top:4px">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
+      <div class="text-secondary tp-admin-help">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
     </div>
     <div class="d-flex gap-2 mt-3 align-items-center">
-      <button class="btn btn-nb btn-success btn-sm" onclick="submitUser()">Salvar</button>
-      <button class="btn btn-nb btn-dark btn-sm" onclick="toggleUserForm()">Cancelar</button>
-      <span class="text-secondary" style="font-size:0.75rem" id="userFormMsg"></span>
+      <button type="button" class="btn btn-nb btn-success" onclick="submitUser()">Salvar usuário</button>
+      <button type="button" class="btn btn-nb btn-dark" onclick="toggleUserForm()">Cancelar</button>
+      <span class="tp-admin-feedback" id="userFormMsg" role="status" aria-live="polite"></span>
     </div>
   </div>
 
   <div class="table-responsive">
-    <table class="table table-striped align-middle">
+    <table class="table table-striped align-middle tp-admin-table tp-admin-users-table">
       <thead>
         <tr>
           <th>#</th>
@@ -182,45 +177,78 @@
           <th>Sala</th>
           <th>Uso atual</th>
           <th>Conta criada</th>
-          <th>Acoes</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="userTable"></tbody>
     </table>
   </div>
-</div>
+</section>
 
-<div class="nb-card tp-card mt-3 tp-admin-section" id="adminOperations">
-  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="mb-4 p-3 bg-light border border-dark rounded">
-    <h2 id="giftCatalogAdminTitle">Catálogo global de gifts</h2>
-    <p class="text-secondary" style="font-size:0.85rem">Sincronize os presentes compartilhados do TikTok. Os filtros mínimo e máximo dos seletores no painel são buscas locais e não alteram esta operação.</p>
+<section class="tp-admin-section tp-admin-management" id="adminOperations" aria-labelledby="adminOperationsHeading">
+  <header class="tp-admin-section-heading">
+    <div><h2 id="adminOperationsHeading">Operação local</h2><p>Execute tarefas administrativas neste servidor e acompanhe o processo em tempo real.</p></div>
+  </header>
+  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
+    <div class="tp-admin-operation-heading"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>Sincronize os presentes compartilhados do TikTok. Os filtros dos seletores no painel são buscas locais e não alteram esta operação.</p></div></div>
     <div class="d-flex flex-wrap align-items-center gap-2">
       <button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar catálogo</button>
       <span class="text-secondary" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
     </div>
   </section>
-  <h2>Gerar Contextos (Local)</h2>
-  <div class="mb-2 d-flex flex-wrap align-items-center gap-3">
-    <label class="text-secondary" style="font-size:0.85rem">Intervalo entre alvos (min): <input type="number" id="ctxInterval" value="15" min="1" style="width:70px"></label>
-    <label class="text-secondary" style="font-size:0.85rem">Palavras por contexto: <input type="number" id="ctxWords" value="1000" min="100" step="100" style="width:90px"></label>
-    <label class="text-secondary" style="font-size:0.85rem">Limite (0 = todos): <input type="number" id="ctxLimit" value="0" min="0" style="width:70px"></label>
+  <div class="tp-admin-operation-block">
+  <div class="tp-admin-operation-heading"><div><h3>Gerar contextos</h3><p>Configure o volume e o intervalo da geração local de contextos.</p></div></div>
+  <div class="tp-admin-operation-fields">
+    <label class="tp-admin-field" for="ctxInterval">Intervalo entre alvos <span>Minutos</span><input type="number" id="ctxInterval" value="15" min="1"></label>
+    <label class="tp-admin-field" for="ctxWords">Palavras por contexto <span>Mínimo: 100</span><input type="number" id="ctxWords" value="1000" min="100" step="100"></label>
+    <label class="tp-admin-field" for="ctxLimit">Limite de contextos <span>0 = todos</span><input type="number" id="ctxLimit" value="0" min="0"></label>
   </div>
-  <div class="d-flex gap-2 mb-2">
-    <button class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()">Ativar Geração Automática</button>
-    <button class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
+  <div class="tp-admin-operation-actions">
+    <button type="button" class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()">Ativar geração</button>
+    <button type="button" class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
   </div>
-  <div class="progress" style="height:22px">
+  <div class="progress tp-admin-progress" role="progressbar" aria-label="Progresso da geração">
     <div class="progress-bar" id="ctxBar" style="width:0%">0/0</div>
   </div>
-  <div class="text-secondary mt-2" style="font-size:0.85rem">
+  <div class="tp-admin-operation-status">
     Palavra atual: <b id="ctxCurrent">-</b> &nbsp;|&nbsp; Erros: <b id="ctxErrors">0</b>
   </div>
-  <div class="text-secondary" style="font-size:0.75rem" id="ctxMsg"></div>
-  <div class="mt-2">
-    <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">Log de geração</div>
-    <div id="ctxLog" style="background:#1e1e1e;color:#e5e7eb;font-family:Consolas,monospace;font-size:0.72rem;padding:8px;border-radius:6px;max-height:260px;overflow-y:auto;white-space:pre-wrap;line-height:1.5"></div>
+  <div class="tp-admin-feedback" id="ctxMsg" role="status" aria-live="polite"></div>
+  <div class="tp-admin-log-wrap">
+    <div class="tp-admin-log-title">Log de geração</div>
+    <div id="ctxLog"></div>
   </div>
-</div>
+  </div>
+</section>
+
+<section class="tp-admin-section tp-admin-monitor" id="adminMonitor" hidden aria-labelledby="monitorHeading">
+  <div class="tp-monitor-head">
+    <div><div class="tp-monitor-eyebrow"><i></i>INFRAESTRUTURA</div><h1 id="monitorHeading">Monitor de <span>Servidor</span></h1><p>Acompanhe saúde, serviços, host, banco, WebSocket e incidentes da plataforma.</p></div>
+    <div class="tp-monitor-actions"><span class="tp-monitor-connection" id="realtimeStatus" data-connected="false">Tempo real desconectado</span><label>Atualização<select id="pollInterval"><option value="15000">15 segundos</option><option value="30000">30 segundos</option><option value="60000">1 minuto</option></select></label><button class="tp-monitor-btn" id="wallboardBtn">Modo wallboard</button><button class="tp-monitor-btn" id="monitorRefresh">Atualizar</button><button class="tp-monitor-btn tp-monitor-btn-primary" id="fullscreenBtn">Tela cheia</button></div>
+  </div>
+  <p class="tp-monitor-notice" id="monitorNotice" role="status" aria-live="polite" hidden></p>
+  <div class="tp-monitor-overall" id="overallStrip"><div class="tp-monitor-overall-main"><span class="tp-monitor-health-dot" id="healthOrb"></span><div><small>STATUS GERAL</small><strong id="overallText">Carregando</strong><span id="overallDetail">Consultando serviços…</span></div></div><div class="tp-monitor-overall-meta"><div><small>AMBIENTE</small><b id="environmentValue">—</b></div><div><small>HOST</small><b id="hostValue">—</b></div><div><small>UPTIME</small><b id="uptimeValue">—</b></div><div><small>ÚLTIMO SNAPSHOT</small><b id="snapshotValue">—</b></div></div></div>
+  <div class="tp-monitor-kpis">
+    <article class="tp-monitor-kpi"><small>SERVIÇOS SAUDÁVEIS</small><strong id="servicesOk">—</strong><span id="servicesMeta">Aguardando dados</span></article><article class="tp-monitor-kpi"><small>STREAMERS ONLINE</small><strong id="streamersOnline">—</strong><span id="sessionsMeta">Sessões ativas: —</span></article><article class="tp-monitor-kpi"><small>LATÊNCIA API p95</small><strong id="latencyP95">—</strong><span id="latencyMeta">p50 — · p99 —</span></article><article class="tp-monitor-kpi"><small>TAXA DE ERRO · 5 MIN</small><strong id="errorRate">—</strong><span id="errorMeta">— erros</span></article><article class="tp-monitor-kpi"><small>CPU</small><strong id="cpuValue">—</strong><span id="cpuMeta">Uso do host</span></article><article class="tp-monitor-kpi"><small>MEMÓRIA</small><strong id="ramValue">—</strong><span id="ramMeta">—</span></article>
+  </div>
+  <div class="tp-monitor-section-heading"><div><small>SERVIÇOS</small><h2>Saúde da plataforma</h2><p>Status consolidado dos componentes monitorados.</p></div><div class="tp-monitor-legend"><span><i class="healthy"></i>Saudável</span><span><i class="warning"></i>Atenção</span><span><i class="critical"></i>Crítico</span></div></div>
+  <div class="tp-monitor-services" id="servicesGrid"></div>
+  <div class="tp-monitor-grid tp-monitor-grid-main">
+    <article class="tp-monitor-panel"><header><h3>Latência da API</h3><span id="latencyWindow">últimos 60 min</span></header><div class="tp-monitor-chart-summary"><div><small>p50</small><strong id="latP50">—</strong></div><div><small>p95</small><strong id="latP95">—</strong></div><div><small>p99</small><strong id="latP99">—</strong></div></div><div class="tp-monitor-chart" id="latencyChart"></div></article>
+    <article class="tp-monitor-panel"><header><h3>Host · CPU, RAM e disco</h3><span>60 min</span></header><div class="tp-monitor-gauges"><div><i id="cpuGauge"><b>—</b></i><small>CPU</small></div><div><i id="ramGauge"><b>—</b></i><small>RAM</small></div><div><i id="diskGauge"><b>—</b></i><small>DISCO</small></div></div><div class="tp-monitor-chart compact" id="hostChart"></div></article>
+  </div>
+  <div class="tp-monitor-grid tp-monitor-grid-secondary">
+    <article class="tp-monitor-panel"><header><h3>Requisições e erros</h3><span>por minuto</span></header><div class="tp-monitor-chart" id="requestsChart"></div></article>
+    <article class="tp-monitor-panel"><header><h3>WebSocket</h3><span class="tp-monitor-status" id="wsStatus">—</span></header><div class="tp-monitor-inline-stats"><div><small>CONEXÕES</small><strong id="wsConnections">—</strong></div><div><small>EVENTOS / MIN</small><strong id="wsEvents">—</strong></div><div><small>STATUS</small><strong id="wsText">—</strong></div></div><div class="tp-monitor-chart compact" id="wsChart"></div></article>
+    <article class="tp-monitor-panel"><header><h3>Banco de dados</h3><span class="tp-monitor-status" id="dbStatus">—</span></header><dl class="tp-monitor-db"><div><dt>Leitura</dt><dd id="dbRead">—</dd></div><div><dt>Status</dt><dd id="dbText">—</dd></div><div><dt>Arquivo</dt><dd id="dbFile">SQLite</dd></div></dl><div class="tp-monitor-threshold"><span>Limite para alerta</span><strong id="dbThreshold">—</strong></div></article>
+  </div>
+  <div class="tp-monitor-section-heading" id="monitor-incidents"><div><small>INCIDENTES</small><h2>Alertas e eventos recentes</h2><p>Alertas ativos, reconhecidos e incidentes resolvidos recentemente.</p></div><button class="tp-monitor-btn" id="showAllIncidents">Ver histórico</button></div>
+  <div class="tp-monitor-grid tp-monitor-grid-incidents"><article class="tp-monitor-panel"><header><h3>Alertas ativos</h3><span id="activeAlertCount">0 ativos</span></header><div class="tp-monitor-list" id="alertList"></div></article><article class="tp-monitor-panel"><header><h3>Incidentes recentes</h3><span id="incidentCount">0</span></header><div class="tp-monitor-list" id="incidentList"></div></article></div>
+  <div class="tp-monitor-section-heading"><div><small>SAAS</small><h2>Atividade da plataforma</h2><p>Indicadores operacionais do TikPlay.</p></div></div>
+  <div class="tp-monitor-platform"><article><span>STREAMERS ONLINE</span><b id="platformStreamers">—</b></article><article><span>SESSÕES ATIVAS</span><b id="platformSessions">—</b></article><article><span>JOGOS ATIVOS</span><b id="platformGames">—</b></article><article><span>USUÁRIOS</span><b id="platformUsers">—</b></article><article><span>DAEMON</span><b id="platformDaemon">—</b></article><article><span>ALERTAS SILENCIADOS</span><b id="platformSilenced">—</b></article></div>
+  <div class="tp-monitor-wallboard" id="wallboard" aria-hidden="true"><header><div><strong>Tik<span>Play</span></strong><small>CENTRAL DE MONITORAMENTO</small></div><div><time id="wallClock">--:--:--</time><small>Produção · <b id="wallRealtime">Tempo real ativo</b></small></div><button class="tp-monitor-btn" id="wallboardClose" aria-label="Fechar wallboard">×</button></header><div class="tp-monitor-overall" id="wallOverall"><span class="tp-monitor-health-dot"></span><div><small>STATUS GERAL</small><strong id="wallStatusText">—</strong><span id="wallStatusDetail">—</span></div></div><div class="tp-monitor-wall-kpis"><div><small>SERVIÇOS</small><strong id="wallServices">—</strong><span id="wallServicesMeta">—</span></div><div><small>STREAMERS</small><strong id="wallStreamers">—</strong><span>online agora</span></div><div><small>LATÊNCIA p95</small><strong id="wallLatency">—</strong><span>API global</span></div><div><small>ERROS 5 MIN</small><strong id="wallErrors">—</strong><span id="wallErrorMeta">—</span></div><div><small>CPU</small><strong id="wallCpu">—</strong><span>host</span></div><div><small>RAM</small><strong id="wallRam">—</strong><span>host</span></div></div><div class="tp-monitor-wall-main"><div id="wallServicesGrid"></div><div><article class="tp-monitor-panel"><header><h3>Latência API</h3></header><div class="tp-monitor-chart" id="wallLatencyChart"></div></article><article class="tp-monitor-panel"><header><h3>CPU / RAM</h3></header><div class="tp-monitor-chart" id="wallHostChart"></div></article></div></div><div class="tp-monitor-wall-alerts" id="wallAlerts">Sem alertas ativos.</div></div>
+  <dialog id="monitorHistoryDialog"><form method="dialog"><header><h2>Histórico de incidentes</h2><button class="tp-monitor-btn" aria-label="Fechar histórico">×</button></header><div class="tp-monitor-history-filters"><label>Status<select id="incidentStatusFilter"><option value="all">Todos</option><option value="open">Abertos</option><option value="acknowledged">Reconhecidos</option><option value="resolved">Resolvidos</option></select></label></div><div class="tp-monitor-history-list" id="incidentHistoryList"></div></form></dialog>
+</section>
 
 <section class="tp-admin-section tp-support-admin" id="adminSupportOverview" hidden>
   <div class="tp-support-admin-heading"><div><h2>Suporte · Visão geral</h2><p>Volume atual de chamados e sugestões.</p></div><button type="button" class="btn btn-nb btn-dark" id="supportOverviewRefresh">Atualizar</button></div>
@@ -280,14 +308,17 @@
 <script>
 function selectAdminSection() {
   const links = [...document.querySelectorAll('.tp-admin-nav a')];
-  const selected = links.find(link => link.hash === location.hash) || links[0];
-  for (const section of document.querySelectorAll('.tp-admin-section')) section.hidden = '#' + section.id !== selected.hash;
+  const selected = links.find(link => link.hash === location.hash) || links.find(link => link.hash.split('/')[0] === location.hash) || links[0];
+  const sectionId = selected.dataset.adminSection || selected.hash.slice(1).split('/')[0];
+  for (const section of document.querySelectorAll('.tp-admin-section')) section.hidden = section.id !== sectionId;
   for (const link of links) {
     if (link === selected) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  document.getElementById('adminPageTitle').textContent = selected.textContent;
+  document.getElementById('adminPageTitle').textContent = selected.lastChild.textContent.trim();
   document.querySelector('.tp-admin-metrics').hidden = selected.hash !== '#adminAccounts';
+  window.TikPlayMonitor?.setActive(sectionId === 'adminMonitor');
+  if (sectionId === 'adminMonitor' && location.hash.endsWith('/incidents')) document.getElementById('monitor-incidents')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 window.addEventListener('hashchange', selectAdminSection);
 selectAdminSection();
@@ -382,6 +413,12 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function formatAdminDate(value) {
+  if (!value) return "—";
+  const date = new Date(String(value).includes("T") ? value : `${value.replace(" ", "T")}Z`);
+  return Number.isFinite(date.getTime()) ? date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : String(value);
+}
+
 let usersData = [];
 let editingId = null;
 
@@ -402,17 +439,22 @@ async function loadInvites() {
       const isActive = inv.status === "active";
       tr.innerHTML = `
         <td>${inviteStatusBadge(inv.status)}</td>
-        <td><code>${esc(inv.created_at)}</code></td>
-        <td>${inv.expires_at ? `<code>${esc(inv.expires_at)}</code>` : "sem expiração"}</td>
+        <td><time>${esc(formatAdminDate(inv.created_at))}</time></td>
+        <td>${inv.expires_at ? `<time>${esc(formatAdminDate(inv.expires_at))}</time>` : "Sem expiração"}</td>
         <td>${inv.used_by_email ? esc(inv.used_by_email) : "—"}</td>
-        <td class="d-flex gap-2 flex-wrap">
+        <td><div class="tp-admin-row-actions">
           ${isActive ? `<button class="btn btn-nb btn-dark" onclick="copyInviteLink('${esc(inv.token)}')">Copiar link</button>
           <button class="btn btn-nb btn-danger" onclick="revokeInvite(${inv.id})">Revogar</button>` : ""}
-        </td>
+        </div></td>
       `;
       tbody.appendChild(tr);
     }
-  } catch (e) {}
+    if (!tbody.children.length) tbody.innerHTML = '<tr><td colspan="5">Nenhum convite encontrado.</td></tr>';
+  } catch (e) {
+    const tbody = document.getElementById("inviteTable");
+    tbody.innerHTML = '<tr><td colspan="5">Não foi possível carregar os convites.</td></tr>';
+    document.getElementById("inviteMsg").textContent = e.message || "Falha ao carregar convites.";
+  }
 }
 
 async function generateInvite() {
@@ -556,7 +598,7 @@ function renderAdminUsage(activity) {
     ['Painel', typeof a.panel_online === 'boolean' ? (a.panel_online ? 'Online' : 'Offline') : 'Indisponível'],
     ['TikTok', Object.hasOwn(states, a.tiktok_status) ? states[a.tiktok_status] : 'Indisponível'],
     ['Jogo atual', a.game_name ? String(a.game_name) + (Object.hasOwn(gameStates, a.game_status) ? ' · ' + gameStates[a.game_status] : '') : (a.game_status === 'idle' ? 'Sem partida' : 'Indisponível')],
-    ['Última atividade', timestamp && Number.isFinite(timestamp.getTime()) ? timestamp.toLocaleString('pt-BR') : 'Indisponível']
+    ['Última atividade', timestamp && Number.isFinite(timestamp.getTime()) ? formatAdminDate(timestamp.toISOString()) : 'Indisponível']
   ];
   return '<dl class="tp-admin-usage">' + values.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('') + '</dl>';
 }
@@ -582,12 +624,18 @@ function renderAdminUsers() {
       <td>${esc(u.tiktok_username) || "-"}</td>
       <td><code>${esc(u.room_code)}</code></td>
       <td>${renderAdminUsage(u.activity)}</td>
-      <td>${esc(u.created_at)}</td>
-      <td class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-nb ${u.status === "active" ? "btn-danger" : "btn-success"}" onclick="toggleStatus(${u.id}, '${u.status === "active" ? "disabled" : "active"}')">${toggleLabel}</button>
-        <button class="btn btn-nb btn-warn" onclick="resetPassword(${u.id})">Resetar Senha</button>
-        <button class="btn btn-nb btn-dark" onclick="editUser(${u.id})">Editar</button>
-      </td>
+      <td><time>${esc(formatAdminDate(u.created_at))}</time></td>
+      <td><div class="tp-admin-row-actions">
+        <button type="button" class="btn btn-nb tp-admin-icon-action ${u.status === "active" ? "btn-danger" : "btn-success"}" aria-label="${toggleLabel} conta de ${esc(u.name)}" title="${toggleLabel} conta" onclick="toggleStatus(${u.id}, '${u.status === "active" ? "disabled" : "active"}')">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+        </button>
+        <button type="button" class="btn btn-nb btn-warn tp-admin-icon-action" aria-label="Redefinir senha de ${esc(u.name)}" title="Redefinir senha" onclick="resetPassword(${u.id})">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 8-8a2 2 0 0 1 2.83 2.83l-1.42 1.42-1.41-1.41-2.12 2.12 1.41 1.41-2.12 2.12"/></svg>
+        </button>
+        <button type="button" class="btn btn-nb btn-dark tp-admin-icon-action" aria-label="Editar conta de ${esc(u.name)}" title="Editar conta" onclick="editUser(${u.id})">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 4 4 4L9 19l-5 1 1-5Z"/><path d="m14 6 4 4"/></svg>
+        </button>
+      </div></td>
     `;
     tbody.appendChild(tr);
   }
@@ -915,6 +963,57 @@ pollContextos();
   $('helpArticleForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,p=new FormData(f),payload={id:p.get('id')?Number(p.get('id')):undefined,category_id:Number(p.get('category_id')),game_id:p.get('game_id'),title:p.get('title').trim(),slug:p.get('slug').trim()||undefined,summary:p.get('summary').trim(),content:p.get('content'),keywords:p.get('keywords').trim(),published:f.elements.published.checked,sort_order:Number(p.get('sort_order'))||0};try{const d=await api('/api/admin/help/articles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});notice('adminArticleNotice',payload.published?'Artigo publicado.':'Rascunho salvo.');f.elements.id.value=d.article.id;await loadArticles();}catch(err){notice('adminArticleNotice',err.message,true);}});
   $('helpArticleDelete').addEventListener('click',async()=>{const id=$('helpArticleForm').elements.id.value;if(!id||!confirm('Excluir este artigo?'))return;try{await api(`/api/admin/help/articles/${encodeURIComponent(id)}`,{method:'DELETE'});resetArticleForm();notice('adminArticleNotice','Artigo excluído.');loadArticles();}catch(e){notice('adminArticleNotice',e.message,true);}});
   window.addEventListener('hashchange',loadSection);window.addEventListener('pagehide',revokeTicketImages);loadSection();
+})();
+</script>
+<script>
+(function () {
+  const root = document.getElementById('adminMonitor');
+  if (!root) return;
+  const apiBase = '/api/admin/monitor';
+  const state = { active:false, snapshot:null, series:[], thresholds:null, pollMs:15000, pollTimer:0, seriesTimer:0, reconnectTimer:0, refreshTimer:0, eventSource:null, busy:false, updatedAt:0, seriesAt:0, wallClockTimer:0 };
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = value => value == null || !Number.isFinite(Number(value)) ? '—' : new Intl.NumberFormat('pt-BR').format(Number(value));
+  const ms = value => value == null || !Number.isFinite(Number(value)) ? '—' : `${Math.round(Number(value))} ms`;
+  const percent = value => value == null || !Number.isFinite(Number(value)) ? '—' : `${(Number(value) <= 1 ? Number(value) * 100 : Number(value)).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;
+  const statusText = status => ({healthy:'Saudável',attention:'Atenção',warning:'Atenção',degraded:'Degradação',down:'Indisponível',critical:'Crítico',unknown:'Indeterminado'})[status] || 'Indeterminado';
+  const statusClass = status => ({healthy:'healthy',attention:'warning',warning:'warning',degraded:'degraded',down:'down',critical:'critical',unknown:'unknown'})[status] || 'unknown';
+  const ago = value => { const time=typeof value==='number'?value:Date.parse(value||''); if(!Number.isFinite(time))return '—'; const sec=Math.max(0,Math.floor((Date.now()-time)/1000)); return sec<10?'agora':sec<60?`há ${sec}s`:sec<3600?`há ${Math.floor(sec/60)} min`:`há ${Math.floor(sec/3600)} h`; };
+  const uptime = value => { if(value==null)return '—'; const s=Number(value),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60); return d?`${d}d ${h}h`:h?`${h}h ${m}min`:`${m}min`; };
+  const bytes = value => { if(value==null)return '—'; const n=Number(value); if(!Number.isFinite(n))return '—'; const units=['B','KB','MB','GB','TB']; let x=n,i=0; while(x>=1024&&i<units.length-1){x/=1024;i++;} return `${x.toLocaleString('pt-BR',{maximumFractionDigits:1})} ${units[i]}`; };
+  function setNotice(message, error=true) { const node=$('monitorNotice'); node.textContent=message||''; node.hidden=!message; node.classList.toggle('is-error',error); }
+  function token() { return localStorage.getItem('token')||localStorage.getItem('auth_token')||localStorage.getItem('jwt')||''; }
+  async function api(path, options={}) { const headers={...(options.headers||{}),Authorization:`Bearer ${token()}`}; if(options.body&&!headers['Content-Type'])headers['Content-Type']='application/json'; const response=await fetch(`${apiBase}${path}`,{...options,headers}); let data={}; try{data=await response.json();}catch{} if(!response.ok)throw new Error(data.error||`${response.status} ${response.statusText}`); return data; }
+  function setGauge(id,value){const el=$(id);if(!el)return;const n=value==null?null:Math.max(0,Math.min(100,Number(value)));el.style.setProperty('--value',n??0);el.querySelector('b').textContent=n==null?'—':`${Math.round(n)}%`;}
+  function renderOverall(){const s=state.snapshot||{},o=s.overall?.status||s.overall||'unknown',cls=statusClass(o);$('overallStrip').dataset.status=cls;$('overallStrip').className=`tp-monitor-overall status-${cls}`;$('healthOrb').dataset.status=cls;$('overallText').textContent=s.overall?.label||statusText(o);$('overallDetail').textContent=cls==='healthy'?'Todos os sistemas operando normalmente.':cls==='unknown'?'Status geral indisponível ou ainda sem amostras.':'Há componentes que exigem atenção.';$('environmentValue').textContent=s.environment==='production'?'Produção':s.environment||'—';$('hostValue').textContent=s.host?.hostname||s.nodes?.[0]?.id||'—';$('uptimeValue').textContent=uptime(s.host?.uptime_s);$('snapshotValue').textContent=ago(s.generated_at);$('wallOverall').dataset.status=cls;$('wallStatusText').textContent=s.overall?.label||statusText(o);$('wallStatusDetail').textContent=$('overallDetail').textContent;}
+  function renderKpis(){const s=state.snapshot||{},p=s.platform||{},h=s.host||{},lat=s.latency||{},r=s.rates||{},services=s.services||[];const good=services.filter(x=>x.status==='healthy').length;$('servicesOk').textContent=`${good}/${services.length}`;$('servicesMeta').textContent=`${Math.max(0,services.length-good)} com atenção`;$('streamersOnline').textContent=fmt(p.streamers_online);$('sessionsMeta').textContent=`Sessões ativas: ${fmt(s.websocket?.clients_total)}`;$('latencyP95').textContent=ms(lat.p95);$('latencyMeta').textContent=`p50 ${ms(lat.p50)} · p99 ${ms(lat.p99)}`;$('errorRate').textContent=percent(r.error_rate);$('errorMeta').textContent=`${fmt(r.errors)} erros`;$('cpuValue').textContent=percent(h.cpu_pct);$('cpuMeta').textContent=h.loadavg?.[0]!=null?`Load ${Number(h.loadavg[0]).toFixed(2)} · ${fmt(h.cores)} núcleos`:'Uso atual do host';$('ramValue').textContent=percent(h.ram?.pct);$('ramMeta').textContent=h.ram?.used?`${bytes(h.ram.used)} usados`:'Memória do host';setGauge('cpuGauge',h.cpu_pct);setGauge('ramGauge',h.ram?.pct);setGauge('diskGauge',h.disk?.pct);$('latP50').textContent=ms(lat.p50);$('latP95').textContent=ms(lat.p95);$('latP99').textContent=ms(lat.p99);$('wallServices').textContent=`${good}/${services.length}`;$('wallServicesMeta').textContent=`${Math.max(0,services.length-good)} em atenção`;$('wallStreamers').textContent=fmt(p.streamers_online);$('wallLatency').textContent=ms(lat.p95);$('wallErrors').textContent=percent(r.error_rate);$('wallErrorMeta').textContent=`${fmt(r.errors)} erros`;$('wallCpu').textContent=percent(h.cpu_pct);$('wallRam').textContent=percent(h.ram?.pct);}
+  function displayMetric(key,value){if(value==null||typeof value==='object')return null;const k=key.toLowerCase();if(k.includes('latency')||k.endsWith('_ms')||k.includes('read_latency'))return ms(value);if(k.includes('pct')||k.includes('rate'))return percent(value);if(k.includes('bytes')||k.endsWith('_size'))return bytes(value);if(typeof value==='boolean')return value?'Sim':'Não';return String(value);}
+  function serviceEntries(service){const entries=[];for(const [key,value] of Object.entries(service.metrics||{})){const shown=displayMetric(key,value);if(shown!=null)entries.push([key.replaceAll('_',' '),shown]);}if(service.note)entries.push(['DETALHE',service.note]);return entries.slice(0,4);}
+  function serviceCard(service){const status=statusClass(service.status),entries=serviceEntries(service);return `<article class="tp-monitor-service" data-status="${esc(status)}"><header><h3 title="${esc(service.name)}">${esc(service.name||service.id||'Serviço')}</h3><span><i></i>${esc(statusText(service.status))}</span></header><dl>${(entries.length?entries:[['status',statusText(service.status)]]).map(([k,v])=>`<div><dt>${esc(k)}</dt><dd title="${esc(v)}">${esc(v)}</dd></div>`).join('')}</dl></article>`;}
+  function renderServices(){const list=state.snapshot?.services||[];$('servicesGrid').innerHTML=list.length?list.map(serviceCard).join(''):'<div class="tp-monitor-empty">Nenhum serviço retornado pelo monitor.</div>';$('wallServicesGrid').innerHTML=list.slice(0,8).map(serviceCard).join('');}
+  function chart(id,points,keys,max=null){const el=$(id);if(!el)return;const vals=points.flatMap(p=>keys.map(k=>p[k]==null?NaN:Number(p[k])).filter(Number.isFinite));if(!points.length||!vals.length){el.innerHTML='<div class="tp-monitor-empty">Sem dados suficientes para este período.</div>';return;}const w=800,h=210,p={l:38,r:10,t:12,b:22},min=0,top=max||Math.max(1,...vals)*1.12,sx=i=>p.l+i*(w-p.l-p.r)/Math.max(1,points.length-1),sy=v=>p.t+(top-v)*(h-p.t-p.b)/(top-min),grid=[0,.25,.5,.75,1].map(t=>{const y=p.t+t*(h-p.t-p.b),v=Math.round(top-(top-min)*t);return `<line class="chart-grid-line" x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}"/><text class="chart-label" x="2" y="${y+3}">${v}</text>`}).join(''),classes=['chart-line','chart-line secondary','chart-line error'],paths=keys.map((k,index)=>{let drawing=false;const segments=points.map((point,i)=>{if(point[k]==null||!Number.isFinite(Number(point[k]))){drawing=false;return '';}const command=`${drawing?'L':'M'} ${sx(i).toFixed(1)} ${sy(Number(point[k])).toFixed(1)}`;drawing=true;return command;}).filter(Boolean).join(' ');return `<path class="${classes[index]||classes[1]}" d="${segments}"/>`;}).join('');el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Gráfico de métricas do monitor">${grid}${paths}</svg>`;}
+  function renderCharts(){const s=state.series||[];chart('latencyChart',s,['latency_p95','latency_avg']);chart('hostChart',s,['cpu','ram'],100);chart('requestsChart',s,['requests','errors']);chart('wsChart',s,['ws_events']);chart('wallLatencyChart',s,['latency_p95','latency_avg']);chart('wallHostChart',s,['cpu','ram'],100);}
+  function renderWsDb(){const s=state.snapshot||{},ws=s.websocket||{},db=s.database||{},wsService=(s.services||[]).find(item=>item.id==='ws'),wsState=ws.status||wsService?.status||'unknown',wsStatus=statusClass(wsState),dbStatus=statusClass(db.status||'unknown');$('wsConnections').textContent=fmt(ws.clients_total);$('wsEvents').textContent=fmt(ws.events_per_min);$('wsText').textContent=statusText(wsState);$('wsStatus').dataset.status=wsStatus;$('wsStatus').textContent=statusText(wsState);$('dbRead').textContent=ms(db.read_latency_ms);$('dbText').textContent=statusText(db.status||'unknown');$('dbFile').textContent=db.path?db.path.split(/[\\/]/).pop():'SQLite';$('dbStatus').dataset.status=dbStatus;$('dbStatus').textContent=statusText(db.status||'unknown');const threshold=state.thresholds?.db_read_ms?.warn;$('dbThreshold').textContent=threshold==null?'—':`${fmt(threshold)} ms`;}
+  function renderAlerts(){const alerts=state.snapshot?.alerts||[];$('activeAlertCount').textContent=`${alerts.length} ativo${alerts.length===1?'':'s'}`;$('alertList').innerHTML=alerts.length?alerts.map(a=>`<article class="tp-monitor-event" data-severity="${esc(a.severity||'warning')}"><i>!</i><div><b>${esc(a.title||a.key)}</b><p>${esc(a.detail||'')}</p><p>${esc(a.key||'')}</p></div><div><time>${ago(a.last_seen||a.created_at||Date.now())}</time><button class="tp-monitor-btn" data-silence="${esc(a.key)}">Silenciar 30 min</button></div></article>`).join(''):'<div class="tp-monitor-empty">Nenhum alerta ativo no momento.</div>';$('wallAlerts').innerHTML=alerts.length?alerts.slice(0,5).map(a=>`<span data-severity="${esc(a.severity)}">● ${esc(a.title||a.key)}</span>`).join(''):'Sem alertas ativos.';}
+  function renderIncidents(){const items=state.snapshot?.incidents?.items||[];$('incidentCount').textContent=String(items.length);$('incidentList').innerHTML=items.length?items.slice(0,8).map(i=>`<article class="tp-monitor-event"><span class="tp-monitor-badge ${esc(i.status)}">${esc(i.status==='acknowledged'?'Reconhecido':'Aberto')}</span><div><b>${esc(i.title||i.key)}</b><p>${esc(i.detail||i.key||'')}</p><p>Desde ${ago(i.first_seen)} · Atualizado ${ago(i.last_seen)}</p></div><div>${i.status==='open'?`<button class="tp-monitor-btn" data-ack="${esc(i.id)}">Reconhecer</button>`:''}<button class="tp-monitor-btn" data-resolve="${esc(i.id)}">Resolver</button></div></article>`).join(''):'<div class="tp-monitor-empty">Nenhum incidente ativo.</div>';}
+  function renderPlatform(){const p=state.snapshot?.platform||{};$('platformStreamers').textContent=fmt(p.streamers_online);$('platformSessions').textContent=fmt(state.snapshot?.websocket?.clients_total);$('platformGames').textContent=fmt(p.games_active);$('platformUsers').textContent=fmt(p.users_total);const daemon=(state.snapshot?.services||[]).find(s=>s.id==='daemon');$('platformDaemon').textContent=daemon?statusText(daemon.status):'—';$('platformSilenced').textContent=fmt(state.snapshot?.silenced_alerts);}
+  function renderMeta(){if(!state.updatedAt)return;$('snapshotValue').textContent=ago(state.snapshot?.generated_at||state.updatedAt);}
+  function renderAll(){renderOverall();renderKpis();renderServices();renderCharts();renderWsDb();renderAlerts();renderIncidents();renderPlatform();renderMeta();}
+  async function loadSnapshot(){if(state.busy||!state.active)return;state.busy=true;try{const data=await api('/snapshot');state.snapshot=data.snapshot||null;if(!state.snapshot)throw new Error('O backend não retornou um snapshot válido.');state.updatedAt=Date.now();setNotice((state.snapshot.degraded_sections||[]).length?`Métricas parciais: ${state.snapshot.degraded_sections.join(', ')}.`:'',false);renderAll();}catch(error){setNotice(`Não foi possível carregar o monitor: ${error.message}`);if(!state.snapshot){$('overallText').textContent='Indisponível';$('overallDetail').textContent='Não há snapshot válido para exibir.';}}finally{state.busy=false;}}
+  async function loadSeries(){if(!state.active)return;try{const data=await api('/series?window=60&bucket=60');state.series=Array.isArray(data.points)?data.points:[];state.seriesAt=Date.now();renderCharts();}catch(error){if(!state.series.length)setNotice(`Séries temporariamente indisponíveis: ${error.message}`);}}
+  async function loadThresholds(){try{const data=await api('/thresholds');state.thresholds=data.thresholds||null;renderWsDb();}catch(error){setNotice(`Limiares indisponíveis: ${error.message}`);}}
+  function setRealtime(connected){const top=$('realtimeStatus'),side=$('sidebarStatus');if(top){top.textContent=connected?'Tempo real ativo':'Tempo real desconectado';top.dataset.connected=String(connected);}if(side)side.textContent=connected?'Monitor conectado':'Polling ativo';$('wallRealtime').textContent=connected?'Tempo real ativo':'Somente polling';}
+  function connectSse(){clearTimeout(state.reconnectTimer);if(!state.active)return;if(state.eventSource){state.eventSource.close();state.eventSource=null;}api('/events-ticket',{method:'POST',body:'{}'}).then(data=>{if(!state.active)return;if(!data.ticket)throw new Error('Ticket SSE ausente');const source=new EventSource(`${apiBase}/events?ticket=${encodeURIComponent(data.ticket)}`);state.eventSource=source;source.onopen=()=>setRealtime(true);source.onerror=()=>{setRealtime(false);source.close();if(state.eventSource===source)state.eventSource=null;state.reconnectTimer=setTimeout(connectSse,5000);};['hello','alert','incident','service_status'].forEach(type=>source.addEventListener(type,()=>{clearTimeout(state.refreshTimer);state.refreshTimer=setTimeout(()=>{loadSnapshot();if(Date.now()-state.seriesAt>60000)loadSeries();},350);}));}).catch(()=>{setRealtime(false);state.reconnectTimer=setTimeout(connectSse,10000);});}
+  function start(){if(state.active)return;state.active=true;state.pollMs=Number($('pollInterval').value)||15000;setRealtime(false);loadThresholds();loadSnapshot();loadSeries();state.pollTimer=setInterval(loadSnapshot,state.pollMs);state.seriesTimer=setInterval(loadSeries,60000);connectSse();state.wallClockTimer=setInterval(()=>{$('wallClock').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false});},1000);}
+  function stop(){state.active=false;clearInterval(state.pollTimer);clearInterval(state.seriesTimer);clearInterval(state.wallClockTimer);clearTimeout(state.reconnectTimer);clearTimeout(state.refreshTimer);state.eventSource?.close();state.eventSource=null;closeWallboard();}
+  function closeWallboard(exitFullscreen=true){$('wallboard').classList.remove('open');$('wallboard').setAttribute('aria-hidden','true');document.body.classList.remove('tp-monitor-wallboard');if(exitFullscreen&&document.fullscreenElement)document.exitFullscreen?.();}
+  function openWallboard(){if(!state.snapshot){loadSnapshot();}renderAll();$('wallboard').classList.add('open');$('wallboard').setAttribute('aria-hidden','false');document.body.classList.add('tp-monitor-wallboard');}
+  async function toggleFullscreen(){try{if(!document.fullscreenElement){await root.requestFullscreen();openWallboard();}else{await document.exitFullscreen();closeWallboard(false);}}catch(_){openWallboard();}}
+  async function loadHistory(){const status=$('incidentStatusFilter').value;const list=$('incidentHistoryList');list.innerHTML='<div class="tp-monitor-empty">Carregando histórico…</div>';try{const data=await api(`/incidents?status=${encodeURIComponent(status)}&limit=100`);const items=data.items||[];list.innerHTML=items.length?items.map(i=>`<article class="tp-monitor-event"><span class="tp-monitor-badge ${esc(i.status)}">${esc(i.status==='acknowledged'?'Reconhecido':i.status==='resolved'?'Resolvido':'Aberto')}</span><div><b>${esc(i.title||i.key)}</b><p>${esc(i.detail||'')}</p><p>Primeiro registro ${ago(i.first_seen)} · Última atualização ${ago(i.last_seen)}${i.resolved_at?` · Resolvido ${ago(i.resolved_at)}`:''}</p></div><time>${esc(i.severity==='critical'?'Crítico':'Atenção')}</time></article>`).join(''):'<div class="tp-monitor-empty">Nenhum incidente para este filtro.</div>';}catch(error){list.innerHTML=`<div class="tp-monitor-empty">${esc(error.message)}</div>`;}}
+  root.addEventListener('click',async event=>{const target=event.target.closest('button');if(!target)return;try{if(target.id==='monitorRefresh'){target.disabled=true;await loadSnapshot();await loadSeries();target.disabled=false;}else if(target.id==='wallboardBtn')openWallboard();else if(target.id==='fullscreenBtn')await toggleFullscreen();else if(target.id==='wallboardClose')closeWallboard();else if(target.id==='showAllIncidents'){$('monitorHistoryDialog').showModal();loadHistory();}else if(target.dataset.ack){target.disabled=true;await api(`/incidents/${encodeURIComponent(target.dataset.ack)}/ack`,{method:'POST',body:'{}'});await loadSnapshot();}else if(target.dataset.resolve){target.disabled=true;await api(`/incidents/${encodeURIComponent(target.dataset.resolve)}/resolve`,{method:'POST',body:'{}'});await loadSnapshot();if($('monitorHistoryDialog').open)loadHistory();}else if(target.dataset.silence){target.disabled=true;await api('/silences',{method:'POST',body:JSON.stringify({key:target.dataset.silence,minutes:30})});await loadSnapshot();}}catch(error){setNotice(error.message);target.disabled=false;}});
+  $('incidentStatusFilter').addEventListener('change',loadHistory);$('pollInterval').addEventListener('change',()=>{state.pollMs=Number($('pollInterval').value)||15000;if(state.active){clearInterval(state.pollTimer);state.pollTimer=setInterval(loadSnapshot,state.pollMs);}});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('wallboard').classList.contains('open'))closeWallboard();});document.addEventListener('visibilitychange',()=>{if(state.active&&!document.hidden)loadSnapshot();});document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('wallboard').classList.contains('open'))closeWallboard(false);});window.addEventListener('pagehide',stop);
+  window.TikPlayMonitor={setActive(active){if(active)start();else stop();}};
+  if(location.hash==='#adminMonitor'||location.hash==='#adminMonitor/incidents')start();
 })();
 </script>
 </body>

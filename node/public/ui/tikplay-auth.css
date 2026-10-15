@@ -1,0 +1,45 @@
+.tp-auth-page {
+  --tp-auth-bg: var(--bg);
+  --tp-auth-surface: var(--panel);
+  --tp-auth-field: #09111b;
+  --tp-auth-line: var(--line);
+  --tp-auth-control-line: rgba(255,255,255,.12);
+  --tp-auth-text: var(--text);
+  --tp-auth-muted: var(--muted);
+  --tp-auth-cyan: var(--cyan);
+  --tp-auth-green: var(--green);
+  --tp-auth-red: #ff6b7e;
+  background-color: var(--tp-auth-bg);
+  color: var(--tp-auth-text);
+  color-scheme: dark;
+  font-family: var(--tp-font-ui, Inter, 'Segoe UI', sans-serif);
+}
+
+.tp-auth-main { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
+.tp-auth-panel { width: min(100%, 440px); margin: auto; padding: 32px; background: linear-gradient(160deg,#111c2b,#080e17 72%); border: 1px solid var(--tp-auth-line); border-radius: 23px; box-shadow: var(--shadow); }
+.tp-auth-panel > .brand { width: fit-content; margin: 0 auto 22px; }
+.tp-auth-heading { margin-bottom: 22px; text-align: center; }
+.tp-auth-heading .eyebrow { justify-content: center; margin-bottom: 12px; }
+.tp-auth-heading h1 { margin: 0; color: var(--tp-auth-text); font: 700 26px/1.25 "Space Grotesk", var(--tp-font-display, Inter, "Segoe UI", sans-serif); }
+.tp-auth-heading h1 span { background: linear-gradient(90deg,var(--tp-auth-cyan),#4f9fff 55%,#a27cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tp-auth-heading p { margin: 8px 0 0; color: var(--tp-auth-muted); font-size: 13px; line-height: 1.5; }
+.tp-auth-tabs { display: flex; gap: 24px; margin-bottom: 20px; border-bottom: 1px solid var(--tp-auth-line); }
+.tp-auth-tabs button { min-height: 40px; margin-bottom: -1px; padding: 0 4px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--tp-auth-muted); font: 600 13px var(--tp-font-ui, Inter, 'Segoe UI', sans-serif); transition: border-color .18s ease,color .18s ease; }
+.tp-auth-tabs button:hover { color: var(--tp-auth-text); }
+.tp-auth-tabs button.active { border-bottom-color: var(--tp-auth-cyan); background: transparent; color: var(--tp-auth-text); box-shadow: none; }
+.tp-auth-form .mb-3 { margin-bottom: 16px !important; }
+.tp-auth-form .form-label { margin-bottom: 7px; color: #a9b5c4; font-size: 12px; font-weight: 600; }
+.tp-auth-form .form-control { min-height: 40px; padding: 8px 12px; border: 1px solid var(--tp-auth-control-line); border-radius: 12px; background: var(--tp-auth-field); color: var(--tp-auth-text); box-shadow: none; font: 500 13px var(--tp-font-ui, Inter, 'Segoe UI', sans-serif); }
+.tp-auth-form .form-control::placeholder { color: #718197; }
+.tp-auth-form .form-control:focus { border-color: var(--tp-auth-cyan); background: var(--tp-auth-field); color: var(--tp-auth-text); box-shadow: 0 0 0 3px rgba(38,216,255,.12); }
+.tp-auth-form .btn-nb { width: 100%; margin-top: 4px; }
+.tp-auth-alert { display: none; margin-bottom: 16px; padding: 11px 12px; border: 1px solid var(--tp-auth-line); border-radius: var(--tp-radius-sm, 8px); font-size: .82rem; line-height: 1.45; }
+.tp-auth-alert.err { display: block; border-color: rgba(255,107,126,.28); background: rgba(255,107,126,.08); color: #ff9aa8; }
+.tp-auth-alert.ok { display: block; border-color: rgba(48,230,161,.25); background: rgba(48,230,161,.08); color: var(--tp-auth-green); }
+.tp-auth-page :is(button,a,input):focus-visible { outline: 2px solid var(--tp-auth-cyan); outline-offset: 3px; }
+
+@media (max-width: 480px) {
+  .tp-auth-main { padding: 16px; }
+  .tp-auth-panel { padding: 24px 20px; }
+  .tp-auth-heading h1 { font-size: 23px; }
+}

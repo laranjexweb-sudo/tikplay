@@ -49,6 +49,22 @@ pm2 restart tikplay
 - Não há novas dependências na maioria das atualizações → normalmente **não** precisa `npm install`.
 - O restart do Node relança o daemon Python (`python/service.py`) e roda as migrações idempotentes do `db.js`.
 
+### Atualizar o motor Edge TTS
+
+O daemon usa `edge-tts` na mesma instalação Python indicada por `PYTHON_BIN`.
+Após atualizar `jogo-contexto`, atualize essa dependência no ambiente usado pelo
+PM2 antes de reiniciar:
+
+```bash
+cd /var/www/tikplay
+python3 -m pip install -r python/requirements-tts.txt
+pm2 restart tikplay
+python3 -c "import importlib.metadata as m; print(m.version('edge-tts'))"
+```
+
+Se `PYTHON_BIN` apontar para outro interpretador/virtualenv, use esse mesmo
+interpretador no comando `-m pip` e na verificação da versão.
+
 ## Arquivos preservados (fora do Git)
 
 O `.gitignore` do repositório garante que estes **ficam intactos** na VPS após `pull`/`checkout`:
@@ -73,10 +89,26 @@ O `.gitignore` do repositório garante que estes **ficam intactos** na VPS após
 
 ```bash
 curl -I http://localhost:3100/jogo        # 200
+curl -I http://localhost:3100/contexto    # 200 (jogo publico)
+curl -s  http://localhost:3100/api/contexto/daily | head -c 120
 curl -I http://localhost:3100/overlay     # 404 (página removida)
 curl -s http://localhost:3100/api/plans | head -c 120
 pm2 logs tikplay --lines 30
 ```
+
+## Site institucional + jogo público (apex)
+
+O apex **`tikplay.com.br`** passa a ser servido pelo próprio Node (mesmo app/porta `3100`):
+
+- A raiz `/` mostra o site institucional (`node/public/site/index.html`) quando o `Host` é
+  `tikplay.com.br`/`www.tikplay.com.br`; no painel (`painel.tikplay.com.br`) `/` continua
+  redirecionando para `/login` (diferenciado por `Host` no `server.js`).
+- O jogo público fica em `/contexto` e a API em `/api/contexto/*`, ambos no mesmo app
+  (sem autenticação; sem novo processo PM2 nem 2º spaCy).
+- **nginx:** o vhost `tikplay.com.br` (que hoje só faz `return 301` para o login) deve passar
+  a **proxiar para `http://127.0.0.1:3100`**, igual ao bloco de `painel.tikplay.com.br`
+  (mesmos `proxy_set_header`, inclusive `Host $host`). O certificado existente já cobre o apex.
+- Deploy: `cd /var/www/tikplay && git pull origin main && pm2 restart tikplay` (sem `npm install`).
 
 ## Links públicos para OBS/TikTok (`?tk=`)
 

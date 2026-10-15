@@ -221,6 +221,7 @@ async function testIntegration() {
   }
   const s = await get("/api/reports/summary");
   check("/api/reports/summary autenticado -> 200", s.status === 200 && s.json.success === true, JSON.stringify(s));
+  check("/api/reports/summary inclui level_up por eixo", s.json.level_up && typeof s.json.level_up.total === "number" && typeof s.json.level_up.gifter === "number" && typeof s.json.level_up.fanclub === "number", JSON.stringify(s.json.level_up));
   const ls = await get("/api/live-sessions");
   check("/api/live-sessions autenticado -> 200", ls.status === 200 && Array.isArray(ls.json.sessions), JSON.stringify(ls).slice(0, 120));
   const ev = await get("/api/reports/events?limit=5");
@@ -231,6 +232,8 @@ async function testIntegration() {
   check("/api/reports/ranking autenticado -> 200", rk.status === 200 && Array.isArray(rk.json.ranking));
   const lvl = await get("/api/reports/levels");
   check("/api/reports/levels autenticado -> 200", lvl.status === 200 && Array.isArray(lvl.json.levels));
+  const lvlEv = await get("/api/reports/events?type=level_up&axis=gifter&limit=5");
+  check("/api/reports/events?type=level_up&axis gifter -> 200", lvlEv.status === 200 && Array.isArray(lvlEv.json.events));
 }
 
 function testLevels() {
@@ -257,9 +260,11 @@ function testLevels() {
   check("nível ausente/0 não gera evento nem sobrescreve",
     r.events.length === 0 && db.getLiveViewerLevel(901, "R1", "u1").gifter_level === 16);
 
-  // Persistido como interação level_up.
-  const s = db.summaryInteractions({ tenantId: 901 });
-  check("level_up persistido como interação", s.by_type.level_up && s.by_type.level_up.count === 1, JSON.stringify(s.by_type));
+  // Persistido em level_ups (fonte dedicada).
+  const lu = db.queryLevelUps({ tenantId: 901, room_id: "R1", axis: "gifter" });
+  check("subida de presenteador persistida em level_ups (15->16)",
+    lu.events.length === 1 && lu.events[0].before === 15 && lu.events[0].after === 16 && lu.events[0].axis === "gifter",
+    JSON.stringify(lu.events));
 
   // Eixo fã-clube independente.
   const t2 = tenant(901, "R1", 11);
@@ -276,7 +281,45 @@ function testLevels() {
   r = levels.handleViewerLevel(t2, { room_id: "R1", user_id: "u3", username: "u3", gifter_level: 8, ts: 5200 });
   check("após baseline, próxima subida anima (7->8)", r.events.length === 1 && r.events[0].before === 7 && r.events[0].after === 8);
 
+  // Barrage explícito de fã-clube sem baseline => before null (não inventamos).
+  const explicit = levels.handleViewerLevel(t2, {
+    room_id: "R-explicit", user_id: "u4", username: "u4", nickname: "U4",
+    fan_club_level: 30, level_up_axis: "fanclub", ts: 6000,
+  });
+  check("promoção explícita sem baseline gera evento (before null, after 30)",
+    explicit.events.length === 1 && explicit.events[0].axis === "fanclub" && explicit.events[0].before === null && explicit.events[0].after === 30,
+    JSON.stringify(explicit));
+  check("promoção explícita persiste em level_ups",
+    db.queryLevelUps({ tenantId: 901, room_id: "R-explicit", axis: "fanclub" }).events.length === 1);
+  const duplicateExplicit = levels.handleViewerLevel(t2, {
+    room_id: "R-explicit", user_id: "u4", username: "u4", nickname: "U4",
+    fan_club_level: 30, level_up_axis: "fanclub", ts: 6100,
+  });
+  check("promoção explícita duplicada (mesmo nível) não repete",
+    duplicateExplicit.events.length === 0 && db.queryLevelUps({ tenantId: 901, room_id: "R-explicit", axis: "fanclub" }).events.length === 1);
+
+  // Barrage explícito de PRESENTEADOR (USER_UPGRADE) sem baseline.
+  const gifterExplicit = levels.handleViewerLevel(t2, {
+    room_id: "R-gifter", user_id: "u5", username: "u5", nickname: "U5",
+    gifter_level: 20, level_up_axis: "gifter", event_id: "ug-1", ts: 7000,
+  });
+  check("promoção explícita de presenteador sem baseline (before null, after 20)",
+    gifterExplicit.events.length === 1 && gifterExplicit.events[0].axis === "gifter" && gifterExplicit.events[0].before === null && gifterExplicit.events[0].after === 20,
+    JSON.stringify(gifterExplicit));
+  const dupEventId = levels.handleViewerLevel(t2, {
+    room_id: "R-gifter", user_id: "u5", username: "u5", nickname: "U5",
+    gifter_level: 20, level_up_axis: "gifter", event_id: "ug-1", ts: 7050,
+  });
+  check("dedupe por event_id não repete", dupEventId.events.length === 0);
+
+  // Resumo por eixo.
+  const luSummary = db.summarizeLevelUps({ tenantId: 901 });
+  check("summary de subidas por eixo (gifter>=1, fanclub>=1)",
+    luSummary.gifter >= 1 && luSummary.fanclub >= 1 && luSummary.total === luSummary.gifter + luSummary.fanclub,
+    JSON.stringify(luSummary));
+
   // Isolamento e listagem.
+  check("isolamento por tenant (level_ups)", db.queryLevelUps({ tenantId: 902 }).events.length === 0);
   check("isolamento por tenant", db.getLiveViewerLevel(902, "R1", "u1") === null);
   const lv = db.listViewerLevels(901, { room_id: "R1" });
   check("listViewerLevels por sala", Array.isArray(lv) && lv.length >= 3, "n=" + lv.length);

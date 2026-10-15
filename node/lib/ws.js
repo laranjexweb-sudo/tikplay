@@ -45,6 +45,9 @@ function getTenant(id) {
       currentStatus: null,
       currentWord: "",
       sessionStarted: false,
+      activeDaemonSessionId: null,
+      activeLiveUsername: null,
+      activeLiveEngine: null,
       currentRoomId: null,
       currentSessionId: null,
       liveSessionStartedAt: null,
@@ -79,13 +82,13 @@ function registerLogPersister(fn) {
 }
 
 function broadcastLog(tenant, item) {
-  // Aceita string (legado) ou objeto estruturado {text, game, level}.
+  // Aceita string legada ou evento estruturado; metadados são aditivos ao contrato.
   const base = (typeof item === "string" ? { text: item } : (item || {})) || {};
   const payload = { type: "log" };
   let meta = null;
   if (logPersister) {
     try {
-      meta = logPersister(tenant.id, base) || null;
+      meta = logPersister(tenant.id, base, tenant) || null;
     } catch {
       meta = null;
     }
@@ -93,9 +96,10 @@ function broadcastLog(tenant, item) {
   payload.text = (meta && meta.message != null) ? meta.message : (base.text || "");
   payload.game = (meta && meta.game != null) ? meta.game : (base.game || "");
   payload.level = (meta && meta.level != null) ? meta.level : (base.level || "");
-  if (meta && meta.id != null) payload.id = meta.id;
-  if (meta && meta.ts != null) payload.ts = meta.ts;
-  if (meta && meta.category) payload.category = meta.category;
+  for (const key of ["id", "ts", "category", "event", "source", "code", "session_id", "trace_id", "game_id", "duration_ms", "details"]) {
+    const value = meta && meta[key] != null ? meta[key] : base[key];
+    if (value != null) payload[key] = value;
+  }
   broadcastToClients(tenant.logClients, payload);
 }
 

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="pt-BR" class="overlay-document">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TikPlay · Ranking de apoiadores</title>
+  <link rel="stylesheet" href="/ui/tikplay-theme.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: var(--tp-font-ui);
+      --dw-coins: var(--tp-yellow);
+      --dw-likes: var(--tp-pink);
+      --dw-panel: color-mix(in srgb, var(--tp-black) 94%, transparent);
+      --dw-panel-raised: color-mix(in srgb, var(--tp-black-2) 96%, transparent);
+      --dw-muted: color-mix(in srgb, var(--tp-text-inverse) 64%, transparent);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { color: var(--tp-text-inverse); }
+    .overlay-stack {
+      position: absolute;
+      top: 50%;
+      right: 2rem;
+      display: grid;
+      gap: .75rem;
+      width: min(27rem, calc(100vw - 2rem));
+      max-height: calc(100vh - 2rem);
+      transform: translateY(-50%);
+      transform-origin: top right;
+    }
+    .ranking-card {
+      --rank-accent: var(--dw-coins);
+      position: relative;
+      min-width: 0;
+      padding: .85rem;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--rank-accent) 65%, transparent);
+      border-radius: var(--tp-radius-md);
+      background: var(--dw-panel);
+      box-shadow: 0 .5rem 1.5rem color-mix(in srgb, var(--tp-black) 55%, transparent);
+      isolation: isolate;
+    }
+    .ranking-card[data-ranking="likes"] { --rank-accent: var(--dw-likes); }
+    .ranking-card::before {
+      position: absolute;
+      z-index: -1;
+      inset: 0 0 auto;
+      height: .2rem;
+      background: var(--rank-accent);
+      content: "";
+    }
+    .ranking-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      margin: 0 0 .65rem;
+      padding: 0 .15rem .65rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--tp-text-inverse) 16%, transparent);
+    }
+    .heading-copy { min-width: 0; }
+    .eyebrow { color: var(--rank-accent); font-size: .58rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h2 { margin: .12rem 0 0; color: var(--tp-text-inverse); font: 800 1.12rem/1.15 var(--tp-font-display); }
+    .live-badge {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .3rem .48rem;
+      border: 1px solid color-mix(in srgb, var(--rank-accent) 48%, transparent);
+      border-radius: 99px;
+      color: var(--rank-accent);
+      background: color-mix(in srgb, var(--rank-accent) 9%, transparent);
+      font-size: .58rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .live-badge i { width: .38rem; height: .38rem; border-radius: 50%; background: currentColor; }
+    .rows { display: grid; gap: .28rem; margin: 0; padding: 0; list-style: none; }
+    .row {
+      display: grid;
+      grid-template-columns: 2.55rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: .55rem;
+      min-width: 0;
+      min-height: 2.55rem;
+      padding: .22rem .42rem;
+      border: 1px solid color-mix(in srgb, var(--tp-text-inverse) 8%, transparent);
+      border-radius: var(--tp-radius-xs);
+      background: color-mix(in srgb, var(--tp-text-inverse) 4%, transparent);
+      animation: row-enter .2s ease-out both;
+    }
+    .row:nth-child(2) { animation-delay: 25ms; }
+    .row:nth-child(3) { animation-delay: 50ms; }
+    .row:nth-child(n+4) { min-height: 1.95rem; }
+    .rank-mark {
+      display: grid;
+      width: 2.1rem;
+      height: 2.1rem;
+      place-items: center;
+      border: 1px solid color-mix(in srgb, var(--rank-accent) 42%, transparent);
+      border-radius: 50%;
+      color: var(--rank-accent);
+      background: color-mix(in srgb, var(--rank-accent) 12%, var(--dw-panel-raised));
+      font: 800 1rem/1 var(--tp-font-display);
+    }
+    .row:nth-child(n+4) .rank-mark { width: 1.5rem; height: 1.5rem; font-size: .72rem; }
+    .player { display: flex; align-items: center; gap: .48rem; min-width: 0; }
+    .avatar {
+      flex: 0 0 2rem;
+      width: 2rem;
+      height: 2rem;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--tp-text-inverse) 24%, transparent);
+      border-radius: 50%;
+      background: var(--tp-black-3);
+      object-fit: cover;
+    }
+    .row:nth-child(n+4) .avatar { flex-basis: 1.45rem; width: 1.45rem; height: 1.45rem; }
+    .avatar-fallback { display: grid; place-items: center; color: var(--rank-accent); font-size: .7rem; font-weight: 800; }
+    .player-name { min-width: 0; overflow: hidden; color: var(--tp-text-inverse); font-size: .82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .row:nth-child(n+4) .player-name { font-size: .72rem; }
+    .player-value { display: flex; align-items: center; gap: .28rem; color: var(--rank-accent); font: 800 .82rem/1 var(--tp-font-display); white-space: nowrap; }
+    .row:nth-child(n+4) .player-value { font-size: .72rem; }
+    .unit { color: var(--dw-muted); font: 700 .52rem/1 var(--tp-font-ui); text-transform: uppercase; }
+    .empty-state { padding: .9rem .25rem; color: var(--dw-muted); font-size: .72rem; text-align: center; }
+    .ranking-foot { display: flex; justify-content: space-between; gap: .5rem; margin-top: .58rem; color: var(--dw-muted); font-size: .54rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .connection-state[data-state="connected"] { color: var(--tp-green); }
+    .connection-state[data-state="error"] { color: var(--tp-red); }
+    body.demo-preview { background: color-mix(in srgb, var(--tp-black) 92%, transparent); }
+    body.demo-preview .overlay-stack { right: max(1rem, 3vw); }
+    @keyframes row-enter { from { opacity: .45; transform: translateY(.2rem); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 48rem) {
+      .overlay-stack { right: .5rem; width: min(25rem, calc(100vw - 1rem)); gap: .5rem; transform: translateY(-50%) scale(.86); }
+      .ranking-card { padding: .68rem; }
+      .ranking-head { margin-bottom: .48rem; padding-bottom: .48rem; }
+      h2 { font-size: 1rem; }
+      .row { min-height: 2.3rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+  </style>
+</head>
+<body class="overlay">
+  <main class="overlay-stack" aria-label="Rankings da live">
+    <section class="ranking-card" data-ranking="coins" aria-labelledby="coinsTitle">
+      <header class="ranking-head">
+        <div class="heading-copy"><div class="eyebrow">Apoiadores da live</div><h2 id="coinsTitle">Ranking de gifts</h2></div>
+        <span class="live-badge"><i></i> Ao vivo</span>
+      </header>
+      <ol class="rows" data-rows="coins" aria-live="polite"></ol>
+      <footer class="ranking-foot"><span>Valor enviado</span><span class="connection-state" data-connection-state>Conectando</span></footer>
+    </section>
+    <section class="ranking-card" data-ranking="likes" aria-labelledby="likesTitle">
+      <header class="ranking-head">
+        <div class="heading-copy"><div class="eyebrow">Engajamento da live</div><h2 id="likesTitle">Ranking de curtidas</h2></div>
+        <span class="live-badge"><i></i> Ao vivo</span>
+      </header>
+      <ol class="rows" data-rows="likes" aria-live="polite"></ol>
+      <footer class="ranking-foot"><span>Mais ativos</span><span class="connection-state" data-connection-state>Conectando</span></footer>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('tk') || params.get('token') || localStorage.getItem('token');
+    const demo = params.get('demo') === '1';
+    const visibleCount = 6;
+    const state = { roomId: '', likes: [], coins: [], identityByUser: new Map(), socket: null, closing: false, coinRefreshTimer: 0 };
+    const number = value => Math.max(0, Number(value) || 0).toLocaleString('pt-BR');
+    const rootFor = type => document.querySelector(`[data-rows="${type}"]`);
+
+    function setConnection(label, status = 'connecting') {
+      document.querySelectorAll('[data-connection-state]').forEach(node => {
+        node.textContent = label;
+        node.dataset.state = status;
+      });
+    }
+
+    function makeAvatar(item) {
+      const name = item.nickname || item.username || item.user_id || item.user || '?';
+      if (item.avatar) {
+        try {
+          const url = new URL(item.avatar, location.origin);
+          if (['https:', 'http:'].includes(url.protocol)) {
+            const image = document.createElement('img');
+            image.className = 'avatar';
+            image.alt = '';
+            image.loading = 'lazy';
+            image.src = url.href;
+            image.onerror = () => image.replaceWith(makeFallback(name));
+            return image;
+          }
+        } catch {}
+      }
+      return makeFallback(name);
+    }
+
+    function makeFallback(name) {
+      const fallback = document.createElement('span');
+      fallback.className = 'avatar avatar-fallback';
+      fallback.setAttribute('aria-hidden', 'true');
+      fallback.textContent = String(name || '?').trim().slice(0, 1).toUpperCase();
+      return fallback;
+    }
+
+    function render(type, source) {
+      const list = rootFor(type);
+      const items = (Array.isArray(source) ? source : []).slice(0, visibleCount);
+      list.replaceChildren();
+      if (!items.length) {
+        const empty = document.createElement('li');
+        empty.className = 'empty-state';
+        empty.textContent = demo ? 'Sem dados de demonstração' : 'Aguardando atividade da live';
+        list.append(empty);
+        return;
+      }
+      items.forEach((item, index) => {
+        const row = document.createElement('li');
+        row.className = 'row';
+        row.style.animationDelay = `${Math.min(index, 3) * 25}ms`;
+        const rank = document.createElement('span');
+        rank.className = 'rank-mark';
+        rank.textContent = String(index + 1).padStart(2, '0');
+        const player = document.createElement('span');
+        player.className = 'player';
+        player.append(makeAvatar(item));
+        const name = document.createElement('span');
+        name.className = 'player-name';
+        name.textContent = item.nickname || item.username || item.user_id || item.user || 'Participante';
+        name.title = name.textContent;
+        player.append(name);
+        const value = document.createElement('span');
+        value.className = 'player-value';
+        const amount = type === 'coins' ? item.value_sum : item.likes;
+        value.textContent = number(amount);
+        const unit = document.createElement('span');
+        unit.className = 'unit';
+        unit.textContent = type === 'coins' ? 'diam.' : 'curtidas';
+        value.append(unit);
+        row.append(rank, player, value);
+        list.append(row);
+      });
+    }
+
+    async function api(path) {
+      const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    async function loadCoinRanking(roomId) {
+      if (!roomId || !token) {
+        state.coins = [];
+        render('coins', []);
+        return;
+      }
+      const query = new URLSearchParams({ room_id: roomId, type: 'gift', limit: String(visibleCount) });
+      const eventsQuery = new URLSearchParams({ room_id: roomId, type: 'gift', limit: '200' });
+      const [rankingData, eventData] = await Promise.all([
+        api(`/api/reports/ranking?${query}`),
+        api(`/api/reports/events?${eventsQuery}`),
+      ]);
+      state.identityByUser = new Map();
+      for (const event of eventData.events || []) {
+        state.identityByUser.set(String(event.user_id), event);
+        if (event.username) state.identityByUser.set(String(event.username).toLowerCase(), event);
+      }
+      state.coins = (rankingData.ranking || []).map(entry => {
+        const identity = state.identityByUser.get(String(entry.user_id)) || {};
+        return { ...identity, user_id: entry.user_id, value_sum: entry.value_sum };
+      });
+      render('coins', state.coins);
+    }
+
+    async function loadSnapshot() {
+      if (!token) {
+        setConnection('Link inválido', 'error');
+        render('coins', []);
+        render('likes', []);
+        return;
+      }
+      try {
+        const snapshot = await api('/api/game-state');
+        const nextRoom = String(snapshot.last_status?.room_id || '');
+        if (nextRoom !== state.roomId) {
+          state.roomId = nextRoom;
+          state.likes = [];
+        }
+        state.likes = snapshot.likes_ranking_all || snapshot.likes_ranking || [];
+        render('likes', state.likes);
+        setConnection(snapshot.last_status?.state === 'connected' ? 'Conectado' : 'Aguardando live', snapshot.last_status?.state === 'connected' ? 'connected' : 'connecting');
+        await loadCoinRanking(state.roomId);
+      } catch {
+        setConnection('Sem conexão', 'error');
+      }
+    }
+
+    function scheduleCoinRefresh() {
+      clearTimeout(state.coinRefreshTimer);
+      state.coinRefreshTimer = setTimeout(() => loadCoinRanking(state.roomId).catch(() => {}), 650);
+    }
+
+    function connect() {
+      if (!token || state.closing) return;
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const socket = new WebSocket(`${protocol}://${location.host}/browser?token=${encodeURIComponent(token)}`);
+      state.socket = socket;
+      socket.onopen = () => { setConnection('Conectado', 'connected'); loadSnapshot(); };
+      socket.onmessage = event => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'status') {
+            const nextRoom = String(message.room_id || '');
+            if (nextRoom !== state.roomId) {
+              state.roomId = nextRoom;
+              state.likes = [];
+              render('likes', []);
+              loadCoinRanking(state.roomId).catch(() => {});
+            }
+            setConnection(message.state === 'connected' ? 'Conectado' : 'Aguardando live', message.state === 'connected' ? 'connected' : 'connecting');
+          } else if (message.type === 'likes_ranking') {
+            state.likes = message.ranking_all || message.likes_ranking_all || message.ranking || [];
+            render('likes', state.likes);
+          } else if (message.type === 'gift_event') {
+            scheduleCoinRefresh();
+          }
+        } catch {}
+      };
+      socket.onclose = event => {
+        if (event.code === 1008) { setConnection('Link expirado', 'error'); return; }
+        setConnection('Reconectando', 'connecting');
+        if (!state.closing) setTimeout(connect, 3000);
+      };
+    }
+
+    if (demo) {
+      document.body.classList.add('demo-preview');
+      setConnection('Demonstração', 'connected');
+      render('coins', [
+        { nickname: 'DragonMasterBR', value_sum: 25400 },
+        { nickname: 'ShadowKnight', value_sum: 18900 },
+        { nickname: 'InfernalMage', value_sum: 15320 },
+        { nickname: 'ElvenRider', value_sum: 12840 },
+        { nickname: 'FireSoul', value_sum: 11120 },
+        { nickname: 'RuneWarrior', value_sum: 9760 },
+      ]);
+      render('likes', [
+        { nickname: 'HeartStorm', likes: 85200 },
+        { nickname: 'PinkWizard', likes: 73800 },
+        { nickname: 'LoveDragon', likes: 61400 },
+        { nickname: 'RubyFlame', likes: 58000 },
+        { nickname: 'NightHeart', likes: 52700 },
+        { nickname: 'CrystalRose', likes: 48100 },
+      ]);
+    } else {
+      render('coins', []);
+      render('likes', []);
+      connect();
+    }
+
+    window.addEventListener('pagehide', () => {
+      state.closing = true;
+      clearTimeout(state.coinRefreshTimer);
+      state.socket?.close();
+    }, { once: true });
+  </script>
+</body>
+</html>

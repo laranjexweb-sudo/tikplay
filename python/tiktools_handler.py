@@ -35,7 +35,7 @@ async def check_live_status_tiktools(username: str, api_key: str, log_cb=None) -
                 return {"live": True, "room_id": str(data.get("room_id")), "info": data}
             return {"live": False, "room_id": None}
         except Exception as e:
-            msg = f"[TikTools] live_status falhou ({e}); tentando check_alive..."
+            msg = f"[TikTools] live_status falhou ({type(e).__name__}); tentando check_alive..."
             if log_cb:
                 log_cb(msg)
             else:
@@ -58,7 +58,7 @@ async def check_live_status_tiktools(username: str, api_key: str, log_cb=None) -
 
 
 class TikToolsHandler:
-    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None):
+    def __init__(self, username: str, api_key: str, on_comment=None, on_gift=None, on_like=None, on_join=None, on_share=None, on_follow=None, on_level_up=None):
         self.username = username
         self.api_key = api_key
         self.on_comment_cb = on_comment
@@ -67,6 +67,7 @@ class TikToolsHandler:
         self.on_join_cb = on_join
         self.on_share_cb = on_share
         self.on_follow_cb = on_follow
+        self.on_level_up_cb = on_level_up
         self.log_cb = None
         self._room_id = None
         self._connected = False
@@ -196,7 +197,7 @@ class TikToolsHandler:
         elif etype in ("member", "join", "roomMember"):
             if self.on_join_cb and user:
                 await self.on_join_cb(user=self._display_name(user), nickname=self._nickname(user),
-                                      room_id=room_id, event_id=event_id)
+                                      user_meta=self._user_meta(user), room_id=room_id, event_id=event_id)
 
         elif etype == "like":
             like_count = int(data.get("likeCount") or 0)
@@ -266,7 +267,15 @@ class TikToolsHandler:
                 try:
                     await self._handle_event(event)
                 except Exception as e:
-                    self.log(f"[TikTools] Erro ao processar evento {event.get('event')}: {e}")
+                    self.log({
+                        "text": f"[TikTools] Falha ao processar evento {event.get('event') or 'unknown'}.",
+                        "category": "error",
+                        "level": "error",
+                        "event": "tiktoktools.event_processing.failed",
+                        "source": "python",
+                        "code": "TIKTOOLS_EVENT_PROCESSING_FAILED",
+                        "details": {"error_type": type(e).__name__, "provider_event": str(event.get("event") or "unknown")[:48]},
+                    })
 
     async def _fetch_rate(self) -> dict:
         try:
@@ -323,8 +332,7 @@ class TikToolsHandler:
                     raise
                 except websockets.exceptions.ConnectionClosed as e:
                     code = getattr(e, "code", None)
-                    reason = getattr(e, "reason", "")
-                    self.log(f"[TikTools] Conexao fechada (codigo {code}): {reason}")
+                    self.log(f"[TikTools] Conexão fechada (código {code}).")
                     if code in STREAM_END_CODES:
                         backoff = 30
                     else:
@@ -335,13 +343,28 @@ class TikToolsHandler:
                             self.log("[TikTools] AVISO: múltiplas quedas consecutivas (conexão instável)")
                             self._drops = 0
                 except Exception as e:
-                    self.log(f"[TikTools] ERRO: {type(e).__name__}: {e}")
+                    self.log({
+                        "text": "[TikTools] Falha na conexão com o provedor.",
+                        "category": "error",
+                        "level": "error",
+                        "event": "tiktoktools.connection.failed",
+                        "source": "python",
+                        "code": "TIKTOOLS_CONNECTION_FAILED",
+                        "details": {"error_type": type(e).__name__},
+                    })
                     backoff = min(backoff * 2, 60)
                 finally:
                     self._connected = False
                     self._emit_status("disconnected")
 
-                print(f"[TikTools] Reconectando em {backoff}s...")
+                self.log({
+                    "text": f"[TikTools] Reconectando em {backoff}s.",
+                    "category": "connection",
+                    "level": "warning" if backoff >= 30 else "info",
+                    "event": "tiktoktools.connection.retry_scheduled",
+                    "source": "python",
+                    "details": {"backoff_seconds": backoff},
+                })
                 await asyncio.sleep(backoff)
                 if backoff >= 30:
                     backoff = 30
