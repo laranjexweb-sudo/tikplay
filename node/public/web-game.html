@@ -1140,7 +1140,15 @@ const GUESS_TOP_MS = 1200;  // tempo para ler o palpite no topo
 const GUESS_GAP_MS = 20;    // intervalo antes do proximo
 
 function handleGuessHighlight(msg) {
-  guessHighlightQueue.push(msg);
+  if (!msg || !msg.word) return;
+
+  const alreadyListed = state.guesses.some(g => g.word.toLowerCase() === msg.word.toLowerCase());
+  const isDuplicate = !!msg.is_duplicate || alreadyListed;
+  if (!isDuplicate) addGuessToList(msg);
+
+  // A lista é imediata; sob carga, apenas o destaque visual é condensado.
+  guessHighlightQueue = guessHighlightQueue.filter(item => item.is_game_over_event);
+  guessHighlightQueue.push({ ...msg, is_duplicate: isDuplicate, alreadyListed: true });
   processGuessHighlightQueue();
 }
 
@@ -1149,7 +1157,7 @@ function processGuessHighlightQueue() {
   guessHighlightShowing = true;
 
   const current = guessHighlightQueue.shift();
-  const isDuplicate = current.is_duplicate || state.guesses.some(g => g.word.toLowerCase() === (current.word || "").toLowerCase());
+  const isDuplicate = current.is_duplicate || (!current.alreadyListed && state.guesses.some(g => g.word.toLowerCase() === (current.word || "").toLowerCase()));
 
   if (current.is_game_over_event) {
     const msg = current.msg;
@@ -1289,13 +1297,13 @@ function addGuessToList(msg) {
   });
   document.getElementById("guessCount").textContent = state.guesses.length;
   insertGuessRow(state.guesses[state.guesses.length - 1]);
-  refreshRanking();
+  if (rankingMode === "guesses") renderGuessesRanking();
   renderActiveGift(state.activeGift);
 
   if (msg.rank === 1) {
-    showNotification(`${msg.nickname || msg.user} acertou!`, "green");
+    showNotification(`${msg.nickname || msg.user} acertou!`, "green", "guess");
   } else if (msg.rank <= 50) {
-    showNotification(`${msg.nickname || msg.user}: ${msg.word} (#${msg.rank})`, "lime");
+    showNotification(`${msg.nickname || msg.user}: ${msg.word} (#${msg.rank})`, "lime", "guess");
   }
 }
 
@@ -1351,20 +1359,10 @@ function insertGuessRow(guess) {
   if (!container || !guess) return;
 
   const existingRows = [...container.querySelectorAll(":scope > .guess-row")];
-  const previousTops = new Map(existingRows.map(row => [row, row.getBoundingClientRect().top]));
   const row = createGuessRow(guess, true);
   const nextRow = existingRows.find(item => Number(item.dataset.rank) > Number(guess.rank));
   container.insertBefore(row, nextRow || null);
   guess.justAdded = false;
-
-  for (const item of existingRows) {
-    const deltaY = previousTops.get(item) - item.getBoundingClientRect().top;
-    if (Math.abs(deltaY) < 1) continue;
-    item.animate(
-      [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0)" }],
-      { duration: 180, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
-    );
-  }
 
   while (container.children.length > 50) container.lastElementChild.remove();
 }
@@ -1578,9 +1576,11 @@ function renderPostGame() {
   }
 }
 
-function showNotification(text, color) {
+function showNotification(text, color, key = "") {
+  if (key) document.querySelector(`.guess-notification[data-notification-key="${key}"]`)?.remove();
   const el = document.createElement("div");
   el.className = "guess-notification";
+  if (key) el.dataset.notificationKey = key;
   el.style.borderColor = color;
   el.textContent = text;
   document.body.appendChild(el);
