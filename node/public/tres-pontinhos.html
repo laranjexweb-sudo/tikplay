@@ -356,16 +356,16 @@
   #wrongGuess { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
   .wrong-item {
     display: flex; align-items: center; gap: 8px;
-    background: rgba(251,91,91,.09);
-    border: 2px solid rgba(251,91,91,.5);
+    background: rgba(56,189,248,.07);
+    border: 2px solid rgba(56,189,248,.25);
     border-radius: 8px;
     padding: 4px 10px;
     font-size: 13px;
-    color: #ffd8d8;
+    color: #d8e7f6;
   }
-  .wrong-item img { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(251,91,91,.6); object-fit: cover; flex-shrink: 0; }
+  .wrong-item img { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(56,189,248,.4); object-fit: cover; flex-shrink: 0; }
   .wrong-item .wu { color: #fff; font-weight: 900; }
-  .wrong-item .wx { margin-left: auto; color: #f4a6a6; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+  .wrong-item .wx { margin-left: auto; color: #9aacc1; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
 
   /* ===================== APOIADORES ===================== */
   #supportersBox {
@@ -549,6 +549,75 @@
   .rk-row .pt { margin-left: auto; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
   .rk-row.hl { border: 2px solid var(--gold); border-radius: 8px; animation: rowFlash 1.1s ease; }
   .rk-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+  /* Composição para fonte vertical de live: mantém o jogo na área segura e
+     reserva a faixa inferior para chat, presentes e controles do TikTok. */
+  @media (max-aspect-ratio: 3/4) {
+    body { align-items: flex-start; }
+    #stage {
+      width: min(100vw, 760px);
+      height: 60vh;
+      max-height: 1350px;
+      margin-top: 10vh;
+      padding: clamp(8px, 1.1vh, 18px) clamp(18px, 4vw, 44px);
+      gap: clamp(5px, .65vh, 10px);
+    }
+    .pills { flex-direction: row; gap: 5px; }
+    .pill { padding: 4px 8px; gap: 5px; border-width: 1px; }
+    .pill-label { font-size: 9px; letter-spacing: .8px; }
+    #timerVal { font-size: 19px; }
+    #pointsVal { font-size: 14px; }
+    .brand-title { font-size: clamp(18px, 2.4vh, 24px); }
+    .stage-label { font-size: clamp(10px, 1.35vh, 14px); margin-top: 3px; }
+    .statusbar { min-height: 18px; margin-top: 0; }
+    .badge { padding: 2px 6px; font-size: 9px; border-width: 1px; }
+    #wordZone { margin: 2px 0 0; }
+    #wordTiles { padding: 4px 0 18px; }
+    .wtile { border-radius: 8px; }
+    .word-meta { font-size: 10px; min-height: 12px; margin-top: 0; }
+    #dicas { gap: 5px; }
+    .dica-inner { padding: 6px 10px 7px; border-width: 1px; }
+    .dica-head { gap: 6px; margin-bottom: 3px; }
+    .dica-num { width: 22px; height: 22px; font-size: 11px; border-width: 1px; }
+    .dica-tag { font-size: 9px; letter-spacing: 1px; }
+    .dica-points { font-size: 9px; letter-spacing: .5px; }
+    .dica-points.gold { font-size: 11px; }
+    .dica-text { font-size: 14px; }
+    .dica-text.sm { font-size: 12px; }
+    .dica-text.big { font-size: clamp(17px, 2.2vh, 22px); line-height: 1.25; }
+    .dica.history .dica-inner { padding-top: 4px; padding-bottom: 5px; }
+    .dica.history .dica-head { margin-bottom: 1px; }
+    .dica.history .dica-num { width: 18px; height: 18px; font-size: 9px; }
+    .dica.history .dica-text { font-size: 11px; }
+    .dica.locked .dica-inner { padding-top: 4px; padding-bottom: 4px; }
+    .dica.locked .dica-head { margin: 0; }
+    .dica.locked .dica-lock-blur { display: none; }
+    .dica.current { transform: none; }
+    #giftInfo { justify-content: flex-start; margin: 1px 0; }
+    .gift-tag { padding: 2px 8px; font-size: 9px; border-width: 1px; }
+    .gift-tag .gift-img { width: 18px; height: 18px; }
+    #wrongGuess { gap: 3px; }
+    .wrong-item {
+      min-height: 25px;
+      padding: 2px 7px;
+      font-size: 10px;
+      color: #d8e7f6;
+      background: rgba(56,189,248,.07);
+      border: 1px solid rgba(56,189,248,.22);
+    }
+    .wrong-item img { width: 18px; height: 18px; border-color: rgba(56,189,248,.35); }
+    .wrong-item .wx { color: #9aacc1; }
+    #supportersBox { padding: 4px 8px; border-width: 1px; margin-top: 0; }
+    #supportersBox .lbl { font-size: 8px; letter-spacing: 1px; }
+    .supp-avatar { width: 22px; height: 22px; }
+    .weekly { margin-top: 0; }
+    .weekly-title { display: none; }
+    .weekly-list { display: flex; }
+    .weekly-row { min-height: 30px; padding: 4px 8px; font-size: 11px; border-width: 1px; }
+    .weekly-row .pos { width: 18px; }
+    .weekly-row:not(:first-child) { display: none; }
+  }
+
 </style>
 </head>
 <body>

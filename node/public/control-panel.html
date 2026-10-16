@@ -241,8 +241,8 @@
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
 <link rel="stylesheet" href="/ui/tikplay-streamer-reference.css">
-<link rel="stylesheet" href="/ui/tikplay-streamer-model.css?v=20261013-overlay-hold">
-<link rel="stylesheet" href="/ui/tikplay-sounds-model.css">
+<link rel="stylesheet" href="/ui/tikplay-streamer-model.css?v=20261016-themed-selects">
+<link rel="stylesheet" href="/ui/tikplay-sounds-model.css?v=20261016-themed-selects">
 <link rel="stylesheet" href="/ui/tikplay-word-model.css?v=20261013-history">
 <link rel="stylesheet" href="/ui/tikplay-threedicas-model.css?v=20261014">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
@@ -421,29 +421,30 @@
         <section class="card page-section tp-sound-section" data-feature-section="chat" data-section="voice" id="tab-chat">
           <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz do narrador</h2><p>Compartilhada pela narração do chat e pelas charadas da Palavra Secreta.</p></div></div></div>
           <div class="card-body">
-            <div class="form-grid">
-              <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio (servidor)</option><option value="edge_francisca" selected>Francisca (servidor)</option></select><small>Aplicada ao chat e às charadas.</small></div>
-              <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
-            </div>
-            <div id="elevenChatBox" hidden>
-              <div class="divider"></div>
-              <div class="field"><label for="elevenChatVoice">Voz adicional do chat</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
-              <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz adicional</button></div>
-              <small id="elevenChatStatus" role="status" aria-live="polite"></small>
-            </div>
-            <div class="divider"></div>
-            <label class="switch-row" for="chatNarrEnabled">
-              <input type="checkbox" id="chatNarrEnabled" onchange="onSettingsChanged()">
-              <span class="switch"></span>
-              <div><b>Ler mensagens do chat em voz alta</b><small>Os comentários são sintetizados e reproduzidos em sequência no painel.</small></div>
-            </label>
-            <div class="form-grid">
-              <div class="field"><label for="chatNarrMode">Comentários narrados</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos</option><option value="exclude">Todos, exceto os que começam com o caractere</option><option value="only">Somente os que começam com o caractere</option></select></div>
-              <div class="field"><label for="chatNarrChar">Caractere de filtro</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado nos modos de filtro; o caractere não é falado.</small></div>
-            </div>
-            <div class="row-actions"><button class="btn btn-primary" type="button" onclick="testPanelVoice()">Testar voz</button></div>
-            <div class="divider"></div>
-            <div class="info-card"><strong>Importante:</strong> voz e velocidade são compartilhadas. A opção de narração automática da charada continua independente da leitura do chat.</div>
+            <section class="tts-settings-section" aria-labelledby="chatNarrationHeading">
+              <h3 class="tts-subsection-title" id="chatNarrationHeading">Narração do chat</h3>
+              <label class="switch-row tts-chat-toggle" for="chatNarrEnabled">
+                <input type="checkbox" id="chatNarrEnabled" onchange="onSettingsChanged()">
+                <span class="switch"></span>
+                <div><b>Ler mensagens do chat em voz alta</b><small>Os comentários são sintetizados e reproduzidos em sequência no painel.</small></div>
+              </label>
+              <div class="form-grid tts-chat-filters">
+                <div class="field"><label for="chatNarrMode">Comentários narrados</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos</option><option value="exclude">Todos, exceto os que começam com o caractere</option><option value="only">Somente os que começam com o caractere</option></select></div>
+                <div class="field"><label for="chatNarrChar">Caractere de filtro</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado nos modos de filtro; o caractere não é falado.</small></div>
+              </div>
+            </section>
+            <div class="divider tts-section-divider"></div>
+            <section class="tts-settings-section" aria-labelledby="ttsPlaybackHeading">
+              <h3 class="tts-subsection-title" id="ttsPlaybackHeading">Voz e reprodução</h3>
+              <div class="form-grid tts-playback-grid">
+                <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio (servidor)</option><option value="edge_francisca" selected>Francisca (servidor)</option></select><small>Aplicada ao chat e às charadas.</small></div>
+                <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
+                <div class="field tts-volume-field"><label for="ttsVolume">Volume da narração · <span id="ttsVolumeLabel">100%</span></label><input type="range" id="ttsVolume" min="0" max="100" step="0.1" value="50" oninput="onTtsVolumeChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>0%</span><span>100%</span><span>300%</span></div><small>100% fica no centro da escala; acima disso, a amplificação pode distorcer dependendo do áudio e da saída.</small></div>
+              </div>
+              <div class="row-actions tts-test-action"><button class="btn btn-primary" type="button" onclick="testPanelVoice()"><span aria-hidden="true">▶</span> Testar voz</button></div>
+            </section>
+            <div class="divider tts-section-divider"></div>
+            <div class="info-card tts-riddle-info"><span aria-hidden="true">ⓘ</span><p><strong>A voz e a velocidade também são usadas nas charadas.</strong> A narração automática das charadas continua independente da leitura do chat.</p></div>
           </div>
         </section>
 
@@ -463,6 +464,14 @@
       </div>
 
       <aside class="stack">
+        <section class="card eleven-chat-voice-card" id="elevenChatBox" hidden aria-labelledby="elevenChatVoiceTitle">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">♫</div><div><h2 id="elevenChatVoiceTitle">Voz adicional do chat</h2><p>Selecione e teste a voz alternativa para a narração do chat.</p></div></div></div>
+          <div class="card-body">
+            <div class="field"><label for="elevenChatVoice">Voz</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
+            <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz adicional</button></div>
+            <small id="elevenChatStatus" role="status" aria-live="polite"></small>
+          </div>
+        </section>
         <section class="card eleven-usage-card" id="elevenUsageCard" hidden aria-labelledby="elevenUsageTitle">
           <div class="card-head"><div class="title-wrap"><div class="title-icon">◴</div><div><h2 id="elevenUsageTitle">Limite de voz adicional</h2><p>Consumo acumulado neste mês.</p></div></div></div>
           <div class="card-body">
@@ -476,8 +485,7 @@
             </div>
           </div>
         </section>
-        <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">◉</div><div><h2>Status do áudio</h2><p>Resumo rápido da configuração atual.</p></div></div></div><div class="card-body"><div class="status-list"><div class="status-item"><div><span>Motor de voz</span><strong>Síntese de voz</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Voz selecionada</span><strong id="voiceStatus">—</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Salvamento</span><strong>Automático</strong></div><i class="status-dot"></i></div></div><div class="mini-stat-grid"><div class="mini-stat"><span>ALERTAS</span><strong id="soundsAlertCount">—</strong></div><div class="mini-stat"><span>COM ÁUDIO</span><strong id="soundsAudioCount">—</strong></div></div></div></section>
-        <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione a voz e teste a narração.<br><br><strong>2.</strong> Escolha um presente do catálogo.<br><br><strong>3.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>4.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
+        <section class="card hidden" data-section="alerts"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione o presente no catálogo.<br><br><strong>2.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>3.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
       </aside>
     </section>
       </div>
@@ -2037,8 +2045,6 @@ function renderSoundAlerts() {
     const image = file ? '<img src="/gift-images/' + esc(file) + '" alt="">' : '<span aria-hidden="true">♪</span>';
     return '<article class="alert-row"><div class="alert-top"><div class="gift-name"><div class="gift-img">' + image + '</div><div><strong>' + esc(soundAlertLabel(gift)) + '</strong><span>Presente configurado</span></div></div><button class="btn btn-danger btn-small" type="button" onclick="removeGiftSound(' + idx + ')">Remover</button></div><div class="alert-slots"><div class="slot">' + soundSlotControls(idx,'normal',entry.normal) + '</div><div class="slot">' + soundSlotControls(idx,'combo',entry.combo) + '</div></div></article>';
   }).join('') : '<p class="panel-copy">Nenhum alerta configurado ainda.</p>';
-  document.getElementById('soundsAlertCount').textContent = gifts.length;
-  document.getElementById('soundsAudioCount').textContent = gifts.filter(g => { const entry = soundAlerts[g] || {}; return entry.normal || entry.combo; }).length;
   bindSoundGiftPicker();
 }
 
@@ -3003,6 +3009,7 @@ let ttsPlaybackOverflowAt = 0;
 let ttsPlaybackErrorAt = 0;
 let ttsPlaybackCurrentItem = null;
 let ttsPlaybackCurrentAudio = null;
+let ttsPlaybackGainNode = null;
 let ttsPlaybackCurrentFinish = null;
 let ttsPlaybackCurrentCancel = null;
 
@@ -3066,11 +3073,13 @@ function playNextTikPlayAudio() {
   const audio = buffered ? null : new Audio(item.url);
   const controller = buffered ? new AbortController() : null;
   let source = null;
+  let gainNode = null;
   let loadTimer = null;
   let finished = false;
   ttsPlaybackActive = true;
   ttsPlaybackCurrentItem = item;
   ttsPlaybackCurrentAudio = audio;
+  ttsPlaybackGainNode = null;
   if (audio) {
     audio.preload = "auto";
     audio.volume = 1;
@@ -3083,9 +3092,11 @@ function playNextTikPlayAudio() {
     ttsPlaybackActive = false;
     controller?.abort();
     if (source) { source.onended = null; source.disconnect(); }
+    if (gainNode) gainNode.disconnect();
     if (ttsPlaybackCurrentItem === item) {
       ttsPlaybackCurrentItem = null;
       ttsPlaybackCurrentAudio = null;
+      ttsPlaybackGainNode = null;
       ttsPlaybackCurrentFinish = null;
       ttsPlaybackCurrentCancel = null;
     }
@@ -3125,12 +3136,25 @@ function playNextTikPlayAudio() {
         complete.copyToChannel(decoded.getChannelData(channel), channel, leadIn);
       source = context.createBufferSource();
       source.buffer = complete;
-      source.connect(context.destination);
+      gainNode = context.createGain();
+      gainNode.gain.value = getTtsVolumeGain();
+      source.connect(gainNode).connect(context.destination);
+      ttsPlaybackGainNode = gainNode;
       source.onended = finish;
       source.start();
       if (item.diag) addLog({ text: "[Áudio] Reprodução TTS iniciada.", game: item.game, level: "info" });
     })().catch(fail);
     return;
+  }
+  if (audio && connectAudioContext) {
+    try {
+      const mediaSource = connectAudioContext.createMediaElementSource(audio);
+      gainNode = connectAudioContext.createGain();
+      gainNode.gain.value = getTtsVolumeGain();
+      mediaSource.connect(gainNode).connect(connectAudioContext.destination);
+      source = mediaSource;
+      ttsPlaybackGainNode = gainNode;
+    } catch (_) { /* Mantém a reprodução nativa se Web Audio não estiver disponível. */ }
   }
   audio.onended = finish;
   audio.onerror = fail;
@@ -3349,7 +3373,7 @@ const giftHint = document.getElementById("giftHint");
 
 // Preferências de Jogo
 let settingsDirty = false;
-let savedSettings = { apenas_seguidores: false, apenas_heart_me: false, command_prefix: "#", pct_dica: 70, pct_charada: 30, tts_rate: 1.0, tts_voice: "", chat_narr_enabled: false, chat_narr_mode: "all", chat_narr_char: "#" };
+let savedSettings = { apenas_seguidores: false, apenas_heart_me: false, command_prefix: "#", pct_dica: 70, pct_charada: 30, tts_rate: 1.0, tts_volume: 1.0, tts_voice: "", chat_narr_enabled: false, chat_narr_mode: "all", chat_narr_char: "#" };
 const chkFollowers = document.getElementById("chkFollowers");
 const chkHeartMe = document.getElementById("chkHeartMe");
 const cmdPrefixInput = document.getElementById("cmdPrefix");
@@ -3357,6 +3381,8 @@ const pctDicaInput = document.getElementById("pctDica");
 const pctCharadaInput = document.getElementById("pctCharada");
 const ttsRateInput = document.getElementById("ttsRate");
 const ttsRateLabel = document.getElementById("ttsRateLabel");
+const ttsVolumeInput = document.getElementById("ttsVolume");
+const ttsVolumeLabel = document.getElementById("ttsVolumeLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
 const chatNarrEnabledInput = document.getElementById("chatNarrEnabled");
 const chatNarrModeInput = document.getElementById("chatNarrMode");
@@ -3904,7 +3930,7 @@ function createPreferenceSaver({ statusId, ready = () => true, read, send, commi
 const preferencePost = (path, body) => apiFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function preferenceHydration(scope, loaded, error = "") {
-  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVoiceSelect,#chatNarrEnabled,#chatNarrMode,#chatNarrChar,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
+  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVolume,#ttsVoiceSelect,#chatNarrEnabled,#chatNarrMode,#chatNarrChar,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
   document.querySelectorAll(selectors[scope]).forEach(el => { if (el.matches("input,select,textarea")) el.disabled = !loaded; else el.inert = !loaded; });
   const statusId = {settings:"settingsSaveStatus",gifts:"giftSaveStatus",tres:"tresSaveStatus",duelo:"dueloSaveStatus"}[scope];
   const el = document.getElementById(statusId); if(el) el.textContent = loaded ? "Preferências salvas automaticamente após alterações." : (error || "Carregando preferências…");
@@ -3922,7 +3948,7 @@ function readPanelSettings() {
     apenas_seguidores: chkFollowers.checked, apenas_heart_me: chkHeartMe.checked,
     command_prefix: cmdPrefixInput ? cmdPrefixInput.value : "#",
     pct_dica: Math.max(0, Math.min(100, Number(pctDicaInput.value))),
-    tts_rate: Number(ttsRateInput.value) || 1, tts_voice: currentTtsVoice,
+    tts_rate: Number(ttsRateInput.value) || 1, tts_volume: getTtsVolumeGain(), tts_voice: currentTtsVoice,
     chat_narr_enabled: chatNarrEnabledInput.checked,
     chat_narr_mode: chatNarrModeInput.value,
     chat_narr_char: (chatNarrCharInput.value || "#").slice(0, 1),
@@ -4019,6 +4045,9 @@ function applySettingsUI(settings) {
   const rate = Math.max(0.1, Math.min(10, Number(s.tts_rate) || 1));
   ttsRateInput.value = rate;
   if (ttsRateLabel) ttsRateLabel.textContent = `${rate.toFixed(1).replace(/\.0$/, "")}x`;
+  const volume = Math.max(0, Math.min(3, Number(s.tts_volume ?? 1)));
+  ttsVolumeInput.value = ttsVolumeGainToPosition(volume);
+  if (ttsVolumeLabel) ttsVolumeLabel.textContent = `${Math.round(volume * 100)}%`;
   currentTtsVoice = s.tts_voice || "";
   chatNarrEnabledInput.checked = !!s.chat_narr_enabled;
   chatNarrModeInput.value = ["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all";
@@ -4043,6 +4072,25 @@ function onTtsRateChanged(el) {
   if (ttsRateLabel) ttsRateLabel.textContent = `${el.value}x`;
   onSettingsChanged();
 
+}
+
+function getTtsVolumeGain() {
+  const position = Number(ttsVolumeInput && ttsVolumeInput.value);
+  const value = Math.max(0, Math.min(100, Number.isFinite(position) ? position : 50));
+  return value <= 50 ? value / 50 : 1 + ((value - 50) / 50) * 2;
+}
+
+function ttsVolumeGainToPosition(gain) {
+  const value = Math.max(0, Math.min(3, Number(gain) || 0));
+  return value <= 1 ? value * 50 : 50 + ((value - 1) / 2) * 50;
+}
+
+function onTtsVolumeChanged(el) {
+  if (ttsVolumeLabel) ttsVolumeLabel.textContent = `${Math.round(getTtsVolumeGain() * 100)}%`;
+  if (ttsPlaybackGainNode && connectAudioContext) {
+    ttsPlaybackGainNode.gain.setTargetAtTime(getTtsVolumeGain(), connectAudioContext.currentTime, 0.015);
+  }
+  onSettingsChanged();
 }
 
 
@@ -4206,6 +4254,7 @@ function isSettingsDirty() {
     (cmdPrefixInput ? cmdPrefixInput.value : "#") !== (savedSettings.command_prefix === undefined || savedSettings.command_prefix === null ? "#" : savedSettings.command_prefix) ||
     dica !== (savedSettings.pct_dica ?? 70) ||
     Math.abs(rate - (savedSettings.tts_rate || 1)) > 0.001 ||
+    Math.abs(getTtsVolumeGain() - Number(savedSettings.tts_volume ?? 1)) > 0.001 ||
     (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
     chatNarrEnabledInput.checked !== !!savedSettings.chat_narr_enabled ||
     chatNarrModeInput.value !== (savedSettings.chat_narr_mode || "all") ||
@@ -6139,17 +6188,10 @@ function syncSoundModelTabs(preferred) {
     const active = button === selected;
     button.classList.toggle('active',active);
     button.setAttribute('aria-pressed', String(active));
-    root.querySelector('[data-section="' + button.dataset.localTab + '"]').classList.toggle('hidden', !active);
+    root.querySelectorAll('[data-section="' + button.dataset.localTab + '"]').forEach(section => section.classList.toggle('hidden', !active));
   }
 }
 document.querySelectorAll('#tab-sons [data-local-tab]').forEach(button => button.addEventListener('click', () => syncSoundModelTabs(button.dataset.localTab)));
-function updateSoundVoiceStatus() {
-  const select = document.getElementById('ttsVoiceSelect');
-  document.getElementById('voiceStatus').textContent = select.options[select.selectedIndex]?.text || '—';
-}
-document.getElementById('ttsVoiceSelect').addEventListener('change',updateSoundVoiceStatus);
-new MutationObserver(updateSoundVoiceStatus).observe(document.getElementById('ttsVoiceSelect'),{childList:true,subtree:true,attributes:true});
-updateSoundVoiceStatus();
 let streamerDashboardBusy = false;
 document.getElementById('streamerNavSlot').append(document.querySelector('.tp-panel-nav'));
 function toggleStreamerLogs(open) {
@@ -6267,6 +6309,289 @@ try {
 } catch (e) {}
 setLogCategories();
 for (const scope of ["settings","gifts","tres","duelo"]) preferenceHydration(scope, false);
+
+function setupThemedSelects() {
+  let sequence = 0;
+  let openSelect = null;
+  const states = new WeakMap();
+  const selectValueDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  const selectIndexDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "selectedIndex");
+  const optionSelectedDescriptor = Object.getOwnPropertyDescriptor(HTMLOptionElement.prototype, "selected");
+
+  function enhance(select) {
+    if (!(select instanceof HTMLSelectElement) || select.dataset.tpSelectEnhanced === "true" || select.multiple || select.size > 1 || select.hidden || select.style.display === "none") return;
+    const parent = select.parentElement;
+    if (!parent) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = "tp-select" + (select.classList.contains("form-select-sm") || select.classList.contains("form-control-sm") ? " tp-select--compact" : "");
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.dataset.tpSelectEnhanced = "true";
+    select.classList.add("tp-select-native");
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tp-select-trigger";
+    button.id = `${select.id || `tpSelect${++sequence}`}__trigger`;
+    button.setAttribute("role", "combobox");
+    button.setAttribute("aria-haspopup", "listbox");
+    button.setAttribute("aria-expanded", "false");
+
+    const value = document.createElement("span");
+    value.className = "tp-select-value";
+    button.appendChild(value);
+    wrapper.appendChild(button);
+
+    const menu = document.createElement("div");
+    menu.className = "tp-select-menu";
+    menu.id = `tpSelectList${++sequence}`;
+    menu.setAttribute("role", "listbox");
+    menu.setAttribute("aria-labelledby", button.id);
+    menu.hidden = true;
+    document.body.appendChild(menu);
+    button.setAttribute("aria-controls", menu.id);
+
+    const error = document.createElement("span");
+    error.className = "tp-select-error";
+    error.id = `${menu.id}Error`;
+    error.setAttribute("role", "alert");
+    error.hidden = true;
+    wrapper.appendChild(error);
+    const describedBy = [select.getAttribute("aria-describedby"), error.id].filter(Boolean).join(" ");
+    button.setAttribute("aria-describedby", describedBy);
+    if (select.hasAttribute("required")) button.setAttribute("aria-required", "true");
+    if (select.getAttribute("aria-label")) button.setAttribute("aria-label", select.getAttribute("aria-label"));
+    if (select.title) button.title = select.title;
+
+    const labels = [...document.querySelectorAll("label[for]")].filter(label => label.htmlFor === select.id && select.id);
+    const wrappingLabel = select.closest("label");
+    for (const label of labels) label.htmlFor = button.id;
+    if (!labels.length && wrappingLabel) wrappingLabel.htmlFor = button.id;
+    if (!labels.length && !wrappingLabel && !button.hasAttribute("aria-label")) {
+      button.setAttribute("aria-label", select.name || "Selecionar opção");
+    }
+
+    const state = { select, wrapper, button, value, menu, error, activeIndex: -1, sync: null, open: null, close: null, position: null, patchOptions: null };
+    function optionIsDisabled(option) { return option.disabled || !!option.parentElement?.disabled; }
+    function updateActive(index, scroll = false) {
+      const options = [...select.options];
+      if (index < 0 || index >= options.length || optionIsDisabled(options[index]) || options[index].hidden) return false;
+      state.activeIndex = index;
+      menu.querySelectorAll("[data-tp-option-index]").forEach(item => {
+        const active = Number(item.dataset.tpOptionIndex) === index;
+        item.classList.toggle("is-active", active);
+      });
+      button.setAttribute("aria-activedescendant", `${menu.id}Option${index}`);
+      if (scroll) menu.querySelector(`#${CSS.escape(`${menu.id}Option${index}`)}`)?.scrollIntoView({ block: "nearest" });
+      return true;
+    }
+    function renderOptions() {
+      menu.replaceChildren();
+      let previousGroup = null;
+      [...select.options].forEach((option, index) => {
+        if (option.hidden) return;
+        const group = option.parentElement?.tagName === "OPTGROUP" ? option.parentElement.label : "";
+        if (group && group !== previousGroup) {
+          const heading = document.createElement("div");
+          heading.className = "tp-select-group-label";
+          heading.setAttribute("role", "presentation");
+          heading.textContent = group;
+          menu.appendChild(heading);
+        }
+        previousGroup = group;
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "tp-select-option";
+        item.tabIndex = -1;
+        item.id = `${menu.id}Option${index}`;
+        item.dataset.tpOptionIndex = String(index);
+        item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", String(index === select.selectedIndex));
+        item.disabled = optionIsDisabled(option);
+        item.textContent = option.label || option.textContent.trim();
+        item.addEventListener("pointermove", () => { if (!item.disabled) updateActive(index); });
+        item.addEventListener("mousedown", event => event.preventDefault());
+        item.addEventListener("click", () => choose(index));
+        menu.appendChild(item);
+      });
+      if (!menu.children.length) {
+        const empty = document.createElement("div");
+        empty.className = "tp-select-group-label";
+        empty.textContent = "Nenhuma opção disponível";
+        menu.appendChild(empty);
+      }
+      menu.setAttribute("aria-label", button.getAttribute("aria-label") || value.textContent || "Opções");
+      menu.querySelectorAll("[data-tp-option-index]").forEach(item => item.setAttribute("aria-selected", String(Number(item.dataset.tpOptionIndex) === select.selectedIndex)));
+    }
+    function sync() {
+      const selected = select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      value.textContent = selected ? (selected.label || selected.textContent.trim()) : "Selecione uma opção";
+      button.disabled = select.matches(":disabled");
+      button.setAttribute("aria-required", String(select.required));
+      if (select.validity.valid && select.getAttribute("aria-invalid") === "true") {
+        select.removeAttribute("aria-invalid");
+        error.hidden = true;
+        error.textContent = "";
+      }
+      button.setAttribute("aria-invalid", String(select.getAttribute("aria-invalid") === "true"));
+      wrapper.hidden = select.hidden || select.style.display === "none";
+      wrapper.classList.toggle("tp-select--compact", select.classList.contains("form-select-sm") || select.classList.contains("form-control-sm"));
+      if (wrapper.hidden && openSelect === state) close();
+      if (openSelect === state) renderOptions();
+    }
+    function position() {
+      const rect = button.getBoundingClientRect();
+      const gap = 6;
+      const maxHeight = Math.max(120, Math.min(288, window.innerHeight - 16));
+      menu.style.maxHeight = `${maxHeight}px`;
+      menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))}px`;
+      menu.style.width = `${Math.min(rect.width, window.innerWidth - 16)}px`;
+      const below = window.innerHeight - rect.bottom - gap;
+      const above = rect.top - gap;
+      const openAbove = below < Math.min(menu.scrollHeight, maxHeight) && above > below;
+      menu.style.top = `${Math.max(8, openAbove ? rect.top - Math.min(menu.scrollHeight, maxHeight) - gap : rect.bottom + gap)}px`;
+    }
+    function close(restoreFocus = false) {
+      menu.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      button.removeAttribute("aria-activedescendant");
+      wrapper.removeAttribute("data-open");
+      if (openSelect === state) openSelect = null;
+      if (restoreFocus) button.focus({ preventScroll: true });
+    }
+    function open(startIndex = select.selectedIndex) {
+      if (button.disabled) return;
+      if (openSelect && openSelect !== state) openSelect.close();
+      openSelect = state;
+      renderOptions();
+      menu.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      wrapper.setAttribute("data-open", "true");
+      position();
+      if (!updateActive(startIndex)) {
+        const first = [...select.options].findIndex(option => !optionIsDisabled(option) && !option.hidden);
+        updateActive(first);
+      }
+    }
+    function choose(index) {
+      const option = select.options[index];
+      if (!option || optionIsDisabled(option)) return;
+      const changed = select.value !== option.value;
+      select.value = option.value;
+      select.removeAttribute("aria-invalid");
+      button.removeAttribute("aria-invalid");
+      error.hidden = true;
+      error.textContent = "";
+      close(true);
+      if (changed) {
+        select.dispatchEvent(new Event("input", { bubbles: true }));
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    state.sync = sync; state.open = open; state.close = close; state.position = position;
+    states.set(select, state);
+
+    function patchProperty(target, descriptor, name, afterSet) {
+      if (!descriptor?.get || !descriptor?.set) return;
+      try {
+        Object.defineProperty(target, name, { configurable: true, enumerable: descriptor.enumerable, get() { return descriptor.get.call(this); }, set(value) { descriptor.set.call(this, value); afterSet(); } });
+      } catch (_) {}
+    }
+    function patchOption(option) {
+      if (!optionSelectedDescriptor || Object.prototype.hasOwnProperty.call(option, "selected")) return;
+      patchProperty(option, optionSelectedDescriptor, "selected", sync);
+    }
+    state.patchOptions = () => [...select.options].forEach(patchOption);
+    patchProperty(select, selectValueDescriptor, "value", sync);
+    patchProperty(select, selectIndexDescriptor, "selectedIndex", sync);
+    state.patchOptions();
+    const nativeAdd = select.add.bind(select);
+    select.add = function(option, before) { const result = nativeAdd(option, before); if (option instanceof HTMLOptionElement) patchOption(option); sync(); return result; };
+    select.addEventListener("input", sync);
+    select.addEventListener("change", sync);
+    select.addEventListener("invalid", event => {
+      event.preventDefault();
+      select.setAttribute("aria-invalid", "true");
+      error.textContent = select.validationMessage || "Selecione uma opção.";
+      error.hidden = false;
+      button.setAttribute("aria-invalid", "true");
+      button.focus();
+    });
+    button.addEventListener("click", () => openSelect === state ? close() : open());
+    button.addEventListener("keydown", event => {
+      const options = [...select.options];
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (openSelect !== state) open();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        let next = state.activeIndex;
+        for (let i = 0; i < options.length; i++) { next = (next + delta + options.length) % options.length; if (updateActive(next, true)) break; }
+      } else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        if (openSelect !== state) open();
+        const order = event.key === "Home" ? options.map((_, i) => i) : options.map((_, i) => options.length - i - 1);
+        const next = order.find(index => !optionIsDisabled(options[index]) && !options[index].hidden);
+        if (next !== undefined) updateActive(next, true);
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (openSelect === state) choose(state.activeIndex); else open();
+      } else if (event.key === "Escape" && openSelect === state) {
+        event.preventDefault(); close();
+      } else if (event.key === "Tab" && openSelect === state) {
+        close();
+      } else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+        const query = (state.typeahead || "") + event.key.toLocaleLowerCase();
+        state.typeahead = query;
+        clearTimeout(state.typeaheadTimer);
+        state.typeaheadTimer = setTimeout(() => { state.typeahead = ""; }, 700);
+        const start = Math.max(0, select.selectedIndex + 1);
+        const ordered = [...options.slice(start), ...options.slice(0, start)];
+        const match = ordered.find(option => !optionIsDisabled(option) && (option.label || option.textContent.trim()).toLocaleLowerCase().startsWith(query));
+        if (match) { if (openSelect !== state) open(); updateActive([...options].indexOf(match), true); }
+      }
+    });
+
+    const form = select.closest("form");
+    if (form) form.addEventListener("reset", () => setTimeout(sync, 0));
+    sync();
+  }
+
+  document.querySelectorAll("select").forEach(enhance);
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      const target = record.target;
+      if (target instanceof HTMLSelectElement) {
+        if (target.dataset.tpSelectEnhanced === "true") {
+          const state = states.get(target);
+          state?.patchOptions();
+          state?.sync();
+        } else if (target.style.display !== "none" && !target.hidden) enhance(target);
+      } else if (target instanceof HTMLOptionElement || target instanceof HTMLOptGroupElement) {
+        const state = states.get(target.closest("select"));
+        state?.patchOptions();
+        state?.sync();
+      }
+      for (const node of record.addedNodes || []) {
+        if (!(node instanceof Element)) continue;
+        if (node.matches("select")) enhance(node);
+        node.querySelectorAll?.("select").forEach(enhance);
+        const select = node.closest("select");
+        if (select && states.has(select)) { states.get(select).patchOptions(); states.get(select).sync(); }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "hidden", "disabled", "label", "selected", "value"] });
+  document.addEventListener("pointerdown", event => {
+    if (!openSelect) return;
+    if (openSelect.wrapper.contains(event.target) || openSelect.menu.contains(event.target)) return;
+    openSelect.close();
+  }, true);
+  window.addEventListener("resize", () => openSelect?.position(), { passive: true });
+  window.addEventListener("scroll", () => openSelect?.position(), { passive: true, capture: true });
+}
+setupThemedSelects();
 </script>
 </body>
 </html>

@@ -210,6 +210,42 @@
   <header class="tp-admin-section-heading">
     <div><h2 id="adminOperationsHeading">Operação local</h2><p>Execute tarefas administrativas neste servidor e acompanhe o processo em tempo real.</p></div>
   </header>
+  <div class="tp-admin-operation-block" id="wordCatalogAdmin">
+    <div class="tp-admin-operation-heading"><div><h3>Catálogo de palavras</h3><p>Gerencie o vocabulário global. Novas palavras entram em revisão; somente palavras ativas e não banidas podem ser sorteadas.</p></div></div>
+    <div class="tp-admin-metrics" aria-label="Resumo do catálogo"><div><span>Total</span><strong id="wordCatalogTotal">—</strong></div><div><span>Ativas e elegíveis</span><strong id="wordCatalogEligible">—</strong></div><div><span>Em revisão</span><strong id="wordCatalogReview">—</strong></div><div><span>Inativas</span><strong id="wordCatalogInactive">—</strong></div></div>
+    <div class="tp-admin-operation-fields">
+      <label class="tp-admin-field" for="wordCatalogSearch">Buscar palavra <input id="wordCatalogSearch" type="search" maxlength="60" placeholder="Ex.: abelha"></label>
+      <label class="tp-admin-field" for="wordCatalogStatus">Status <select id="wordCatalogStatus" class="form-select"><option value="">Todos</option><option value="active">Ativas</option><option value="review">Em revisão</option><option value="inactive">Inativas</option></select></label>
+      <label class="tp-admin-field" for="wordCatalogCategory">Categoria <select id="wordCatalogCategory" class="form-select"><option value="">Todas</option></select></label>
+    </div>
+    <div class="table-responsive"><table class="table align-middle tp-admin-table"><thead><tr><th>Palavra</th><th>Categoria</th><th>Dificuldade</th><th>Status</th><th>Origem</th><th>Ação</th></tr></thead><tbody id="wordCatalogRows"><tr><td colspan="6">Carregando catálogo…</td></tr></tbody></table></div>
+    <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-dark" id="wordCatalogPrev" disabled>Anterior</button><span id="wordCatalogPageLabel" class="text-secondary">Página —</span><button type="button" class="btn btn-nb btn-dark" id="wordCatalogNext" disabled>Próxima</button></div>
+    <div class="tp-admin-operation-block">
+      <div class="tp-admin-operation-heading"><div><h4>Adicionar ou importar</h4><p>Uma palavra por linha. Palavras inválidas e duplicadas são informadas e ignoradas.</p></div></div>
+      <div class="tp-admin-operation-fields">
+        <label class="tp-admin-field" for="wordImportCategory">Categoria <input id="wordImportCategory" type="text" maxlength="40" value="geral" list="wordCategoryOptions"><datalist id="wordCategoryOptions"></datalist></label>
+        <label class="tp-admin-field" for="wordImportDifficulty">Dificuldade <select id="wordImportDifficulty" class="form-select"><option value="facil">Fácil</option><option value="media" selected>Média</option><option value="dificil">Difícil</option></select></label>
+        <label class="tp-admin-field" for="wordImportStatus">Status inicial <select id="wordImportStatus" class="form-select"><option value="review" selected>Em revisão</option><option value="active">Ativa</option><option value="inactive">Inativa</option></select></label>
+      </div>
+      <label class="tp-admin-field" for="wordImportText">Palavras <span>Até 2.000 linhas por importação</span><textarea id="wordImportText" rows="4" class="form-control" placeholder="palavra nova&#10;outra palavra"></textarea></label>
+      <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-success" id="wordImportButton">Salvar palavras</button></div>
+      <div class="tp-admin-feedback" id="wordCatalogNotice" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="tp-admin-operation-block" id="wordUsageAdmin">
+    <div class="tp-admin-operation-heading"><div><h3>Uso e sorteio por streamer</h3><p>Cada streamer recebe palavras aleatórias sem repetição dentro do ciclo. O histórico continua disponível quando um novo ciclo começa.</p></div></div>
+    <div class="tp-admin-operation-fields">
+      <label class="tp-admin-field" for="wordUsageStreamer">Streamer <select id="wordUsageStreamer" class="form-select"><option value="">Selecione uma conta</option></select></label>
+      <label class="tp-admin-field" for="wordUsageSearch">Buscar no histórico <input id="wordUsageSearch" type="search" maxlength="80" placeholder="Palavra ou streamer"></label>
+    </div>
+    <div class="tp-admin-feedback" id="wordUsageSummary" role="status" aria-live="polite">Selecione um streamer para ver o ciclo.</div>
+    <div class="tp-admin-operation-heading"><div><h4>Filtros de sorteio</h4><p>Sem seleção, todas as categorias e dificuldades ficam elegíveis.</p></div></div>
+    <div class="tp-admin-operation-fields"><fieldset class="tp-admin-field"><legend>Categorias</legend><div id="wordDrawCategories" class="d-flex flex-wrap gap-2"></div></fieldset><fieldset class="tp-admin-field"><legend>Dificuldade</legend><div id="wordDrawDifficulties" class="d-flex flex-wrap gap-2"></div></fieldset></div>
+    <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-success" id="wordDrawSave" disabled>Salvar filtros</button><button type="button" class="btn btn-nb btn-warn" id="wordCycleReset" disabled>Iniciar novo ciclo</button></div>
+    <div class="tp-admin-feedback" id="wordUsageNotice" role="status" aria-live="polite"></div>
+    <div class="table-responsive"><table class="table align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Palavra</th><th>Jogo</th><th>Ciclo</th><th>Usada em</th></tr></thead><tbody id="wordUsageRows"><tr><td colspan="5">Selecione um streamer para carregar o histórico.</td></tr></tbody></table></div>
+    <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-dark" id="wordUsagePrev" disabled>Anterior</button><span id="wordUsagePageLabel" class="text-secondary">Página —</span><button type="button" class="btn btn-nb btn-dark" id="wordUsageNext" disabled>Próxima</button></div>
+  </div>
   <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
     <div class="tp-admin-operation-heading"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>Sincronize os presentes compartilhados do TikTok. Os filtros dos seletores no painel são buscas locais e não alteram esta operação.</p></div></div>
     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -218,14 +254,15 @@
     </div>
   </section>
   <div class="tp-admin-operation-block">
-  <div class="tp-admin-operation-heading"><div><h3>Gerar contextos</h3><p>Configure o volume e o intervalo da geração local de contextos.</p></div></div>
+  <div class="tp-admin-operation-heading"><div><h3>Gerar contextos</h3><p>Claude Haiku 5.5 via OpenRouter ordena até 50 palavras entre as 300 candidatas mais próximas do ranking local. Se vierem menos, as posições restantes são completadas pelo ranking local. Geração paga, salva para reutilização nas próximas partidas.</p></div></div>
   <div class="tp-admin-operation-fields">
-    <label class="tp-admin-field" for="ctxInterval">Intervalo entre alvos <span>Minutos</span><input type="number" id="ctxInterval" value="15" min="1"></label>
-    <label class="tp-admin-field" for="ctxWords">Palavras por contexto <span>Mínimo: 100</span><input type="number" id="ctxWords" value="1000" min="100" step="100"></label>
-    <label class="tp-admin-field" for="ctxLimit">Limite de contextos <span>0 = todos</span><input type="number" id="ctxLimit" value="0" min="0"></label>
+    <label class="tp-admin-field" for="ctxInterval">Intervalo entre alvos <span>Minutos; 0 = sem pausa</span><input type="number" id="ctxInterval" value="0" min="0" max="1440" step="0.1"></label>
+    <label class="tp-admin-field" for="ctxWords">Palavras próximas por IA <span>Restante completado localmente</span><input type="number" id="ctxWords" value="50" readonly></label>
+    <label class="tp-admin-field" for="ctxLimit">Limite de contextos <span>0 = todos; já gerados são reutilizados</span><input type="number" id="ctxLimit" value="10" min="0" max="2000"></label>
   </div>
+  <label class="form-check"><input type="checkbox" id="ctxRegenerate"> Regenerar contextos existentes (consome novamente)</label>
   <div class="tp-admin-operation-actions">
-    <button type="button" class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()">Ativar geração</button>
+    <button type="button" class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()" disabled>Ativar geração</button>
     <button type="button" class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
   </div>
   <div class="progress tp-admin-progress" role="progressbar" aria-label="Progresso da geração">
@@ -235,7 +272,14 @@
     Palavra atual: <b id="ctxCurrent">-</b> &nbsp;|&nbsp; Erros: <b id="ctxErrors">0</b>
   </div>
   <div class="tp-admin-feedback" id="ctxMsg" role="status" aria-live="polite"></div>
-  <div class="tp-admin-log-wrap">
+  <div class="tp-admin-operation-status" id="ctxConsumption" role="status" aria-live="polite">Carregando consumo…</div>
+  <div class="tp-admin-feedback" id="ctxLifetime"></div>
+  <div class="tp-admin-feedback">Valores em US$ reportados pela API, antes de taxas. Custos não informados ficam pendentes. A parada aguarda a chamada em andamento. Duas falhas consecutivas encerram o lote automaticamente.</div>
+  <div class="tp-admin-log-title">Histórico de execuções (últimas 20)</div>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Início</th><th>Estado</th><th>Processados</th><th>Reutilizados</th><th>Erros</th><th>Tokens</th><th>Custo conhecido</th><th>Custos pendentes</th></tr></thead><tbody id="ctxRunRows"></tbody></table></div>
+  <div class="tp-admin-log-title">Chamadas da última execução (últimas 100)</div>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Palavra</th><th>Estado</th><th>Entrada / saída</th><th>Custo US$</th><th>Tempo</th><th>Resultado</th></tr></thead><tbody id="ctxAttemptRows"></tbody></table></div>
+  <div class="tp-admin-log-wrap" hidden>
     <div class="tp-admin-log-title">Log de geração</div>
     <div id="ctxLog"></div>
   </div>
@@ -552,6 +596,153 @@ async function saveBannedWords() {
   } catch (e) {
     if (msg) msg.textContent = "Não salvo: " + e.message + ". Valores mantidos; edite para tentar novamente.";
   } finally { bannedRunning = false; if (bannedPending) saveBannedWords(); }
+}
+
+let wordCatalogPage = 1, wordCatalogPages = 1, wordUsagePage = 1, wordUsagePages = 1;
+let wordUsageState = { streamers: [], categories: [], difficulties: [] };
+const wordDifficultyLabels = { facil: "Fácil", media: "Média", dificil: "Difícil" };
+const wordStatusLabels = { active: "Ativa", review: "Em revisão", inactive: "Inativa" };
+function setSelectOptions(select, items, selected, labels = {}) {
+  select.replaceChildren();
+  for (const item of items) {
+    const option = document.createElement("option"); option.value = item; option.textContent = labels[item] || item;
+    option.selected = item === selected; select.appendChild(option);
+  }
+}
+async function loadWordCatalog() {
+  const params = new URLSearchParams({ page: String(wordCatalogPage), page_size: "50",
+    search: document.getElementById("wordCatalogSearch").value.trim(),
+    status: document.getElementById("wordCatalogStatus").value,
+    category: document.getElementById("wordCatalogCategory").value });
+  try {
+    const data = await apiFetch(`/api/admin/word-catalog?${params}`);
+    if (!data.success) throw new Error(data.error || "Falha ao carregar o catálogo.");
+    wordCatalogPages = Math.max(1, data.pages || 1);
+    const categorySelect = document.getElementById("wordCatalogCategory"), chosenCategory = categorySelect.value;
+    categorySelect.replaceChildren(new Option("Todas", ""));
+    for (const category of data.categories || []) categorySelect.appendChild(new Option(category, category));
+    categorySelect.value = chosenCategory;
+    const categoryList = document.getElementById("wordCategoryOptions"); categoryList.replaceChildren();
+    for (const category of data.categories || []) categoryList.appendChild(new Option(category, category));
+    document.getElementById("wordCatalogTotal").textContent = data.summary?.total ?? 0;
+    document.getElementById("wordCatalogEligible").textContent = data.summary?.eligible ?? data.summary?.active ?? 0;
+    document.getElementById("wordCatalogReview").textContent = data.summary?.review ?? 0;
+    document.getElementById("wordCatalogInactive").textContent = data.summary?.inactive ?? 0;
+    const body = document.getElementById("wordCatalogRows"); body.replaceChildren();
+    for (const item of data.items || []) {
+      const row = document.createElement("tr"), word = document.createElement("td");
+      word.textContent = `${item.word}${item.banned ? " · banida globalmente" : ""}`; row.appendChild(word);
+      const categoryCell = document.createElement("td"), category = document.createElement("input");
+      category.className = "form-control"; category.maxLength = 40; category.value = item.category; categoryCell.appendChild(category); row.appendChild(categoryCell);
+      const difficultyCell = document.createElement("td"), difficulty = document.createElement("select"); difficulty.className = "form-select";
+      setSelectOptions(difficulty, ["facil", "media", "dificil"], item.difficulty, wordDifficultyLabels); difficultyCell.appendChild(difficulty); row.appendChild(difficultyCell);
+      const statusCell = document.createElement("td"), status = document.createElement("select"); status.className = "form-select";
+      setSelectOptions(status, ["active", "review", "inactive"], item.status, wordStatusLabels); statusCell.appendChild(status); row.appendChild(statusCell);
+      const source = document.createElement("td"); source.textContent = item.source === "words.json" ? "Catálogo inicial" : item.source === "import" ? "Importada" : "Manual"; row.appendChild(source);
+      const action = document.createElement("td"), save = document.createElement("button"); save.type = "button"; save.className = "btn btn-nb btn-dark"; save.textContent = "Salvar";
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        try {
+          const result = await apiFetch(`/api/admin/word-catalog/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: category.value, difficulty: difficulty.value, status: status.value }) });
+          document.getElementById("wordCatalogNotice").textContent = result.success ? `“${item.word}” atualizado.` : result.error || "Falha ao salvar.";
+          await loadWordCatalog(); await loadWordUsage();
+        } catch (error) { document.getElementById("wordCatalogNotice").textContent = error.message; save.disabled = false; }
+      }); action.appendChild(save); row.appendChild(action); body.appendChild(row);
+    }
+    if (!(data.items || []).length) { const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 6; cell.textContent = "Nenhuma palavra encontrada."; row.appendChild(cell); body.appendChild(row); }
+    document.getElementById("wordCatalogPageLabel").textContent = `Página ${data.page} de ${wordCatalogPages} · ${data.total} palavras`;
+    document.getElementById("wordCatalogPrev").disabled = data.page <= 1; document.getElementById("wordCatalogNext").disabled = data.page >= wordCatalogPages;
+  } catch (error) { document.getElementById("wordCatalogNotice").textContent = error.message || "Não foi possível carregar o catálogo."; }
+}
+async function importWordCatalog() {
+  const text = document.getElementById("wordImportText").value;
+  if (!text.trim()) { document.getElementById("wordCatalogNotice").textContent = "Informe uma ou mais palavras."; return; }
+  const button = document.getElementById("wordImportButton"); button.disabled = true;
+  try {
+    const data = await apiFetch("/api/admin/word-catalog/import", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, category: document.getElementById("wordImportCategory").value,
+        difficulty: document.getElementById("wordImportDifficulty").value, status: document.getElementById("wordImportStatus").value }) });
+    if (!data.success) throw new Error(data.error || "Falha ao importar palavras.");
+    document.getElementById("wordCatalogNotice").textContent = `${data.inserted} adicionadas · ${data.duplicates} duplicadas · ${data.invalid} inválidas${data.invalid_examples?.length ? ` · Exemplos inválidos: ${data.invalid_examples.join(", ")}` : ""}`;
+    document.getElementById("wordImportText").value = ""; wordCatalogPage = 1; await loadWordCatalog();
+  } catch (error) { document.getElementById("wordCatalogNotice").textContent = error.message; }
+  finally { button.disabled = false; }
+}
+async function loadWordUsage() {
+  const tenantId = document.getElementById("wordUsageStreamer").value;
+  const params = new URLSearchParams({ page: String(wordUsagePage), page_size: "50", search: document.getElementById("wordUsageSearch").value.trim() });
+  if (tenantId) params.set("tenant_id", tenantId);
+  try {
+    const data = await apiFetch(`/api/admin/word-usage?${params}`);
+    if (!data.success) throw new Error(data.error || "Falha ao carregar o uso das palavras.");
+    wordUsageState.streamers = data.streamers || []; wordUsageState.categories = data.categories || [];
+    wordUsagePages = Math.max(1, data.history?.pages || 1);
+    const select = document.getElementById("wordUsageStreamer"), previous = select.value; select.replaceChildren(new Option("Selecione uma conta", ""));
+    for (const streamer of wordUsageState.streamers) {
+      const label = [streamer.name, streamer.tiktok_username ? `@${streamer.tiktok_username}` : streamer.email].filter(Boolean).join(" · ");
+      select.appendChild(new Option(label, streamer.tenant_id));
+    }
+    select.value = previous && wordUsageState.streamers.some(row => String(row.tenant_id) === previous) ? previous : "";
+    const activeStreamer = wordUsageState.streamers.find(row => String(row.tenant_id) === select.value);
+    const summary = document.getElementById("wordUsageSummary"), body = document.getElementById("wordUsageRows"); body.replaceChildren();
+    const saveFilters = document.getElementById("wordDrawSave"), resetCycle = document.getElementById("wordCycleReset");
+    saveFilters.disabled = !activeStreamer; resetCycle.disabled = !activeStreamer;
+    renderWordFilterChecks("wordDrawCategories", (data.categories || []), activeStreamer?.categories || [], "category");
+    renderWordFilterChecks("wordDrawDifficulties", ["facil", "media", "dificil"], activeStreamer?.difficulties || [], "difficulty", wordDifficultyLabels);
+    if (!activeStreamer) {
+      summary.textContent = `${wordUsageState.streamers.length} streamers · ${data.catalog?.eligible || 0} palavras ativas e não banidas no catálogo.`;
+      const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 5; cell.textContent = "Selecione um streamer para ver o histórico."; row.appendChild(cell); body.appendChild(row);
+      document.getElementById("wordUsagePageLabel").textContent = "Página —";
+      document.getElementById("wordUsagePrev").disabled = true; document.getElementById("wordUsageNext").disabled = true;
+      return;
+    }
+    summary.textContent = `Ciclo ${activeStreamer.current_cycle} · ${activeStreamer.used_in_cycle}/${activeStreamer.eligible_count} usadas · ${activeStreamer.remaining_in_cycle} restantes · ${activeStreamer.total_used} registros no histórico${activeStreamer.remaining_in_cycle === 0 ? " · o próximo sorteio inicia outro ciclo automaticamente" : ""}`;
+    const history = data.history?.items || [];
+    for (const item of history) {
+      const row = document.createElement("tr");
+      for (const value of [item.streamer_name || item.tiktok_username || `Conta ${item.tenant_id}`, item.word,
+        item.game_type === "tres" ? "3 Dicas" : "Palavra Secreta", `#${item.cycle_id}`,
+        item.used_at ? new Date(`${String(item.used_at).replace(" ", "T")}Z`).toLocaleString("pt-BR") : "—"]) {
+        const cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell);
+      }
+      body.appendChild(row);
+    }
+    if (!history.length) { const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 5; cell.textContent = "Nenhuma palavra registrada para este streamer."; row.appendChild(cell); body.appendChild(row); }
+    document.getElementById("wordUsagePageLabel").textContent = `Página ${data.history.page} de ${wordUsagePages} · ${data.history.total} registros`;
+    document.getElementById("wordUsagePrev").disabled = data.history.page <= 1;
+    document.getElementById("wordUsageNext").disabled = data.history.page >= wordUsagePages;
+  } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message || "Não foi possível carregar o uso das palavras."; }
+}
+function renderWordFilterChecks(id, values, selected, type, labels = {}) {
+  const root = document.getElementById(id); root.replaceChildren();
+  for (const value of values) {
+    const label = document.createElement("label"), input = document.createElement("input"); input.type = "checkbox";
+    input.value = value; input.dataset.filterType = type; input.checked = selected.includes(value);
+    label.className = "form-check form-check-inline"; label.append(input, document.createTextNode(` ${labels[value] || value}`)); root.appendChild(label);
+  }
+  if (!values.length) root.textContent = "Nenhuma opção cadastrada.";
+}
+async function saveWordDrawFilters() {
+  const tenantId = document.getElementById("wordUsageStreamer").value; if (!tenantId) return;
+  const categories = [...document.querySelectorAll('#wordDrawCategories input:checked')].map(input => input.value);
+  const difficulties = [...document.querySelectorAll('#wordDrawDifficulties input:checked')].map(input => input.value);
+  const button = document.getElementById("wordDrawSave"); button.disabled = true;
+  try {
+    const data = await apiFetch(`/api/admin/word-usage/${tenantId}/settings`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ categories, difficulties }) });
+    document.getElementById("wordUsageNotice").textContent = data.success ? "Filtros salvos; valem no próximo sorteio." : data.error || "Falha ao salvar filtros.";
+    await loadWordUsage();
+  } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message; button.disabled = false; }
+}
+async function resetWordCycle() {
+  const tenantId = document.getElementById("wordUsageStreamer").value; if (!tenantId) return;
+  if (!confirm("Iniciar um novo ciclo libera novamente as palavras usadas, sem apagar o histórico. Continuar?")) return;
+  const button = document.getElementById("wordCycleReset"); button.disabled = true;
+  try {
+    const data = await apiFetch(`/api/admin/word-usage/${tenantId}/reset-cycle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    document.getElementById("wordUsageNotice").textContent = data.success ? `Ciclo ${data.previous_cycle} encerrado; ciclo ${data.current_cycle} iniciado.` : data.error || "Falha ao iniciar o ciclo.";
+    wordUsagePage = 1; await loadWordUsage();
+  } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message; button.disabled = false; }
 }
 
 async function loadUsers() {
@@ -906,69 +1097,92 @@ apiFetch("/api/auth/me").then((data) => {
 let ctxPoll = null;
 
 async function startContextos() {
-  const interval_min = parseInt(document.getElementById("ctxInterval").value) || 15;
-  const words = parseInt(document.getElementById("ctxWords").value) || 1000;
-  const limit = parseInt(document.getElementById("ctxLimit").value) || 0;
-  const data = await apiFetch("/api/admin/generate-contexts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ interval_min, words, limit }),
-  });
-  if (data.started) {
-    document.getElementById("btnGenContextos").disabled = true;
-    document.getElementById("btnStopContextos").disabled = false;
-    pollContextos();
-  } else {
-    alert(data.reason || "Já está rodando");
+  const interval_min = Number(document.getElementById("ctxInterval").value);
+  const limit = Number(document.getElementById("ctxLimit").value);
+  const regenerate = document.getElementById("ctxRegenerate").checked;
+  if (!Number.isFinite(interval_min) || interval_min < 0 || interval_min > 1440 ||
+      !Number.isInteger(limit) || limit < 0 || limit > 2000) {
+    document.getElementById("ctxMsg").textContent = "Confira o intervalo e o limite de contextos.";
+    return;
+  }
+  document.getElementById("btnGenContextos").disabled = true;
+  try {
+    const data = await apiFetch("/api/admin/generate-contexts", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interval_min, limit, regenerate }),
+    });
+    if (!data.started) {
+      document.getElementById("ctxMsg").textContent = data.reason || data.error || "Não foi possível iniciar.";
+      document.getElementById("btnGenContextos").disabled = false;
+    }
+    else await pollContextos();
+  } catch (_) {
+    document.getElementById("ctxMsg").textContent = "Falha ao iniciar geração.";
+    document.getElementById("btnGenContextos").disabled = false;
   }
 }
 
 async function stopContextos() {
-  await apiFetch("/api/admin/generate-contexts/stop", { method: "POST" });
-  pollContextos();
+  try { await apiFetch("/api/admin/generate-contexts/stop", { method: "POST" }); await pollContextos(); }
+  catch (_) { document.getElementById("ctxMsg").textContent = "Falha ao solicitar parada."; }
+}
+
+function renderContextRows(id, rows, empty, columns) {
+  const body = document.getElementById(id);
+  const fragment = document.createDocumentFragment();
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    for (const value of columns(row)) {
+      const td = document.createElement("td"); td.textContent = value; tr.appendChild(td);
+    }
+    fragment.appendChild(tr);
+  }
+  if (!rows.length) {
+    const tr = document.createElement("tr"), td = document.createElement("td");
+    td.colSpan = 8; td.textContent = empty; tr.appendChild(td); fragment.appendChild(tr);
+  }
+  body.replaceChildren(fragment);
 }
 
 async function pollContextos() {
   clearTimeout(ctxPoll);
-  let data;
   try {
-    data = await apiFetch("/api/admin/generate-contexts/status");
-  } catch (e) {
-    return;
-  }
-  const bar = document.getElementById("ctxBar");
-  const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
-  bar.style.width = pct + "%";
-  bar.textContent = `${data.done}/${data.total}`;
-  document.getElementById("ctxCurrent").textContent = data.current || "-";
-  document.getElementById("ctxErrors").textContent = data.errors || 0;
-  document.getElementById("ctxMsg").textContent = data.last_error ? "Último erro: " + data.last_error : "";
-  document.getElementById("btnGenContextos").disabled = !!data.running;
-  document.getElementById("btnStopContextos").disabled = !data.running;
-
-  const logEl = document.getElementById("ctxLog");
-  if (logEl && Array.isArray(data.logs)) {
-    const frag = document.createDocumentFragment();
-    for (let i = data.logs.length - 1; i >= 0; i--) {
-      const entry = data.logs[i];
-      const div = document.createElement("div");
-      const isOk = entry.text.startsWith("OK");
-      const isErr = entry.text.startsWith("ERRO");
-      const hora = entry.t ? entry.t.slice(11, 19) : "";
-      div.style.color = isErr ? "#ff6b6b" : isOk ? "#7beaa9" : "#9aa0a6";
-      div.textContent = `${hora}  ${entry.text}`;
-      frag.appendChild(div);
+    const data = await apiFetch("/api/admin/generate-contexts/status");
+    if (!data.success) throw new Error("STATUS_FAILED");
+    if (!data.model || data.generator_version !== 3) {
+      document.getElementById("btnGenContextos").disabled = true;
+      document.getElementById("btnStopContextos").disabled = true;
+      document.getElementById("ctxMsg").textContent = "Reinicie o servidor em uma janela segura para ativar o novo gerador OpenRouter.";
+      document.getElementById("ctxConsumption").textContent = "Aguardando atualização do servidor.";
+      ctxPoll = setTimeout(pollContextos, 3000);
+      return;
     }
-    logEl.innerHTML = "";
-    logEl.appendChild(frag);
-    logEl.scrollTop = 0;
+    const bar = document.getElementById("ctxBar");
+    bar.style.width = (data.total ? Math.round(data.done / data.total * 100) : 0) + "%";
+    bar.textContent = `${data.done}/${data.total}`;
+    document.getElementById("ctxCurrent").textContent = data.current || "—";
+    document.getElementById("ctxErrors").textContent = data.errors || 0;
+    const labels = { idle:"Aguardando geração", running:"Gerando", stopping:"Aguardando a chamada atual para parar", completed:"Concluído", failed:"Falhou", stopped:"Interrompido pelo administrador", interrupted:"Interrompido por reinício", pending:"Em andamento", received:"Validando resposta", success:"Salvo" };
+    const money = value => Number(value || 0).toFixed(6);
+    document.getElementById("ctxMsg").textContent = `${data.status === "completed" && data.errors ? "Concluído com erros" : labels[data.status] || data.status}${data.last_error ? " · " + data.last_error : ""}`;
+    document.getElementById("btnGenContextos").disabled = !!data.running || !data.configured;
+    document.getElementById("btnStopContextos").disabled = !data.running || data.status === "stopping";
+    const c = data.consumption || {}, total = data.totals || {};
+    document.getElementById("ctxConsumption").textContent = `Última execução: ${c.requests || 0} chamadas · ${c.succeeded || 0} salvas (${c.ai_words || 0} IA + ${c.local_words || 0} locais) · ${c.partially_completed || 0} completadas localmente · ${c.failed || 0} falhas · ${c.prompt_tokens || 0} tokens de entrada / ${c.completion_tokens || 0} de saída · US$ ${money(c.known_cost_usd)} · ${c.unknown_cost_requests || 0} custos pendentes`;
+    document.getElementById("ctxLifetime").textContent = `Total acumulado: ${total.ai_words || 0} palavras IA + ${total.local_words || 0} locais · ${total.untracked_origin_requests || 0} contextos antigos sem origem registrada · US$ ${money(total.known_cost_usd)} · ${total.requests || 0} chamadas · ${total.unknown_cost_requests || 0} custos pendentes${!data.configured ? " · Configure OPENROUTER_API_KEY no servidor." : ""}`;
+    renderContextRows("ctxRunRows", data.runs || [], "Nenhuma execução registrada.", row => [
+      new Date(row.created_at).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo"}), labels[row.status] || row.status,
+      `${row.done}/${row.total}`, row.skipped, row.errors,
+      `${row.consumption.prompt_tokens} / ${row.consumption.completion_tokens}`,
+      `US$ ${money(row.consumption.known_cost_usd)}`, row.consumption.unknown_cost_requests]);
+    renderContextRows("ctxAttemptRows", data.attempts || [], "Nenhuma chamada registrada.", row => [
+      row.target, labels[row.status] || row.status, `${row.prompt_tokens ?? "—"} / ${row.completion_tokens ?? "—"}`,
+      row.cost_usd == null ? "Pendente" : money(row.cost_usd), row.duration_ms == null ? "—" : `${(row.duration_ms/1000).toFixed(1)} s`,
+      `${row.status === "success" ? (row.local_fill_count ? "Salvo com complemento local" : "Salvo") : row.error_code || "OK"}${row.ai_count == null ? "" : ` · ${row.ai_count} IA + ${row.local_fill_count} locais`}${row.received_count == null ? "" : ` · ${row.received_count} recebidas / ${row.unique_count} únicas`}`]);
+  } catch (_) {
+    document.getElementById("ctxMsg").textContent = "Não foi possível atualizar o relatório. Tentando novamente…";
   }
-
-  if (data.running) {
-    ctxPoll = setTimeout(pollContextos, 2000);
-  } else if (data.finished) {
-    document.getElementById("ctxMsg").textContent += (data.errors ? " | Concluído com erros" : " | Concluído!");
-  }
+  ctxPoll = setTimeout(pollContextos, 3000);
 }
 
 document.getElementById('adminSearch').addEventListener('input', renderAdminUsers);
@@ -979,10 +1193,24 @@ document.getElementById('adminRefresh').addEventListener('click', loadUsers);
 document.getElementById("bannedWordsInput").disabled = true;
 document.getElementById("bannedWordsInput").addEventListener("input", () => { if(!bannedHydrated) return; bannedPending = true; document.getElementById("bannedMsg").textContent = "Alteração pendente…"; clearTimeout(bannedTimer); bannedTimer = setTimeout(saveBannedWords, 600); });
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
+document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
+document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });
+document.getElementById("wordCatalogCategory").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });
+document.getElementById("wordCatalogPrev").addEventListener("click", () => { if (wordCatalogPage > 1) { wordCatalogPage--; loadWordCatalog(); } });
+document.getElementById("wordCatalogNext").addEventListener("click", () => { if (wordCatalogPage < wordCatalogPages) { wordCatalogPage++; loadWordCatalog(); } });
+document.getElementById("wordImportButton").addEventListener("click", importWordCatalog);
+document.getElementById("wordUsageStreamer").addEventListener("change", () => { wordUsagePage = 1; loadWordUsage(); });
+document.getElementById("wordUsageSearch").addEventListener("input", () => { clearTimeout(window.wordUsageSearchTimer); window.wordUsageSearchTimer = setTimeout(() => { wordUsagePage = 1; loadWordUsage(); }, 250); });
+document.getElementById("wordUsagePrev").addEventListener("click", () => { if (wordUsagePage > 1) { wordUsagePage--; loadWordUsage(); } });
+document.getElementById("wordUsageNext").addEventListener("click", () => { if (wordUsagePage < wordUsagePages) { wordUsagePage++; loadWordUsage(); } });
+document.getElementById("wordDrawSave").addEventListener("click", saveWordDrawFilters);
+document.getElementById("wordCycleReset").addEventListener("click", resetWordCycle);
 loadBannedWords();
 loadUsers();
 loadInvites();
 pollContextos();
+loadWordCatalog();
+loadWordUsage();
 
 (() => {
   const $ = (id) => document.getElementById(id);

@@ -7,6 +7,8 @@
   --tp-red: var(--red); --tp-yellow: var(--yellow); --tp-purple: var(--violet);
   --tp-font-ui: 'Inter', Arial, sans-serif; --tp-font-display: 'Space Grotesk', Arial, sans-serif;
   --tp-radius-md: 20px; --tp-radius-sm: 12px; --tp-shadow-card: none;
+  --tp-control-bg: var(--panel3); --tp-control-border: var(--line-strong); --tp-control-height: 2.875rem;
+  --tp-control-border-width: .0625rem; --tp-control-menu-shadow: 0 1rem 2.5rem rgba(0,0,0,.48);
   --tp-streamer-side: 260px; --tp-streamer-bar: 72px;
   --tp-streamer-panel: linear-gradient(160deg,rgba(13,22,35,.92),rgba(8,13,21,.94));
   --tp-streamer-action: linear-gradient(135deg,var(--cyan),#1591ff);
@@ -54,7 +56,36 @@
 .tp-panel-streamer .btn-nb.btn-primary,.tp-panel-streamer .btn-nb.btn-success,.tp-panel-streamer #tab-duelo .duelo-btn--primary,.tp-panel-streamer #tab-duelo .duelo-btn--success { background: var(--tp-streamer-action); color: #00111a; }
 .tp-panel-streamer .btn-nb.btn-danger,.tp-panel-streamer #tab-duelo .duelo-btn--danger { background: rgba(255,77,109,.1); color: #ff8a9c; border-color: rgba(255,77,109,.2); }
 .tp-panel-streamer .btn-nb.btn-warning,.tp-panel-streamer #tab-duelo .duelo-btn--warning { background: rgba(255,211,92,.1); color: var(--yellow); }
-.tp-panel-streamer :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,.form-control,.form-select),.tp-panel-streamer #tab-duelo :is(input,select,textarea,.form-control,.form-select) { background-color: #09111b; border: 1px solid var(--line-strong); color: var(--text); border-radius: 12px; box-shadow: none; font-family: var(--tp-font-ui); }
+body.tp-panel-streamer input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),body.tp-panel-streamer select,body.tp-panel-streamer textarea,body.tp-panel-streamer .form-control,body.tp-panel-streamer .form-select { background-color:var(--tp-control-bg); border:1px solid var(--tp-control-border); color:var(--tp-text); border-radius:var(--tp-radius-sm); box-shadow:none; font-family:var(--tp-font-ui); transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease; }
+body.tp-panel-streamer input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(.form-control-sm),body.tp-panel-streamer select:not(.form-select-sm),body.tp-panel-streamer textarea:not(.form-control-sm),body.tp-panel-streamer .form-control:not(.form-control-sm):not([type=file]),body.tp-panel-streamer .form-select:not(.form-select-sm) { min-height:var(--tp-control-height); padding:0 var(--tp-space-3); font-size:.8125rem; }
+body.tp-panel-streamer select:not([multiple]):not([size]) { appearance:none; -webkit-appearance:none; color-scheme:dark; padding-right:calc(var(--tp-space-3) * 3); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6 4 4 4-4' stroke='%2394a8bd' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right var(--tp-space-3) center; background-size:1rem 1rem; cursor:pointer; }
+body.tp-panel-streamer select option { background-color:var(--panel2); color:var(--tp-text); }
+body.tp-panel-streamer .tp-select { position:relative; display:block; width:100%; min-width:0; }
+body.tp-panel-streamer .tp-select--compact { width:7rem; min-width:7rem; }
+body.tp-panel-streamer .tp-overlay-count-control .tp-select { width:7rem; min-width:7rem; }
+body.tp-panel-streamer .tp-select-native { position:absolute!important; width:.0625rem!important; height:.0625rem!important; min-height:0!important; margin:-.0625rem!important; padding:0!important; overflow:hidden!important; clip-path:inset(50%)!important; white-space:nowrap!important; border:0!important; }
+body.tp-panel-streamer .tp-select-trigger { display:flex; align-items:center; justify-content:space-between; gap:var(--tp-space-3); width:100%; min-width:0; min-height:var(--tp-control-height); padding:0 var(--tp-space-3); border:var(--tp-control-border-width) solid var(--tp-control-border); border-radius:var(--tp-radius-sm); background:var(--tp-control-bg); color:var(--tp-text); box-shadow:none; font:500 .8125rem var(--tp-font-ui); text-align:left; cursor:pointer; transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease; }
+body.tp-panel-streamer .tp-select--compact .tp-select-trigger { min-height:1.875rem; padding:var(--tp-space-1) var(--tp-space-2); font-size:.78rem; }
+body.tp-panel-streamer .tp-select-trigger::after { content:""; flex:0 0 .55rem; width:.55rem; height:.55rem; margin:0 .15rem .2rem 0; border-right:var(--tp-line) solid var(--muted); border-bottom:var(--tp-line) solid var(--muted); transform:rotate(45deg); transition:transform .18s ease,border-color .18s ease; }
+body.tp-panel-streamer .tp-select-trigger[aria-expanded="true"] { border-color:var(--cyan); background:var(--panel2); box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 14%,transparent); }
+body.tp-panel-streamer .tp-select-trigger[aria-expanded="true"]::after { margin-bottom:-.2rem; border-color:var(--cyan); transform:rotate(225deg); }
+body.tp-panel-streamer .tp-select-trigger:hover:not(:disabled) { border-color:color-mix(in srgb,var(--tp-control-border) 55%,var(--cyan)); background:var(--panel2); }
+body.tp-panel-streamer .tp-select-trigger:focus-visible { outline:var(--tp-line) solid var(--cyan); outline-offset:var(--tp-space-1); }
+body.tp-panel-streamer .tp-select-trigger:disabled { opacity:.55; cursor:not-allowed; }
+body.tp-panel-streamer .tp-select-value { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+body.tp-panel-streamer .tp-select-menu { position:fixed; z-index:2000; max-height:min(18rem,calc(100dvh - 1rem)); overflow:auto; padding:var(--tp-space-1); border:var(--tp-control-border-width) solid color-mix(in srgb,var(--cyan) 24%,var(--tp-control-border)); border-radius:var(--tp-radius-sm); background:linear-gradient(160deg,var(--panel2),var(--panel3)); color:var(--tp-text); box-shadow:var(--tp-control-menu-shadow); scrollbar-color:var(--tp-control-border) var(--tp-control-bg); }
+body.tp-panel-streamer .tp-select-menu[hidden] { display:none!important; }
+body.tp-panel-streamer .tp-select-option { display:flex; align-items:center; justify-content:space-between; gap:var(--tp-space-3); width:100%; min-height:2.5rem; padding:var(--tp-space-2) var(--tp-space-3); border:0; border-radius:var(--tp-radius-xs); background:transparent; color:var(--tp-text); font:500 .8125rem/1.4 var(--tp-font-ui); text-align:left; cursor:pointer; transition:background-color .15s ease,color .15s ease; }
+body.tp-panel-streamer .tp-select-option::after { content:""; width:.75rem; color:var(--cyan); font-weight:800; }
+body.tp-panel-streamer .tp-select-option[aria-selected="true"]::after { content:"✓"; }
+body.tp-panel-streamer .tp-select-option:is(:hover,.is-active) { background:color-mix(in srgb,var(--cyan) 13%,transparent); color:var(--tp-text); }
+body.tp-panel-streamer .tp-select-option:disabled { opacity:.48; cursor:not-allowed; }
+body.tp-panel-streamer .tp-select-group-label { padding:var(--tp-space-2) var(--tp-space-3) var(--tp-space-1); color:var(--tp-text-muted); font-size:.6875rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+body.tp-panel-streamer .tp-select-error { display:block; margin-top:var(--tp-space-1); color:var(--tp-red); font-size:.75rem; }
+body.tp-panel-streamer .tp-select-error[hidden] { display:none!important; }
+.tp-panel-streamer :is(.form-control-sm,.form-select-sm) { min-height:1.875rem; padding:var(--tp-space-1) var(--tp-space-2); font-size:.78rem; }
+body.tp-panel-streamer textarea.form-control:not(.form-control-sm) { min-height:var(--tp-control-height); padding:var(--tp-space-2) var(--tp-space-3); }
+body.tp-panel-streamer input[type=file].form-control { min-height:0; padding:var(--tp-space-2); }
 .tp-panel-streamer input[type=checkbox],.tp-panel-streamer input[type=radio] { accent-color: var(--cyan); }
 .tp-panel-streamer :is(.bg-light,.bg-white) { background: rgba(255,255,255,.025) !important; color: var(--text); }
 .tp-panel-streamer .border-dark { border-color: var(--line-strong) !important; }
