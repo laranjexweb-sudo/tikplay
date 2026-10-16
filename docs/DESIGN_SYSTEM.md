@@ -1,5 +1,17 @@
 # TikPlay — Design System Oficial (tema reutilizável)
 
+> 2026-10-16: Margem silenciosa local das vozes da API ampliada de 150 para 500 ms para acomodar a ativação da saída de áudio. Amostras e volume preservados; validação auditiva no dispositivo pendente. Ver `voz-api-margem-inicial.md`.
+
+> 2026-10-16: Palavra Secreta mantém o acerto imediato no ranking sem duplicar rank 1 no destaque temporário de palpite. Eventos atrasados não reabrem destaques após o encerramento. Ver `correcao-destaque-vencedor.md`.
+
+> 2026-10-15: Reproducao das vozes adicionais passa a decodificar o audio completo em saida persistente, sem fade, com margem silenciosa local de 150 ms. Fila, prioridade e cancelamento preservados; nenhuma mudanca visual.
+
+> 2026-10-15: Configuracoes globais do Super Admin incluem campo protegido para salvar/remover a chave ElevenLabs. Somente o estado da credencial volta ao navegador; componentes administrativos existentes e rota de navegacao `#adminRules` preservados.
+
+> 2026-10-15: ElevenLabs opcional por streamer: Admin oferece liberacao individual e limite mensal; Sons/Narracao exibe seletor e teste exclusivos do chat apenas para contas autorizadas. Controles reutilizam os componentes existentes. Chave e ativacao real pendentes; ver `plano-vozes-por-streamer.md`.
+
+> 2026-10-15: No painel streamer, a voz adicional nao expoe o nome da integracao. Para economizar quota, cada sintese adicional usa no maximo 120 caracteres e a previa foi encurtada; voz padrao inalterada.
+
 > 2026-10-15: Login e cadastro adotam a composição do site e os controles compartilhados do Painel Streamer (botões, campos e indicador de aba), com `/register`/`/cadastro` abrindo o cadastro quando permitido. Fluxos de autenticação, convites e APIs preservados.
 
 > 2026-10-15: Ranking de diamantes V3 salva posição, escala e quantidade por conta; páginas públicas abertas carregam a preferência e recebem atualização via WebSocket. Prévia de Narração posiciona o marcador 1x conforme a escala linear real e oculta referências visíveis ao mecanismo de voz, preservando IDs internos.
@@ -546,6 +558,12 @@ node/public/
 - 2026-10-15 — Login/cadastro: composição do site, botões compartilhados, campos e alertas com contraste escuro, layout responsivo e seleção de aba pelo caminho amigável. Contratos e lógica de autenticação preservados.
 
 - 2026-10-15 — Sons → Narração: preferências persistidas para habilitar a fala do chat, selecionar filtro e caractere; Edge TTS usa voz/velocidade compartilhadas com charadas. Fila serial e playback no painel respeitam prioridade de charada.
+
+- 2026-10-15 — Sons → Narração: removido o card informativo duplicado "Prévia da narração"; controles e botão real de teste preservados.
+
+- 2026-10-15 — Sons → Narração: painel lateral "Limite de voz adicional" apresenta consumo mensal usando os dados de quota existentes; créditos aparecem como prévia visual indisponível, sem integração de recarga ou alteração do backend.
+
+- 2026-10-15 — Sons → Narração: removida a frase explicativa sob o botão de teste; limite permanece apresentado no cartão lateral.
 
 - 2026-10-15 — Charada pública: narração/controles de áudio removidos da página do jogo; texto preservado. O painel mantém voz, velocidade, reprodução automática e replay.
 

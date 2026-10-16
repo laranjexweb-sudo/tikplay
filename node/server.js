@@ -375,6 +375,10 @@ function updateGameState(tenant, msg) {
       gs.secret_word = msg.secret_word;
       if (msg.secret_word) gs.secret_length = msg.secret_word.length;
       gs.winner = msg.winner;
+      if (Array.isArray(msg.guesses)) {
+        gs.guesses = msg.guesses;
+        gs.guess_count = msg.guesses.length;
+      }
       gs.post_game_summary = msg.post_game_summary || null;
       break;
     case "battle_state":
@@ -1214,6 +1218,10 @@ app.post("/api/presenter-level/test", auth.requireAuth, (req, res) => {
 
 // ---------------- TTS (voz do servidor) ----------------
 
+require("./routes/elevenlabs")(app, { db, auth, daemonSend,
+  log: (id, entry) => logStructuredEvent(getTenant(id), entry),
+});
+
 const TTS_VOICES = [
   { key: "edge_antonio", label: "Edge — Antonio (servidor)" },
   { key: "edge_francisca", label: "Edge — Francisca (servidor)" },
@@ -1422,9 +1430,13 @@ app.post("/api/end-game", auth.requireAuth, (req, res) => {
     current_status: gs.active ? (gs.finished ? "finished" : "running") : "idle",
     guess_count: Number(gs.guess_count) || 0,
   });
-  if (!liveOnline(tenant)) {
-    logPalavraDebug(tenant, "end.rejected", { reason: "live_offline", game_id: gs.game_id || null, trace_id: traceId });
-    return res.json({ success: false, error: "Live offline — conecte a live antes de finalizar", trace_id: traceId });
+  if (!gs.active || gs.finished) {
+    logPalavraDebug(tenant, "end.rejected", { reason: "game_not_active", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "Não há uma partida ativa para encerrar", trace_id: traceId });
+  }
+  if (!tenant || !tenant.sessionStarted || !tenant.activeDaemonSessionId) {
+    logPalavraDebug(tenant, "end.rejected", { reason: "session_unavailable", game_id: gs.game_id || null, trace_id: traceId });
+    return res.json({ success: false, error: "A sessão do jogo não está disponível para encerrar a partida", trace_id: traceId });
   }
   const ok = daemonSend({
     cmd: "end_game",
@@ -1435,7 +1447,11 @@ app.post("/api/end-game", auth.requireAuth, (req, res) => {
     logPalavraDebug(tenant, "end.rejected", { reason: "daemon_unavailable", game_id: gs.game_id || null, trace_id: traceId });
     return res.json({ success: false, error: "Servico Python indisponivel", trace_id: traceId });
   }
-  logPalavraDebug(tenant, "end.queued", { game_id: gs.game_id || null, trace_id: traceId });
+  logPalavraDebug(tenant, "end.queued", {
+    game_id: gs.game_id || null,
+    trace_id: traceId,
+    connection_state: tenant.currentStatus && tenant.currentStatus.state || "unknown",
+  });
   res.json({ success: true, trace_id: traceId });
 });
 

@@ -184,7 +184,7 @@ class TikTokLiveHandler:
         mid = getattr(common, "msg_id", None)
         return (str(rid) if rid else None, str(mid) if mid else None)
 
-    def _is_backlog(self, event) -> bool:
+    def _is_backlog(self, event, margin_seconds=5) -> bool:
         """Descarta eventos criados antes da conexao (backlog reenviado pelo
         WebSocket/cursor), mantendo margem para o handshake."""
         if not self._connected_at:
@@ -192,7 +192,7 @@ class TikTokLiveHandler:
         ct = self._event_create_time(event)
         if not ct:
             return False
-        return ct < self._connected_at - 5
+        return ct < self._connected_at - margin_seconds
 
     def _emit_status(self, state: str, extra: dict = None):
         status = {"state": state, "user": self.username}
@@ -230,7 +230,7 @@ class TikTokLiveHandler:
     async def _on_comment(self, event: CommentEvent):
         if not self.on_comment_cb:
             return
-        if self._is_backlog(event):
+        if not self._connected or self._is_backlog(event, margin_seconds=0):
             return
         user = getattr(event, "user", None)
         rid, mid = self._event_ids(event)
@@ -390,7 +390,10 @@ class TikTokLiveHandler:
         backoff = 5
         while True:
             self.log(f"[TikTokLive] Iniciando conexao com @{self.username}...")
-            client = TikTokLiveClient(unique_id=self.username)
+            client = TikTokLiveClient(
+                unique_id=self.username,
+                ws_kwargs={"base_uri_params": {"history_comment_count": "0"}},
+            )
             self.client = client
             # Silencia bug de schema conhecido do TikTokLiveProto (WebcastLinkLayerMessage)
             try:

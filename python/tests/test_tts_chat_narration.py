@@ -15,6 +15,20 @@ import tts
 
 
 class ChatNarrationTextTests(unittest.TestCase):
+    def test_tiktok_emote_codes_are_removed_without_speaking_their_names(self):
+        self.assertEqual(tts.prepare_chat_text("Olá [happy] [facewithrollingeyes] :heart: Brasil"), "Olá Brasil")
+
+    def test_ascii_emoticons_and_keycaps_are_not_spoken(self):
+        self.assertEqual(tts.prepare_chat_text("Oi:) :D <3<3 XD T_T 1️⃣ 2️⃣ Brasil"), "Oi Brasil")
+
+    def test_only_emotes_or_punctuation_produces_no_speech(self):
+        for text in ("😂🔥❤️", "[happy][laugh]", ":) :D <3", "1️⃣ 2️⃣", "... !!!", r"¯\_(ツ)_/¯"):
+            with self.subTest(text=text):
+                self.assertEqual(tts.prepare_chat_text(text), "")
+
+    def test_unicode_normalization_preserves_portuguese_accents(self):
+        self.assertEqual(tts.prepare_chat_text("Corac\u0327a\u0303o 10:30 (Brasil)"), "Coração 10:30 (Brasil)")
+
     def test_cleaning_removes_emojis_and_preserves_portuguese_text(self):
         self.assertEqual(tts.prepare_chat_text("Olá 😄, coração!"), "Olá , coração!")
 
@@ -33,6 +47,33 @@ class ChatNarrationTextTests(unittest.TestCase):
 
 
 class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_chat_uses_additional_voice_without_changing_riddle_voice(self):
+        session = self._session()
+        session._tts_url = AsyncMock(return_value="/edge.mp3")
+        item = {"text": "Olá", "voice_key": "edge_francisca", "rate": 1.0}
+        with patch.object(service.elevenlabs_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")):
+            self.assertTrue((await session._chat_tts_url(item)).endswith("/eleven_test.mp3"))
+        session._tts_url.assert_not_called()
+        self.assertEqual(session._tts_config_snapshot()["voice_key"], "edge_francisca")
+
+    async def test_additional_voice_failure_falls_back_to_shared_voice(self):
+        session = self._session()
+        session._tts_url = AsyncMock(return_value="/edge.mp3")
+        session._log_event = Mock()
+        item = {"text": "Olá", "voice_key": "edge_francisca", "rate": 1.0}
+        with patch.object(service.elevenlabs_tts, "synthesize", side_effect=service.elevenlabs_tts.ProviderError("SYNTHESIS_FAILED")):
+            self.assertEqual(await session._chat_tts_url(item), "/edge.mp3")
+        session._tts_url.assert_awaited_once_with("Olá", voice_key="edge_francisca", rate=1.0)
+        self.assertEqual(session._log_event.call_args.args[2], "tts.provider.fallback")
+
+    async def test_additional_voice_test_emits_audio_and_structured_completion(self):
+        with patch.object(service.elevenlabs_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")), \
+                patch.object(service, "emit") as emitted, patch.object(service, "emit_service_log") as logged:
+            await service._test_elevenlabs_voice(98231, "test-trace")
+        emitted.assert_called_once_with(98231, "tts_test_ready", "/tts-audio/98231/eleven_test.mp3")
+        self.assertEqual(logged.call_args.args[3], "tts.provider.completed")
+        self.assertEqual(logged.call_args.kwargs["trace_id"], "test-trace")
+
     def _session(self, queue_size=2):
         session = service.GameSession.__new__(service.GameSession)
         session.tenant_id = 98231

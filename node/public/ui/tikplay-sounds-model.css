@@ -52,4 +52,17 @@ h1 { letter-spacing: 0; font-size: 54px; }
 #tab-sons .tts-rate-markers span:first-child { left: 0; transform: none; }
 #tab-sons .tts-rate-markers span:nth-child(2) { left: calc(8px + (100% - 16px) / 3); }
 #tab-sons .tts-rate-markers span:last-child { right: 0; transform: none; }
+#tab-sons .eleven-usage-card[hidden] { display: none; }
+#tab-sons .eleven-usage-summary { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
+#tab-sons .eleven-usage-summary strong { font:700 20px/1.2 "Space Grotesk",sans-serif; overflow-wrap:anywhere; }
+#tab-sons .eleven-usage-summary span { color:var(--cyan); font-size:12px; font-weight:800; white-space:nowrap; }
+#tab-sons .eleven-usage-meter { height:12px; overflow:hidden; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:rgba(255,255,255,.06); }
+#tab-sons .eleven-usage-meter span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--cyan),var(--blue)); transition:width .35s ease; }
+#tab-sons .eleven-usage-labels { display:flex; justify-content:space-between; gap:12px; margin-top:8px; color:var(--muted); font-size:10px; }
+#tab-sons .eleven-credit-preview { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); }
+#tab-sons .eleven-credit-preview div span,#tab-sons .eleven-credit-preview div strong { display:block; }
+#tab-sons .eleven-credit-preview div span { color:var(--muted); font-size:10px; margin-bottom:4px; }
+#tab-sons .eleven-credit-preview div strong { font-size:12px; }
+#tab-sons .eleven-credit-preview small { grid-column:1/-1; color:var(--muted2); font-size:10px; line-height:1.4; }
+@media(max-width:720px) { #tab-sons .eleven-usage-summary strong { font-size:18px; } }
 

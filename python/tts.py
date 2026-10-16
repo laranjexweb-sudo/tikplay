@@ -9,6 +9,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 
 EDGE_AVAILABLE = False
 edge_tts = None
@@ -58,18 +59,26 @@ def _hash(text: str, extra: str) -> str:
 def clean_text(text: str, max_len: int = 200) -> str:
     """Limpa o texto para sintese TTS.
 
-    Remove URLs, @mencoes, hashtags, emojis e simbolos que fazem o motor
+    Remove URLs, @mencoes, hashtags, emojis, codigos de emote e emoticons que fazem o motor
     truncar. Mantem letras (com acentos), numeros, espacos e pontuacao basica.
     """
     if not text:
         return ""
-    t = text
+    t = unicodedata.normalize("NFC", str(text))
+    # Remove complete emote codes before their brackets would be stripped.
+    t = re.sub(r"\[[A-Za-z][A-Za-z0-9_-]{0,40}\]", " ", t)
+    t = re.sub(r"(?<!\w):[A-Za-z][A-Za-z0-9_+-]{1,40}:(?!\w)", " ", t)
+    t = re.sub(r"[#*0-9]\ufe0f?\u20e3", " ", t)
+    t = re.sub(r"(?:[:;=][~^'\-]?[)(/\\dDpPoO*|]|</?3)(?!\w)|(?<!\w)(?:[xX][dD]|[tT][_.-][tT]|[uU][_.-][uU]|\^[_-]?\^)(?!\w)", " ", t)
+    t = t.replace(r"¯\_(ツ)_/¯", " ")
     t = re.sub(r"https?://\S+|www\.\S+", " ", t, flags=re.IGNORECASE)
     t = re.sub(r"@\w+", " ", t)
     t = re.sub(r"#\S+", " ", t)
     t = re.sub(r"[^\w\s.,!?;:'\"()\-]", " ", t, flags=re.UNICODE)
     t = t.replace("_", " ")
     t = re.sub(r"\s+", " ", t).strip()
+    if not any(char.isalpha() or char.isdigit() for char in t):
+        return ""
     if len(t) > max_len:
         cut = t[:max_len].rsplit(" ", 1)[0].rstrip()
         t = cut if cut else t[:max_len].rstrip()

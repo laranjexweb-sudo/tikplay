@@ -98,12 +98,16 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Eventos estruturados de diagnóstico da Palavra Secreta usam `game: "palavra"` e `level: "debug"`, devem ser classificados como Diagnóstico e não podem incluir palavra secreta, texto completo da charada ou comentário bruto. A presença em execução precisa ser confirmada no log persistido e no filtro **Diagnóstico detalhado**.
 - O Jogo 3 Dicas usa `category: "game"`, `game: "tres"` e eventos `tres.*`; logs de início, geração/fallback de dicas, estágios, presentes, vitória, timeout e controles não podem incluir resposta, texto integral de dica ou palpite bruto. Usar `game_id`/rodada e `trace_id` quando a ação veio do painel; não emitir log por tick ou por palpite incorreto individual.
 
-### 3.2 Overlay de Dica Ativada (`dica-overlay`)
+### 3.2 Palavra Secreta - encerramento
+- O evento existente `game_over` carrega o snapshot completo de palpites com classificação por cor. O Node atualiza seu estado antes do broadcast; o front substitui a lista local e encerra a partida sem aguardar a fila de destaques. Partidas finalizadas carregam a lista completa em `/api/game-state`; durante a partida, a hidratação inicial continua limitada aos 50 primeiros.
+- O encerramento manual pode ser solicitado enquanto a sessão do daemon permanece ativa em `waiting` ou `disconnected`; não exige live em estado `connected`. A interface mostra falhas da solicitação mesmo quando há `trace_id`.
+
+### 3.3 Overlay de Dica Ativada (`dica-overlay`)
 - Card centralizado via Flexbox (`align-items: center; justify-content: center;`).
 - Imagem do presente definida com `display: block; margin: 0 auto 15px auto;` para centralização geométrica perfeita.
 - Compensação de margem negativa (`margin-right` negativo) para anular o deslocamento de espaço extra gerado pela propriedade CSS `letter-spacing`.
 
-### 3.3 Modal Pós-Partida ("Ver Palavras Próximas")
+### 3.4 Modal Pós-Partida ("Ver Palavras Próximas")
 - **Botão Oculto no Jogo Active**: O botão `🔍 Ver Palavras Próximas (Pós-Partida)` permanece invisível durante a partida e é exibido **logo abaixo do painel da palavra secreta** (`.secret-display`) quando o jogo encerra.
 - **Modal Overlay**: Exibe um modal responsivo (`width: 94%; max-width: 580px; height: 82vh;`) sobre a tela com fundo escuro borrado (`backdrop-filter: blur(4px)`).
 - **Controles de Fechamento**: Suporta botão `×` no topo, botão "Fechar" no rodapé, clique fora no backdrop e tecla `ESC`.

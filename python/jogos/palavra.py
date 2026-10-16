@@ -16,7 +16,7 @@ from datetime import datetime
 
 from similarity import nlp
 import db
-from service_common import strip_accents, GIFT_PT_MAP
+from service_common import strip_accents, GIFT_PT_MAP, get_rank_color
 from gifts_catalog import get_catalog
 
 
@@ -599,8 +599,12 @@ class JogoContexto:
             "avatar": "",
             "secret_word": self.secret_word,
             "total_guesses": len(self.guesses),
+            "guesses": self.get_final_guesses(),
             "post_game_summary": self.build_post_game_summary(100),
         }
+
+    def get_final_guesses(self) -> list:
+        return [{**guess, "color": get_rank_color(int(guess.get("rank", 1001)))} for guess in self.guesses]
 
     def save_result(self, winner: str, nickname: str, avatar: str, total_guesses: int, room_id: str = ""):
         self.winner_nickname = nickname
@@ -839,7 +843,7 @@ class JogoContexto:
             "letter_gift": self.letter_gift,
             "first_letter": self.secret_word[0] if (self.secret_word and self.first_letter_revealed) else "",
             "first_letter_revealed": self.first_letter_revealed,
-            "guesses": self.guesses[:50],
+            "guesses": self.get_final_guesses() if self.finished else self.guesses[:50],
             "hints": self.hints_given,
             "finished": self.finished,
             "winner": self.winner,

@@ -345,9 +345,7 @@ function handleMessage(msg) {
       break;
 
     case "game_over":
-      // Queue victory event so it plays after the winning guess transition
-      guessHighlightQueue.push({ is_game_over_event: true, msg });
-      processGuessHighlightQueue();
+      applyGameOver(msg);
       break;
   }
 }
@@ -1136,15 +1134,43 @@ function renderGameOver(winner, html) {
   if (name) name.innerHTML = html;
 }
 
+function applyGameOver(msg) {
+  guessHighlightQueue = [];
+  guessHighlightShowing = false;
+  if (Array.isArray(msg.guesses)) state.guesses = msg.guesses;
+  state.finished = true;
+  state.secretWord = msg.secret_word;
+  state.secretLength = (msg.secret_word || "").length;
+  state.postGameSummary = msg.post_game_summary || null;
+  document.getElementById("guessCount").textContent = state.guesses.length;
+
+  if (msg.winner === "Ninguém") {
+    renderGameOver("Ninguém", `<span class="end-icon">✖</span> Partida encerrada sem vencedor`);
+  } else {
+    renderGameOver(msg.winner, `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`);
+  }
+  renderBoxes();
+  renderGuesses(true);
+  refreshRanking();
+  showStartBar("Jogo finalizado! Aguardando a próxima partida...");
+  hideWaitingScreen();
+  enablePostGame();
+  state.display.riddleVisible = false;
+  stopLetterGiftPromptCycle();
+}
+
 const GUESS_TOP_MS = 1200;  // tempo para ler o palpite no topo
 const GUESS_GAP_MS = 20;    // intervalo antes do proximo
 
 function handleGuessHighlight(msg) {
-  if (!msg || !msg.word) return;
+  if (!msg || !msg.word || state.finished) return;
 
   const alreadyListed = state.guesses.some(g => g.word.toLowerCase() === msg.word.toLowerCase());
   const isDuplicate = !!msg.is_duplicate || alreadyListed;
   if (!isDuplicate) addGuessToList(msg);
+
+  // O acerto já aparece no ranking; game_over apresenta o vencedor.
+  if (Number(msg.rank) === 1) return;
 
   // A lista é imediata; sob carga, apenas o destaque visual é condensado.
   guessHighlightQueue = guessHighlightQueue.filter(item => item.is_game_over_event);
@@ -1153,6 +1179,11 @@ function handleGuessHighlight(msg) {
 }
 
 function processGuessHighlightQueue() {
+  if (state.finished) {
+    guessHighlightQueue = [];
+    guessHighlightShowing = false;
+    return;
+  }
   if (guessHighlightShowing || guessHighlightQueue.length === 0) return;
   guessHighlightShowing = true;
 
@@ -1160,26 +1191,7 @@ function processGuessHighlightQueue() {
   const isDuplicate = current.is_duplicate || (!current.alreadyListed && state.guesses.some(g => g.word.toLowerCase() === (current.word || "").toLowerCase()));
 
   if (current.is_game_over_event) {
-    const msg = current.msg;
-    state.finished = true;
-    state.secretWord = msg.secret_word;
-    state.secretLength = (msg.secret_word || "").length;
-    state.postGameSummary = msg.post_game_summary || null;
-    if (msg.winner === "Ninguém") {
-      renderGameOver("Ninguém", `<span class="end-icon">✖</span> Partida encerrada sem vencedor`);
-    } else {
-      renderGameOver(msg.winner, `<img src="${msg.avatar || ''}" class="winner-av" onerror="this.style.display='none'"><span>🏆 ${msg.nickname || msg.winner}</span><div class="winner-msg">Acertou a Palavra Secreta!</div>`);
-    }
-    renderBoxes();
-    refreshRanking();
-    showStartBar("Jogo finalizado! Aguardando a próxima partida...");
-    hideWaitingScreen();
-    enablePostGame();
-    state.display.riddleVisible = false;
-    stopLetterGiftPromptCycle();
-
-    guessHighlightShowing = false;
-    processGuessHighlightQueue();
+    applyGameOver(current.msg);
     return;
   }
   
@@ -1307,11 +1319,13 @@ function addGuessToList(msg) {
   }
 }
 
-function renderGuesses() {
+function renderGuesses(showAll = false) {
   const container = document.getElementById("guessesList");
-  const sorted = [...state.guesses].sort((a, b) => a.rank - b.rank).slice(0, 50);
-  container.innerHTML = "";
-  sorted.forEach(g => container.appendChild(createGuessRow(g)));
+  const sorted = [...state.guesses].sort((a, b) => a.rank - b.rank);
+  const visible = showAll ? sorted : sorted.slice(0, 50);
+  const fragment = document.createDocumentFragment();
+  visible.forEach(g => fragment.appendChild(createGuessRow(g)));
+  container.replaceChildren(fragment);
 }
 
 function createGuessRow(g, animateEntry = false) {
@@ -1736,7 +1750,7 @@ async function loadGameState() {
       enablePostGame();
 
       renderBoxes();
-      renderGuesses();
+      renderGuesses(state.finished);
       refreshRanking();
       stopLetterGiftPromptCycle();
       startLetterGiftPromptCycle();

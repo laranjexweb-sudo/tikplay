@@ -115,7 +115,7 @@ function dbMetrics(dbMod) {
 }
 
 // Entradas necessárias para derivar alertas; cada leitura isolada.
-function collectAlertInputs({ db: dbMod, metrics, daemon, host }) {
+function collectAlertInputs({ db: dbMod, metrics, daemon, host, platform }) {
   const dbInfo = safe(() => dbMetrics(dbMod), null);
   return {
     host: host || null,
@@ -123,10 +123,11 @@ function collectAlertInputs({ db: dbMod, metrics, daemon, host }) {
     rates: safe(() => metrics.getRates(ERROR_RATE_WINDOW_MIN), { error_rate: 0, requests: 0 }),
     database: dbInfo,
     daemon: daemon || { alive: false },
+    platform: platform || null,
   };
 }
 
-function deriveAlerts({ host, latency, rates, database, daemon }) {
+function deriveAlerts({ host, latency, rates, database, daemon, platform }) {
   const alerts = [];
   const push = (key, severity, title, detail, source) => {
     if (severity) alerts.push({ key, severity, title, detail: String(detail), source });
@@ -150,6 +151,17 @@ function deriveAlerts({ host, latency, rates, database, daemon }) {
 
   if (daemon && daemon.alive === false) {
     alerts.push({ key: "daemon.down", severity: "critical", title: "Daemon Python indisponível", detail: "processo ausente", source: "daemon" });
+  }
+
+  if (platform && platform.reconnecting > 0) {
+    const count = platform.reconnecting;
+    alerts.push({
+      key: "tiktok.reconnecting",
+      severity: "warning",
+      title: count === 1 ? "Live em reconexão" : "Lives em reconexão",
+      detail: `${count} ${count === 1 ? "live está tentando" : "lives estão tentando"} reconectar.`,
+      source: "connection",
+    });
   }
 
   if (database) {
@@ -316,7 +328,7 @@ function buildSnapshot({ db: dbMod, tenants, metrics, getDaemonStatus, ttsConfig
   const platform = safe(() => platformMetrics({ tenants, stats }), {});
   if (!stats) degraded.push("platform");
 
-  const inputs = collectAlertInputs({ db: dbMod, metrics, daemon, host: { cpu_pct: host.cpu_pct, ram: host.ram, disk: host.disk } });
+  const inputs = collectAlertInputs({ db: dbMod, metrics, daemon, host: { cpu_pct: host.cpu_pct, ram: host.ram, disk: host.disk }, platform });
   const allAlerts = safe(() => deriveAlerts(inputs), []);
   const latency = safe(() => metrics.getLatency(), { p50: null, p95: null, p99: null, avg: null, window_min: 15, count: 0 });
   const rates = safe(() => metrics.getRates(ERROR_RATE_WINDOW_MIN), { requests: 0, errors: 0, error_rate: 0, window_min: ERROR_RATE_WINDOW_MIN });
@@ -448,12 +460,12 @@ function createEngine({ db: dbMod, metrics, sse, tenants, getDaemonStatus, ttsCo
       const daemon = safe(() => (getDaemonStatus ? getDaemonStatus() : { alive: false }), { alive: false });
       const hostSample = safe(() => metrics.getHost(), null);
       const host = hostSample ? { cpu_pct: hostSample.cpu_pct, ram: hostSample.ram, disk: hostSample.disk } : null;
-      const inputs = collectAlertInputs({ db: dbMod, metrics, daemon, host });
-      runIncidents(inputs);
-
       const ws = safe(() => wsMetrics(tenants), { clients_total: 0, panels: 0, overlays: 0 });
       const stats = safe(() => dbMod.getMonitorPlatformStats(), null) || {};
       const platform = safe(() => platformMetrics({ tenants, stats }), {});
+      const inputs = collectAlertInputs({ db: dbMod, metrics, daemon, host, platform });
+      runIncidents(inputs);
+
       const database = inputs.database;
       const services = safe(() => servicesHealth({ metrics, database, host, ws, daemon, platform, ttsConfigured }), []);
       runServiceStatus(services);

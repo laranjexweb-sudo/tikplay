@@ -421,10 +421,15 @@
         <section class="card page-section tp-sound-section" data-feature-section="chat" data-section="voice" id="tab-chat">
           <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz do narrador</h2><p>Compartilhada pela narração do chat e pelas charadas da Palavra Secreta.</p></div></div></div>
           <div class="card-body">
-            <div class="voice-preview"><div class="voice-avatar">◖</div><div><strong>Prévia da narração</strong><span>Teste a voz e ajuste a velocidade antes de iniciar a live.</span></div></div>
             <div class="form-grid">
               <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio (servidor)</option><option value="edge_francisca" selected>Francisca (servidor)</option></select><small>Aplicada ao chat e às charadas.</small></div>
               <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
+            </div>
+            <div id="elevenChatBox" hidden>
+              <div class="divider"></div>
+              <div class="field"><label for="elevenChatVoice">Voz adicional do chat</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
+              <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz adicional</button></div>
+              <small id="elevenChatStatus" role="status" aria-live="polite"></small>
             </div>
             <div class="divider"></div>
             <label class="switch-row" for="chatNarrEnabled">
@@ -458,6 +463,19 @@
       </div>
 
       <aside class="stack">
+        <section class="card eleven-usage-card" id="elevenUsageCard" hidden aria-labelledby="elevenUsageTitle">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">◴</div><div><h2 id="elevenUsageTitle">Limite de voz adicional</h2><p>Consumo acumulado neste mês.</p></div></div></div>
+          <div class="card-body">
+            <div class="eleven-usage-summary"><strong id="elevenUsageCount">—</strong><span id="elevenUsagePercent">—</span></div>
+            <div class="eleven-usage-meter" role="progressbar" aria-label="Consumo mensal da voz adicional" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="elevenUsageFill"></span></div>
+            <div class="eleven-usage-labels"><span>Usado</span><span id="elevenUsageRemaining">Restante: —</span></div>
+            <div class="eleven-credit-preview">
+              <div><span>Créditos internos</span><strong>Recarga em breve</strong></div>
+              <button class="btn btn-dark btn-small" type="button" disabled title="Recargas ainda não estão disponíveis">Adicionar créditos</button>
+              <small>Recargas ainda não disponíveis.</small>
+            </div>
+          </div>
+        </section>
         <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">◉</div><div><h2>Status do áudio</h2><p>Resumo rápido da configuração atual.</p></div></div></div><div class="card-body"><div class="status-list"><div class="status-item"><div><span>Motor de voz</span><strong>Síntese de voz</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Voz selecionada</span><strong id="voiceStatus">—</strong></div><i class="status-dot"></i></div><div class="status-item"><div><span>Salvamento</span><strong>Automático</strong></div><i class="status-dot"></i></div></div><div class="mini-stat-grid"><div class="mini-stat"><span>ALERTAS</span><strong id="soundsAlertCount">—</strong></div><div class="mini-stat"><span>COM ÁUDIO</span><strong id="soundsAudioCount">—</strong></div></div></div></section>
         <section class="card"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione a voz e teste a narração.<br><br><strong>2.</strong> Escolha um presente do catálogo.<br><br><strong>3.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>4.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
       </aside>
@@ -1685,6 +1703,8 @@ function connectLogs() {
     if(msg.active_gift !== undefined) renderWordCurrentGift(msg.active_gift);
     if (msg.type === "log") {
       addLog(msg);
+      if (msg.event === "tts.provider.failed" && msg.details && msg.details.operation === "test")
+        document.getElementById("elevenChatStatus").textContent = "A prévia não pôde ser gerada. Confira o limite e a configuração da voz.";
     } else if (msg.type === "status") {
       updateStatus(msg);
     } else if (msg.type === "word") {
@@ -1730,6 +1750,7 @@ function connectLogs() {
       fetchHistoryAll();
     } else if (msg.type === "tts_test_ready" && msg.url) {
       playTikPlayAudio(msg.url, "tts", true, true);
+      if (!document.getElementById("elevenChatBox").hidden) loadElevenChatVoices();
     } else if (msg.type === "gift_event") {
       streamerGiftCount += Math.max(1, Number(msg.repeat_count) || 1);
       document.getElementById('streamerDashGifts').textContent = streamerGiftCount.toLocaleString('pt-BR');
@@ -2983,6 +3004,7 @@ let ttsPlaybackErrorAt = 0;
 let ttsPlaybackCurrentItem = null;
 let ttsPlaybackCurrentAudio = null;
 let ttsPlaybackCurrentFinish = null;
+let ttsPlaybackCurrentCancel = null;
 
 function playTikPlayAudio(url, game, diag, priority = false, expiresInMs = 0) {
   if (!url) return;
@@ -3019,13 +3041,7 @@ function clearChatNarrationPlayback() {
       ttsPlaybackDrops++;
     }
   }
-  if (ttsPlaybackCurrentItem && ttsPlaybackCurrentItem.game === "chat" && ttsPlaybackCurrentAudio) {
-    try {
-      ttsPlaybackCurrentAudio.pause();
-      ttsPlaybackCurrentAudio.currentTime = 0;
-    } catch (e) {}
-    if (ttsPlaybackCurrentFinish) ttsPlaybackCurrentFinish();
-  }
+  if (ttsPlaybackCurrentItem?.game === "chat") ttsPlaybackCurrentCancel?.();
 }
 
 function logTtsPlaybackDrop() {
@@ -3046,25 +3062,43 @@ function playNextTikPlayAudio() {
   if (!ttsPlaybackQueue.length) return;
   unlockAudio();
   const item = ttsPlaybackQueue.shift();
-  const audio = new Audio(item.url);
+  const buffered = /\/eleven_[a-f0-9]+\.mp3(?:[?#]|$)/i.test(item.url) && connectAudioContext;
+  const audio = buffered ? null : new Audio(item.url);
+  const controller = buffered ? new AbortController() : null;
+  let source = null;
+  let loadTimer = null;
   let finished = false;
   ttsPlaybackActive = true;
   ttsPlaybackCurrentItem = item;
   ttsPlaybackCurrentAudio = audio;
-  audio.preload = "auto";
+  if (audio) {
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.muted = false;
+  }
   const finish = () => {
     if (finished) return;
     finished = true;
+    clearTimeout(loadTimer);
     ttsPlaybackActive = false;
-    if (ttsPlaybackCurrentAudio === audio) {
+    controller?.abort();
+    if (source) { source.onended = null; source.disconnect(); }
+    if (ttsPlaybackCurrentItem === item) {
       ttsPlaybackCurrentItem = null;
       ttsPlaybackCurrentAudio = null;
       ttsPlaybackCurrentFinish = null;
+      ttsPlaybackCurrentCancel = null;
     }
     setTimeout(playNextTikPlayAudio, 0);
   };
   ttsPlaybackCurrentFinish = finish;
+  ttsPlaybackCurrentCancel = () => {
+    if (source) { try { source.stop(); } catch (_) {} }
+    if (audio) { audio.pause(); audio.currentTime = 0; }
+    finish();
+  };
   const fail = () => {
+    if (finished) return;
     const now = Date.now();
     if (now - ttsPlaybackErrorAt >= 5000) {
       ttsPlaybackErrorAt = now;
@@ -3072,6 +3106,32 @@ function playNextTikPlayAudio() {
     }
     finish();
   };
+  if (buffered) {
+    loadTimer = setTimeout(fail, 15000);
+    (async () => {
+      const context = connectAudioContext;
+      if (context.state === "suspended") await context.resume();
+      if (finished) return;
+      const response = await fetch(item.url, { signal: controller.signal });
+      if (!response.ok) throw new Error("TTS_AUDIO_FETCH_FAILED");
+      const decoded = await context.decodeAudioData(await response.arrayBuffer());
+      if (finished) return;
+      if (item.expiresAt && item.expiresAt <= Date.now()) { logTtsPlaybackDrop(); finish(); return; }
+      clearTimeout(loadTimer);
+      // A local silent lead-in wakes the output without discarding any speech.
+      const leadIn = Math.round(decoded.sampleRate * 0.5);
+      const complete = context.createBuffer(decoded.numberOfChannels, decoded.length + leadIn, decoded.sampleRate);
+      for (let channel = 0; channel < decoded.numberOfChannels; channel++)
+        complete.copyToChannel(decoded.getChannelData(channel), channel, leadIn);
+      source = context.createBufferSource();
+      source.buffer = complete;
+      source.connect(context.destination);
+      source.onended = finish;
+      source.start();
+      if (item.diag) addLog({ text: "[Áudio] Reprodução TTS iniciada.", game: item.game, level: "info" });
+    })().catch(fail);
+    return;
+  }
   audio.onended = finish;
   audio.onerror = fail;
   let promise;
@@ -3229,7 +3289,7 @@ async function endGameFromPanel() {
   btn.textContent = "Finalizando...";
   try {
     const res = await apiFetch(`/api/end-game`, { method: "POST" });
-    if (!res.success && !res.trace_id) addLog({ text: `[Painel] ${res.error || "Falha ao solicitar encerramento."}`, category: "error", level: "error", event: "palavra.end.request_failed", source: "browser", code: "PALAVRA_END_REQUEST_FAILED" });
+    if (!res.success) addLog({ text: `[Painel] ${res.error || "Falha ao solicitar encerramento."}`, category: "error", level: "error", event: "palavra.end.request_failed", source: "browser", code: "PALAVRA_END_REQUEST_FAILED", trace_id: res.trace_id || null });
   } catch (err) {
     addLog({ text: "[Painel] Falha de rede ao solicitar encerramento da partida.", category: "error", level: "error", event: "palavra.end.network_failed", source: "browser", code: "PALAVRA_END_NETWORK_FAILED" });
   }
@@ -4048,6 +4108,72 @@ async function loadSettings() {
       settingsHydrated = true; preferenceHydration("settings", true);
     }
   } catch (e) { preferenceHydration("settings", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
+}
+
+async function loadElevenChatVoices() {
+  const box = document.getElementById("elevenChatBox");
+  const select = document.getElementById("elevenChatVoice");
+  const test = document.getElementById("elevenChatTest");
+  const status = document.getElementById("elevenChatStatus");
+  try {
+    const data = await apiFetch("/api/tts/elevenlabs");
+    if (!data.success) throw new Error("Não foi possível carregar as vozes.");
+    box.hidden = !data.enabled;
+    document.getElementById("elevenUsageCard").hidden = !data.enabled;
+    if (!data.enabled) return;
+    select.replaceChildren(new Option("Usar a voz padrão", ""));
+    for (const voice of data.voices || []) select.add(new Option(voice.label, voice.key));
+    if (data.voice_id && !Array.from(select.options).some(option => option.value === data.voice_id))
+      select.add(new Option("Voz selecionada indisponível", data.voice_id));
+    select.value = data.voice_id || "";
+    select.dataset.saved = select.value;
+    select.disabled = !data.configured;
+    test.disabled = !data.configured || !data.voice_id;
+    const used = Math.max(0, Number(data.used_characters) || 0);
+    const limit = Math.max(0, Number(data.monthly_limit) || 0);
+    const percent = limit ? Math.min(100, Math.round(used / limit * 100)) : 0;
+    document.getElementById("elevenUsageCount").textContent = `${used.toLocaleString("pt-BR")} / ${limit.toLocaleString("pt-BR")} caracteres`;
+    document.getElementById("elevenUsagePercent").textContent = `${percent}% usado`;
+    document.getElementById("elevenUsageRemaining").textContent = `Restante: ${Math.max(0, limit - used).toLocaleString("pt-BR")}`;
+    document.getElementById("elevenUsageFill").style.width = `${percent}%`;
+    const meter = document.querySelector("#elevenUsageCard .eleven-usage-meter");
+    meter.setAttribute("aria-valuenow", String(percent));
+    status.textContent = data.catalog_error ? "Não foi possível carregar o catálogo de vozes. Recarregue o painel para tentar novamente." : data.configured
+      ? ""
+      : "Aguardando configuração da voz adicional.";
+  } catch {
+    status.textContent = "Não foi possível carregar as vozes adicionais. Recarregue o painel para tentar novamente.";
+    select.disabled = true;
+    test.disabled = true;
+  }
+}
+
+async function saveElevenChatVoice() {
+  const select = document.getElementById("elevenChatVoice");
+  const status = document.getElementById("elevenChatStatus");
+  select.disabled = true;
+  document.getElementById("elevenChatTest").disabled = true;
+  try {
+    const result = await apiFetch("/api/tts/elevenlabs", { method: "PUT",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voice_id: select.value }) });
+    if (!result.success) throw new Error("Falha ao salvar.");
+    await loadElevenChatVoices();
+  } catch {
+    select.value = select.dataset.saved || "";
+    status.textContent = "Não foi possível salvar a voz. Tente novamente.";
+  } finally { select.disabled = false; }
+}
+
+async function testElevenChatVoice() {
+  const button = document.getElementById("elevenChatTest");
+  const status = document.getElementById("elevenChatStatus");
+  button.disabled = true;
+  try {
+    const result = await apiFetch("/api/tts/elevenlabs/test", { method: "POST" });
+    if (!result.success) throw new Error("Falha no teste.");
+    status.textContent = "Gerando prévia da voz. O áudio será reproduzido quando estiver pronto.";
+  } catch { status.textContent = "Não foi possível iniciar a prévia. Confira o limite e a disponibilidade da voz."; }
+  finally { button.disabled = false; }
 }
 
 function onPctChanged(el) {
@@ -5764,6 +5890,7 @@ async function copyRoomLink(path, statusId = "") {
   renderSoundAlerts();
   await loadGiftConfig();
   await loadSettings();
+  loadElevenChatVoices();
   await Promise.all(['v2','v3'].map(loadLikesOverlayLayout));
   await loadTresConfig();
   loadPanelVoices();

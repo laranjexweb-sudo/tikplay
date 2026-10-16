@@ -25,12 +25,14 @@ from tiktoklive_handler import TikTokLiveHandler
 from contexto_public import handle_public_command
 import db
 import tts
+import elevenlabs_tts
 
 TTS_AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "public", "tts-audio")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.br")
 CHAT_NARRATION_QUEUE_SIZE = 10
 CHAT_NARRATION_MAX_AGE_SECONDS = 10.0
 CHAT_NARRATION_STATS_INTERVAL = 30.0
+_elevenlabs_test_tasks = set()
 
 _gifts_sync_running = False
 
@@ -41,6 +43,22 @@ from service_common import (
 )
 
 
+async def _test_elevenlabs_voice(tid, trace_id):
+    try:
+        audio_path, code = await asyncio.to_thread(
+            elevenlabs_tts.synthesize, tid,
+            "Prévia da voz adicional.",
+            os.path.join(TTS_AUDIO_ROOT, str(tid)))
+    except Exception:
+        audio_path, code = None, "SYNTHESIS_FAILED"
+    if audio_path:
+        emit(tid, "tts_test_ready", f"/tts-audio/{tid}/{os.path.basename(audio_path)}")
+    emit_service_log(tid, "diagnostic" if audio_path else "error", "debug" if audio_path else "error",
+                     "tts.provider.completed" if audio_path else "tts.provider.failed",
+                     "Prévia da voz adicional concluída." if audio_path else "Não foi possível gerar a prévia da voz adicional.",
+                     game="tts", trace_id=trace_id, code=code, details={"operation": "test"})
+
+
 async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
     api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
     words_str = ", ".join(words)
@@ -48,7 +66,7 @@ async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
         try:
             import urllib.request
             req_body = json.dumps({
-                "model": "openai/gpt-4o-mini",
+                "model": "openai/gpt-5.6-luna",
                 "messages": [
                     {
                         "role": "system",
@@ -68,7 +86,7 @@ async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
                         "content": "Crie a charada agora para a live do TikTok sem citar a palavra secreta."
                     }
                 ],
-                "temperature": 0.7,
+                "reasoning": {"effort": "none"},
                 "max_tokens": 200
             }).encode("utf-8")
             req = urllib.request.Request(
@@ -573,9 +591,7 @@ class GameSession:
                         or time.monotonic() - item["queued_at"] > CHAT_NARRATION_MAX_AGE_SECONDS):
                     self._record_chat_narration("stale")
                     continue
-                audio_url = await self._tts_url(
-                    item["text"], voice_key=item["voice_key"], rate=item["rate"]
-                )
+                audio_url = await self._chat_tts_url(item)
                 if audio_url:
                     age = time.monotonic() - item["queued_at"]
                     if (item["epoch"] != self._chat_narration_epoch
@@ -620,6 +636,27 @@ class GameSession:
                 "rate": item.get("rate"),
             },
         )
+
+    async def _chat_tts_url(self, item):
+        try:
+            path, code = await asyncio.to_thread(
+                elevenlabs_tts.synthesize, self.tenant_id, item["text"],
+                os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id)), item["rate"])
+            if path:
+                self._record_chat_narration("elevenlabs_synthesized")
+                return f"/tts-audio/{self.tenant_id}/{os.path.basename(path)}"
+        except elevenlabs_tts.ProviderError as exc:
+            code = str(exc)
+        except Exception:
+            code = "PROVIDER_UNAVAILABLE"
+        if code not in ("NOT_CONFIGURED", "NOT_SELECTED", "NOT_AVAILABLE"):
+            now = time.monotonic()
+            if now - getattr(self, "_elevenlabs_failure_at", 0) >= 30:
+                self._elevenlabs_failure_at = now
+                self._log_event("notice", "warning", "tts.provider.fallback",
+                                "Voz adicional indisponível; usando a voz padrão.",
+                                code=code, details={"engine": "additional_voice"})
+        return await self._tts_url(item["text"], voice_key=item["voice_key"], rate=item["rate"])
 
     async def _tts_url(self, text: str, voice_key: str = None, rate: float = None) -> str:
         """Gera áudio pelo Edge com voz/taxa explícitas e retorna sua URL pública."""
@@ -1579,6 +1616,7 @@ class GameSession:
                 "avatar": final_avatar,
                 "secret_word": self.game.secret_word,
                 "total_guesses": len(self.game.guesses),
+                "guesses": self.game.get_final_guesses(),
                 "post_game_summary": self.game.build_post_game_summary(100),
             })
             self._palavra_debug("game.finished", game_id=self.game.game_id, cause="correct_guess",
@@ -1792,6 +1830,7 @@ class GameSession:
                 "avatar": avatar,
                 "secret_word": self.game.secret_word,
                 "total_guesses": len(self.game.guesses),
+                "guesses": self.game.get_final_guesses(),
                 "post_game_summary": self.game.build_post_game_summary(100),
             })
             self._palavra_debug("game.finished", game_id=self.game.game_id, cause="final_boss_gift",
@@ -2845,6 +2884,12 @@ async def process_commands(queue):
                 emit_service_log(tid, "notice", "warning", "palavra.settings.rejected",
                                  "[Palavra] Preferências não aplicadas: sessão não ativa.", game="palavra",
                                  trace_id=cmd.get("trace_id"), code="SESSION_NOT_ACTIVE")
+
+        elif c == "elevenlabs_test":
+            trace_id = str(cmd.get("trace_id") or uuid.uuid4().hex)
+            task = asyncio.create_task(_test_elevenlabs_voice(tid, trace_id))
+            _elevenlabs_test_tasks.add(task)
+            task.add_done_callback(_elevenlabs_test_tasks.discard)
 
         elif c == "tts_test":
             text = cmd.get("text") or "Olá! Esta é a voz para as charadas do jogo Contexto."

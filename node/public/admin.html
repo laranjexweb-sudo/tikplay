@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="/ui/tikplay-admin-site.css">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
-<link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v2">
+<link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v11">
 
 </head>
 <body class="tp-super-admin">
@@ -39,7 +39,7 @@
     <a href="#adminDashboard"><span aria-hidden="true">◫</span>Dashboard</a>
     <a href="#adminAccounts"><span aria-hidden="true">◎</span>Usuários</a>
     <a href="#adminInvites"><span aria-hidden="true">◆</span>Convites</a>
-    <a href="#adminRules"><span aria-hidden="true">⚙</span>Regras globais</a>
+    <a href="#adminRules"><span aria-hidden="true">⚙</span>Configurações globais</a>
     <a href="#adminOperations"><span aria-hidden="true">⌁</span>Operação local</a>
     <span class="tp-admin-caption">INFRAESTRUTURA</span>
     <a href="#adminMonitor"><span aria-hidden="true">⌁</span>Monitor de Servidor</a>
@@ -83,13 +83,26 @@
 </div>
 <section class="tp-admin-section tp-admin-management" id="adminRules" aria-labelledby="adminRulesHeading">
   <header class="tp-admin-section-heading">
-    <div><h2 id="adminRulesHeading">Regras globais</h2><p>Palavras que não devem ser sorteadas em Palavra Secreta e 3 Dicas. A regra vale para todos os clientes.</p></div>
+    <div><h2 id="adminRulesHeading">Configurações globais</h2><p>Integrações da plataforma e palavras banidas dos jogos.</p></div>
     <span class="tp-admin-count" id="bannedCount" aria-label="Quantidade de palavras banidas">0</span>
   </header>
   <label class="tp-admin-field" for="bannedWordsInput">Palavras banidas <span>Uma palavra por linha</span>
     <textarea id="bannedWordsInput" rows="8" class="form-control tp-admin-monospace" placeholder="exemplo&#10;palavra2&#10;termo3"></textarea>
   </label>
   <div class="tp-admin-feedback" id="bannedMsg" role="status" aria-live="polite"></div>
+  <div class="tp-admin-operation-block" aria-labelledby="elevenGlobalTitle">
+    <div class="tp-admin-operation-heading"><div><h3 id="elevenGlobalTitle">Integração ElevenLabs</h3></div></div>
+    <form id="elevenGlobalForm" onsubmit="saveElevenGlobal(event)">
+      <label class="tp-admin-field" for="elevenGlobalKey">Chave da API
+        <input class="form-control" id="elevenGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Cole a chave da ElevenLabs">
+      </label>
+      <div class="tp-admin-operation-actions">
+        <button class="btn btn-nb btn-success" id="elevenGlobalSave" type="submit" disabled>Salvar chave</button>
+        <button class="btn btn-nb btn-danger" id="elevenGlobalClear" type="button" onclick="clearElevenGlobal()" disabled>Remover chave</button>
+      </div>
+    </form>
+    <div class="tp-admin-feedback" id="elevenGlobalStatus" role="status" aria-live="polite">Carregando configuração da integração…</div>
+  </div>
 </section>
 
 <section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
@@ -155,6 +168,14 @@
       </div>
       <div class="d-flex flex-wrap gap-3" id="featuresBox"></div>
       <div class="text-secondary tp-admin-help">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
+    </div>
+    <div class="tp-admin-feature-box" id="elevenAdminBox" hidden>
+      <span class="tp-admin-form-title">ElevenLabs · Leitor de chat</span>
+      <label class="form-check"><input class="form-check-input" type="checkbox" id="elevenAdminEnabled">Liberar vozes adicionais nesta conta</label>
+      <label class="form-label" for="elevenAdminLimit">Limite mensal de caracteres</label>
+      <input class="form-control form-control-sm" type="number" min="0" max="1000000" step="1" id="elevenAdminLimit" value="10000">
+      <button class="btn btn-nb btn-dark" type="button" id="elevenAdminSave" onclick="saveElevenAccess()">Salvar acesso ElevenLabs</button>
+      <span id="elevenAdminStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span>
     </div>
     <div class="d-flex gap-2 mt-3 align-items-center">
       <button type="button" class="btn btn-nb btn-success" onclick="submitUser()">Salvar usuário</button>
@@ -246,7 +267,7 @@
   <div class="tp-monitor-grid tp-monitor-grid-incidents"><article class="tp-monitor-panel"><header><h3>Alertas ativos</h3><span id="activeAlertCount">0 ativos</span></header><div class="tp-monitor-list" id="alertList"></div></article><article class="tp-monitor-panel"><header><h3>Incidentes recentes</h3><span id="incidentCount">0</span></header><div class="tp-monitor-list" id="incidentList"></div></article></div>
   <div class="tp-monitor-section-heading"><div><small>SAAS</small><h2>Atividade da plataforma</h2><p>Indicadores operacionais do TikPlay.</p></div></div>
   <div class="tp-monitor-platform"><article><span>STREAMERS ONLINE</span><b id="platformStreamers">—</b></article><article><span>SESSÕES ATIVAS</span><b id="platformSessions">—</b></article><article><span>JOGOS ATIVOS</span><b id="platformGames">—</b></article><article><span>USUÁRIOS</span><b id="platformUsers">—</b></article><article><span>DAEMON</span><b id="platformDaemon">—</b></article><article><span>ALERTAS SILENCIADOS</span><b id="platformSilenced">—</b></article></div>
-  <div class="tp-monitor-wallboard" id="wallboard" aria-hidden="true"><header><div><strong>Tik<span>Play</span></strong><small>CENTRAL DE MONITORAMENTO</small></div><div><time id="wallClock">--:--:--</time><small>Produção · <b id="wallRealtime">Tempo real ativo</b></small></div><button class="tp-monitor-btn" id="wallboardClose" aria-label="Fechar wallboard">×</button></header><div class="tp-monitor-overall" id="wallOverall"><span class="tp-monitor-health-dot"></span><div><small>STATUS GERAL</small><strong id="wallStatusText">—</strong><span id="wallStatusDetail">—</span></div></div><div class="tp-monitor-wall-kpis"><div><small>SERVIÇOS</small><strong id="wallServices">—</strong><span id="wallServicesMeta">—</span></div><div><small>STREAMERS</small><strong id="wallStreamers">—</strong><span>online agora</span></div><div><small>LATÊNCIA p95</small><strong id="wallLatency">—</strong><span>API global</span></div><div><small>ERROS 5 MIN</small><strong id="wallErrors">—</strong><span id="wallErrorMeta">—</span></div><div><small>CPU</small><strong id="wallCpu">—</strong><span>host</span></div><div><small>RAM</small><strong id="wallRam">—</strong><span>host</span></div></div><div class="tp-monitor-wall-main"><div id="wallServicesGrid"></div><div><article class="tp-monitor-panel"><header><h3>Latência API</h3></header><div class="tp-monitor-chart" id="wallLatencyChart"></div></article><article class="tp-monitor-panel"><header><h3>CPU / RAM</h3></header><div class="tp-monitor-chart" id="wallHostChart"></div></article></div></div><div class="tp-monitor-wall-alerts" id="wallAlerts">Sem alertas ativos.</div></div>
+  <div class="tp-monitor-wallboard" id="wallboard" aria-hidden="true"><header><div><strong>Tik<span>Play</span></strong><small>CENTRAL DE MONITORAMENTO</small></div><div><time id="wallClock">--:--:--</time><small>Produção · <b id="wallRealtime">Tempo real ativo</b></small></div><button class="tp-monitor-btn" id="wallboardClose" aria-label="Fechar wallboard">×</button></header><div class="tp-monitor-overall" id="wallOverall"><div class="tp-monitor-overall-main"><span class="tp-monitor-health-dot"></span><div><small>STATUS GERAL</small><strong id="wallStatusText">—</strong><span id="wallStatusDetail">—</span></div></div></div><div class="tp-monitor-wall-kpis"><div><small>SERVIÇOS</small><strong id="wallServices">—</strong><span id="wallServicesMeta">—</span></div><div><small>STREAMERS</small><strong id="wallStreamers">—</strong><span>online agora</span></div><div><small>LATÊNCIA p95</small><strong id="wallLatency">—</strong><span>API global</span></div><div><small>ERROS 5 MIN</small><strong id="wallErrors">—</strong><span id="wallErrorMeta">—</span></div><div><small>CPU</small><strong id="wallCpu">—</strong><span>host</span></div><div><small>RAM</small><strong id="wallRam">—</strong><span>host</span></div></div><div class="tp-monitor-wall-main"><div id="wallServicesGrid"></div><div><article class="tp-monitor-panel"><header><h3>Latência API</h3></header><div class="tp-monitor-chart" id="wallLatencyChart"></div></article><article class="tp-monitor-panel"><header><h3>CPU / RAM</h3></header><div class="tp-monitor-chart" id="wallHostChart"></div></article></div></div><div class="tp-monitor-wall-alerts" id="wallAlerts">Sem alertas ativos.</div></div>
   <dialog id="monitorHistoryDialog"><form method="dialog"><header><h2>Histórico de incidentes</h2><button class="tp-monitor-btn" aria-label="Fechar histórico">×</button></header><div class="tp-monitor-history-filters"><label>Status<select id="incidentStatusFilter"><option value="all">Todos</option><option value="open">Abertos</option><option value="acknowledged">Reconhecidos</option><option value="resolved">Resolvidos</option></select></label></div><div class="tp-monitor-history-list" id="incidentHistoryList"></div></form></dialog>
 </section>
 
@@ -656,6 +677,7 @@ function toggleUserForm() {
   card.style.display = show ? "block" : "none";
   if (show) {
     editingId = null;
+    document.getElementById("elevenAdminBox").hidden = true;
     document.getElementById("userFormTitle").textContent = "Nova conta";
     for (const id of ["uName", "uEmail", "uPassword", "uTikTok", "uApiKey"]) document.getElementById(id).value = "";
     document.getElementById("uPlan").value = "free";
@@ -714,6 +736,7 @@ function editUser(id) {
   const u = usersData.find((x) => x.id === id);
   if (!u) return;
   editingId = id;
+  loadElevenAccess(id);
   document.getElementById("userFormTitle").textContent = `Editar conta #${id}`;
   document.getElementById("uName").value = u.name || "";
   document.getElementById("uEmail").value = u.email || "";
@@ -727,6 +750,95 @@ function editUser(id) {
   const card = document.getElementById("userFormCard");
   card.style.display = "block";
   card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+let elevenGlobalConfigured = false;
+
+function showElevenGlobalState(data) {
+  elevenGlobalConfigured = data.configured === true;
+  document.getElementById("elevenGlobalSave").disabled = false;
+  document.getElementById("elevenGlobalClear").disabled = !elevenGlobalConfigured;
+  document.getElementById("elevenGlobalStatus").textContent = data.source === "unavailable"
+    ? "Não foi possível ler a configuração. Salve uma chave para atualizar."
+    : elevenGlobalConfigured ? "Chave configurada. A liberação continua individual por streamer." : "Nenhuma chave configurada.";
+}
+
+async function loadElevenGlobal() {
+  try {
+    const data = await apiFetch("/api/admin/integrations/elevenlabs");
+    if (!data.success) throw new Error("Falha ao carregar.");
+    showElevenGlobalState(data);
+  } catch {
+    document.getElementById("elevenGlobalStatus").textContent = "Não foi possível carregar a configuração da ElevenLabs. Atualize a página para tentar novamente.";
+  }
+}
+
+async function saveElevenGlobal(event, clear = false) {
+  event?.preventDefault();
+  const input = document.getElementById("elevenGlobalKey");
+  const status = document.getElementById("elevenGlobalStatus");
+  if (!clear && !input.value.trim()) {
+    status.textContent = "Cole a chave da API antes de salvar.";
+    input.focus();
+    return;
+  }
+  document.getElementById("elevenGlobalSave").disabled = true;
+  document.getElementById("elevenGlobalClear").disabled = true;
+  status.textContent = "Salvando configuração…";
+  try {
+    const data = await apiFetch("/api/admin/integrations/elevenlabs", { method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clear ? { clear: true } : { api_key: input.value.trim() }) });
+    if (!data.success) throw new Error(data.error || "Não foi possível salvar a chave.");
+    input.value = "";
+    showElevenGlobalState(data);
+    status.textContent = clear ? "Chave removida. Integração desativada." : "Chave salva. Integração pronta para as contas autorizadas.";
+  } catch {
+    status.textContent = "Não foi possível confirmar a configuração. Atualize a página para conferir o estado e tente novamente.";
+  } finally {
+    document.getElementById("elevenGlobalSave").disabled = false;
+    document.getElementById("elevenGlobalClear").disabled = !elevenGlobalConfigured;
+  }
+}
+
+function clearElevenGlobal() {
+  return saveElevenGlobal(null, true);
+}
+
+async function loadElevenAccess(id) {
+  const box = document.getElementById("elevenAdminBox");
+  const button = document.getElementById("elevenAdminSave");
+  box.hidden = false;
+  button.disabled = true;
+  document.getElementById("elevenAdminStatus").textContent = "Carregando...";
+  try {
+    const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`);
+    if (editingId !== id) return;
+    if (!data.success) throw new Error("Falha ao carregar.");
+    document.getElementById("elevenAdminEnabled").checked = data.enabled;
+    document.getElementById("elevenAdminLimit").value = data.monthly_limit;
+    document.getElementById("elevenAdminStatus").textContent = data.configured
+      ? `${data.used_characters} caracteres reservados neste mês.` : "Chave ElevenLabs pendente no servidor.";
+    button.disabled = false;
+  } catch {
+    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível carregar o acesso.";
+  }
+}
+
+async function saveElevenAccess() {
+  const id = editingId;
+  if (!id) return;
+  const button = document.getElementById("elevenAdminSave");
+  button.disabled = true;
+  try {
+    const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`, { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: document.getElementById("elevenAdminEnabled").checked,
+        monthly_limit: Number(document.getElementById("elevenAdminLimit").value) }) });
+    if (!data.success) throw new Error(data.error || "Falha ao salvar.");
+    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Acesso ElevenLabs salvo.";
+  } catch {
+    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível salvar. Confira o limite e tente novamente.";
+  } finally { if (editingId === id) button.disabled = false; }
 }
 
 async function submitUser() {
@@ -787,6 +899,7 @@ apiFetch("/api/auth/me").then((data) => {
     return;
   }
   document.getElementById("giftCatalogAdminCard").hidden = false;
+  loadElevenGlobal();
   refreshGiftSyncState();
 });
 
@@ -998,10 +1111,11 @@ pollContextos();
   function renderOverall(){const s=state.snapshot||{},o=s.overall?.status||s.overall||'unknown',cls=statusClass(o);$('overallStrip').dataset.status=cls;$('overallStrip').className=`tp-monitor-overall status-${cls}`;$('healthOrb').dataset.status=cls;$('overallText').textContent=s.overall?.label||statusText(o);$('overallDetail').textContent=cls==='healthy'?'Todos os sistemas operando normalmente.':cls==='unknown'?'Status geral indisponível ou ainda sem amostras.':'Há componentes que exigem atenção.';$('environmentValue').textContent=s.environment==='production'?'Produção':s.environment||'—';$('hostValue').textContent=s.host?.hostname||s.nodes?.[0]?.id||'—';$('uptimeValue').textContent=uptime(s.host?.uptime_s);$('snapshotValue').textContent=ago(s.generated_at);$('wallOverall').dataset.status=cls;$('wallStatusText').textContent=s.overall?.label||statusText(o);$('wallStatusDetail').textContent=$('overallDetail').textContent;}
   function renderKpis(){const s=state.snapshot||{},p=s.platform||{},h=s.host||{},lat=s.latency||{},r=s.rates||{},services=s.services||[];const good=services.filter(x=>x.status==='healthy').length;$('servicesOk').textContent=`${good}/${services.length}`;$('servicesMeta').textContent=`${Math.max(0,services.length-good)} com atenção`;$('streamersOnline').textContent=fmt(p.streamers_online);$('sessionsMeta').textContent=`Sessões ativas: ${fmt(s.websocket?.clients_total)}`;$('latencyP95').textContent=ms(lat.p95);$('latencyMeta').textContent=`p50 ${ms(lat.p50)} · p99 ${ms(lat.p99)}`;$('errorRate').textContent=percent(r.error_rate);$('errorMeta').textContent=`${fmt(r.errors)} erros`;$('cpuValue').textContent=percent(h.cpu_pct);$('cpuMeta').textContent=h.loadavg?.[0]!=null?`Load ${Number(h.loadavg[0]).toFixed(2)} · ${fmt(h.cores)} núcleos`:'Uso atual do host';$('ramValue').textContent=percent(h.ram?.pct);$('ramMeta').textContent=h.ram?.used?`${bytes(h.ram.used)} usados`:'Memória do host';setGauge('cpuGauge',h.cpu_pct);setGauge('ramGauge',h.ram?.pct);setGauge('diskGauge',h.disk?.pct);$('latP50').textContent=ms(lat.p50);$('latP95').textContent=ms(lat.p95);$('latP99').textContent=ms(lat.p99);$('wallServices').textContent=`${good}/${services.length}`;$('wallServicesMeta').textContent=`${Math.max(0,services.length-good)} em atenção`;$('wallStreamers').textContent=fmt(p.streamers_online);$('wallLatency').textContent=ms(lat.p95);$('wallErrors').textContent=percent(r.error_rate);$('wallErrorMeta').textContent=`${fmt(r.errors)} erros`;$('wallCpu').textContent=percent(h.cpu_pct);$('wallRam').textContent=percent(h.ram?.pct);}
   function displayMetric(key,value){if(value==null||typeof value==='object')return null;const k=key.toLowerCase();if(k.includes('latency')||k.endsWith('_ms')||k.includes('read_latency'))return ms(value);if(k.includes('pct')||k.includes('rate'))return percent(value);if(k.includes('bytes')||k.endsWith('_size'))return bytes(value);if(typeof value==='boolean')return value?'Sim':'Não';return String(value);}
-  function serviceEntries(service){const entries=[];for(const [key,value] of Object.entries(service.metrics||{})){const shown=displayMetric(key,value);if(shown!=null)entries.push([key.replaceAll('_',' '),shown]);}if(service.note)entries.push(['DETALHE',service.note]);return entries.slice(0,4);}
+  const serviceMetricLabels={latency_avg_ms:'Latência média (ms)',latency_p95_ms:'Latência p95 (ms)',latency_p99_ms:'Latência p99 (ms)',requests_per_min:'Requisições por minuto',clients_total:'Clientes conectados',panels:'Painéis',overlays:'Sobreposições',events_per_min:'Eventos por minuto',read_latency_ms:'Latência de leitura (ms)',size_bytes:'Tamanho do banco',wal_bytes:'Log WAL',rows:'Registros',pid:'PID',backoff_ms:'Intervalo de reconexão (ms)',used_bytes:'Armazenamento usado',total_bytes:'Armazenamento total',pct:'Uso (%)',lives_connected:'Lives conectadas',reconnecting:'Reconexões',status:'Status',detail:'Detalhe'};
+  function serviceEntries(service){const entries=[];for(const [key,value] of Object.entries(service.metrics||{})){const shown=displayMetric(key,value);if(shown!=null)entries.push([serviceMetricLabels[key.toLowerCase()]||key.replaceAll('_',' '),shown]);}if(service.note)entries.push(['DETALHE',service.note]);return entries.slice(0,4);}
   function serviceCard(service){const status=statusClass(service.status),entries=serviceEntries(service);return `<article class="tp-monitor-service" data-status="${esc(status)}"><header><h3 title="${esc(service.name)}">${esc(service.name||service.id||'Serviço')}</h3><span><i></i>${esc(statusText(service.status))}</span></header><dl>${(entries.length?entries:[['status',statusText(service.status)]]).map(([k,v])=>`<div><dt>${esc(k)}</dt><dd title="${esc(v)}">${esc(v)}</dd></div>`).join('')}</dl></article>`;}
   function renderServices(){const list=state.snapshot?.services||[];$('servicesGrid').innerHTML=list.length?list.map(serviceCard).join(''):'<div class="tp-monitor-empty">Nenhum serviço retornado pelo monitor.</div>';$('wallServicesGrid').innerHTML=list.slice(0,8).map(serviceCard).join('');}
-  function chart(id,points,keys,max=null){const el=$(id);if(!el)return;const vals=points.flatMap(p=>keys.map(k=>p[k]==null?NaN:Number(p[k])).filter(Number.isFinite));if(!points.length||!vals.length){el.innerHTML='<div class="tp-monitor-empty">Sem dados suficientes para este período.</div>';return;}const w=800,h=210,p={l:38,r:10,t:12,b:22},min=0,top=max||Math.max(1,...vals)*1.12,sx=i=>p.l+i*(w-p.l-p.r)/Math.max(1,points.length-1),sy=v=>p.t+(top-v)*(h-p.t-p.b)/(top-min),grid=[0,.25,.5,.75,1].map(t=>{const y=p.t+t*(h-p.t-p.b),v=Math.round(top-(top-min)*t);return `<line class="chart-grid-line" x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}"/><text class="chart-label" x="2" y="${y+3}">${v}</text>`}).join(''),classes=['chart-line','chart-line secondary','chart-line error'],paths=keys.map((k,index)=>{let drawing=false;const segments=points.map((point,i)=>{if(point[k]==null||!Number.isFinite(Number(point[k]))){drawing=false;return '';}const command=`${drawing?'L':'M'} ${sx(i).toFixed(1)} ${sy(Number(point[k])).toFixed(1)}`;drawing=true;return command;}).filter(Boolean).join(' ');return `<path class="${classes[index]||classes[1]}" d="${segments}"/>`;}).join('');el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Gráfico de métricas do monitor">${grid}${paths}</svg>`;}
+  function chart(id,points,keys,max=null){const el=$(id);if(!el)return;const vals=points.flatMap(p=>keys.map(k=>p[k]==null?NaN:Number(p[k])).filter(Number.isFinite));if(!points.length||!vals.length){el.innerHTML='<div class="tp-monitor-empty">Sem dados suficientes para este período.</div>';return;}const bounds=el.getBoundingClientRect(),w=Math.max(320,Math.round(bounds.width)||800),h=Math.max(120,Math.round(bounds.height)||210),p={l:42,r:10,t:12,b:24},min=0,top=max||Math.max(1,...vals)*1.12,sx=i=>p.l+i*(w-p.l-p.r)/Math.max(1,points.length-1),sy=v=>p.t+(top-v)*(h-p.t-p.b)/(top-min),grid=[0,.25,.5,.75,1].map(t=>{const y=p.t+t*(h-p.t-p.b),v=Math.round(top-(top-min)*t);return `<line class="chart-grid-line" x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}"/><text class="chart-label" x="4" y="${y+4}">${v}</text>`}).join(''),classes=['chart-line','chart-line secondary','chart-line error'],paths=keys.map((k,index)=>{let drawing=false;const segments=points.map((point,i)=>{if(point[k]==null||!Number.isFinite(Number(point[k]))){drawing=false;return '';}const command=`${drawing?'L':'M'} ${sx(i).toFixed(1)} ${sy(Number(point[k])).toFixed(1)}`;drawing=true;return command;}).filter(Boolean).join(' ');return `<path class="${classes[index]||classes[1]}" d="${segments}"/>`;}).join('');el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Gráfico de métricas do monitor">${grid}${paths}</svg>`;}
   function renderCharts(){const s=state.series||[];chart('latencyChart',s,['latency_p95','latency_avg']);chart('hostChart',s,['cpu','ram'],100);chart('requestsChart',s,['requests','errors']);chart('wsChart',s,['ws_events']);chart('wallLatencyChart',s,['latency_p95','latency_avg']);chart('wallHostChart',s,['cpu','ram'],100);}
   function renderWsDb(){const s=state.snapshot||{},ws=s.websocket||{},db=s.database||{},wsService=(s.services||[]).find(item=>item.id==='ws'),wsState=ws.status||wsService?.status||'unknown',wsStatus=statusClass(wsState),dbStatus=statusClass(db.status||'unknown');$('wsConnections').textContent=fmt(ws.clients_total);$('wsEvents').textContent=fmt(ws.events_per_min);$('wsText').textContent=statusText(wsState);$('wsStatus').dataset.status=wsStatus;$('wsStatus').textContent=statusText(wsState);$('dbRead').textContent=ms(db.read_latency_ms);$('dbText').textContent=statusText(db.status||'unknown');$('dbFile').textContent=db.path?db.path.split(/[\\/]/).pop():'SQLite';$('dbStatus').dataset.status=dbStatus;$('dbStatus').textContent=statusText(db.status||'unknown');const threshold=state.thresholds?.db_read_ms?.warn;$('dbThreshold').textContent=threshold==null?'—':`${fmt(threshold)} ms`;}
   function renderAlerts(){const alerts=state.snapshot?.alerts||[];$('activeAlertCount').textContent=`${alerts.length} ativo${alerts.length===1?'':'s'}`;$('alertList').innerHTML=alerts.length?alerts.map(a=>`<article class="tp-monitor-event" data-severity="${esc(a.severity||'warning')}"><i>!</i><div><b>${esc(a.title||a.key)}</b><p>${esc(a.detail||'')}</p><p>${esc(a.key||'')}</p></div><div><time>${ago(a.last_seen||a.created_at||Date.now())}</time><button class="tp-monitor-btn" data-silence="${esc(a.key)}">Silenciar 30 min</button></div></article>`).join(''):'<div class="tp-monitor-empty">Nenhum alerta ativo no momento.</div>';$('wallAlerts').innerHTML=alerts.length?alerts.slice(0,5).map(a=>`<span data-severity="${esc(a.severity)}">● ${esc(a.title||a.key)}</span>`).join(''):'Sem alertas ativos.';}
@@ -1017,12 +1131,12 @@ pollContextos();
   function start(){if(state.active)return;state.active=true;state.pollMs=Number($('pollInterval').value)||15000;setRealtime(false);loadThresholds();loadSnapshot();loadSeries();state.pollTimer=setInterval(loadSnapshot,state.pollMs);state.seriesTimer=setInterval(loadSeries,60000);connectSse();state.wallClockTimer=setInterval(()=>{$('wallClock').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false});},1000);}
   function stop(){state.active=false;clearInterval(state.pollTimer);clearInterval(state.seriesTimer);clearInterval(state.wallClockTimer);clearTimeout(state.reconnectTimer);clearTimeout(state.refreshTimer);state.eventSource?.close();state.eventSource=null;closeWallboard();}
   function closeWallboard(exitFullscreen=true){$('wallboard').classList.remove('open');$('wallboard').setAttribute('aria-hidden','true');document.body.classList.remove('tp-monitor-wallboard-active');if(exitFullscreen&&document.fullscreenElement)document.exitFullscreen?.();}
-  function openWallboard(){if(!state.snapshot){loadSnapshot();}renderAll();$('wallboard').classList.add('open');$('wallboard').setAttribute('aria-hidden','false');document.body.classList.add('tp-monitor-wallboard-active');}
+  function openWallboard(){if(!state.snapshot){loadSnapshot();}$('wallboard').classList.add('open');$('wallboard').setAttribute('aria-hidden','false');document.body.classList.add('tp-monitor-wallboard-active');renderAll();}
   async function toggleFullscreen(){try{if(!document.fullscreenElement){openWallboard();await document.documentElement.requestFullscreen();}else{await document.exitFullscreen();closeWallboard(false);}}catch(_){openWallboard();}}
   async function loadHistory(){const status=$('incidentStatusFilter').value;const list=$('incidentHistoryList');list.innerHTML='<div class="tp-monitor-empty">Carregando histórico…</div>';try{const data=await api(`/incidents?status=${encodeURIComponent(status)}&limit=100`);const items=data.items||[];list.innerHTML=items.length?items.map(i=>`<article class="tp-monitor-event"><span class="tp-monitor-badge ${esc(i.status)}">${esc(i.status==='acknowledged'?'Reconhecido':i.status==='resolved'?'Resolvido':'Aberto')}</span><div><b>${esc(i.title||i.key)}</b><p>${esc(i.detail||'')}</p><p>Primeiro registro ${ago(i.first_seen)} · Última atualização ${ago(i.last_seen)}${i.resolved_at?` · Resolvido ${ago(i.resolved_at)}`:''}</p></div><time>${esc(i.severity==='critical'?'Crítico':'Atenção')}</time></article>`).join(''):'<div class="tp-monitor-empty">Nenhum incidente para este filtro.</div>';}catch(error){list.innerHTML=`<div class="tp-monitor-empty">${esc(error.message)}</div>`;}}
   document.addEventListener('pointerdown',unlockAlertSound,{once:true});
   root.addEventListener('click',async event=>{const target=event.target.closest('button');if(!target)return;try{if(target.id==='monitorRefresh'){target.disabled=true;await loadSnapshot();await loadSeries();target.disabled=false;}else if(target.id==='wallboardBtn')openWallboard();else if(target.id==='fullscreenBtn')await toggleFullscreen();else if(target.id==='wallboardClose')closeWallboard();else if(target.id==='showAllIncidents'){$('monitorHistoryDialog').showModal();loadHistory();}else if(target.dataset.ack){target.disabled=true;await api(`/incidents/${encodeURIComponent(target.dataset.ack)}/ack`,{method:'POST',body:'{}'});await loadSnapshot();}else if(target.dataset.resolve){target.disabled=true;await api(`/incidents/${encodeURIComponent(target.dataset.resolve)}/resolve`,{method:'POST',body:'{}'});await loadSnapshot();if($('monitorHistoryDialog').open)loadHistory();}else if(target.dataset.silence){target.disabled=true;await api('/silences',{method:'POST',body:JSON.stringify({key:target.dataset.silence,minutes:30})});await loadSnapshot();}}catch(error){setNotice(error.message);target.disabled=false;}});
-  $('incidentStatusFilter').addEventListener('change',loadHistory);$('pollInterval').addEventListener('change',()=>{state.pollMs=Number($('pollInterval').value)||15000;if(state.active){clearInterval(state.pollTimer);state.pollTimer=setInterval(loadSnapshot,state.pollMs);}});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('wallboard').classList.contains('open'))closeWallboard();});document.addEventListener('visibilitychange',()=>{if(state.active&&!document.hidden)loadSnapshot();});document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('wallboard').classList.contains('open'))closeWallboard(false);});window.addEventListener('pagehide',stop);
+  $('incidentStatusFilter').addEventListener('change',loadHistory);$('pollInterval').addEventListener('change',()=>{state.pollMs=Number($('pollInterval').value)||15000;if(state.active){clearInterval(state.pollTimer);state.pollTimer=setInterval(loadSnapshot,state.pollMs);}});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('wallboard').classList.contains('open'))closeWallboard();});document.addEventListener('visibilitychange',()=>{if(state.active&&!document.hidden)loadSnapshot();});document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('wallboard').classList.contains('open'))closeWallboard(false);else if($('wallboard').classList.contains('open'))renderCharts();});window.addEventListener('resize',()=>{if($('wallboard').classList.contains('open'))renderCharts();});window.addEventListener('pagehide',stop);
   window.TikPlayMonitor={setActive(active){if(active)start();else stop();}};
   if(location.hash==='#adminMonitor'||location.hash==='#adminMonitor/incidents')start();
 })();
