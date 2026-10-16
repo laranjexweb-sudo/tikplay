@@ -3,6 +3,9 @@ import os
 import json
 import time
 import unicodedata
+import random
+import hashlib
+from pathlib import Path
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "data.db")
 
@@ -10,7 +13,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node",
 def _norm(s: str) -> str:
     if not s:
         return ""
-    s = s.lower().strip()
+    s = s.casefold().strip()
     return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
@@ -46,6 +49,30 @@ def init_db():
       last_id INTEGER DEFAULT 0,
       played_words TEXT DEFAULT '[]'
     );
+    CREATE TABLE IF NOT EXISTS word_catalog (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT NOT NULL, word_key TEXT NOT NULL UNIQUE,
+      category TEXT NOT NULL DEFAULT 'geral', difficulty TEXT NOT NULL DEFAULT 'media',
+      status TEXT NOT NULL DEFAULT 'review', source TEXT NOT NULL DEFAULT 'manual',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_word_catalog_status ON word_catalog(status,category,difficulty,id);
+    CREATE TABLE IF NOT EXISTS word_cycles (
+      tenant_id INTEGER PRIMARY KEY, current_cycle INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS word_cycle_migrations (
+      tenant_id INTEGER PRIMARY KEY, migrated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS word_usage (
+      tenant_id INTEGER NOT NULL, cycle_id INTEGER NOT NULL, word_key TEXT NOT NULL, word TEXT NOT NULL,
+      game_id INTEGER, game_type TEXT NOT NULL DEFAULT 'palavra', source TEXT NOT NULL DEFAULT 'draw',
+      used_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY(tenant_id,cycle_id,word_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_word_usage_tenant_time ON word_usage(tenant_id,used_at DESC);
+    CREATE TABLE IF NOT EXISTS word_draw_settings (
+      tenant_id INTEGER PRIMARY KEY, categories TEXT NOT NULL DEFAULT '[]', difficulties TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS tenant_settings (
       tenant_id INTEGER PRIMARY KEY,
       apenas_seguidores INTEGER DEFAULT 0,
@@ -53,6 +80,7 @@ def init_db():
       pct_dica INTEGER DEFAULT 70,
       pct_charada INTEGER DEFAULT 30,
       tts_rate REAL DEFAULT 1.0,
+      tts_volume REAL DEFAULT 1.0,
       tts_voice TEXT DEFAULT '',
       chat_narr_enabled INTEGER DEFAULT 0,
       chat_narr_mode TEXT DEFAULT 'all',
@@ -134,7 +162,22 @@ def init_db():
     """)
     conn.commit()
     try:
+        words_path = Path(__file__).with_name('words.json')
+        words = json.loads(words_path.read_text(encoding='utf-8'))
+        conn.executemany(
+            "INSERT OR IGNORE INTO word_catalog(word,word_key,category,difficulty,status,source) VALUES(?,?,'geral','media','active','words.json')",
+            [(word.strip(), _norm(word)) for word in words if isinstance(word, str) and word.strip() and _norm(word)],
+        )
+        conn.commit()
+    except (OSError, ValueError, sqlite3.OperationalError):
+        pass
+    try:
         conn.execute("ALTER TABLE games ADD COLUMN room_id TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE tenant_settings ADD COLUMN tts_volume REAL DEFAULT 1.0")
         conn.commit()
     except Exception:
         pass
@@ -147,7 +190,7 @@ def get_tenant_settings(tenant_id):
     try:
         conn = _conn()
         row = conn.execute(
-            "SELECT apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, "
+            "SELECT apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_volume, "
             "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, boss_mode "
             "FROM tenant_settings WHERE tenant_id=?",
             (tenant_id,),
@@ -161,12 +204,13 @@ def get_tenant_settings(tenant_id):
             "pct_dica": int(row[2] if row[2] is not None else 70),
             "pct_charada": int(row[3] if row[3] is not None else 30),
             "tts_rate": float(row[4] if row[4] is not None else 1.0),
-            "tts_voice": (row[5] or ""),
-            "chat_narr_enabled": bool(row[6]),
-            "chat_narr_mode": (row[7] or "all"),
-            "chat_narr_char": (row[8] or "#"),
-            "command_prefix": (row[9] or "#"),
-            "boss_mode": bool(row[10] if row[10] is not None else 1),
+            "tts_volume": max(0.0, min(3.0, float(row[5] if row[5] is not None else 1.0))),
+            "tts_voice": (row[6] or ""),
+            "chat_narr_enabled": bool(row[7]),
+            "chat_narr_mode": (row[8] or "all"),
+            "chat_narr_char": (row[9] or "#"),
+            "command_prefix": (row[10] or "#"),
+            "boss_mode": bool(row[11] if row[11] is not None else 1),
         }
     except Exception:
         return {}
@@ -246,6 +290,186 @@ def load_tenant_history(tenant_id):
     return {"last_id": row[0], "played_words": pw}
 
 
+def get_word_catalog(active_only=True):
+    """Return canonical game words from the managed catalog, with a legacy fallback."""
+    conn = _conn()
+    try:
+        query = "SELECT word FROM word_catalog" + (" WHERE status='active'" if active_only else "") + " ORDER BY id"
+        rows = conn.execute(query).fetchall()
+        return [row[0] for row in rows if row and isinstance(row[0], str)]
+    except sqlite3.OperationalError:
+        pass
+    finally:
+        conn.close()
+    try:
+        return json.loads(Path(__file__).with_name('words.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+
+
+def get_word_catalog_version():
+    """Stable signature shared by the game and generated-context worker."""
+    words = sorted({_norm(word) for word in get_word_catalog() if isinstance(word, str) and _norm(word)})
+    payload = json.dumps(words, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    return hashlib.md5(payload).hexdigest()
+
+
+def _ensure_word_usage_schema(conn):
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS word_catalog(id INTEGER PRIMARY KEY AUTOINCREMENT,word TEXT NOT NULL,word_key TEXT NOT NULL UNIQUE,category TEXT NOT NULL DEFAULT 'geral',difficulty TEXT NOT NULL DEFAULT 'media',status TEXT NOT NULL DEFAULT 'review',source TEXT NOT NULL DEFAULT 'manual',created_at TEXT NOT NULL DEFAULT (datetime('now')),updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE INDEX IF NOT EXISTS idx_word_catalog_status ON word_catalog(status,category,difficulty,id);
+    CREATE TABLE IF NOT EXISTS word_cycles(tenant_id INTEGER PRIMARY KEY,current_cycle INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS word_cycle_migrations(tenant_id INTEGER PRIMARY KEY,migrated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS word_usage(tenant_id INTEGER NOT NULL,cycle_id INTEGER NOT NULL,word_key TEXT NOT NULL,word TEXT NOT NULL,game_id INTEGER,game_type TEXT NOT NULL DEFAULT 'palavra',source TEXT NOT NULL DEFAULT 'draw',used_at TEXT NOT NULL DEFAULT (datetime('now')),PRIMARY KEY(tenant_id,cycle_id,word_key));
+    CREATE INDEX IF NOT EXISTS idx_word_usage_tenant_time ON word_usage(tenant_id,used_at DESC);
+    CREATE TABLE IF NOT EXISTS word_draw_settings(tenant_id INTEGER PRIMARY KEY,categories TEXT NOT NULL DEFAULT '[]',difficulties TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    """)
+    try:
+        conn.execute("ALTER TABLE word_usage ADD COLUMN game_type TEXT NOT NULL DEFAULT 'palavra'")
+    except sqlite3.OperationalError:
+        pass
+
+
+def get_word_draw_settings(tenant_id):
+    conn = _conn()
+    try:
+        _ensure_word_usage_schema(conn)
+        row = conn.execute("SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?", (tenant_id,)).fetchone()
+        if not row:
+            return {"categories": [], "difficulties": []}
+        def parsed(value):
+            try:
+                result = json.loads(value or '[]')
+                return result if isinstance(result, list) else []
+            except ValueError:
+                return []
+        return {"categories": parsed(row[0]), "difficulties": parsed(row[1])}
+    finally:
+        conn.close()
+
+
+def reserve_word_for_tenant(tenant_id, fallback_words, banned_words=None, game_type='palavra', game_id=None):
+    """Atomically reserve one active word and advance the tenant's cycle if exhausted."""
+    banned = {_norm(word) for word in (banned_words or set())}
+    conn = _conn()
+    try:
+        _ensure_word_usage_schema(conn)
+        conn.execute('BEGIN IMMEDIATE')
+        catalog = conn.execute("SELECT word,word_key,category,difficulty FROM word_catalog WHERE status='active' ORDER BY id").fetchall()
+        if not catalog:
+            catalog = [(word, _norm(word), 'geral', 'media') for word in fallback_words if isinstance(word, str)]
+        eligible = [row for row in catalog if row[1] not in banned]
+        if not eligible:
+            raise ValueError('NO_ELIGIBLE_WORDS')
+        settings = conn.execute('SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?', (tenant_id,)).fetchone()
+        try:
+            categories = set(json.loads(settings[0] or '[]')) if settings else set()
+            difficulties = set(json.loads(settings[1] or '[]')) if settings else set()
+        except (ValueError, TypeError):
+            categories, difficulties = set(), set()
+        filtered = [row for row in eligible if (not categories or row[2] in categories) and (not difficulties or row[3] in difficulties)]
+        filter_fallback = bool((categories or difficulties) and not filtered)
+        if filter_fallback:
+            filtered = eligible
+
+        conn.execute('INSERT OR IGNORE INTO word_cycles(tenant_id,current_cycle) VALUES(?,1)', (tenant_id,))
+        cycle = conn.execute('SELECT current_cycle FROM word_cycles WHERE tenant_id=?', (tenant_id,)).fetchone()[0]
+        if not conn.execute('SELECT 1 FROM word_cycle_migrations WHERE tenant_id=?', (tenant_id,)).fetchone():
+            legacy = conn.execute('SELECT played_words FROM tenant_history WHERE tenant_id=?', (tenant_id,)).fetchone()
+            try:
+                old_words = json.loads(legacy[0] or '[]') if legacy else []
+            except (ValueError, TypeError):
+                old_words = []
+            for old_word in old_words:
+                if isinstance(old_word, str) and old_word.strip():
+                    conn.execute("INSERT OR IGNORE INTO word_usage(tenant_id,cycle_id,word_key,word,source) VALUES(?,?,?,?, 'legacy')",
+                                 (tenant_id, cycle, _norm(old_word), old_word))
+            conn.execute('INSERT INTO word_cycle_migrations(tenant_id) VALUES(?)', (tenant_id,))
+
+        used = {row[0] for row in conn.execute('SELECT word_key FROM word_usage WHERE tenant_id=? AND cycle_id=?', (tenant_id, cycle))}
+        available = [row for row in filtered if row[1] not in used]
+        cycle_started = False
+        if not available:
+            cycle += 1
+            cycle_started = True
+            conn.execute("UPDATE word_cycles SET current_cycle=?,updated_at=datetime('now') WHERE tenant_id=?", (cycle, tenant_id))
+            available = filtered
+        selected = random.choice(available)
+        history = conn.execute('SELECT last_id FROM tenant_history WHERE tenant_id=?', (tenant_id,)).fetchone()
+        last_id = int(history[0] or 0) if history else 0
+        allocated_id = last_id + 1 if game_type == 'palavra' else game_id
+        conn.execute('INSERT INTO word_usage(tenant_id,cycle_id,word_key,word,game_id,game_type,source) VALUES(?,?,?,?,?,?,?)',
+                     (tenant_id, cycle, selected[1], selected[0], allocated_id, game_type, 'draw'))
+        if game_type == 'palavra':
+            last_id = allocated_id
+        played = [row[0] for row in conn.execute('SELECT word FROM word_usage WHERE tenant_id=? AND cycle_id=? ORDER BY used_at,word_key', (tenant_id, cycle))]
+        conn.execute("INSERT INTO tenant_history(tenant_id,last_id,played_words) VALUES(?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET last_id=excluded.last_id,played_words=excluded.played_words",
+                     (tenant_id, last_id, json.dumps(played, ensure_ascii=False)))
+        conn.commit()
+        return {"word": selected[0], "cycle_id": cycle, "game_id": allocated_id, "last_id": last_id,
+                "played_words": played, "cycle_started": cycle_started, "filter_fallback": filter_fallback,
+                "eligible_count": len(filtered)}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def record_tenant_word_used(tenant_id, word, game_type='tres', game_id=None):
+    if tenant_id is None or not isinstance(word, str) or not word.strip():
+        return
+    conn = _conn()
+    try:
+        _ensure_word_usage_schema(conn)
+        conn.execute('BEGIN IMMEDIATE')
+        conn.execute('INSERT OR IGNORE INTO word_cycles(tenant_id,current_cycle) VALUES(?,1)', (tenant_id,))
+        cycle = conn.execute('SELECT current_cycle FROM word_cycles WHERE tenant_id=?', (tenant_id,)).fetchone()[0]
+        conn.execute('INSERT OR IGNORE INTO word_usage(tenant_id,cycle_id,word_key,word,game_id,game_type,source) VALUES(?,?,?,?,?,?,?)',
+                     (tenant_id, cycle, _norm(word), word.strip(), game_id, game_type, 'custom'))
+        row = conn.execute('SELECT last_id FROM tenant_history WHERE tenant_id=?', (tenant_id,)).fetchone()
+        last_id = int(row[0] or 0) if row else 0
+        played = [r[0] for r in conn.execute('SELECT word FROM word_usage WHERE tenant_id=? AND cycle_id=? ORDER BY used_at,word_key', (tenant_id, cycle))]
+        conn.execute("INSERT INTO tenant_history(tenant_id,last_id,played_words) VALUES(?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET played_words=excluded.played_words",
+                     (tenant_id, last_id, json.dumps(played, ensure_ascii=False)))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def reset_tenant_word_cycle(tenant_id):
+    conn = _conn()
+    try:
+        _ensure_word_usage_schema(conn)
+        conn.execute('BEGIN IMMEDIATE')
+        conn.execute('INSERT OR IGNORE INTO word_cycles(tenant_id,current_cycle) VALUES(?,1)', (tenant_id,))
+        current = conn.execute('SELECT current_cycle FROM word_cycles WHERE tenant_id=?', (tenant_id,)).fetchone()[0]
+        if not conn.execute('SELECT 1 FROM word_cycle_migrations WHERE tenant_id=?', (tenant_id,)).fetchone():
+            legacy = conn.execute('SELECT played_words FROM tenant_history WHERE tenant_id=?', (tenant_id,)).fetchone()
+            try:
+                old_words = json.loads(legacy[0] or '[]') if legacy else []
+            except (ValueError, TypeError):
+                old_words = []
+            for word in old_words:
+                if isinstance(word, str) and word.strip():
+                    conn.execute("INSERT OR IGNORE INTO word_usage(tenant_id,cycle_id,word_key,word,source) VALUES(?,?,?,?,'legacy')",
+                                 (tenant_id, current, _norm(word), word))
+            conn.execute('INSERT INTO word_cycle_migrations(tenant_id) VALUES(?)', (tenant_id,))
+        next_cycle = current + 1
+        conn.execute("UPDATE word_cycles SET current_cycle=?,updated_at=datetime('now') WHERE tenant_id=?", (next_cycle, tenant_id))
+        conn.execute("UPDATE tenant_history SET played_words='[]' WHERE tenant_id=?", (tenant_id,))
+        conn.commit()
+        return current, next_cycle
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def save_contexto(alvo, gerado_em, ranking):
     conn = _conn()
     cur = conn.cursor()
@@ -263,6 +487,21 @@ def list_contextos():
     rows = conn.execute("SELECT alvo, gerado_em FROM contextos ORDER BY alvo").fetchall()
     conn.close()
     return [{"alvo": r[0], "gerado_em": r[1]} for r in rows]
+
+
+def get_generated_context(alvo, pool_version):
+    """Read only validated hybrid contexts; legacy local contexts are not promoted."""
+    conn = _conn()
+    try:
+        row = conn.execute('SELECT c.ranking, m.created_at FROM contextos c '
+                           'JOIN generated_context_metadata m ON m.target=c.alvo '
+                           'WHERE m.target=? AND m.pool_version=? AND m.method_version=? AND m.top_count=50',
+                           (_norm(alvo), pool_version, 'openrouter-top50-v1')).fetchone()
+        return {"ranking": json.loads(row[0]), "created_at": row[1]} if row else None
+    except (sqlite3.OperationalError, ValueError, TypeError):
+        return None
+    finally:
+        conn.close()
 
 
 # ---------------- BATALHA ----------------

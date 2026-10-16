@@ -1,5 +1,17 @@
 # Regras e Diretrizes do Projeto - Jogo TikTok (Contexto)
 
+> 2026-10-16 — Contextos gerados no Super Admin: Claude Haiku 5.5/OpenRouter
+> propõe até 50 posições; palavras válidas são salvas e as vagas restantes
+> seguem o ranking spaCy. A geração é manual e paga; custos conhecidos e
+> pendentes persistem inclusive em falhas.
+> Rankings compatíveis são capturados no início da rodada; o alvo permanece
+> #1, sem atualização no meio da partida. Ver `docs/gerador-contextos-openrouter.md`.
+
+> 2026-10-16 — Catálogo administrável de palavras semeado de `python/words.json`;
+> novas entradas passam por revisão. Palavra Secreta e 3 Dicas reservam palavras
+> aleatórias sem repetição no ciclo de cada streamer; ciclos anteriores permanecem
+> consultáveis. Ver `docs/catalogo-palavras.md`.
+
 Este documento contém todas as regras de negócio, convenções de código, correções de bugs e decisões arquiteturais estabelecidas no desenvolvimento do **Jogo TikTok (Contexto)**.
 
 ---
@@ -7,9 +19,9 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 ## 1. Regras de Negócio e Processamento de Palpites
 
 ### 1.1 Acentuação e Busca Accent-Insensitive
-- As palavras secretas do dicionário (`words.json`) possuem **acentuação em português correto** (ex: `coração`, `água`, `árvore`, `atenção`, `sentença`).
+- As palavras secretas do catálogo (semeado por `words.json`) possuem **acentuação em português correto** (ex: `coração`, `água`, `árvore`, `atenção`, `sentença`).
 - O processamento de palpites é **accent-insensitive** (normalizado via `unicodedata.normalize('NFD')` em Python e normalização em JS).
-- Chutes sem acento (ex: `!atencao`) casam perfeitamente com a palavra secreta acentuada (`atenção`), sendo exibidos com a grafia correta do dicionário.
+- Chutes sem acento (ex: `!atencao`) casam perfeitamente com a palavra secreta acentuada (`atenção`), sendo exibidos com a grafia correta do catálogo.
 
 ### 1.2 Formatação e Extração de Chutes do Chat
 - **Apenas a primeira palavra**: Entradas com múltiplas palavras (ex: `@bolo de chocolate`) consideram apenas o primeiro token (`bolo`), ignorando o restante da frase.
@@ -127,7 +139,7 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - A leitura ignora comentários do próprio streamer. Não altera captura, pontuação, filtros de participação ou encaminhamento do comentário aos jogos.
 - A fila do daemon é serial e limitada a 10 itens por sessão; comentários expiram após 10 segundos, e itens pendentes são limpos ao alterar ativação/filtro/voz/velocidade ou desconectar. Quando cheia, descarta novos itens até haver espaço. A reprodução no painel também é serial e limitada a 10 itens, priorizando charada e teste de voz sobre comentários pendentes; mensagens expiram após o prazo restante enviado pelo daemon.
 - O cache local de áudio Edge mantém no máximo 500 MP3s recentes por conta; MP3s mais antigos são removidos durante a geração de novos áudios.
-- A voz (`tts_voice`) e a velocidade (`tts_rate`) configuradas em **Sons → Narração** são compartilhadas entre chat e charadas. Voz/velocidade da charada são capturadas antes da geração OpenRouter, para que alterações durante uma requisição não mudem a narração já solicitada.
+- A voz (`tts_voice`), velocidade (`tts_rate`) e volume (`tts_volume`, 0–3; padrão 1) configuradas em **Sons → Narração** são compartilhadas entre chat e charadas. O ganho é aplicado na reprodução do painel e pode passar de 100%; não altera alertas de presentes. Voz/velocidade da charada são capturadas antes da geração OpenRouter, para que alterações durante uma requisição não mudem a narração já solicitada.
 - OpenRouter gera exclusivamente o texto da charada; Edge TTS gera o MP3. O texto da charada aparece no painel e na página pública/OBS; o áudio é entregue somente ao painel streamer. `riddle_auto_narrate` controla a reprodução automática no painel e permanece independente do toggle de narração do chat.
 - Logs técnicos agregam contagens e falhas; nunca incluem comentário bruto, nome de usuário, texto integral da charada, palavra secreta ou prompt. A persistência de interações de comentário segue a retenção funcional documentada na seção 2.5.
 

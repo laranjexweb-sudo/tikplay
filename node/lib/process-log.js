@@ -1,6 +1,6 @@
 const { sanitizeText, sanitizeDetails } = require("./log-sanitize");
 
-function processLog({ category = "system", level = "info", event, message, source = "node", code, details } = {}) {
+function processLog({ category = "system", level = "info", event, message, source = "node", code, trace_id, details } = {}) {
   const entry = {
     timestamp: new Date().toISOString(),
     category,
@@ -10,6 +10,7 @@ function processLog({ category = "system", level = "info", event, message, sourc
     message: sanitizeText(String(message || "").slice(0, 500)),
   };
   if (code) entry.code = String(code).slice(0, 64);
+  if (trace_id) entry.trace_id = String(trace_id).slice(0, 64);
   if (details && typeof details === "object") {
     try { entry.details = JSON.parse(sanitizeDetails(details)); } catch { entry.details = { detail: "[oculto]" }; }
   }

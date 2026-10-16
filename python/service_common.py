@@ -54,6 +54,7 @@ DEFAULT_SETTINGS = {
     "pct_dica": 70,
     "pct_charada": 30,
     "tts_rate": 1.0,
+    "tts_volume": 1.0,
     "tts_voice": "",
     "chat_narr_enabled": False,
     "chat_narr_mode": "all",
@@ -90,6 +91,13 @@ def normalize_settings(raw) -> dict:
         except (TypeError, ValueError):
             val = DEFAULT_SETTINGS["tts_rate"]
         settings["tts_rate"] = val
+    if "tts_volume" in raw:
+        try:
+            volume = float(raw["tts_volume"])
+            volume = max(0.0, min(3.0, volume))
+        except (TypeError, ValueError):
+            volume = DEFAULT_SETTINGS["tts_volume"]
+        settings["tts_volume"] = volume
     if "tts_voice" in raw:
         settings["tts_voice"] = str(raw["tts_voice"] or "").strip()
     if "chat_narr_enabled" in raw:

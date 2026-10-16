@@ -97,7 +97,7 @@ app.get("/", (req, res) => {
   }
   return res.redirect("/login");
 });
-const NO_CACHE_ROUTES = new Set(["/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto"]);
+const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -844,6 +844,9 @@ function normalizeSettings(raw) {
     let rate = typeof raw.tts_rate === "number" ? raw.tts_rate : parseFloat(raw.tts_rate);
     if (!Number.isFinite(rate)) rate = DEFAULT_SETTINGS.tts_rate;
     out.tts_rate = Math.max(0.1, Math.min(10, rate));
+    let volume = typeof raw.tts_volume === "number" ? raw.tts_volume : parseFloat(raw.tts_volume);
+    if (!Number.isFinite(volume)) volume = DEFAULT_SETTINGS.tts_volume;
+    out.tts_volume = Math.max(0, Math.min(3, volume));
     out.tts_voice = typeof raw.tts_voice === "string" ? raw.tts_voice.trim() : "";
     if (typeof raw.chat_narr_enabled === "boolean") out.chat_narr_enabled = raw.chat_narr_enabled;
     if (raw.chat_narr_mode === "no_guesses") out.chat_narr_mode = "exclude";

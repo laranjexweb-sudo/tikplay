@@ -2,6 +2,7 @@
 // Registrado por server.js com o contexto (db, auth, ws, python).
 
 const path = require("path");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 
 module.exports = function registerAuthRoutes(app, ctx = {}) {
@@ -218,110 +219,30 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
 
   // ---------------- Gerar Contextos (super admin) ----------------
 
-  const CONTEXTOS_SCRIPT = path.join(__dirname, "..", "python", "generate_contextos.py");
-
-  let contextosJob = null;
-
-  function spawnContextosJob(interval_min, limit, words) {
-    if (contextosJob && contextosJob.running) {
-      return { started: false, reason: "ja rodando" };
-    }
-    const env = {
-      ...process.env,
-      PYTHONIOENCODING: "utf-8",
-      PYTHONUNBUFFERED: "1",
-      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
-      LLM_BASE_URL: process.env.LLM_BASE_URL || "http://127.0.0.1:1234/v1",
-      LLM_MODEL: process.env.LLM_MODEL || "qwen2.5-coder-7b-instruct",
-      INTERVAL_S: String(Math.max(0, Math.round((interval_min || 15) * 60))),
-      LIMIT: String(Math.max(0, limit || 0)),
-      WORDS_PER_CONTEXT: String(Math.max(100, words || 1000)),
-      CORRIGE_TOP: String(Math.max(10, parseInt(process.env.CORRIGE_TOP, 10) || 200)),
-    };
-    const proc = spawn(PYTHON_BIN, ["-u", CONTEXTOS_SCRIPT], { env });
-    contextosJob = {
-      proc,
-      running: true,
-      finished: false,
-      done: 0,
-      total: 0,
-      current: "",
-      errors: 0,
-      last_error: null,
-      started_at: new Date().toISOString(),
-      logs: [],
-    };
-    proc.stdout.on("data", (data) => {
-      const lines = data.toString("utf-8").split("\n");
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const msg = JSON.parse(line);
-          if (!contextosJob) continue;
-          if (typeof msg.done === "number") contextosJob.done = msg.done;
-          if (typeof msg.total === "number") contextosJob.total = msg.total;
-          if (typeof msg.current === "string") contextosJob.current = msg.current;
-          if (typeof msg.errors === "number") contextosJob.errors = msg.errors;
-          if (msg.last_error !== undefined) contextosJob.last_error = msg.last_error;
-          if (msg.running === false) contextosJob.running = false;
-          if (msg.finished === true) contextosJob.finished = true;
-          if (typeof msg.log === "string" && msg.log) {
-            contextosJob.logs.push({ t: new Date().toISOString(), text: msg.log });
-            if (contextosJob.logs.length > 300) contextosJob.logs = contextosJob.logs.slice(-300);
-          }
-        } catch {}
-      }
-    });
-    proc.stderr.on("data", () => {});
-    proc.on("close", (code) => {
-      if (contextosJob) {
-        contextosJob.running = false;
-        contextosJob.finished = true;
-      }
-    });
-    proc.on("error", (err) => {
-      if (contextosJob) {
-        contextosJob.running = false;
-        contextosJob.last_error = err.message;
-      }
-    });
-    return { started: true };
-  }
-
-  function killContextosJob() {
-    if (contextosJob && contextosJob.proc) {
-      try {
-        contextosJob.proc.kill();
-      } catch (e) {}
-    }
-  }
+  const { createContextGenerator } = require("../lib/context-generation");
+  const contextGenerator = createContextGenerator({ db: db.db, pythonBin: PYTHON_BIN,
+    ...(ctx.contextSpawn ? { spawnProcess: ctx.contextSpawn } : {}),
+    log: ctx.contextLog || ((actorId, entry) => require("../lib/ws").broadcastLog(getTenant(actorId), { ...entry, text: entry.message })) });
 
   app.post("/api/admin/generate-contexts", auth.requireAdmin, (req, res) => {
-    const interval_min = req.body && typeof req.body.interval_min === "number" ? req.body.interval_min : 15;
-    const limit = req.body && typeof req.body.limit === "number" ? req.body.limit : 0;
-    const words = req.body && typeof req.body.words === "number" ? req.body.words : 1000;
-    const r = spawnContextosJob(interval_min, limit, words);
-    res.json({ success: true, started: r.started, reason: r.reason || "" });
+    const body = req.body || {};
+    const interval_min = body.interval_min === undefined ? 0 : body.interval_min;
+    const limit = body.limit === undefined ? 10 : body.limit;
+    if (!Number.isFinite(interval_min) || interval_min < 0 || interval_min > 1440 ||
+        !Number.isInteger(limit) || limit < 0 || limit > 2000 ||
+        (body.regenerate !== undefined && typeof body.regenerate !== "boolean")) {
+      return res.status(400).json({ success: false, error: "Volume ou intervalo inválido." });
+    }
+    const result = contextGenerator.start(req.user.id, { interval_min, limit, regenerate: body.regenerate === true });
+    res.json({ success: true, ...result });
   });
 
   app.get("/api/admin/generate-contexts/status", auth.requireAdmin, (req, res) => {
-    res.json({
-      success: true,
-      running: !!(contextosJob && contextosJob.running),
-      finished: !!(contextosJob && contextosJob.finished),
-      done: contextosJob ? contextosJob.done : 0,
-      total: contextosJob ? contextosJob.total : 0,
-      current: contextosJob ? contextosJob.current : "",
-      errors: contextosJob ? contextosJob.errors : 0,
-      last_error: contextosJob ? contextosJob.last_error : null,
-      started_at: contextosJob ? contextosJob.started_at : null,
-      logs: contextosJob ? contextosJob.logs : [],
-    });
+    res.json(contextGenerator.status());
   });
 
   app.post("/api/admin/generate-contexts/stop", auth.requireAdmin, (req, res) => {
-    killContextosJob();
-    res.json({ success: true });
+    res.json(contextGenerator.stop());
   });
 
   // ---------------- Palavras banidas (global, admin super) ----------------
@@ -334,6 +255,124 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
     const words = (req.body && req.body.words) || [];
     const clean = db.saveBannedWords(words);
     res.json({ success: true, words: clean, count: clean.length });
+  });
+
+  // ---------------- Catálogo e sorteio de palavras ----------------
+  const wordCatalogEvent = (req, event, level, code, details = {}) => {
+    try {
+      const requestedTrace = String(req.headers["x-trace-id"] || "");
+      require("../lib/process-log").processLog({ category: level === "warning" ? "notice" : level === "error" ? "error" : "diagnostic",
+        level, event, message: level === "error" ? "Falha ao atualizar o catálogo de palavras." : "Operação do catálogo de palavras concluída.",
+        source: "node", code, trace_id: /^[a-zA-Z0-9_-]{1,64}$/.test(requestedTrace) ? requestedTrace : crypto.randomUUID(),
+        details: { actor_id: req.user.id, ...details } });
+    } catch (_) {}
+  };
+  const catalogText = value => String(value || "").trim().replace(/\s+/g, " ");
+  const catalogKey = value => catalogText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+  const validCatalogWord = value => value.length >= 2 && value.length <= 60 && /^[\p{L}]+(?:[-'][\p{L}]+)*$/u.test(value);
+  const validCatalogCategory = value => value.length >= 2 && value.length <= 40 && /^[\p{L}\p{N} _-]+$/u.test(value);
+
+  app.get("/api/admin/word-catalog", auth.requireAdmin, (req, res) => {
+    const page = Math.max(1, Math.min(10000, parseInt(req.query.page, 10) || 1));
+    const pageSize = Math.max(10, Math.min(100, parseInt(req.query.page_size, 10) || 50));
+    res.json({ success: true, ...db.listWordCatalog({ search: catalogText(req.query.search).slice(0, 60),
+      status: String(req.query.status || ""), category: catalogText(req.query.category), page, pageSize }) });
+  });
+
+  app.post("/api/admin/word-catalog/import", auth.requireAdmin, (req, res) => {
+    const rawWords = Array.isArray(req.body?.words) ? req.body.words : String(req.body?.text || "").split(/[\n,;]+/);
+    if (rawWords.length > 2000) return res.status(400).json({ success: false, error: "Importe no máximo 2.000 palavras por vez." });
+    const category = catalogText(req.body?.category || "geral");
+    const difficulty = String(req.body?.difficulty || "media");
+    const status = String(req.body?.status || "review");
+    if (!validCatalogCategory(category) || !db.WORD_DIFFICULTIES.includes(difficulty) || !db.WORD_STATUSES.includes(status)) {
+      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_IMPORT_METADATA");
+      return res.status(400).json({ success: false, error: "Confira categoria, dificuldade e status da importação." });
+    }
+    const unique = new Map(), invalidKeys = new Set();
+    for (const item of rawWords) {
+      const word = catalogText(item);
+      if (!validCatalogWord(word)) { if (word) invalidKeys.add(word.slice(0, 60)); continue; }
+      const word_key = catalogKey(word);
+      if (!unique.has(word_key)) unique.set(word_key, { word, word_key, category, difficulty, status });
+    }
+    const invalid = rawWords.filter(item => catalogText(item) && !validCatalogWord(catalogText(item))).length;
+    try {
+      const items = [...unique.values()];
+      const inserted = db.importWordCatalogWords(items);
+      const duplicates = items.length - inserted + (rawWords.filter(item => validCatalogWord(catalogText(item))).length - items.length);
+      wordCatalogEvent(req, "word_catalog.import.completed", "info", undefined,
+        { inserted_count: inserted, duplicate_count: duplicates, invalid_count: invalid });
+      res.json({ success: true, inserted, duplicates, invalid, invalid_examples: [...invalidKeys].slice(0, 10) });
+    } catch (error) {
+      wordCatalogEvent(req, "word_catalog.change.failed", "error", "WORD_CATALOG_IMPORT_FAILED", { error_type: error.name });
+      res.status(500).json({ success: false, error: "Não foi possível importar as palavras." });
+    }
+  });
+
+  app.put("/api/admin/word-catalog/:id", auth.requireAdmin, (req, res) => {
+    const id = Number(req.params.id), category = catalogText(req.body?.category),
+      difficulty = String(req.body?.difficulty || ""), status = String(req.body?.status || "");
+    if (!Number.isSafeInteger(id) || id < 1 || !validCatalogCategory(category) ||
+        !db.WORD_DIFFICULTIES.includes(difficulty) || !db.WORD_STATUSES.includes(status)) {
+      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_WORD_METADATA");
+      return res.status(400).json({ success: false, error: "Confira categoria, dificuldade e status." });
+    }
+    try {
+      const item = db.updateWordCatalogWord(id, { category, difficulty, status });
+      if (!item) return res.status(404).json({ success: false, error: "Palavra não encontrada." });
+      wordCatalogEvent(req, "word_catalog.word.updated", "info", undefined, { word_id: id, category_changed: true, status, difficulty });
+      res.json({ success: true, item });
+    } catch (error) {
+      const code = error.code === "LAST_ACTIVE_WORD" ? error.code : "WORD_CATALOG_UPDATE_FAILED";
+      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", code, { word_id: id });
+      res.status(error.code === "LAST_ACTIVE_WORD" ? 409 : 500).json({ success: false,
+        error: error.code === "LAST_ACTIVE_WORD" ? "Mantenha ao menos uma palavra ativa." : "Não foi possível atualizar a palavra." });
+    }
+  });
+
+  app.get("/api/admin/word-usage", auth.requireAdmin, (req, res) => {
+    const rawTenant = req.query.tenant_id == null || req.query.tenant_id === "" ? null : Number(req.query.tenant_id);
+    if (rawTenant !== null && (!Number.isSafeInteger(rawTenant) || rawTenant < 1))
+      return res.status(400).json({ success: false, error: "Streamer inválido." });
+    const page = Math.max(1, Math.min(10000, parseInt(req.query.page, 10) || 1));
+    const pageSize = Math.max(10, Math.min(100, parseInt(req.query.page_size, 10) || 50));
+    const catalogMeta = db.listWordCatalog({ page: 1, pageSize: 50 });
+    res.json({ success: true, streamers: db.listWordUsageStreamers(), categories: catalogMeta.categories,
+      difficulties: db.WORD_DIFFICULTIES,
+      history: db.listWordUsageEntries({ tenantId: rawTenant, search: catalogText(req.query.search).slice(0, 80), page, pageSize }),
+      catalog: db.getWordCatalogEligibleStats() });
+  });
+
+  app.put("/api/admin/word-usage/:tenantId/settings", auth.requireAdmin, (req, res) => {
+    const tenantId = Number(req.params.tenantId), categories = req.body?.categories, difficulties = req.body?.difficulties;
+    if (!Number.isSafeInteger(tenantId) || tenantId < 1 || !db.getUserById(tenantId))
+      return res.status(404).json({ success: false, error: "Streamer não encontrado." });
+    const knownCategories = new Set(db.listWordCatalog({ page: 1, pageSize: 100 }).categories);
+    if (!Array.isArray(categories) || categories.length > 100 || categories.some(value => typeof value !== "string" || !knownCategories.has(value)) ||
+        !Array.isArray(difficulties) || difficulties.length > db.WORD_DIFFICULTIES.length ||
+        difficulties.some(value => !db.WORD_DIFFICULTIES.includes(value))) {
+      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_DRAW_FILTERS", { tenant_id: tenantId });
+      return res.status(400).json({ success: false, error: "Confira os filtros de categoria e dificuldade." });
+    }
+    const settings = db.saveWordDrawSettings(tenantId, { categories: [...new Set(categories)], difficulties: [...new Set(difficulties)] });
+    wordCatalogEvent(req, "word_draw.filters.updated", "info", undefined, { tenant_id: tenantId,
+      category_count: settings.categories.length, difficulty_count: settings.difficulties.length });
+    res.json({ success: true, settings });
+  });
+
+  app.post("/api/admin/word-usage/:tenantId/reset-cycle", auth.requireAdmin, (req, res) => {
+    const tenantId = Number(req.params.tenantId);
+    if (!Number.isSafeInteger(tenantId) || tenantId < 1 || !db.getUserById(tenantId))
+      return res.status(404).json({ success: false, error: "Streamer não encontrado." });
+    try {
+      const cycle = db.resetWordUsageCycle(tenantId);
+      wordCatalogEvent(req, "word_usage.cycle.reset", "info", undefined, { tenant_id: tenantId, ...cycle });
+      res.json({ success: true, ...cycle });
+    } catch (error) {
+      wordCatalogEvent(req, "word_catalog.change.failed", "error", "WORD_CYCLE_RESET_FAILED", { tenant_id: tenantId, error_type: error.name });
+      res.status(500).json({ success: false, error: "Não foi possível iniciar um novo ciclo." });
+    }
   });
 
   // ---------------- Convites de cadastro (Admin) ----------------

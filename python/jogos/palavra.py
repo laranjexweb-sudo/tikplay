@@ -34,12 +34,9 @@ METHOD_VERSION = "sim-v1"
 
 
 def _pool_signature() -> str:
-    """Assinatura do words.json: qualquer mudança no pool invalida o cache do índice."""
-    path = os.path.join(_PYROOT, "words.json")
+    """Assinatura do catálogo ativo para invalidar rankings após edição no painel."""
     try:
-        with open(path, "rb") as f:
-            data = f.read()
-        return hashlib.md5(data).hexdigest()
+        return db.get_word_catalog_version()
     except Exception:
         return "desconhecido"
 
@@ -47,7 +44,7 @@ def _pool_signature() -> str:
 
 
 # Cache de índices por palavra secreta (evita recalcular ~6s a cada partida repetida).
-# Chave: palavra secreta normalizada. Valor: dict com all_scored, sims, neg_sims, word_index, hint_pool.
+# Chave: (assinatura do catálogo, palavra secreta normalizada).
 # Limitado a um número razoável de entradas para não crescer sem limite.
 _INDEX_CACHE = {}
 _INDEX_CACHE_MAX = 200
@@ -224,9 +221,7 @@ class JogoContexto:
             return []
 
     def _load_word_pool(self):
-        path = os.path.join(_PYROOT, "words.json")
-        with open(path, encoding="utf-8") as f:
-            self.word_pool = json.load(f)
+        self.word_pool = db.get_word_catalog()
         self._pool_version = _pool_signature()
         self.norm_to_word = {strip_accents(w): w for w in self.word_pool}
         try:
@@ -265,6 +260,43 @@ class JogoContexto:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _build_hint_pool(self):
+        self._hybrid_ranking = False
+        self._build_local_hint_pool()
+        generated = db.get_generated_context(self.secret_word, self._pool_version)
+        if not generated:
+            return
+        # Copy, never mutate a local index shared by other tenants/rounds.
+        local_words = list(self.all_scored)
+        local_sims = list(self.all_scored_sims)
+        canonical = self.norm_to_word
+        ranked = []
+        seen = {strip_accents(self.secret_word)}
+        try:
+            for item in generated['ranking']:
+                key = strip_accents(item['palavra'])
+                if key not in canonical or key in seen:
+                    return  # Corrupt/incompatible context: retain local index.
+                seen.add(key)
+                ranked.append(canonical[key])
+        except (KeyError, TypeError):
+            return
+        if len(ranked) < 50:
+            return
+        for word in local_words:
+            key = strip_accents(word)
+            if key not in seen:
+                seen.add(key)
+                ranked.append(word)
+        self._hybrid_local_words = local_words
+        self._hybrid_local_neg_sims = [-s for s in local_sims]
+        self.all_scored = ranked
+        sim_map = {strip_accents(w): s for w, s in zip(local_words, local_sims)}
+        self.all_scored_sims = [sim_map.get(strip_accents(w), -1.0) for w in ranked]
+        self._word_index = {strip_accents(w): i for i, w in enumerate(ranked)}
+        self.hint_pool = ranked[:150]
+        self._hybrid_ranking = True
+
+    def _build_local_hint_pool(self):
         """Constrói (ou reutiliza do cache de memória/SQLite) o índice de proximidade
         da palavra secreta.
 
@@ -273,7 +305,8 @@ class JogoContexto:
         spaCy (uma única vez por palavra, gravado no SQLite).
         """
         key = strip_accents(self.secret_word)
-        cache = _INDEX_CACHE.get(key)
+        cache_key = (self._pool_version, key)
+        cache = _INDEX_CACHE.get(cache_key)
         if cache is None:
             # Cache persistente: compartilhado entre restarts do daemon/máquinas.
             try:
@@ -281,14 +314,14 @@ class JogoContexto:
             except Exception:
                 cache = None
             if cache:
-                _INDEX_CACHE[key] = cache
+                _INDEX_CACHE[cache_key] = cache
         if cache is not None:
             self.all_scored = cache["all_scored"]
             self.all_scored_sims = cache["sims"]
             self._all_scored_neg_sims = cache.get("neg_sims") or [-s for s in cache["sims"]]
             self._word_index = cache.get("word_index") or {strip_accents(w): i for i, w in enumerate(self.all_scored)}
             self.hint_pool = cache["hint_pool"]
-            self._secret_index_key = key
+            self._secret_index_key = cache_key
             return
 
         secret_doc = nlp(self.secret_word)
@@ -306,7 +339,7 @@ class JogoContexto:
         self._all_scored_neg_sims = [-s for s in self.all_scored_sims]
         self._word_index = {strip_accents(w): i for i, w in enumerate(self.all_scored)}
         self.hint_pool = [w for w, _ in scored[:150]]
-        self._secret_index_key = key
+        self._secret_index_key = cache_key
 
         # Guarda no cache global (com limite)
         if len(_INDEX_CACHE) >= _INDEX_CACHE_MAX:
@@ -314,7 +347,7 @@ class JogoContexto:
                 _INDEX_CACHE.pop(next(iter(_INDEX_CACHE)))
             except Exception:
                 pass
-        _INDEX_CACHE[key] = {
+        _INDEX_CACHE[cache_key] = {
             "all_scored": self.all_scored,
             "all_scored_sims": self.all_scored_sims,
             "neg_sims": self._all_scored_neg_sims,
@@ -375,27 +408,46 @@ class JogoContexto:
                     s2 = doc.similarity(alias_doc)
                     if s2 > best_sim:
                         best_sim = s2
+        if getattr(self, '_hybrid_ranking', False):
+            # Only dictionary entries can occupy the 50 curated positions.
+            pos = bisect.bisect_left(self._hybrid_local_neg_sims, -best_sim)
+            if pos >= len(self._hybrid_local_words):
+                return len(self.all_scored) + 2
+            local_key = strip_accents(self._hybrid_local_words[pos])
+            return max(52, self._word_index[local_key] + 2)
         pos = bisect.bisect_left(self._all_scored_neg_sims, -best_sim)
         return pos + 2
 
     def start_new_game(self, hint_gifts: list = None, riddle_gifts: list = None, size_gift: str = None, letter_gift: str = None, build_pool: bool = True) -> str:
+        # Reload catalog changes between rounds; active games keep their snapshot.
+        self._load_word_pool()
         # Relê as palavras banidas a cada rodada (mudanças do admin valem na próxima)
         try:
             self.banned_words = db.load_banned_words()
         except Exception:
             self.banned_words = self.banned_words or set()
-        available = [w for w in self.word_pool
-                     if w not in self.played_words and strip_accents(w) not in self.banned_words]
-        if not available:
-            self.played_words.clear()
-            available = [w for w in self.word_pool if strip_accents(w) not in self.banned_words]
-        if not available:
-            available = self.word_pool[:]
-
-        self.secret_word = random.choice(available)
-        self.played_words.add(self.secret_word)
-        self.last_game_id += 1
-        self.game_id = self.last_game_id
+        if not self.word_pool:
+            raise ValueError("NO_ELIGIBLE_WORDS")
+        if self.tenant_id is not None:
+            reservation = db.reserve_word_for_tenant(self.tenant_id, self.word_pool, self.banned_words,
+                                                     game_type='palavra')
+            self.secret_word = reservation['word']
+            self.played_words = set(reservation['played_words'])
+            self.last_game_id = reservation['last_id']
+            self.game_id = reservation['game_id']
+            self._word_reservation = {k: v for k, v in reservation.items() if k != 'word'}
+        else:
+            available = [w for w in self.word_pool
+                         if w not in self.played_words and strip_accents(w) not in self.banned_words]
+            if not available:
+                self.played_words.clear()
+                available = [w for w in self.word_pool if strip_accents(w) not in self.banned_words]
+            if not available:
+                available = self.word_pool[:]
+            self.secret_word = random.choice(available)
+            self.played_words.add(self.secret_word)
+            self.last_game_id += 1
+            self.game_id = self.last_game_id
         self.guesses = []
         self.hints_given = []
         self.hint_pool = []
@@ -415,7 +467,8 @@ class JogoContexto:
         if build_pool:
             self._build_hint_pool()
             self._pool_ready = bool(self.all_scored and self.hint_pool)
-        self._save_history()
+        if self.tenant_id is None:
+            self._save_history()
         return self.secret_word
 
     def get_riddle_words(self, stage: int) -> list:

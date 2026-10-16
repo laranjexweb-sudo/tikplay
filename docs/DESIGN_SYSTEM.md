@@ -1,6 +1,22 @@
 # TikPlay — Design System Oficial (tema reutilizável)
 
+> 2026-10-16: Página pública do 3 Dicas adaptada para fontes verticais de live: área de jogo entre 10% e 70% da altura, dicas anteriores/bloqueadas compactas, até três palpites recentes com cores informativas e ranking semanal resumido ao líder. A tela horizontal mantém o layout anterior; IDs e eventos preservados.
+
+> 2026-10-16: Operação local inclui catálogo de palavras pesquisável e importável, revisão de novas entradas, categorias/dificuldade, filtros por streamer, histórico persistente de uso e ciclos de sorteio. A reserva é transacional por tenant; o histórico não é apagado quando o ciclo avança. Ver `catalogo-palavras.md`.
+
+> 2026-10-16: Operação local → Gerar contextos usa OpenRouter/Claude Haiku 5.5 para até 50 palavras próximas e completa vagas restantes com o ranking spaCy. O relatório mostra quantidades por origem, execuções, chamadas, tokens, custo conhecido e custos pendentes. Controles existentes preservados. Interface conferida em navegador com dados simulados; ativação no servidor principal pendente de reinício seguro. Ver `gerador-contextos-openrouter.md`.
+
 > 2026-10-16: Margem silenciosa local das vozes da API ampliada de 150 para 500 ms para acomodar a ativação da saída de áudio. Amostras e volume preservados; validação auditiva no dispositivo pendente. Ver `voz-api-margem-inicial.md`.
+> 2026-10-16: Sons → Narração ganhou volume ajustável de 0% a 300%, persistido por conta e aplicado ao ganho TTS do painel durante a reprodução; alertas de presentes permanecem independentes. Validação auditiva e ativação no serviço pendentes.
+> 2026-10-16: Sons → Narração reorganizada: configurações gerais ficam à esquerda; voz adicional e limite mensal ficam juntos à direita. Removido o cartão redundante “Status do áudio”; ajuda de alertas aparece somente na aba de alertas.
+> 2026-10-16: Voz adicional e limite mensal foram trazidos para dentro do cartão “Voz do narrador”, em uma grade interna responsiva. Na aba Narração, o cartão ocupa a largura do conteúdo; instruções de presentes continuam na coluna lateral da aba Alertas.
+> 2026-10-16: Slider de volume da narração usa escala com 100% no centro e 300% no máximo; voz adicional e limite permanecem na barra lateral.
+> 2026-10-16: Cartão “Voz do narrador” organizado em “Voz e reprodução” e “Narração do chat”. Botão de teste junto aos controles, toggle alinhado à direita e aviso sobre charadas compacto; handlers e IDs preservados.
+> 2026-10-16: “Narração do chat” movida para o início do cartão “Voz do narrador”, deixando “Ler mensagens do chat em voz alta” como primeiro ajuste; IDs e handlers preservados.
+> 2026-10-16: Campos de seleção da narração receberam seta personalizada, cores escuras também no menu de opções e estados de foco/hover com contraste; foco por teclado preservado.
+> 2026-10-16: Formulários do Painel Streamer padronizados com tokens compartilhados para altura, fundo, borda, raio, tipografia e seta de seleção. Campo de busca e ação de adicionar presente alinhados; focos de teclado e comportamentos existentes preservados.
+> 2026-10-16: Seletores do Painel Streamer passaram a abrir listas próprias no tema TikPlay, com destaque ciano e seleção marcada, seguindo o autocomplete de presentes. IDs, opções, valores, eventos change/input e validação do select original são mantidos; suporte a teclado e atualização de opções dinâmicas incluídos.
+> 2026-10-16: Campos de filtro da narração do chat alinhados pelo topo e com altura igual; margem global de `.field` neutralizada apenas nesses controles para evitar deslocamento causado pelo texto auxiliar.
 
 > 2026-10-16: Palavra Secreta mantém o acerto imediato no ranking sem duplicar rank 1 no destaque temporário de palpite. Eventos atrasados não reabrem destaques após o encerramento. Ver `correcao-destaque-vencedor.md`.
 
@@ -558,6 +574,16 @@ node/public/
 - 2026-10-15 — Login/cadastro: composição do site, botões compartilhados, campos e alertas com contraste escuro, layout responsivo e seleção de aba pelo caminho amigável. Contratos e lógica de autenticação preservados.
 
 - 2026-10-15 — Sons → Narração: preferências persistidas para habilitar a fala do chat, selecionar filtro e caractere; Edge TTS usa voz/velocidade compartilhadas com charadas. Fila serial e playback no painel respeitam prioridade de charada.
+- 2026-10-16 — Sons → Narração: slider de volume de 0% a 300% persistido por conta; ganho aplicado às narrações TTS e prévias, inclusive durante áudio em execução. Alertas por presente não usam esse ganho. Teste auditivo e carregamento no processo atualizado pendentes.
+- 2026-10-16 — Sons → Narração: configurações gerais organizadas na coluna esquerda; controles da voz adicional agrupados com o limite mensal na direita. Removido o cartão de status de áudio; instruções de efeitos sonoros ficam restritas à aba de alertas.
+- 2026-10-16 — Sons → Narração: voz adicional e limite mensal agrupados dentro do cartão “Voz do narrador” em duas colunas responsivas; a aba Narração expande o cartão para a largura do conteúdo.
+- 2026-10-16 — Sons → Narração: escala do controle ajustada para 0% à esquerda, 100% no centro e 300% à direita; voz adicional e limite mensal exibidos novamente na lateral direita.
+- 2026-10-16 — Sons → Narração: controles agrupados visualmente em “Voz e reprodução” e “Narração do chat”; botão de teste movido junto aos controles de voz, toggle à direita e informação sobre charadas compactada. IDs e handlers mantidos.
+- 2026-10-16 — Sons → Narração: seção “Narração do chat” movida para o início do cartão para priorizar o controle de leitura em voz alta; IDs e salvamento automático preservados.
+- 2026-10-16 — Sons → Narração: seletores com seta personalizada e menu escuro; foco e hover destacados sem remover o indicador de teclado.
+- 2026-10-16 — Painel Streamer: campos de texto e seletores compartilham altura, borda, fundo, raio, fonte e seta; estilos responsivos compactos e exceções de controles especializados preservados.
+- 2026-10-16 — Painel Streamer: menus de seleção substituem o pop-up nativo do Windows por lista no tema TikPlay, com seleção/hover ciano, rolagem e suporte a teclado; select nativo oculto preserva IDs, opções, valores e eventos usados pelo código.
+- 2026-10-16 — Sons → Narração: alinhamento superior e altura igual aplicados aos campos “Comentários narrados” e “Caractere de filtro”; removido o efeito da margem global sobre essas colunas.
 
 - 2026-10-15 — Sons → Narração: removido o card informativo duplicado "Prévia da narração"; controles e botão real de teste preservados.
 

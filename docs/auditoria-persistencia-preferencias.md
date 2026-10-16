@@ -12,6 +12,7 @@ Para cada área de preferência: rastreei o contrato (endpoint de leitura/grava�
 |---|---|---|---|---|---|
 | Preferências (voz/velocidade/filtro/prefixo/meta/auto/boss) | `tenant_settings` (todas as colunas) | ✔ | ✔ (sessão carrega em `start`; `GameSession.__init__` tb lê do banco) | GET `/api/settings`; POST grava **substituindo todas as colunas** | `db.js: getTenantSettings/saveTenantSettings`; `server.js /api/settings`; `service.py _start` |
 | Voz/velocidade na narração | `tenant_settings.tts_voice/tts_rate` | ✔ | ✔ (hidratado no `GameSession.__init__` e no `start`) | POST `/api/settings` (full-replace) | commits TTS; `service._tts_url` |
+| Volume da narração | `tenant_settings.tts_volume` (0–3, padrão 1) | ✔ | Painel aplica ganho de Web Audio na reprodução; sem efeito no daemon TTS | POST `/api/settings` | `control-panel.html` |
 | Credenciais TikTools/username/engine | `users.tiktools_api_key/username/tiktok_engine/room_code` | ✔ | ✔ | POST `/api/panel-config` (por campo) — key mascarada no GET (`publicUser`/`maskKey`) | `panel-config`; `db.publicUser` |
 | Gifts Palavra (dica/revelador/tamanho/letra) | `tenant_gift_config.hint_gifts/riddle_gifts/size_gift/letter_gift` | ✔ | ✔ (re-aplicado no próximo `/new-game`) | GET/POST `/api/gift-config` — **merge por campo no servidor** | `routes/gifts.js` |
 | Alertas sonoros por gift | `tenant_gift_config.sound_alerts` + arquivos em `public/alert-audio/` | ✔ | ✔ | POST/GET/DELETE `/api/sound-alerts` | `routes/gifts.js` |

@@ -1175,8 +1175,30 @@ class GameSession:
         except Exception:
             pass
 
-    def _pick_tres_word(self) -> str:
-        """Sorteia uma palavra para o 3 Pontinhos sem repetir (reusa played_words) e sem banidas."""
+    def _pick_tres_word(self, trace_id=None, game_id=None) -> str:
+        """Reserva atomicamente uma palavra para 3 Dicas no ciclo do streamer."""
+        if self.tenant_id is not None:
+            try:
+                self.game._load_word_pool()
+                banned = db.load_banned_words()
+                reservation = db.reserve_word_for_tenant(self.tenant_id, self.game.word_pool, banned,
+                    game_type="tres", game_id=game_id or int(getattr(self.tres, "round_id", 0) or 0) + 1)
+                self.game.played_words = set(reservation["played_words"])
+                self._word_draw_reservation = {k: v for k, v in reservation.items() if k != "word"}
+                if reservation["filter_fallback"]:
+                    self._log_event("notice", "warning", "word_draw.filters.fallback",
+                        "Os filtros não tinham palavras ativas; foi usado o catálogo ativo.", game="tres",
+                        game_id=str(game_id or getattr(self.tres, "round_id", 0) + 1), trace_id=trace_id,
+                        code="WORD_FILTERS_NO_MATCH", details={"cycle": reservation["cycle_id"],
+                        "eligible_count": reservation["eligible_count"]})
+                self._log_event("diagnostic", "debug", "word_draw.reserved",
+                    "Palavra reservada para a rodada.", game="tres",
+                    game_id=str(game_id or getattr(self.tres, "round_id", 0) + 1), trace_id=trace_id,
+                    details={"cycle": reservation["cycle_id"], "eligible_count": reservation["eligible_count"],
+                    "cycle_started": reservation["cycle_started"]})
+                return reservation["word"]
+            except Exception:
+                return ""
         if not self.game.word_pool:
             return ""
         try:
@@ -1193,13 +1215,17 @@ class GameSession:
         import random as _r
         return _r.choice(disponiveis)
 
-    def _mark_tres_played(self, palavra: str):
+    def _mark_tres_played(self, palavra: str, game_id=None):
         """Registra a palavra usada no 3 Pontinhos como já jogada e persiste."""
         if not palavra:
             return
-        self.game.played_words.add(strip_accents(palavra))
         try:
-            self.game._save_history()
+            if self.tenant_id is not None:
+                db.record_tenant_word_used(self.tenant_id, palavra, game_type="tres", game_id=game_id)
+                self.game.played_words = set(db.load_tenant_history(self.tenant_id)["played_words"])
+            else:
+                self.game.played_words.add(strip_accents(palavra))
+                self.game._save_history()
         except Exception:
             pass
 
@@ -1211,14 +1237,14 @@ class GameSession:
                         "[3 Dicas] Preparação da próxima rodada iniciada.", game="tres",
                         game_id=str(next_round_id), trace_id=trace_id,
                         details={"source": "auto_round"})
-        palavra = self._pick_tres_word()
+        palavra = self._pick_tres_word(trace_id=trace_id, game_id=next_round_id)
         if not palavra:
             self._log_event("notice", "warning", "tres.round.preparation_rejected",
                             "[3 Dicas] Não há palavra disponível para a próxima rodada.", game="tres",
                             game_id=str(next_round_id), trace_id=trace_id,
                             code="TRES_WORD_UNAVAILABLE")
             return None, None
-        self._mark_tres_played(palavra)
+        self._mark_tres_played(palavra, game_id=next_round_id)
         def log_generation(event, details):
             fallback = event.endswith("fallback")
             self._log_event(
@@ -1257,7 +1283,24 @@ class GameSession:
             hint_gifts=len(hint_gifts or []),
             riddle_gifts=len(riddle_gifts or []),
         )
-        self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift, build_pool=False)
+        try:
+            self.game.start_new_game(hint_gifts=hint_gifts, riddle_gifts=riddle_gifts, size_gift=size_gift, letter_gift=letter_gift, build_pool=False)
+        except ValueError as exc:
+            code = "PALAVRA_NO_ELIGIBLE_WORDS" if str(exc) == "NO_ELIGIBLE_WORDS" else "PALAVRA_DRAW_FAILED"
+            self._log_event("notice", "warning", "palavra.start.rejected",
+                "Não há palavras elegíveis para iniciar a partida.", game="palavra",
+                trace_id=trace_id, code=code)
+            return
+        reservation = getattr(self.game, "_word_reservation", {}) or {}
+        if reservation.get("filter_fallback"):
+            self._log_event("notice", "warning", "word_draw.filters.fallback",
+                "Os filtros não tinham palavras ativas; foi usado o catálogo ativo.", game="palavra",
+                game_id=self.game.game_id, trace_id=trace_id, code="WORD_FILTERS_NO_MATCH",
+                details={"cycle": reservation.get("cycle_id"), "eligible_count": reservation.get("eligible_count")})
+        self._log_event("diagnostic", "debug", "word_draw.reserved",
+            "Palavra reservada para a partida.", game="palavra", game_id=self.game.game_id,
+            trace_id=trace_id, details={"cycle": reservation.get("cycle_id"),
+            "eligible_count": reservation.get("eligible_count"), "cycle_started": reservation.get("cycle_started")})
         # Meta de tap: zera a cada partida e aplica o valor configurado
         self.tap_meta_current = 0
         self.tap_meta_total = int(self.settings.get("tap_meta", 1000) or 1000)
@@ -2402,7 +2445,7 @@ class GameSession:
                                 game_id=str(next_round_id), trace_id=trace_id,
                                 details={"custom_word_supplied": bool(palavra), "custom_clues_supplied": len(dicas) >= 3})
                 if not palavra:
-                    palavra = self._pick_tres_word()
+                    palavra = self._pick_tres_word(trace_id=trace_id, game_id=next_round_id)
                 if not palavra:
                     self._log_event("notice", "warning", "tres.start.rejected",
                                     "[3 Dicas] Não há palavra disponível para iniciar a rodada.", game="tres",
@@ -2410,7 +2453,7 @@ class GameSession:
                                     code="TRES_WORD_UNAVAILABLE")
                     continue
                 try:
-                    self._mark_tres_played(palavra)
+                    self._mark_tres_played(palavra, game_id=next_round_id)
                     if not dicas or len(dicas) < 3:
                         def log_generation(event, details):
                             fallback = event.endswith("fallback")

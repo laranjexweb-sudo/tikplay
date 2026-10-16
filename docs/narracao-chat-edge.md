@@ -5,7 +5,7 @@
 O TikTok fornece comentários como texto. O daemon Python deve limpar o texto e
 enfileirá-lo no motor Edge TTS; o painel streamer reproduz os MP3 sequencialmente.
 O OpenRouter permanece responsável somente pelo texto da charada. A voz da
-charada e do chat compartilha `tts_voice` e `tts_rate`, persistidos em
+charada e do chat compartilha `tts_voice`, `tts_rate` e `tts_volume`, persistidos em
 `tenant_settings` e configurados em **Sons → Narração**.
 
 O campo existente `chat_narr_enabled` habilita apenas a fala de comentários.
@@ -17,6 +17,12 @@ O campo existente `chat_narr_enabled` habilita apenas a fala de comentários.
 
 O controle `riddle_auto_narrate` continua independente: regula a reprodução
 automática da charada, não a geração de voz nem a leitura do chat.
+
+O volume fica entre 0% e 300% em **Sons → Narração** (padrão 100%) e se aplica
+às narrações TTS reproduzidas no painel, incluindo chat, charadas e prévias de
+voz. Web Audio aplica o ganho depois de decodificar/reproduzir o MP3; valores
+acima de 100% podem causar clipping conforme a gravação e a saída de áudio.
+Alertas sonoros por presente mantêm o volume próprio deles.
 
 ## Fluxos
 
@@ -54,6 +60,7 @@ fazer a fala usar outra taxa. A chave do cache de áudio inclui texto, voz e tax
 | Síntese de comentário falhou | `error` / `error` | `chat.tts.failed` / `TTS_CHAT_SYNTHESIS_FAILED` | Tipo da exceção, voz/taxa, duração e sessão; throttle de 5 s |
 | Síntese da charada começou/concluiu | `diagnostic` / `debug` | `palavra.riddle.tts_started` / `palavra.riddle.tts_completed` | `trace_id`, `game_id`, estágio, tamanho do texto, voz/taxa e duração |
 | Síntese da charada falhou | `error` / `error` | `tts.riddle_audio.failed` / `TTS_RIDDLE_SYNTHESIS_FAILED` | `trace_id`, estágio, tipo de exceção e duração |
+| Preferência de volume salva | fluxo existente de configurações | `POST /api/settings` → `update_settings` | `tenant_id` autenticado e preferência numérica entre 0 e 3; sem novo log por movimento do slider |
 
 Não emitir evento persistido por comentário nem logar comentário bruto, nome de
 usuário, texto integral da charada, palavra secreta, prompt, credencial ou URL de
@@ -75,6 +82,9 @@ Preservar o payload e nomes dos eventos `narrate`, `chat_narrate` e
 - Validar taxa Edge enviada para 0,5x, 1x, 1,5x e 2x; reproduzir a mesma
   charada em cada valor e confirmar que a velocidade audível acompanha o
   controle de Sons.
+- Validar volume em 0%, 100% e 300% em narração Edge e voz adicional, persistência
+  por conta e atualização do ganho durante reprodução; confirmar que alertas de
+  presentes não herdam o ganho de TTS.
 - Painel reproduz fala serialmente; a charada preserva reprodução automática e
   replay manual no painel, sem duplicação; a página pública só mostra o texto.
   Filtros e configurações persistem por conta.

@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pct_dica: 70,
   pct_charada: 30,
   tts_rate: 1.0,
+  tts_volume: 1.0,
   tts_voice: "",
   chat_narr_enabled: false,
   chat_narr_mode: "all",
@@ -68,6 +69,9 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN riddle_auto_narrate INTEGER DEFAULT 1");
+} catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN tts_volume REAL DEFAULT 1.0");
 } catch {}
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN boss_mode INTEGER DEFAULT 1");
@@ -297,6 +301,7 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   pct_dica INTEGER DEFAULT 70,
   pct_charada INTEGER DEFAULT 30,
   tts_rate REAL DEFAULT 1.0,
+  tts_volume REAL DEFAULT 1.0,
   tts_voice TEXT DEFAULT '',
   chat_narr_enabled INTEGER DEFAULT 0,
   chat_narr_mode TEXT DEFAULT 'all',
@@ -398,11 +403,90 @@ CREATE TABLE IF NOT EXISTS banned_words (
 );
 `);
 db.exec(`
+CREATE TABLE IF NOT EXISTS word_catalog (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word TEXT NOT NULL,
+  word_key TEXT NOT NULL UNIQUE,
+  category TEXT NOT NULL DEFAULT 'geral',
+  difficulty TEXT NOT NULL DEFAULT 'media' CHECK (difficulty IN ('facil','media','dificil')),
+  status TEXT NOT NULL DEFAULT 'review' CHECK (status IN ('active','review','inactive')),
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_word_catalog_status ON word_catalog(status, category, difficulty, id);
+CREATE TABLE IF NOT EXISTS word_cycles (
+  tenant_id INTEGER PRIMARY KEY,
+  current_cycle INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS word_cycle_migrations (
+  tenant_id INTEGER PRIMARY KEY,
+  migrated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS word_usage (
+  tenant_id INTEGER NOT NULL,
+  cycle_id INTEGER NOT NULL,
+  word_key TEXT NOT NULL,
+  word TEXT NOT NULL,
+  game_id INTEGER,
+  game_type TEXT NOT NULL DEFAULT 'palavra',
+  source TEXT NOT NULL DEFAULT 'draw',
+  used_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, cycle_id, word_key)
+);
+CREATE INDEX IF NOT EXISTS idx_word_usage_tenant_time ON word_usage(tenant_id, used_at DESC);
+CREATE INDEX IF NOT EXISTS idx_word_usage_word ON word_usage(word_key, used_at DESC);
+CREATE TABLE IF NOT EXISTS word_draw_settings (
+  tenant_id INTEGER PRIMARY KEY,
+  categories TEXT NOT NULL DEFAULT '[]',
+  difficulties TEXT NOT NULL DEFAULT '[]',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+`);
+function normalizeCatalogWord(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+}
+try {
+  const initialWords = readJsonFile(path.join(__dirname, '..', 'python', 'words.json'), []);
+  const seedWord = db.prepare("INSERT OR IGNORE INTO word_catalog(word,word_key,category,difficulty,status,source) VALUES(?,?, 'geral','media','active','words.json')");
+  const seedWords = db.transaction((words) => {
+    for (const word of words) {
+      const text = String(word || '').trim();
+      const key = normalizeCatalogWord(text);
+      if (text && key) seedWord.run(text, key);
+    }
+  });
+  seedWords(Array.isArray(initialWords) ? initialWords : []);
+} catch (error) {
+  console.error('[word-catalog] seed failed:', error && error.name || 'Error');
+}
+try {
+  const pendingHistory = db.prepare(`SELECT h.tenant_id,h.played_words FROM tenant_history h
+    LEFT JOIN word_cycle_migrations m ON m.tenant_id=h.tenant_id WHERE m.tenant_id IS NULL`).all();
+  const migrateLegacyWordUsage = db.transaction((rows) => {
+    const addUsage = db.prepare("INSERT OR IGNORE INTO word_usage(tenant_id,cycle_id,word_key,word,source) VALUES(?,1,?,?,'legacy')");
+    const mark = db.prepare('INSERT OR IGNORE INTO word_cycle_migrations(tenant_id) VALUES(?)');
+    const addCycle = db.prepare('INSERT OR IGNORE INTO word_cycles(tenant_id,current_cycle) VALUES(?,1)');
+    for (const row of rows) {
+      let words = []; try { const parsed = JSON.parse(row.played_words || '[]'); words = Array.isArray(parsed) ? parsed : []; } catch {}
+      addCycle.run(row.tenant_id);
+      for (const word of words) if (typeof word === 'string' && word.trim())
+        addUsage.run(row.tenant_id, normalizeCatalogWord(word), word.trim());
+      mark.run(row.tenant_id);
+    }
+  });
+  migrateLegacyWordUsage(pendingHistory);
+} catch (error) {
+  console.error('[word-catalog] history migration failed:', error && error.name || 'Error');
+}
+db.exec(`
 CREATE TABLE IF NOT EXISTS app_schema_migrations (
   name TEXT PRIMARY KEY,
   applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
+try { db.exec("ALTER TABLE word_usage ADD COLUMN game_type TEXT NOT NULL DEFAULT 'palavra'"); } catch {}
 const likesOverlayDefaultMigration = "likes_overlay_default_top_left_v1";
 if (!db.prepare("SELECT 1 FROM app_schema_migrations WHERE name = ?").get(likesOverlayDefaultMigration)) {
   // A rota de edição ainda não existia quando 50/50 era o default, então esse
@@ -742,6 +826,7 @@ function getTenantSettings(tenantId) {
     pct_dica: row.pct_dica,
     pct_charada: row.pct_charada,
     tts_rate: row.tts_rate,
+    tts_volume: row.tts_volume === null || row.tts_volume === undefined ? 1.0 : row.tts_volume,
     tts_voice: row.tts_voice,
     chat_narr_enabled: !!row.chat_narr_enabled,
     chat_narr_mode: row.chat_narr_mode,
@@ -757,14 +842,15 @@ function getTenantSettings(tenantId) {
 
 function saveTenantSettings(tenantId, s) {
   db.prepare(`
-    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta, boss_mode)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_volume, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta, boss_mode)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET
       apenas_seguidores=excluded.apenas_seguidores,
       apenas_heart_me=excluded.apenas_heart_me,
       pct_dica=excluded.pct_dica,
       pct_charada=excluded.pct_charada,
       tts_rate=excluded.tts_rate,
+      tts_volume=excluded.tts_volume,
       tts_voice=excluded.tts_voice,
       chat_narr_enabled=excluded.chat_narr_enabled,
       chat_narr_mode=excluded.chat_narr_mode,
@@ -782,6 +868,7 @@ function saveTenantSettings(tenantId, s) {
     s.pct_dica,
     s.pct_charada,
     s.tts_rate,
+    s.tts_volume === undefined ? 1.0 : s.tts_volume,
     s.tts_voice || "",
     s.chat_narr_enabled ? 1 : 0,
     s.chat_narr_mode || "all",
@@ -1926,6 +2013,135 @@ function saveBannedWords(words) {
   return clean;
 }
 
+const WORD_DIFFICULTIES = ['facil', 'media', 'dificil'];
+const WORD_STATUSES = ['active', 'review', 'inactive'];
+function listWordCatalog({ search = '', status = '', category = '', page = 1, pageSize = 50 } = {}) {
+  const where = [], params = [];
+  if (search) { where.push('(word LIKE ? OR category LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
+  if (WORD_STATUSES.includes(status)) { where.push('status=?'); params.push(status); }
+  if (category) { where.push('category=?'); params.push(category); }
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const total = db.prepare(`SELECT COUNT(*) count FROM word_catalog ${clause}`).get(...params).count;
+  const rows = db.prepare(`SELECT id,word,word_key,category,difficulty,status,source,created_at,updated_at
+    FROM word_catalog ${clause} ORDER BY word COLLATE NOCASE,id LIMIT ? OFFSET ?`)
+    .all(...params, pageSize, (page - 1) * pageSize);
+  const summary = db.prepare(`SELECT COUNT(*) total,SUM(status='active') active,SUM(status='review') review,
+    SUM(status='inactive') inactive FROM word_catalog`).get();
+  summary.eligible = getWordCatalogEligibleStats().eligible;
+  const categories = db.prepare('SELECT DISTINCT category FROM word_catalog ORDER BY category COLLATE NOCASE').all().map(r => r.category);
+  const banned = new Set(getBannedWords().map(normalizeCatalogWord));
+  return { items: rows.map(row => ({ ...row, banned: banned.has(row.word_key) })), total, page, page_size: pageSize,
+    pages: Math.ceil(total / pageSize), summary: Object.fromEntries(Object.entries(summary).map(([k,v]) => [k, Number(v || 0)])),
+    categories, difficulties: WORD_DIFFICULTIES, statuses: WORD_STATUSES };
+}
+
+function importWordCatalogWords(items) {
+  const insert = db.prepare(`INSERT OR IGNORE INTO word_catalog(word,word_key,category,difficulty,status,source)
+    VALUES(@word,@word_key,@category,@difficulty,@status,'import')`);
+  const run = db.transaction((list) => {
+    let inserted = 0;
+    for (const item of list) inserted += insert.run(item).changes;
+    return inserted;
+  });
+  return run(items);
+}
+
+function updateWordCatalogWord(id, { category, difficulty, status }) {
+  return db.transaction(() => {
+    const current = db.prepare('SELECT * FROM word_catalog WHERE id=?').get(id);
+    if (!current) return null;
+    if (current.status === 'active' && status !== 'active' &&
+        db.prepare("SELECT COUNT(*) count FROM word_catalog WHERE status='active'").get().count <= 1) {
+      const error = new Error('LAST_ACTIVE_WORD'); error.code = 'LAST_ACTIVE_WORD'; throw error;
+    }
+    db.prepare('UPDATE word_catalog SET category=?,difficulty=?,status=?,updated_at=datetime(\'now\') WHERE id=?')
+      .run(category, difficulty, status, id);
+    return db.prepare('SELECT id,word,word_key,category,difficulty,status,source,created_at,updated_at FROM word_catalog WHERE id=?').get(id);
+  })();
+}
+
+function getWordDrawSettings(tenantId) {
+  const row = db.prepare('SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?').get(tenantId);
+  const parse = (value) => { try { const data = JSON.parse(value || '[]'); return Array.isArray(data) ? data : []; } catch { return []; } };
+  return { categories: parse(row && row.categories), difficulties: parse(row && row.difficulties) };
+}
+
+function saveWordDrawSettings(tenantId, { categories, difficulties }) {
+  db.prepare(`INSERT INTO word_draw_settings(tenant_id,categories,difficulties,updated_at) VALUES(?,?,?,datetime('now'))
+    ON CONFLICT(tenant_id) DO UPDATE SET categories=excluded.categories,difficulties=excluded.difficulties,updated_at=excluded.updated_at`)
+    .run(tenantId, JSON.stringify(categories), JSON.stringify(difficulties));
+  return getWordDrawSettings(tenantId);
+}
+
+function listWordUsageStreamers() {
+  const streamers = db.prepare(`SELECT u.id tenant_id,u.name,u.email,u.tiktok_username,
+    COALESCE(c.current_cycle,1) current_cycle,
+    COALESCE((SELECT COUNT(*) FROM word_usage w WHERE w.tenant_id=u.id AND w.cycle_id=COALESCE(c.current_cycle,1)),0) used_in_cycle,
+    COALESCE((SELECT COUNT(*) FROM word_usage w WHERE w.tenant_id=u.id),0) total_used
+    FROM users u LEFT JOIN word_cycles c ON c.tenant_id=u.id ORDER BY u.name COLLATE NOCASE,u.id`).all()
+    .map(row => ({ ...row, ...getWordDrawSettings(row.tenant_id) }));
+  const banned = new Set(getBannedWords().map(normalizeCatalogWord));
+  const eligible = db.prepare("SELECT word_key,category,difficulty FROM word_catalog WHERE status='active'").all()
+    .filter(word => !banned.has(word.word_key));
+  const usedRows = db.prepare('SELECT tenant_id,cycle_id,word_key FROM word_usage').all();
+  const usedByStreamer = new Map();
+  for (const row of usedRows) {
+    const key = `${row.tenant_id}:${row.cycle_id}`;
+    if (!usedByStreamer.has(key)) usedByStreamer.set(key, new Set());
+    usedByStreamer.get(key).add(row.word_key);
+  }
+  return streamers.map(streamer => {
+    const pool = eligible.filter(word => (!streamer.categories.length || streamer.categories.includes(word.category)) &&
+      (!streamer.difficulties.length || streamer.difficulties.includes(word.difficulty)));
+    const key = `${streamer.tenant_id}:${streamer.current_cycle}`;
+    const used = usedByStreamer.get(key) || new Set();
+    return { ...streamer, used_in_cycle: pool.filter(word => used.has(word.word_key)).length, eligible_count: pool.length,
+      remaining_in_cycle: pool.filter(word => !used.has(word.word_key)).length };
+  });
+}
+
+function listWordUsageEntries({ tenantId = null, search = '', page = 1, pageSize = 50 } = {}) {
+  const where = [], params = [];
+  if (Number.isInteger(tenantId)) { where.push('w.tenant_id=?'); params.push(tenantId); }
+  if (search) { where.push('(w.word LIKE ? OR u.name LIKE ? OR u.tiktok_username LIKE ?)'); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const total = db.prepare(`SELECT COUNT(*) count FROM word_usage w LEFT JOIN users u ON u.id=w.tenant_id ${clause}`).get(...params).count;
+  const rows = db.prepare(`SELECT w.tenant_id,w.cycle_id,w.game_id,w.game_type,w.word,w.used_at,w.source,
+    COALESCE(u.name,'') streamer_name,COALESCE(u.tiktok_username,'') tiktok_username
+    FROM word_usage w LEFT JOIN users u ON u.id=w.tenant_id ${clause}
+    ORDER BY w.used_at DESC,w.tenant_id LIMIT ? OFFSET ?`).all(...params, pageSize, (page-1)*pageSize);
+  return { items: rows, total, page, page_size: pageSize, pages: Math.ceil(total / pageSize) };
+}
+
+function getWordCatalogEligibleStats() {
+  const rows = db.prepare("SELECT word_key,status FROM word_catalog").all();
+  const banned = new Set(getBannedWords().map(normalizeCatalogWord));
+  const eligible = rows.filter(row => row.status === 'active' && !banned.has(row.word_key)).length;
+  return { total: rows.length, active: rows.filter(row => row.status === 'active').length, eligible };
+}
+
+function resetWordUsageCycle(tenantId) {
+  return db.transaction(() => {
+    const row = db.prepare('SELECT current_cycle FROM word_cycles WHERE tenant_id=?').get(tenantId);
+    const legacy = db.prepare('SELECT played_words FROM tenant_history WHERE tenant_id=?').get(tenantId);
+    let oldWords = [];
+    try { const parsed = JSON.parse(legacy?.played_words || '[]'); oldWords = Array.isArray(parsed) ? parsed : []; } catch {}
+    const previous = row ? row.current_cycle : (oldWords.length ? 1 : 0);
+    const next = previous + 1;
+    if (!db.prepare('SELECT 1 FROM word_cycle_migrations WHERE tenant_id=?').get(tenantId)) {
+      const insertLegacy = db.prepare("INSERT OR IGNORE INTO word_usage(tenant_id,cycle_id,word_key,word,source) VALUES(?,?,?,?,'legacy')");
+      for (const word of oldWords) if (typeof word === 'string' && word.trim())
+        insertLegacy.run(tenantId, Math.max(1, previous), normalizeCatalogWord(word), word.trim());
+      db.prepare('INSERT OR IGNORE INTO word_cycle_migrations(tenant_id) VALUES(?)').run(tenantId);
+    }
+    db.prepare(`INSERT INTO word_cycles(tenant_id,current_cycle,updated_at) VALUES(?,?,datetime('now'))
+      ON CONFLICT(tenant_id) DO UPDATE SET current_cycle=excluded.current_cycle,updated_at=excluded.updated_at`)
+      .run(tenantId, next);
+    db.prepare("UPDATE tenant_history SET played_words='[]' WHERE tenant_id=?").run(tenantId);
+    return { previous_cycle: previous, current_cycle: next };
+  })();
+}
+
 // ---------------- Catálogo de gifts (sincronizado) ----------------
 // Leitura no node; a ESCRITA é feita exclusivamente pelo python (python/sync_gifts.py),
 // evitando dois escritores concorrentes no mesmo SQLite.
@@ -2716,6 +2932,17 @@ module.exports = {
   saveVpetState,
   getBannedWords,
   saveBannedWords,
+  WORD_DIFFICULTIES,
+  WORD_STATUSES,
+  listWordCatalog,
+  importWordCatalogWords,
+  updateWordCatalogWord,
+  getWordDrawSettings,
+  saveWordDrawSettings,
+  listWordUsageStreamers,
+  listWordUsageEntries,
+  getWordCatalogEligibleStats,
+  resetWordUsageCycle,
   tenantDataPath,
   readJsonFile,
   // Suporte / Central de Ajuda
