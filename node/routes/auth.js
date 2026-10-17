@@ -270,31 +270,24 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
   const catalogText = value => String(value || "").trim().replace(/\s+/g, " ");
   const catalogKey = value => catalogText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
   const validCatalogWord = value => value.length >= 2 && value.length <= 60 && /^[\p{L}]+(?:[-'][\p{L}]+)*$/u.test(value);
-  const validCatalogCategory = value => value.length >= 2 && value.length <= 40 && /^[\p{L}\p{N} _-]+$/u.test(value);
 
   app.get("/api/admin/word-catalog", auth.requireAdmin, (req, res) => {
     const page = Math.max(1, Math.min(10000, parseInt(req.query.page, 10) || 1));
     const pageSize = Math.max(10, Math.min(100, parseInt(req.query.page_size, 10) || 50));
     res.json({ success: true, ...db.listWordCatalog({ search: catalogText(req.query.search).slice(0, 60),
-      status: String(req.query.status || ""), category: catalogText(req.query.category), page, pageSize }) });
+      status: String(req.query.status || ""), page, pageSize }) });
   });
 
   app.post("/api/admin/word-catalog/import", auth.requireAdmin, (req, res) => {
     const rawWords = Array.isArray(req.body?.words) ? req.body.words : String(req.body?.text || "").split(/[\n,;]+/);
     if (rawWords.length > 2000) return res.status(400).json({ success: false, error: "Importe no máximo 2.000 palavras por vez." });
-    const category = catalogText(req.body?.category || "geral");
-    const difficulty = String(req.body?.difficulty || "media");
-    const status = String(req.body?.status || "review");
-    if (!validCatalogCategory(category) || !db.WORD_DIFFICULTIES.includes(difficulty) || !db.WORD_STATUSES.includes(status)) {
-      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_IMPORT_METADATA");
-      return res.status(400).json({ success: false, error: "Confira categoria, dificuldade e status da importação." });
-    }
+    const status = "active";
     const unique = new Map(), invalidKeys = new Set();
     for (const item of rawWords) {
       const word = catalogText(item);
       if (!validCatalogWord(word)) { if (word) invalidKeys.add(word.slice(0, 60)); continue; }
       const word_key = catalogKey(word);
-      if (!unique.has(word_key)) unique.set(word_key, { word, word_key, category, difficulty, status });
+      if (!unique.has(word_key)) unique.set(word_key, { word, word_key, category: "geral", difficulty: "media", status });
     }
     const invalid = rawWords.filter(item => catalogText(item) && !validCatalogWord(catalogText(item))).length;
     try {
@@ -311,17 +304,15 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
   });
 
   app.put("/api/admin/word-catalog/:id", auth.requireAdmin, (req, res) => {
-    const id = Number(req.params.id), category = catalogText(req.body?.category),
-      difficulty = String(req.body?.difficulty || ""), status = String(req.body?.status || "");
-    if (!Number.isSafeInteger(id) || id < 1 || !validCatalogCategory(category) ||
-        !db.WORD_DIFFICULTIES.includes(difficulty) || !db.WORD_STATUSES.includes(status)) {
+    const id = Number(req.params.id), status = String(req.body?.status || "");
+    if (!Number.isSafeInteger(id) || id < 1 || !db.WORD_STATUSES.includes(status)) {
       wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_WORD_METADATA");
-      return res.status(400).json({ success: false, error: "Confira categoria, dificuldade e status." });
+      return res.status(400).json({ success: false, error: "Confira o status." });
     }
     try {
-      const item = db.updateWordCatalogWord(id, { category, difficulty, status });
+      const item = db.updateWordCatalogWord(id, { status });
       if (!item) return res.status(404).json({ success: false, error: "Palavra não encontrada." });
-      wordCatalogEvent(req, "word_catalog.word.updated", "info", undefined, { word_id: id, category_changed: true, status, difficulty });
+      wordCatalogEvent(req, "word_catalog.word.updated", "info", undefined, { word_id: id, status });
       res.json({ success: true, item });
     } catch (error) {
       const code = error.code === "LAST_ACTIVE_WORD" ? error.code : "WORD_CATALOG_UPDATE_FAILED";
@@ -337,28 +328,18 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
       return res.status(400).json({ success: false, error: "Streamer inválido." });
     const page = Math.max(1, Math.min(10000, parseInt(req.query.page, 10) || 1));
     const pageSize = Math.max(10, Math.min(100, parseInt(req.query.page_size, 10) || 50));
-    const catalogMeta = db.listWordCatalog({ page: 1, pageSize: 50 });
-    res.json({ success: true, streamers: db.listWordUsageStreamers(), categories: catalogMeta.categories,
-      difficulties: db.WORD_DIFFICULTIES,
+    res.json({ success: true, streamers: db.listWordUsageStreamers(),
       history: db.listWordUsageEntries({ tenantId: rawTenant, search: catalogText(req.query.search).slice(0, 80), page, pageSize }),
       catalog: db.getWordCatalogEligibleStats() });
   });
 
   app.put("/api/admin/word-usage/:tenantId/settings", auth.requireAdmin, (req, res) => {
-    const tenantId = Number(req.params.tenantId), categories = req.body?.categories, difficulties = req.body?.difficulties;
+    const tenantId = Number(req.params.tenantId);
     if (!Number.isSafeInteger(tenantId) || tenantId < 1 || !db.getUserById(tenantId))
       return res.status(404).json({ success: false, error: "Streamer não encontrado." });
-    const knownCategories = new Set(db.listWordCatalog({ page: 1, pageSize: 100 }).categories);
-    if (!Array.isArray(categories) || categories.length > 100 || categories.some(value => typeof value !== "string" || !knownCategories.has(value)) ||
-        !Array.isArray(difficulties) || difficulties.length > db.WORD_DIFFICULTIES.length ||
-        difficulties.some(value => !db.WORD_DIFFICULTIES.includes(value))) {
-      wordCatalogEvent(req, "word_catalog.change.rejected", "warning", "INVALID_DRAW_FILTERS", { tenant_id: tenantId });
-      return res.status(400).json({ success: false, error: "Confira os filtros de categoria e dificuldade." });
-    }
-    const settings = db.saveWordDrawSettings(tenantId, { categories: [...new Set(categories)], difficulties: [...new Set(difficulties)] });
-    wordCatalogEvent(req, "word_draw.filters.updated", "info", undefined, { tenant_id: tenantId,
-      category_count: settings.categories.length, difficulty_count: settings.difficulties.length });
-    res.json({ success: true, settings });
+    db.saveWordDrawSettings(tenantId);
+    wordCatalogEvent(req, "word_draw.filters.cleared", "info", undefined, { tenant_id: tenantId });
+    res.json({ success: true, settings: {} });
   });
 
   app.post("/api/admin/word-usage/:tenantId/reset-cycle", auth.requireAdmin, (req, res) => {

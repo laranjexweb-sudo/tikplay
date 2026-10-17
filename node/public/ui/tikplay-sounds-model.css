@@ -80,4 +80,13 @@ h1 { letter-spacing: 0; font-size: 54px; }
 #tab-sons .tts-riddle-info p { margin:0; }
 #tab-sons .tts-riddle-info strong { color:var(--text); }
 @media(max-width:720px) { #tab-sons .eleven-usage-summary strong { font-size:18px; } }
+#tab-sons .voice-credit-packages { display:grid; gap:var(--tp-space-2); }
+#tab-sons .voice-credit-estimator { margin:var(--tp-space-3) 0 var(--tp-space-4); }
+#tab-sons .voice-credit-estimator small { display:block; color:var(--muted); line-height:1.5; margin-top:var(--tp-space-1); }
+#tab-sons .voice-credit-package { width:100%; justify-content:space-between; min-height:var(--tp-control-height); white-space:normal; text-align:left; }
+#tab-sons .voice-credit-package:disabled { opacity:.55; cursor:wait; }
+#tab-sons .voice-credit-history { display:grid; gap:var(--tp-space-1); margin-top:var(--tp-space-4); padding-top:var(--tp-space-3); border-top:1px solid var(--line); }
+#tab-sons .voice-credit-history-row { display:flex; justify-content:space-between; gap:var(--tp-space-3); color:var(--muted); font-size:11px; }
+#tab-sons .voice-credit-history-row strong { color:var(--text); font-variant-numeric:tabular-nums; }
+#tab-sons .voice-credit-history-row strong[data-kind="credit"] { color:var(--green); }
 

@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const MODEL = 'anthropic/claude-haiku-5.5';
+const METHOD = 'openrouter-top50-v1';
 
 function createContextGenerator({ db, pythonBin, log = () => {}, spawnProcess = spawn }) {
   db.exec(fs.readFileSync(path.join(__dirname, 'context-generation.sql'), 'utf8'));
@@ -31,16 +32,35 @@ function createContextGenerator({ db, pythonBin, log = () => {}, spawnProcess = 
     COALESCE(SUM(prompt_tokens),0) prompt_tokens, COALESCE(SUM(completion_tokens),0) completion_tokens,
     COALESCE(SUM(cost_usd),0) known_cost_usd, COALESCE(SUM(cost_usd IS NULL),0) unknown_cost_requests
     FROM context_generation_attempts ${runId ? 'WHERE run_id=?' : ''}`).get(...(runId ? [runId] : []));
+  function coverage() {
+    try {
+      const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+      const words = db.prepare("SELECT word FROM word_catalog WHERE status='active'").all().map(row => row.word).filter(word => typeof word === 'string');
+      const pool = [...new Set(words.map(normalize).filter(Boolean))].sort();
+      const poolVersion = crypto.createHash('md5').update(JSON.stringify(pool), 'utf8').digest('hex');
+      const banned = new Set(db.prepare('SELECT word FROM banned_words').all().map(row => normalize(row.word)));
+      const targetWords = new Set(words.filter(word => /^\p{L}+$/u.test(word)).map(normalize).filter(word => word && !banned.has(word)));
+      const generated = new Set(db.prepare(`SELECT m.target FROM generated_context_metadata m
+        JOIN contextos c ON c.alvo=m.target WHERE m.pool_version=? AND m.method_version=? AND m.model=? AND m.top_count=50`)
+        .all(poolVersion, METHOD, MODEL).map(row => normalize(row.target)));
+      const total = targetWords.size;
+      const completed = [...targetWords].filter(word => generated.has(word)).length;
+      return { available: true, total, generated: completed, remaining: Math.max(0, total - completed),
+        percent: total ? Math.round(completed / total * 100) : 0 };
+    } catch (_) {
+      return { available: false, total: 0, generated: 0, remaining: 0, percent: 0 };
+    }
+  }
   function status() {
     const runs = db.prepare('SELECT * FROM context_generation_runs ORDER BY rowid DESC LIMIT 20').all();
     const current = runs[0];
-    return { success: true, model: MODEL, generator_version: 3,
+    return { success: true, model: MODEL, generator_version: 4,
       configured: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY),
       running: !!active, finished: !!current && !active,
       done: current?.done || 0, total: current?.total || 0, current: current?.current || '',
       errors: current?.errors || 0, last_error: current?.last_error || null,
       started_at: current?.created_at || null, status: current?.status || 'idle',
-      consumption: summary(current?.id), totals: summary(),
+      consumption: summary(current?.id), totals: summary(), coverage: coverage(),
       runs: runs.map(row => ({ ...row, config: JSON.parse(row.config), consumption: summary(row.id) })),
       attempts: current ? db.prepare('SELECT * FROM context_generation_attempts WHERE run_id=? ORDER BY rowid DESC LIMIT 100').all(current.id) : [],
       logs: [] };

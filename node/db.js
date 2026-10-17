@@ -2013,26 +2013,23 @@ function saveBannedWords(words) {
   return clean;
 }
 
-const WORD_DIFFICULTIES = ['facil', 'media', 'dificil'];
 const WORD_STATUSES = ['active', 'review', 'inactive'];
-function listWordCatalog({ search = '', status = '', category = '', page = 1, pageSize = 50 } = {}) {
+function listWordCatalog({ search = '', status = '', page = 1, pageSize = 50 } = {}) {
   const where = [], params = [];
-  if (search) { where.push('(word LIKE ? OR category LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
+  if (search) { where.push('word LIKE ?'); params.push(`%${search}%`); }
   if (WORD_STATUSES.includes(status)) { where.push('status=?'); params.push(status); }
-  if (category) { where.push('category=?'); params.push(category); }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = db.prepare(`SELECT COUNT(*) count FROM word_catalog ${clause}`).get(...params).count;
-  const rows = db.prepare(`SELECT id,word,word_key,category,difficulty,status,source,created_at,updated_at
+  const rows = db.prepare(`SELECT id,word,word_key,status,source,created_at,updated_at
     FROM word_catalog ${clause} ORDER BY word COLLATE NOCASE,id LIMIT ? OFFSET ?`)
     .all(...params, pageSize, (page - 1) * pageSize);
   const summary = db.prepare(`SELECT COUNT(*) total,SUM(status='active') active,SUM(status='review') review,
     SUM(status='inactive') inactive FROM word_catalog`).get();
   summary.eligible = getWordCatalogEligibleStats().eligible;
-  const categories = db.prepare('SELECT DISTINCT category FROM word_catalog ORDER BY category COLLATE NOCASE').all().map(r => r.category);
   const banned = new Set(getBannedWords().map(normalizeCatalogWord));
   return { items: rows.map(row => ({ ...row, banned: banned.has(row.word_key) })), total, page, page_size: pageSize,
     pages: Math.ceil(total / pageSize), summary: Object.fromEntries(Object.entries(summary).map(([k,v]) => [k, Number(v || 0)])),
-    categories, difficulties: WORD_DIFFICULTIES, statuses: WORD_STATUSES };
+    statuses: WORD_STATUSES };
 }
 
 function importWordCatalogWords(items) {
@@ -2046,7 +2043,7 @@ function importWordCatalogWords(items) {
   return run(items);
 }
 
-function updateWordCatalogWord(id, { category, difficulty, status }) {
+function updateWordCatalogWord(id, { status }) {
   return db.transaction(() => {
     const current = db.prepare('SELECT * FROM word_catalog WHERE id=?').get(id);
     if (!current) return null;
@@ -2054,22 +2051,20 @@ function updateWordCatalogWord(id, { category, difficulty, status }) {
         db.prepare("SELECT COUNT(*) count FROM word_catalog WHERE status='active'").get().count <= 1) {
       const error = new Error('LAST_ACTIVE_WORD'); error.code = 'LAST_ACTIVE_WORD'; throw error;
     }
-    db.prepare('UPDATE word_catalog SET category=?,difficulty=?,status=?,updated_at=datetime(\'now\') WHERE id=?')
-      .run(category, difficulty, status, id);
-    return db.prepare('SELECT id,word,word_key,category,difficulty,status,source,created_at,updated_at FROM word_catalog WHERE id=?').get(id);
+    db.prepare('UPDATE word_catalog SET status=?,updated_at=datetime(\'now\') WHERE id=?')
+      .run(status, id);
+    return db.prepare('SELECT id,word,word_key,category,status,source,created_at,updated_at FROM word_catalog WHERE id=?').get(id);
   })();
 }
 
 function getWordDrawSettings(tenantId) {
-  const row = db.prepare('SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?').get(tenantId);
-  const parse = (value) => { try { const data = JSON.parse(value || '[]'); return Array.isArray(data) ? data : []; } catch { return []; } };
-  return { categories: parse(row && row.categories), difficulties: parse(row && row.difficulties) };
+  return {};
 }
 
-function saveWordDrawSettings(tenantId, { categories, difficulties }) {
+function saveWordDrawSettings(tenantId) {
   db.prepare(`INSERT INTO word_draw_settings(tenant_id,categories,difficulties,updated_at) VALUES(?,?,?,datetime('now'))
     ON CONFLICT(tenant_id) DO UPDATE SET categories=excluded.categories,difficulties=excluded.difficulties,updated_at=excluded.updated_at`)
-    .run(tenantId, JSON.stringify(categories), JSON.stringify(difficulties));
+    .run(tenantId, '[]', '[]');
   return getWordDrawSettings(tenantId);
 }
 
@@ -2078,10 +2073,9 @@ function listWordUsageStreamers() {
     COALESCE(c.current_cycle,1) current_cycle,
     COALESCE((SELECT COUNT(*) FROM word_usage w WHERE w.tenant_id=u.id AND w.cycle_id=COALESCE(c.current_cycle,1)),0) used_in_cycle,
     COALESCE((SELECT COUNT(*) FROM word_usage w WHERE w.tenant_id=u.id),0) total_used
-    FROM users u LEFT JOIN word_cycles c ON c.tenant_id=u.id ORDER BY u.name COLLATE NOCASE,u.id`).all()
-    .map(row => ({ ...row, ...getWordDrawSettings(row.tenant_id) }));
+    FROM users u LEFT JOIN word_cycles c ON c.tenant_id=u.id ORDER BY u.name COLLATE NOCASE,u.id`).all();
   const banned = new Set(getBannedWords().map(normalizeCatalogWord));
-  const eligible = db.prepare("SELECT word_key,category,difficulty FROM word_catalog WHERE status='active'").all()
+  const eligible = db.prepare("SELECT word_key FROM word_catalog WHERE status='active'").all()
     .filter(word => !banned.has(word.word_key));
   const usedRows = db.prepare('SELECT tenant_id,cycle_id,word_key FROM word_usage').all();
   const usedByStreamer = new Map();
@@ -2091,8 +2085,7 @@ function listWordUsageStreamers() {
     usedByStreamer.get(key).add(row.word_key);
   }
   return streamers.map(streamer => {
-    const pool = eligible.filter(word => (!streamer.categories.length || streamer.categories.includes(word.category)) &&
-      (!streamer.difficulties.length || streamer.difficulties.includes(word.difficulty)));
+    const pool = eligible;
     const key = `${streamer.tenant_id}:${streamer.current_cycle}`;
     const used = usedByStreamer.get(key) || new Set();
     return { ...streamer, used_in_cycle: pool.filter(word => used.has(word.word_key)).length, eligible_count: pool.length,
@@ -2932,7 +2925,6 @@ module.exports = {
   saveVpetState,
   getBannedWords,
   saveBannedWords,
-  WORD_DIFFICULTIES,
   WORD_STATUSES,
   listWordCatalog,
   importWordCatalogWords,

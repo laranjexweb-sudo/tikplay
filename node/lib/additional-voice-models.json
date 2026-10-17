@@ -1,0 +1,45 @@
+[
+  {
+    "id": "elevenlabs/eleven-v4-turbo",
+    "provider": "elevenlabs",
+    "model_id": "eleven_v4_turbo",
+    "label": "ElevenLabs v4 Turbo",
+    "voice_type": "personalizada",
+    "description": "Vozes disponíveis na conta ElevenLabs configurada pela plataforma.",
+    "pcm_sample_rate": 44100
+  },
+  {
+    "id": "heygen/heygen-voice-1-turbo",
+    "provider": "openrouter",
+    "model_id": "heygen/heygen-voice-1-turbo",
+    "label": "HeyGen Voice Turbo",
+    "voice_type": "padrao",
+    "description": "Vozes padrão do HeyGen; voz clonada exige credencial própria do provedor.",
+    "pt_br_voice_ids": [],
+    "pt_br_note": "As vozes padrão deste modelo foram testadas e não apresentaram sotaque brasileiro. Nenhuma está liberada como PT-BR.",
+    "pcm_sample_rate": 44100
+  },
+  {
+    "id": "hexgrad/kokoro-82m",
+    "provider": "openrouter",
+    "model_id": "hexgrad/kokoro-82m",
+    "label": "Kokoro 82M · Português",
+    "voice_type": "padrao",
+    "description": "Vozes predefinidas, incluindo opções em português.",
+    "pt_br_voice_ids": ["pm_santa"],
+    "pt_br_note": "Somente PM Santa foi conferida com português brasileiro. As outras vozes portuguesas podem soar como português de Portugal.",
+    "pcm_sample_rate": 24000
+  },
+  {
+    "id": "google/gemini-3.8-flash-lite-tts",
+    "provider": "openrouter",
+    "model_id": "google/gemini-3.8-flash-lite-tts",
+    "label": "Gemini 3.8 Flash Lite · TTS",
+    "voice_type": "padrao",
+    "description": "Vozes multilíngues do Gemini TTS disponíveis via OpenRouter.",
+    "admin_note": "As vozes são multilíngues; teste cada prévia em português brasileiro antes de liberar aos clientes.",
+    "pt_br_note": "Nenhuma voz Gemini foi identificada no catálogo OpenRouter.",
+    "response_format": "pcm",
+    "pcm_sample_rate": 24000
+  }
+]

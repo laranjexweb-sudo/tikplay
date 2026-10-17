@@ -90,12 +90,46 @@ class TresLoggingTests(unittest.TestCase):
         async def broken_provider(_trace_id):
             raise RuntimeError("private generated response")
 
+        self.engine.active = True
         self.engine._palavra_provider = broken_provider
         asyncio.run(self.engine._autostart())
         failure = [row for row in self.logs() if row.get("event") == "tres.round.auto_start_failed"][-1]
         self.assertEqual(failure["category"], "error")
         self.assertEqual(failure["code"], "TRES_AUTO_START_FAILED")
         self.assertNotIn("private generated response", repr(failure))
+
+    def test_auto_round_does_not_call_provider_when_live_is_disconnected(self):
+        calls = []
+
+        async def provider(_trace_id):
+            calls.append(True)
+            return "palavra", ["dica 1", "dica 2", "dica 3"]
+
+        self.engine.active = True
+        self.engine._palavra_provider = provider
+        self.engine._can_autostart = lambda: False
+        asyncio.run(self.engine._autostart())
+
+        self.assertEqual(calls, [])
+        rejected = [row for row in self.logs() if row.get("event") == "tres.round.auto_start_rejected"][-1]
+        self.assertEqual(rejected["code"], "TRES_SESSION_INACTIVE")
+
+    def test_auto_round_is_not_started_if_live_disconnects_during_preparation(self):
+        connected = True
+
+        async def provider(_trace_id):
+            nonlocal connected
+            connected = False
+            return "palavra", ["dica 1", "dica 2", "dica 3"]
+
+        self.engine.active = True
+        self.engine._palavra_provider = provider
+        self.engine._can_autostart = lambda: connected
+        asyncio.run(self.engine._autostart())
+
+        self.assertEqual(self.engine.round_id, 0)
+        rejected = [row for row in self.logs() if row.get("event") == "tres.round.auto_start_rejected"][-1]
+        self.assertEqual(rejected["code"], "TRES_SESSION_INACTIVE")
 
 
 if __name__ == "__main__":

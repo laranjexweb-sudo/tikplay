@@ -1,5 +1,45 @@
 # TikPlay — Design System Oficial (tema reutilizável)
 
+> 2026-10-17: Carteira do streamer deixa explícito o preço em reais nos pacotes, estima créditos para uma mensagem digitada conforme tarifa da voz e limite de 150 caracteres, e mostra referência média de 75 caracteres (metade do limite da live). O histórico informa o tamanho da narração; hashtags finais de emoção não entram na contagem.
+
+> 2026-10-17: Voz adicional do chat agora pode narrar até 150 caracteres, alinhada ao limite da mensagem da live; o débito continua calculado sobre o texto efetivamente falado.
+
+> 2026-10-17: Ajuda de hashtags de emoção movida para o cartão de voz adicional do chat; nomes visíveis das vozes padrão Antonio e Francisca não exibem mais “(servidor)”. IDs internos preservados.
+
+> 2026-10-16: Narração adicional passou de cota mensal por caracteres para carteira de créditos: Super Admin define tarifa por 100 caracteres em cada modelo e pacotes avulsos; streamer vê saldo, tarifa da voz, compra via Mercado Pago e histórico recente. Débitos são atômicos e pagamentos aprovados são processados de forma idempotente. Ver `creditos-voz.md` e `modelos-voz-adicionais.md`.
+
+> 2026-10-16: Catálogo de vozes liberadas agora exige evidência de PT-BR: HeyGen fica indisponível aos clientes porque os IDs não identificam sotaque e as dez vozes testadas não soaram brasileiras; Kokoro só oferece PM Santa. ElevenLabs deixou de filtrar sotaque pela API antes da leitura dos metadados e inclui a voz própria Inêz (`pt-brazilian`); clones próprios sem idioma aparecem ao admin como não identificados para teste manual.
+
+> 2026-10-16: Super Admin pode testar as 30 vozes multilíngues do Gemini 3.8 Flash Lite TTS via OpenRouter; cards avisam que o sotaque PT-BR precisa ser confirmado antes da liberação.
+
+> 2026-10-16: Prévia e narração Gemini usam PCM (o modelo rejeita MP3) e convertem a resposta para WAV reproduzível no admin/navegador. Removido das Configurações globais o bloco de palavras banidas e seu autosave no frontend.
+
+> 2026-10-16: Narração do chat interpreta uma hashtag permitida de emoção no final (ex.: `#grito`) como instrução de voz para Gemini e ElevenLabs, removendo-a do texto falado; tags não reconhecidas não viram prompts. Ver `modelos-voz-adicionais.md`.
+
+> 2026-10-16: Painel Streamer exibe nomes de vozes sem sufixo do provedor/modelo; seletor é ocultado quando há no máximo uma opção, mantendo a escolha salva e o teste acessíveis.
+
+> 2026-10-16: Prévia HeyGen no Super Admin pede PCM (formato aceito pelo modelo) e converte para WAV 44,1 kHz para reprodução; Kokoro continua em MP3. Causa do 502 confirmada com resposta HTTP 400 do OpenRouter e corrigida; teste de rota e síntese real aprovados. Ver `modelos-voz-adicionais.md`.
+
+> 2026-10-16: Controles dos cards de voz ficam na ordem play, dados da voz e habilitação, também em telas estreitas.
+
+> 2026-10-16: Super Admin > Vozes liberadas compacta os cards PT-BR em quatro colunas responsivas, com nomes em maiúsculas, play circular somente com ícone e switch claro seguindo os cartões do Monitor. Preview agora desbloqueia o contexto de áudio no gesto do clique, suporta parar e ignora respostas antigas; causa observada de preview indisponível: servidor ativo retorna HTTP 404 para a rota, então a versão nova ainda não foi carregada no processo. Ver `modelos-voz-adicionais.md`.
+
+> 2026-10-16: Catálogo global de presentes movido para Configurações globais no Super Admin. IDs, estado de sincronização, endpoint e ação de sincronizar preservados.
+
+> 2026-10-16: Importação do catálogo de palavras adiciona novas entradas diretamente como ativas; removida a escolha de status inicial do formulário e a rota aplica o mesmo padrão.
+
+> 2026-10-16: Catálogo e importação de palavras não exibem nem editam dificuldade; em Uso e sorteio por streamer, somente categoria pode filtrar. A seleção de palavras ignora configurações antigas de dificuldade.
+
+> 2026-10-16: Categorias removidas do catálogo/importação e dos filtros por streamer. Todas as contas sorteiam do mesmo conjunto de palavras ativas e não banidas; configurações legadas são ignoradas.
+
+> 2026-10-16: Gerador de contextos reorganizado em controles, cobertura do catálogo, progresso e cartões de consumo/custo; histórico detalhado fica recolhido. Cobertura conta somente contextos válidos para o conjunto atual de palavras.
+
+> 2026-10-16: Cabeçalho interno redundante “Operação local” removido da seção do Super Admin; o título da página permanece como identificação da tela.
+
+> 2026-10-16: Operação local deixou de usar um cartão envolvendo todos os blocos. O catálogo de palavras usa um cartão próprio no mesmo nível dos blocos de uso e geração.
+
+> 2026-10-16: Dificuldade removida do catálogo visual e dos filtros de sorteio por streamer; categoria continua opcional e todo o vocabulário ativo participa do sorteio. Colunas legadas do banco permanecem ignoradas por compatibilidade.
+
 > 2026-10-16: Página pública do 3 Dicas adaptada para fontes verticais de live: área de jogo entre 10% e 70% da altura, dicas anteriores/bloqueadas compactas, até três palpites recentes com cores informativas e ranking semanal resumido ao líder. A tela horizontal mantém o layout anterior; IDs e eventos preservados.
 
 > 2026-10-16: Operação local inclui catálogo de palavras pesquisável e importável, revisão de novas entradas, categorias/dificuldade, filtros por streamer, histórico persistente de uso e ciclos de sorteio. A reserva é transacional por tenant; o histórico não é apagado quando o ciclo avança. Ver `catalogo-palavras.md`.
@@ -9,7 +49,7 @@
 > 2026-10-16: Margem silenciosa local das vozes da API ampliada de 150 para 500 ms para acomodar a ativação da saída de áudio. Amostras e volume preservados; validação auditiva no dispositivo pendente. Ver `voz-api-margem-inicial.md`.
 > 2026-10-16: Sons → Narração ganhou volume ajustável de 0% a 300%, persistido por conta e aplicado ao ganho TTS do painel durante a reprodução; alertas de presentes permanecem independentes. Validação auditiva e ativação no serviço pendentes.
 > 2026-10-16: Sons → Narração reorganizada: configurações gerais ficam à esquerda; voz adicional e limite mensal ficam juntos à direita. Removido o cartão redundante “Status do áudio”; ajuda de alertas aparece somente na aba de alertas.
-> 2026-10-16: Voz adicional e limite mensal foram trazidos para dentro do cartão “Voz do narrador”, em uma grade interna responsiva. Na aba Narração, o cartão ocupa a largura do conteúdo; instruções de presentes continuam na coluna lateral da aba Alertas.
+> 2026-10-16: Voz adicional e informações de consumo foram trazidas para dentro do cartão “Voz do narrador”, em uma grade interna responsiva. Na aba Narração, o cartão ocupa a largura do conteúdo; instruções de presentes continuam na coluna lateral da aba Alertas.
 > 2026-10-16: Slider de volume da narração usa escala com 100% no centro e 300% no máximo; voz adicional e limite permanecem na barra lateral.
 > 2026-10-16: Cartão “Voz do narrador” organizado em “Voz e reprodução” e “Narração do chat”. Botão de teste junto aos controles, toggle alinhado à direita e aviso sobre charadas compacto; handlers e IDs preservados.
 > 2026-10-16: “Narração do chat” movida para o início do cartão “Voz do narrador”, deixando “Ler mensagens do chat em voz alta” como primeiro ajuste; IDs e handlers preservados.
@@ -581,9 +621,12 @@ node/public/
 - 2026-10-16 — Sons → Narração: controles agrupados visualmente em “Voz e reprodução” e “Narração do chat”; botão de teste movido junto aos controles de voz, toggle à direita e informação sobre charadas compactada. IDs e handlers mantidos.
 - 2026-10-16 — Sons → Narração: seção “Narração do chat” movida para o início do cartão para priorizar o controle de leitura em voz alta; IDs e salvamento automático preservados.
 - 2026-10-16 — Sons → Narração: seletores com seta personalizada e menu escuro; foco e hover destacados sem remover o indicador de teclado.
+- 2026-10-16 — Admin SaaS → Configurações globais: administrador libera vozes específicas por tipo/modelo; streamer escolhe apenas uma voz da lista aprovada. Seletor de modelo removido do painel do cliente.
+- 2026-10-16 — Admin SaaS → Configurações globais: botão de prévia individual por voz, com amostra fixa e reprodução no navegador antes de liberar a opção aos clientes.
 - 2026-10-16 — Painel Streamer: campos de texto e seletores compartilham altura, borda, fundo, raio, fonte e seta; estilos responsivos compactos e exceções de controles especializados preservados.
 - 2026-10-16 — Painel Streamer: menus de seleção substituem o pop-up nativo do Windows por lista no tema TikPlay, com seleção/hover ciano, rolagem e suporte a teclado; select nativo oculto preserva IDs, opções, valores e eventos usados pelo código.
 - 2026-10-16 — Sons → Narração: alinhamento superior e altura igual aplicados aos campos “Comentários narrados” e “Caractere de filtro”; removido o efeito da margem global sobre essas colunas.
+- 2026-10-16 — Créditos de voz: carteira persistente com histórico, tarifas editáveis por modelo e por 100 caracteres, pacotes configuráveis no admin, checkout avulso Mercado Pago e crédito automático após confirmação idempotente do webhook. Painel streamer informa saldo, tarifa atual, pacotes e movimentações.
 
 - 2026-10-15 — Sons → Narração: removido o card informativo duplicado "Prévia da narração"; controles e botão real de teste preservados.
 
@@ -793,3 +836,11 @@ node/public/
 - 2026-10-14: Nomes longos nos rankings V2/V3 limitados a uma linha com reticências dentro da coluna disponível; nome integral preservado em tooltip e rótulo acessível.
 - 2026-10-14: Quantidade de participantes dos rankings V2/V3 controlada pela preferência salva no painel, não pelo link. Prévia atualiza por postMessage sem recarga; fonte pública carrega a configuração antes do ranking e recebe mudanças ao vivo por WebSocket.
 - 2026-10-14: Relatórios do streamer exibem níveis de fã-clube e presenteador por participante (global ou por live selecionada) e permitem filtrar/detalhar subidas de nível no histórico de interações.
+
+> 2026-10-16: Consulta do catálogo de palavras no Super Admin compactada com métricas em faixa, filtros alinhados, lista com rolagem interna e cabeçalho fixo, e importação recolhível. Busca, paginação e ações preservadas.
+
+> 2026-10-16: Gestor de vozes do Super Admin identifica opções em português brasileiro (PT-BR), mostra o idioma ao lado da voz e informa que o catálogo está filtrado por essa variante.
+
+> 2026-10-16: Gestor de vozes do Super Admin compactado em cards responsivos, com quatro colunas em telas largas, três em médias, duas em tablets e uma em celulares.
+
+> 2026-10-16: Cards de voz ajustados ao padrão visual do Monitor de Servidor: fundo escuro em gradiente, borda discreta e tipografia neutra; grade compacta preservada.

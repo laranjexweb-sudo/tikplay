@@ -24,7 +24,7 @@
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
-<link rel="stylesheet" href="/ui/tikplay-admin-site.css">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css?v=20261016-voice-card-order">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
 <link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v11">
@@ -83,13 +83,8 @@
 </div>
 <section class="tp-admin-section tp-admin-management" id="adminRules" aria-labelledby="adminRulesHeading">
   <header class="tp-admin-section-heading">
-    <div><h2 id="adminRulesHeading">Configurações globais</h2><p>Integrações da plataforma e palavras banidas dos jogos.</p></div>
-    <span class="tp-admin-count" id="bannedCount" aria-label="Quantidade de palavras banidas">0</span>
+    <div><h2 id="adminRulesHeading">Configurações globais</h2><p>Integrações da plataforma.</p></div>
   </header>
-  <label class="tp-admin-field" for="bannedWordsInput">Palavras banidas <span>Uma palavra por linha</span>
-    <textarea id="bannedWordsInput" rows="8" class="form-control tp-admin-monospace" placeholder="exemplo&#10;palavra2&#10;termo3"></textarea>
-  </label>
-  <div class="tp-admin-feedback" id="bannedMsg" role="status" aria-live="polite"></div>
   <div class="tp-admin-operation-block" aria-labelledby="elevenGlobalTitle">
     <div class="tp-admin-operation-heading"><div><h3 id="elevenGlobalTitle">Integração ElevenLabs</h3></div></div>
     <form id="elevenGlobalForm" onsubmit="saveElevenGlobal(event)">
@@ -103,6 +98,29 @@
     </form>
     <div class="tp-admin-feedback" id="elevenGlobalStatus" role="status" aria-live="polite">Carregando configuração da integração…</div>
   </div>
+  <div class="tp-admin-operation-block" aria-labelledby="additionalVoiceModelsTitle">
+    <div class="tp-admin-operation-heading"><div><h3 id="additionalVoiceModelsTitle">Vozes liberadas para clientes</h3><p>Ouça uma prévia de cada voz e marque as opções que os streamers autorizados poderão escolher. As prévias usam uma amostra fixa e o saldo da integração.</p></div></div>
+    <div class="tp-voice-model-provider-status" id="additionalVoiceProviderStatus" role="status" aria-live="polite">Carregando catálogo de vozes…</div>
+    <div class="tp-voice-model-groups" id="additionalVoiceModelsList"><p class="text-secondary">Carregando vozes…</p></div>
+    <div class="tp-admin-feedback" id="additionalVoicePreviewStatus" role="status" aria-live="polite"></div>
+    <div class="tp-admin-feedback" id="additionalVoiceModelsMsg" role="status" aria-live="polite">As liberações são salvas automaticamente ao ativar ou desativar uma voz.</div>
+  </div>
+  <div class="tp-admin-operation-block" aria-labelledby="ttsCreditPackagesTitle">
+    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de créditos de voz</h3><p>Crie pacotes vendidos aos streamers pelo checkout avulso do Mercado Pago.</p></div></div>
+    <div id="ttsCreditPackagesList" class="tp-admin-credit-packages"><p class="text-secondary">Carregando pacotes…</p></div>
+    <div class="tp-admin-operation-actions">
+      <button class="btn btn-nb btn-dark" type="button" id="ttsCreditPackageAdd">Adicionar pacote</button>
+      <button class="btn btn-nb btn-success" type="button" id="ttsCreditPackageSave">Salvar pacotes</button>
+    </div>
+    <div class="tp-admin-feedback" id="ttsCreditPackagesStatus" role="status" aria-live="polite"></div>
+  </div>
+  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
+    <div class="tp-admin-operation-heading"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>Sincronize os presentes compartilhados do TikTok. Os filtros dos seletores no painel são buscas locais e não alteram esta operação.</p></div></div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar catálogo</button>
+      <span class="text-secondary" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
+    </div>
+  </section>
 </section>
 
 <section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
@@ -170,11 +188,12 @@
       <div class="text-secondary tp-admin-help">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
     </div>
     <div class="tp-admin-feature-box" id="elevenAdminBox" hidden>
-      <span class="tp-admin-form-title">ElevenLabs · Leitor de chat</span>
+      <span class="tp-admin-form-title">Voz adicional · Leitor de chat</span>
       <label class="form-check"><input class="form-check-input" type="checkbox" id="elevenAdminEnabled">Liberar vozes adicionais nesta conta</label>
-      <label class="form-label" for="elevenAdminLimit">Limite mensal de caracteres</label>
-      <input class="form-control form-control-sm" type="number" min="0" max="1000000" step="1" id="elevenAdminLimit" value="10000">
-      <button class="btn btn-nb btn-dark" type="button" id="elevenAdminSave" onclick="saveElevenAccess()">Salvar acesso ElevenLabs</button>
+      <div class="text-secondary small">Saldo atual: <strong id="elevenAdminBalance">0 créditos</strong></div>
+      <label class="form-label" for="elevenAdminCreditAdjust">Ajustar saldo (+ ou − créditos)</label>
+      <input class="form-control form-control-sm" type="number" min="-100000000" max="100000000" step="1" id="elevenAdminCreditAdjust" value="0">
+      <button class="btn btn-nb btn-dark" type="button" id="elevenAdminSave" onclick="saveElevenAccess()">Salvar acesso de voz</button>
       <span id="elevenAdminStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span>
     </div>
     <div class="d-flex gap-2 mt-3 align-items-center">
@@ -206,31 +225,25 @@
   </div>
 </section>
 
-<section class="tp-admin-section tp-admin-management" id="adminOperations" aria-labelledby="adminOperationsHeading">
-  <header class="tp-admin-section-heading">
-    <div><h2 id="adminOperationsHeading">Operação local</h2><p>Execute tarefas administrativas neste servidor e acompanhe o processo em tempo real.</p></div>
-  </header>
+<section class="tp-admin-section tp-admin-operations" id="adminOperations" aria-label="Operação local">
   <div class="tp-admin-operation-block" id="wordCatalogAdmin">
-    <div class="tp-admin-operation-heading"><div><h3>Catálogo de palavras</h3><p>Gerencie o vocabulário global. Novas palavras entram em revisão; somente palavras ativas e não banidas podem ser sorteadas.</p></div></div>
-    <div class="tp-admin-metrics" aria-label="Resumo do catálogo"><div><span>Total</span><strong id="wordCatalogTotal">—</strong></div><div><span>Ativas e elegíveis</span><strong id="wordCatalogEligible">—</strong></div><div><span>Em revisão</span><strong id="wordCatalogReview">—</strong></div><div><span>Inativas</span><strong id="wordCatalogInactive">—</strong></div></div>
-    <div class="tp-admin-operation-fields">
+    <div class="tp-admin-operation-heading"><div><h3>Catálogo de palavras</h3><p>Palavras novas são adicionadas ativas e podem ser sorteadas imediatamente.</p></div></div>
+    <div class="tp-admin-metrics tp-word-catalog-summary" aria-label="Resumo do catálogo"><div><span>Total</span><strong id="wordCatalogTotal">—</strong></div><div><span>Ativas e elegíveis</span><strong id="wordCatalogEligible">—</strong></div><div><span>Em revisão</span><strong id="wordCatalogReview">—</strong></div><div><span>Inativas</span><strong id="wordCatalogInactive">—</strong></div></div>
+    <div class="tp-admin-operation-fields tp-word-catalog-filters">
       <label class="tp-admin-field" for="wordCatalogSearch">Buscar palavra <input id="wordCatalogSearch" type="search" maxlength="60" placeholder="Ex.: abelha"></label>
       <label class="tp-admin-field" for="wordCatalogStatus">Status <select id="wordCatalogStatus" class="form-select"><option value="">Todos</option><option value="active">Ativas</option><option value="review">Em revisão</option><option value="inactive">Inativas</option></select></label>
-      <label class="tp-admin-field" for="wordCatalogCategory">Categoria <select id="wordCatalogCategory" class="form-select"><option value="">Todas</option></select></label>
     </div>
-    <div class="table-responsive"><table class="table align-middle tp-admin-table"><thead><tr><th>Palavra</th><th>Categoria</th><th>Dificuldade</th><th>Status</th><th>Origem</th><th>Ação</th></tr></thead><tbody id="wordCatalogRows"><tr><td colspan="6">Carregando catálogo…</td></tr></tbody></table></div>
+    <div class="table-responsive tp-word-catalog-table"><table class="table align-middle tp-admin-table"><thead><tr><th>Palavra</th><th>Status</th><th>Origem</th><th>Ação</th></tr></thead><tbody id="wordCatalogRows"><tr><td colspan="4">Carregando catálogo…</td></tr></tbody></table></div>
     <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-dark" id="wordCatalogPrev" disabled>Anterior</button><span id="wordCatalogPageLabel" class="text-secondary">Página —</span><button type="button" class="btn btn-nb btn-dark" id="wordCatalogNext" disabled>Próxima</button></div>
-    <div class="tp-admin-operation-block">
-      <div class="tp-admin-operation-heading"><div><h4>Adicionar ou importar</h4><p>Uma palavra por linha. Palavras inválidas e duplicadas são informadas e ignoradas.</p></div></div>
-      <div class="tp-admin-operation-fields">
-        <label class="tp-admin-field" for="wordImportCategory">Categoria <input id="wordImportCategory" type="text" maxlength="40" value="geral" list="wordCategoryOptions"><datalist id="wordCategoryOptions"></datalist></label>
-        <label class="tp-admin-field" for="wordImportDifficulty">Dificuldade <select id="wordImportDifficulty" class="form-select"><option value="facil">Fácil</option><option value="media" selected>Média</option><option value="dificil">Difícil</option></select></label>
-        <label class="tp-admin-field" for="wordImportStatus">Status inicial <select id="wordImportStatus" class="form-select"><option value="review" selected>Em revisão</option><option value="active">Ativa</option><option value="inactive">Inativa</option></select></label>
-      </div>
+    <details class="tp-admin-operation-block tp-word-import">
+      <summary class="tp-word-import-summary">Adicionar ou importar palavras <span>Até 2.000 linhas</span></summary>
+      <div class="tp-word-import-content">
+      <div class="tp-admin-operation-heading"><div><p>Uma palavra por linha. Inválidas e duplicadas são informadas e ignoradas.</p></div></div>
       <label class="tp-admin-field" for="wordImportText">Palavras <span>Até 2.000 linhas por importação</span><textarea id="wordImportText" rows="4" class="form-control" placeholder="palavra nova&#10;outra palavra"></textarea></label>
       <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-success" id="wordImportButton">Salvar palavras</button></div>
       <div class="tp-admin-feedback" id="wordCatalogNotice" role="status" aria-live="polite"></div>
-    </div>
+      </div>
+    </details>
   </div>
   <div class="tp-admin-operation-block" id="wordUsageAdmin">
     <div class="tp-admin-operation-heading"><div><h3>Uso e sorteio por streamer</h3><p>Cada streamer recebe palavras aleatórias sem repetição dentro do ciclo. O histórico continua disponível quando um novo ciclo começa.</p></div></div>
@@ -239,50 +252,65 @@
       <label class="tp-admin-field" for="wordUsageSearch">Buscar no histórico <input id="wordUsageSearch" type="search" maxlength="80" placeholder="Palavra ou streamer"></label>
     </div>
     <div class="tp-admin-feedback" id="wordUsageSummary" role="status" aria-live="polite">Selecione um streamer para ver o ciclo.</div>
-    <div class="tp-admin-operation-heading"><div><h4>Filtros de sorteio</h4><p>Sem seleção, todas as categorias e dificuldades ficam elegíveis.</p></div></div>
-    <div class="tp-admin-operation-fields"><fieldset class="tp-admin-field"><legend>Categorias</legend><div id="wordDrawCategories" class="d-flex flex-wrap gap-2"></div></fieldset><fieldset class="tp-admin-field"><legend>Dificuldade</legend><div id="wordDrawDifficulties" class="d-flex flex-wrap gap-2"></div></fieldset></div>
-    <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-success" id="wordDrawSave" disabled>Salvar filtros</button><button type="button" class="btn btn-nb btn-warn" id="wordCycleReset" disabled>Iniciar novo ciclo</button></div>
+    <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-warn" id="wordCycleReset" disabled>Iniciar novo ciclo</button></div>
     <div class="tp-admin-feedback" id="wordUsageNotice" role="status" aria-live="polite"></div>
     <div class="table-responsive"><table class="table align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Palavra</th><th>Jogo</th><th>Ciclo</th><th>Usada em</th></tr></thead><tbody id="wordUsageRows"><tr><td colspan="5">Selecione um streamer para carregar o histórico.</td></tr></tbody></table></div>
     <div class="tp-admin-operation-actions"><button type="button" class="btn btn-nb btn-dark" id="wordUsagePrev" disabled>Anterior</button><span id="wordUsagePageLabel" class="text-secondary">Página —</span><button type="button" class="btn btn-nb btn-dark" id="wordUsageNext" disabled>Próxima</button></div>
   </div>
-  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
-    <div class="tp-admin-operation-heading"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>Sincronize os presentes compartilhados do TikTok. Os filtros dos seletores no painel são buscas locais e não alteram esta operação.</p></div></div>
-    <div class="d-flex flex-wrap align-items-center gap-2">
-      <button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar catálogo</button>
-      <span class="text-secondary" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
+  <div class="tp-admin-operation-block tp-context-generator" id="ctxGenerationAdmin">
+    <div class="tp-admin-operation-heading"><div><h3>Gerar contextos <span class="tp-context-model">Claude Haiku 5.5 · OpenRouter</span></h3><p>Até 50 palavras são organizadas pela IA entre 300 candidatas; vagas restantes são completadas localmente. Contextos válidos são reutilizados.</p></div></div>
+    <div class="tp-admin-operation-fields tp-context-controls">
+      <label class="tp-admin-field" for="ctxInterval">Intervalo entre alvos <span>Minutos; 0 = sem pausa</span><input type="number" id="ctxInterval" value="0" min="0" max="1440" step="0.1"></label>
+      <label class="tp-admin-field" for="ctxWords">Palavras próximas por IA <span>Restante completado localmente</span><input type="number" id="ctxWords" value="50" readonly></label>
+      <label class="tp-admin-field" for="ctxLimit">Limite de contextos <span>0 = todos; os existentes são reutilizados</span><input type="number" id="ctxLimit" value="10" min="0" max="2000"></label>
     </div>
-  </section>
-  <div class="tp-admin-operation-block">
-  <div class="tp-admin-operation-heading"><div><h3>Gerar contextos</h3><p>Claude Haiku 5.5 via OpenRouter ordena até 50 palavras entre as 300 candidatas mais próximas do ranking local. Se vierem menos, as posições restantes são completadas pelo ranking local. Geração paga, salva para reutilização nas próximas partidas.</p></div></div>
-  <div class="tp-admin-operation-fields">
-    <label class="tp-admin-field" for="ctxInterval">Intervalo entre alvos <span>Minutos; 0 = sem pausa</span><input type="number" id="ctxInterval" value="0" min="0" max="1440" step="0.1"></label>
-    <label class="tp-admin-field" for="ctxWords">Palavras próximas por IA <span>Restante completado localmente</span><input type="number" id="ctxWords" value="50" readonly></label>
-    <label class="tp-admin-field" for="ctxLimit">Limite de contextos <span>0 = todos; já gerados são reutilizados</span><input type="number" id="ctxLimit" value="10" min="0" max="2000"></label>
-  </div>
-  <label class="form-check"><input type="checkbox" id="ctxRegenerate"> Regenerar contextos existentes (consome novamente)</label>
-  <div class="tp-admin-operation-actions">
-    <button type="button" class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()" disabled>Ativar geração</button>
-    <button type="button" class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
-  </div>
-  <div class="progress tp-admin-progress" role="progressbar" aria-label="Progresso da geração">
-    <div class="progress-bar" id="ctxBar" style="width:0%">0/0</div>
-  </div>
-  <div class="tp-admin-operation-status">
-    Palavra atual: <b id="ctxCurrent">-</b> &nbsp;|&nbsp; Erros: <b id="ctxErrors">0</b>
-  </div>
-  <div class="tp-admin-feedback" id="ctxMsg" role="status" aria-live="polite"></div>
-  <div class="tp-admin-operation-status" id="ctxConsumption" role="status" aria-live="polite">Carregando consumo…</div>
-  <div class="tp-admin-feedback" id="ctxLifetime"></div>
-  <div class="tp-admin-feedback">Valores em US$ reportados pela API, antes de taxas. Custos não informados ficam pendentes. A parada aguarda a chamada em andamento. Duas falhas consecutivas encerram o lote automaticamente.</div>
-  <div class="tp-admin-log-title">Histórico de execuções (últimas 20)</div>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Início</th><th>Estado</th><th>Processados</th><th>Reutilizados</th><th>Erros</th><th>Tokens</th><th>Custo conhecido</th><th>Custos pendentes</th></tr></thead><tbody id="ctxRunRows"></tbody></table></div>
-  <div class="tp-admin-log-title">Chamadas da última execução (últimas 100)</div>
-  <div class="table-responsive"><table class="table"><thead><tr><th>Palavra</th><th>Estado</th><th>Entrada / saída</th><th>Custo US$</th><th>Tempo</th><th>Resultado</th></tr></thead><tbody id="ctxAttemptRows"></tbody></table></div>
-  <div class="tp-admin-log-wrap" hidden>
-    <div class="tp-admin-log-title">Log de geração</div>
-    <div id="ctxLog"></div>
-  </div>
+    <label class="form-check tp-context-regenerate"><input type="checkbox" id="ctxRegenerate"> Regenerar os existentes (gera novo custo)</label>
+    <div class="tp-admin-operation-actions">
+      <button type="button" class="btn btn-nb btn-success" id="btnGenContextos" onclick="startContextos()" disabled>Ativar geração</button>
+      <button type="button" class="btn btn-nb btn-danger" id="btnStopContextos" onclick="stopContextos()" disabled>Desativar</button>
+      <span class="tp-context-run-state" id="ctxMsg" role="status" aria-live="polite"></span>
+    </div>
+
+    <section class="tp-context-section" aria-labelledby="ctxCoverageHeading">
+      <div class="tp-context-section-heading"><h4 id="ctxCoverageHeading">Cobertura do catálogo</h4><span>Contextos válidos para o vocabulário atual</span></div>
+      <div class="tp-context-kpis tp-context-kpis-coverage">
+        <article><span>Palavras elegíveis</span><strong id="ctxCoverageTotal">—</strong></article>
+        <article><span>Com contexto</span><strong id="ctxCoverageGenerated">—</strong></article>
+        <article><span>Faltando</span><strong id="ctxCoverageRemaining">—</strong></article>
+        <article><span>Cobertura</span><strong id="ctxCoveragePercent">—</strong></article>
+      </div>
+      <div class="tp-context-coverage-track" role="progressbar" aria-label="Cobertura de contextos" aria-valuemin="0" aria-valuemax="100"><div id="ctxCoverageBar"></div></div>
+    </section>
+
+    <section class="tp-context-section" aria-labelledby="ctxProgressHeading">
+      <div class="tp-context-section-heading"><h4 id="ctxProgressHeading">Execução atual</h4><span>O ponto atualiza durante o processamento</span></div>
+      <div class="progress tp-admin-progress" role="progressbar" aria-label="Progresso da geração"><div class="progress-bar" id="ctxBar" style="width:0%">0/0</div></div>
+      <div class="tp-admin-operation-status tp-context-current">Palavra atual: <b id="ctxCurrent">—</b><span>Erros: <b id="ctxErrors">0</b></span></div>
+    </section>
+
+    <section class="tp-context-section" aria-labelledby="ctxUsageHeading">
+      <div class="tp-context-section-heading"><h4 id="ctxUsageHeading">Consumo e custos</h4><span>Valores informados pela API em US$, antes de taxas</span></div>
+      <div class="tp-context-usage-groups">
+        <div><h5>Última execução</h5><div class="tp-context-kpis tp-context-kpis-usage">
+          <article><span>Chamadas salvas / total</span><strong id="ctxRunCalls">—</strong></article>
+          <article><span>Palavras IA + local</span><strong id="ctxRunWords">—</strong></article>
+          <article><span>Tokens entrada / saída</span><strong id="ctxRunTokens">—</strong></article>
+          <article><span>Custo conhecido</span><strong id="ctxRunCost">—</strong><small id="ctxRunPending">—</small></article>
+        </div></div>
+        <div><h5>Acumulado</h5><div class="tp-context-kpis tp-context-kpis-usage">
+          <article><span>Chamadas</span><strong id="ctxTotalCalls">—</strong></article>
+          <article><span>Palavras IA + local</span><strong id="ctxTotalWords">—</strong></article>
+          <article><span>Tokens entrada / saída</span><strong id="ctxTotalTokens">—</strong></article>
+          <article><span>Custo conhecido</span><strong id="ctxTotalCost">—</strong><small id="ctxTotalPending">—</small></article>
+        </div></div>
+      </div>
+      <div class="tp-admin-feedback" id="ctxConsumption" role="status" aria-live="polite">Carregando consumo…</div>
+      <div class="tp-admin-feedback" id="ctxLifetime"></div>
+    </section>
+
+    <details class="tp-context-details"><summary>Histórico de execuções (últimas 20)</summary><div class="table-responsive"><table class="table"><thead><tr><th>Início</th><th>Estado</th><th>Processados</th><th>Reutilizados</th><th>Erros</th><th>Tokens</th><th>Custo conhecido</th><th>Custos pendentes</th></tr></thead><tbody id="ctxRunRows"></tbody></table></div></details>
+    <details class="tp-context-details"><summary>Chamadas da última execução (últimas 100)</summary><div class="table-responsive"><table class="table"><thead><tr><th>Palavra</th><th>Estado</th><th>Entrada / saída</th><th>Custo US$</th><th>Tempo</th><th>Resultado</th></tr></thead><tbody id="ctxAttemptRows"></tbody></table></div></details>
+    <div class="tp-admin-log-wrap" hidden><div class="tp-admin-log-title">Log de geração</div><div id="ctxLog"></div></div>
   </div>
 </section>
 
@@ -558,49 +586,8 @@ async function revokeInvite(id) {
   loadInvites();
 }
 
-let bannedHydrated = false, bannedRunning = false, bannedPending = false, bannedTimer;
-async function loadBannedWords() {
-  try {
-    const data = await apiFetch("/api/admin/banned-words");
-    if (!data.success) throw new Error(data.error || "Falha ao carregar");
-    const input = document.getElementById("bannedWordsInput");
-    const counter = document.getElementById("bannedCount");
-    if (input) { input.value = (data.words || []).join("\n"); input.disabled = false; }
-    bannedHydrated = true;
-    if (counter) counter.textContent = (data.words || []).length;
-    document.getElementById("bannedMsg").textContent = "Alterações salvas automaticamente.";
-  } catch (e) { document.getElementById("bannedMsg").textContent = "Falha ao carregar. Recarregue a página para tentar novamente."; }
-}
-
-async function saveBannedWords() {
-  if (!bannedHydrated || bannedRunning) return;
-  bannedRunning = true; bannedPending = false;
-  const snapshot = document.getElementById("bannedWordsInput").value;
-  const input = document.getElementById("bannedWordsInput");
-  const msg = document.getElementById("bannedMsg");
-  if (msg) msg.textContent = "Salvando…";
-  const words = (input ? input.value : "").split("\n").map(s => s.trim()).filter(Boolean);
-  try {
-    const data = await apiFetch("/api/admin/banned-words", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ words }),
-    });
-    if (data.success) {
-      const counter = document.getElementById("bannedCount");
-      if (counter) counter.textContent = data.count || 0;
-      if (msg && document.getElementById("bannedWordsInput").value === snapshot) msg.textContent = `${data.count} palavra(s) banida(s) salvas.`;
-    } else if (msg) {
-      msg.textContent = data.error || "Erro ao salvar";
-    }
-  } catch (e) {
-    if (msg) msg.textContent = "Não salvo: " + e.message + ". Valores mantidos; edite para tentar novamente.";
-  } finally { bannedRunning = false; if (bannedPending) saveBannedWords(); }
-}
-
 let wordCatalogPage = 1, wordCatalogPages = 1, wordUsagePage = 1, wordUsagePages = 1;
-let wordUsageState = { streamers: [], categories: [], difficulties: [] };
-const wordDifficultyLabels = { facil: "Fácil", media: "Média", dificil: "Difícil" };
+let wordUsageState = { streamers: [] };
 const wordStatusLabels = { active: "Ativa", review: "Em revisão", inactive: "Inativa" };
 function setSelectOptions(select, items, selected, labels = {}) {
   select.replaceChildren();
@@ -612,18 +599,11 @@ function setSelectOptions(select, items, selected, labels = {}) {
 async function loadWordCatalog() {
   const params = new URLSearchParams({ page: String(wordCatalogPage), page_size: "50",
     search: document.getElementById("wordCatalogSearch").value.trim(),
-    status: document.getElementById("wordCatalogStatus").value,
-    category: document.getElementById("wordCatalogCategory").value });
+    status: document.getElementById("wordCatalogStatus").value });
   try {
     const data = await apiFetch(`/api/admin/word-catalog?${params}`);
     if (!data.success) throw new Error(data.error || "Falha ao carregar o catálogo.");
     wordCatalogPages = Math.max(1, data.pages || 1);
-    const categorySelect = document.getElementById("wordCatalogCategory"), chosenCategory = categorySelect.value;
-    categorySelect.replaceChildren(new Option("Todas", ""));
-    for (const category of data.categories || []) categorySelect.appendChild(new Option(category, category));
-    categorySelect.value = chosenCategory;
-    const categoryList = document.getElementById("wordCategoryOptions"); categoryList.replaceChildren();
-    for (const category of data.categories || []) categoryList.appendChild(new Option(category, category));
     document.getElementById("wordCatalogTotal").textContent = data.summary?.total ?? 0;
     document.getElementById("wordCatalogEligible").textContent = data.summary?.eligible ?? data.summary?.active ?? 0;
     document.getElementById("wordCatalogReview").textContent = data.summary?.review ?? 0;
@@ -632,10 +612,6 @@ async function loadWordCatalog() {
     for (const item of data.items || []) {
       const row = document.createElement("tr"), word = document.createElement("td");
       word.textContent = `${item.word}${item.banned ? " · banida globalmente" : ""}`; row.appendChild(word);
-      const categoryCell = document.createElement("td"), category = document.createElement("input");
-      category.className = "form-control"; category.maxLength = 40; category.value = item.category; categoryCell.appendChild(category); row.appendChild(categoryCell);
-      const difficultyCell = document.createElement("td"), difficulty = document.createElement("select"); difficulty.className = "form-select";
-      setSelectOptions(difficulty, ["facil", "media", "dificil"], item.difficulty, wordDifficultyLabels); difficultyCell.appendChild(difficulty); row.appendChild(difficultyCell);
       const statusCell = document.createElement("td"), status = document.createElement("select"); status.className = "form-select";
       setSelectOptions(status, ["active", "review", "inactive"], item.status, wordStatusLabels); statusCell.appendChild(status); row.appendChild(statusCell);
       const source = document.createElement("td"); source.textContent = item.source === "words.json" ? "Catálogo inicial" : item.source === "import" ? "Importada" : "Manual"; row.appendChild(source);
@@ -644,13 +620,13 @@ async function loadWordCatalog() {
         save.disabled = true;
         try {
           const result = await apiFetch(`/api/admin/word-catalog/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ category: category.value, difficulty: difficulty.value, status: status.value }) });
+            body: JSON.stringify({ status: status.value }) });
           document.getElementById("wordCatalogNotice").textContent = result.success ? `“${item.word}” atualizado.` : result.error || "Falha ao salvar.";
           await loadWordCatalog(); await loadWordUsage();
         } catch (error) { document.getElementById("wordCatalogNotice").textContent = error.message; save.disabled = false; }
       }); action.appendChild(save); row.appendChild(action); body.appendChild(row);
     }
-    if (!(data.items || []).length) { const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 6; cell.textContent = "Nenhuma palavra encontrada."; row.appendChild(cell); body.appendChild(row); }
+    if (!(data.items || []).length) { const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 4; cell.textContent = "Nenhuma palavra encontrada."; row.appendChild(cell); body.appendChild(row); }
     document.getElementById("wordCatalogPageLabel").textContent = `Página ${data.page} de ${wordCatalogPages} · ${data.total} palavras`;
     document.getElementById("wordCatalogPrev").disabled = data.page <= 1; document.getElementById("wordCatalogNext").disabled = data.page >= wordCatalogPages;
   } catch (error) { document.getElementById("wordCatalogNotice").textContent = error.message || "Não foi possível carregar o catálogo."; }
@@ -661,8 +637,7 @@ async function importWordCatalog() {
   const button = document.getElementById("wordImportButton"); button.disabled = true;
   try {
     const data = await apiFetch("/api/admin/word-catalog/import", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, category: document.getElementById("wordImportCategory").value,
-        difficulty: document.getElementById("wordImportDifficulty").value, status: document.getElementById("wordImportStatus").value }) });
+      body: JSON.stringify({ text }) });
     if (!data.success) throw new Error(data.error || "Falha ao importar palavras.");
     document.getElementById("wordCatalogNotice").textContent = `${data.inserted} adicionadas · ${data.duplicates} duplicadas · ${data.invalid} inválidas${data.invalid_examples?.length ? ` · Exemplos inválidos: ${data.invalid_examples.join(", ")}` : ""}`;
     document.getElementById("wordImportText").value = ""; wordCatalogPage = 1; await loadWordCatalog();
@@ -676,7 +651,7 @@ async function loadWordUsage() {
   try {
     const data = await apiFetch(`/api/admin/word-usage?${params}`);
     if (!data.success) throw new Error(data.error || "Falha ao carregar o uso das palavras.");
-    wordUsageState.streamers = data.streamers || []; wordUsageState.categories = data.categories || [];
+    wordUsageState.streamers = data.streamers || [];
     wordUsagePages = Math.max(1, data.history?.pages || 1);
     const select = document.getElementById("wordUsageStreamer"), previous = select.value; select.replaceChildren(new Option("Selecione uma conta", ""));
     for (const streamer of wordUsageState.streamers) {
@@ -686,10 +661,8 @@ async function loadWordUsage() {
     select.value = previous && wordUsageState.streamers.some(row => String(row.tenant_id) === previous) ? previous : "";
     const activeStreamer = wordUsageState.streamers.find(row => String(row.tenant_id) === select.value);
     const summary = document.getElementById("wordUsageSummary"), body = document.getElementById("wordUsageRows"); body.replaceChildren();
-    const saveFilters = document.getElementById("wordDrawSave"), resetCycle = document.getElementById("wordCycleReset");
-    saveFilters.disabled = !activeStreamer; resetCycle.disabled = !activeStreamer;
-    renderWordFilterChecks("wordDrawCategories", (data.categories || []), activeStreamer?.categories || [], "category");
-    renderWordFilterChecks("wordDrawDifficulties", ["facil", "media", "dificil"], activeStreamer?.difficulties || [], "difficulty", wordDifficultyLabels);
+    const resetCycle = document.getElementById("wordCycleReset");
+    resetCycle.disabled = !activeStreamer;
     if (!activeStreamer) {
       summary.textContent = `${wordUsageState.streamers.length} streamers · ${data.catalog?.eligible || 0} palavras ativas e não banidas no catálogo.`;
       const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 5; cell.textContent = "Selecione um streamer para ver o histórico."; row.appendChild(cell); body.appendChild(row);
@@ -713,26 +686,6 @@ async function loadWordUsage() {
     document.getElementById("wordUsagePrev").disabled = data.history.page <= 1;
     document.getElementById("wordUsageNext").disabled = data.history.page >= wordUsagePages;
   } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message || "Não foi possível carregar o uso das palavras."; }
-}
-function renderWordFilterChecks(id, values, selected, type, labels = {}) {
-  const root = document.getElementById(id); root.replaceChildren();
-  for (const value of values) {
-    const label = document.createElement("label"), input = document.createElement("input"); input.type = "checkbox";
-    input.value = value; input.dataset.filterType = type; input.checked = selected.includes(value);
-    label.className = "form-check form-check-inline"; label.append(input, document.createTextNode(` ${labels[value] || value}`)); root.appendChild(label);
-  }
-  if (!values.length) root.textContent = "Nenhuma opção cadastrada.";
-}
-async function saveWordDrawFilters() {
-  const tenantId = document.getElementById("wordUsageStreamer").value; if (!tenantId) return;
-  const categories = [...document.querySelectorAll('#wordDrawCategories input:checked')].map(input => input.value);
-  const difficulties = [...document.querySelectorAll('#wordDrawDifficulties input:checked')].map(input => input.value);
-  const button = document.getElementById("wordDrawSave"); button.disabled = true;
-  try {
-    const data = await apiFetch(`/api/admin/word-usage/${tenantId}/settings`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ categories, difficulties }) });
-    document.getElementById("wordUsageNotice").textContent = data.success ? "Filtros salvos; valem no próximo sorteio." : data.error || "Falha ao salvar filtros.";
-    await loadWordUsage();
-  } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message; button.disabled = false; }
 }
 async function resetWordCycle() {
   const tenantId = document.getElementById("wordUsageStreamer").value; if (!tenantId) return;
@@ -996,6 +949,316 @@ function clearElevenGlobal() {
   return saveElevenGlobal(null, true);
 }
 
+let additionalVoiceModels = [];
+let additionalVoiceSaveQueue = Promise.resolve();
+let additionalVoiceSaveRevision = 0;
+function renderAdditionalVoiceModels() {
+  const container = document.getElementById("additionalVoiceModelsList");
+  container.replaceChildren();
+  const groups = [
+    { id: "padrao", label: "Vozes padrão" },
+    { id: "personalizada", label: "Vozes personalizadas" },
+  ];
+  for (const group of groups) {
+    const models = additionalVoiceModels.filter(model => model.voice_type === group.id);
+    if (!models.length) continue;
+    const section = document.createElement("section");
+    section.className = "tp-voice-model-group";
+    const title = document.createElement("h4"); title.textContent = group.label; section.appendChild(title);
+    for (const model of models) {
+      const modelHeading = document.createElement("h5");
+      modelHeading.className = "tp-voice-model-name";
+      modelHeading.textContent = model.label + (model.configured ? "" : " · integração sem chave");
+      section.appendChild(modelHeading);
+      const costField = document.createElement("label");
+      costField.className = "tp-admin-field tp-admin-field-compact tp-admin-credit-rate";
+      costField.append(document.createTextNode("Custo ao cliente · créditos por 100 caracteres"));
+      const costInput = document.createElement("input");
+      costInput.type = "number"; costInput.min = "0"; costInput.max = "100000"; costInput.step = "1";
+      costInput.className = "form-control form-control-sm"; costInput.value = String(model.credits_per_100_chars || 0);
+      costInput.dataset.creditRate = model.id;
+      costInput.setAttribute("aria-label", `Créditos por 100 caracteres para ${model.label}`);
+      costInput.addEventListener("change", () => saveAdditionalVoiceModels());
+      costField.appendChild(costInput); section.appendChild(costField);
+      if (model.admin_note) {
+        const note = document.createElement("p"); note.className = "text-secondary";
+        note.textContent = model.admin_note; section.appendChild(note);
+      }
+      if (!model.voices.length) {
+        const empty = document.createElement("p"); empty.className = "text-secondary";
+        empty.textContent = model.configured ? (model.pt_br_note || "Nenhuma voz identificada como português brasileiro neste modelo.") : "Configure a integração para carregar as vozes.";
+        section.appendChild(empty); continue;
+      }
+      const voiceGrid = document.createElement("div"); voiceGrid.className = "tp-voice-model-voice-grid";
+      for (const voice of model.voices) {
+        const row = document.createElement("div"); row.className = "tp-voice-model-row";
+        const summary = document.createElement("span");
+        const name = document.createElement("strong"); name.textContent = voice.label; summary.appendChild(name);
+        const language = document.createElement("small"); language.textContent = voice.stale
+          ? "Voz fora do catálogo PT-BR atual; desmarque para removê-la."
+          : (voice.language || "Português (Brasil)"); summary.appendChild(language);
+        const preview = document.createElement("button"); preview.type = "button"; preview.className = "tp-voice-preview-button";
+        preview.dataset.state = "idle"; preview.innerHTML = '<span class="tp-voice-preview-glyph" aria-hidden="true"></span>';
+        preview.disabled = !model.catalog_available || voice.stale;
+        preview.dataset.idleLabel = `Ouvir prévia de ${voice.label} (${model.label})`;
+        preview.setAttribute("aria-label", preview.dataset.idleLabel);
+        preview.title = `Ouvir prévia de ${voice.label}`;
+        preview.addEventListener("click", () => previewAdditionalVoice(model.id, voice.key, preview));
+        const toggle = document.createElement("input"); toggle.type = "checkbox"; toggle.className = "form-check-input";
+        toggle.checked = voice.enabled === true; toggle.dataset.voiceId = voice.key; toggle.dataset.modelId = model.id;
+        toggle.dataset.stale = String(voice.stale === true);
+        toggle.disabled = !model.catalog_available;
+        toggle.setAttribute("aria-label", `Exibir ${voice.label} para streamers`);
+        toggle.addEventListener("change", () => saveAdditionalVoiceModels(toggle));
+        const check = document.createElement("label"); check.className = "tp-voice-release-control";
+        const switchTrack = document.createElement("span"); switchTrack.className = "tp-voice-release-track"; switchTrack.setAttribute("aria-hidden", "true");
+        check.append(toggle, switchTrack);
+        row.append(preview, summary, check); voiceGrid.appendChild(row);
+      }
+      section.appendChild(voiceGrid);
+    }
+    container.appendChild(section);
+  }
+}
+
+async function loadAdditionalVoiceModels() {
+  const status = document.getElementById("additionalVoiceProviderStatus");
+  try {
+    const data = await apiFetch("/api/admin/tts/additional-models");
+    if (!data.success) throw new Error("Falha ao carregar o catálogo.");
+    additionalVoiceModels = data.models || [];
+    renderAdditionalVoiceModels();
+    const openRouter = data.openrouter_configured ? "OpenRouter conectado" : "OpenRouter sem chave";
+    const eleven = data.elevenlabs_configured ? "ElevenLabs conectada" : "ElevenLabs sem chave";
+    status.textContent = `${openRouter} · ${eleven}. O catálogo prioriza sotaque PT-BR identificado; vozes próprias da ElevenLabs sem idioma marcado aparecem para teste manual. Ative somente vozes aprovadas para os clientes.${data.catalog_error ? " Parte do catálogo não pôde ser carregada." : ""}`;
+  } catch {
+    status.textContent = "Não foi possível carregar o catálogo de vozes.";
+    document.getElementById("additionalVoiceModelsMsg").textContent = "Atualize a página para tentar novamente.";
+  }
+}
+
+function saveAdditionalVoiceModels(changedToggle) {
+  const message = document.getElementById("additionalVoiceModelsMsg");
+  const revision = ++additionalVoiceSaveRevision;
+  const task = async () => {
+    const inputs = Array.from(document.querySelectorAll("#additionalVoiceModelsList [data-voice-id]"));
+    const voices = inputs.filter(input => input.checked && !input.disabled)
+      .map(input => ({ model_id: input.dataset.modelId, voice_id: input.dataset.voiceId }));
+    const model_ids = additionalVoiceModels.filter(model => model.catalog_available).map(model => model.id);
+    const model_costs = Array.from(document.querySelectorAll("#additionalVoiceModelsList [data-credit-rate]"))
+      .map(input => ({ model_id: input.dataset.creditRate, credits_per_100_chars: Number(input.value) }));
+    if (revision === additionalVoiceSaveRevision) message.textContent = "Salvando alteração…";
+    try {
+      const data = await apiFetch("/api/admin/tts/additional-models", { method: "PUT",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voices, model_ids, model_costs }) });
+      if (!data.success) throw new Error(data.error || "Não foi possível salvar.");
+      if (revision !== additionalVoiceSaveRevision) return;
+      additionalVoiceModels = data.models || additionalVoiceModels;
+      const removedStaleVoice = changedToggle?.dataset.stale === "true" && !changedToggle.checked;
+      if (removedStaleVoice) {
+        renderAdditionalVoiceModels();
+        const nextToggle = Array.from(document.querySelectorAll("#additionalVoiceModelsList [data-voice-id]"))
+          .find(input => input.dataset.modelId === changedToggle.dataset.modelId) ||
+          document.querySelector("#additionalVoiceModelsList [data-voice-id]");
+        nextToggle?.focus();
+      }
+      message.textContent = "Alteração salva automaticamente.";
+      if (model_costs.length) {
+        const saved = new Map(model_costs.map(item => [item.model_id, item.credits_per_100_chars]));
+        for (const model of additionalVoiceModels) if (saved.has(model.id)) model.credits_per_100_chars = saved.get(model.id);
+        message.textContent = "Vozes e tarifas em créditos salvas automaticamente.";
+      }
+    } catch (error) {
+      if (revision !== additionalVoiceSaveRevision) return;
+      const errorMessage = error?.message || "Não foi possível salvar as vozes.";
+      await loadAdditionalVoiceModels();
+      message.textContent = `${errorMessage} O estado salvo foi recarregado.`;
+    }
+  };
+  additionalVoiceSaveQueue = additionalVoiceSaveQueue.then(task, task);
+  return additionalVoiceSaveQueue;
+}
+
+function createTtsCreditPackageRow(item = {}) {
+  const row = document.createElement("div");
+  row.className = "tp-admin-credit-package-row";
+  row.dataset.packageId = item.id || "";
+  const field = (labelText, type, value, attrs = {}) => {
+    const label = document.createElement("label"); label.className = "tp-admin-field tp-admin-field-compact";
+    label.appendChild(document.createTextNode(labelText));
+    const input = document.createElement("input"); input.className = "form-control form-control-sm"; input.type = type;
+    if (type === "checkbox") input.checked = value === true || value === 1;
+    else input.value = value ?? "";
+    for (const [key, val] of Object.entries(attrs)) input.setAttribute(key, val);
+    label.appendChild(input); return { label, input };
+  };
+  const name = field("Nome do pacote", "text", item.name || "", { maxlength: "80", placeholder: "Ex.: Básico" });
+  const credits = field("Créditos", "number", item.credits ?? "", { min: "1", max: "100000000", step: "1" });
+  const price = field("Preço (R$)", "number", item.price_cents ? (item.price_cents / 100).toFixed(2) : "",
+    { min: "0.01", max: "1000000", step: "0.01" });
+  const enabled = field("Vendido aos clientes", "checkbox", item.enabled !== false && item.enabled !== 0);
+  const remove = document.createElement("button"); remove.type = "button"; remove.className = "btn btn-nb btn-danger";
+  remove.textContent = "Remover"; remove.setAttribute("aria-label", `Remover pacote ${item.name || "novo"}`);
+  remove.addEventListener("click", () => row.remove());
+  row.append(name.label, credits.label, price.label, enabled.label, remove);
+  row._fields = { name: name.input, credits: credits.input, price: price.input, enabled: enabled.input };
+  return row;
+}
+
+function renderTtsCreditPackages(items = []) {
+  const list = document.getElementById("ttsCreditPackagesList");
+  list.replaceChildren();
+  if (!items.length) list.appendChild(Object.assign(document.createElement("p"), {
+    className: "text-secondary", textContent: "Nenhum pacote criado. Adicione um pacote para começar a vender créditos.",
+  }));
+  for (const item of items) list.appendChild(createTtsCreditPackageRow(item));
+}
+
+async function loadTtsCreditPackages() {
+  const status = document.getElementById("ttsCreditPackagesStatus");
+  try {
+    const data = await apiFetch("/api/admin/tts/credit-packages");
+    if (!data.success) throw new Error(data.error || "Falha ao carregar os pacotes.");
+    renderTtsCreditPackages(data.packages || []);
+    status.textContent = "Defina o preço e os créditos de cada pacote; pagamentos aprovados no Mercado Pago entram automaticamente no saldo.";
+  } catch {
+    status.textContent = "Não foi possível carregar os pacotes de créditos.";
+  }
+}
+
+async function saveTtsCreditPackages() {
+  const status = document.getElementById("ttsCreditPackagesStatus");
+  const rows = Array.from(document.querySelectorAll("#ttsCreditPackagesList .tp-admin-credit-package-row"));
+  const packages = rows.map(row => ({ id: row.dataset.packageId || undefined, name: row._fields.name.value.trim(),
+    credits: Number(row._fields.credits.value), price_cents: Math.round(Number(row._fields.price.value) * 100),
+    enabled: row._fields.enabled.checked }));
+  if (packages.some(item => !item.name || !Number.isSafeInteger(item.credits) || item.credits < 1
+      || !Number.isSafeInteger(item.price_cents) || item.price_cents < 1)) {
+    status.textContent = "Preencha o nome, a quantidade de créditos e o preço válido de cada pacote.";
+    return;
+  }
+  status.textContent = "Salvando pacotes…";
+  try {
+    const data = await apiFetch("/api/admin/tts/credit-packages", { method: "PUT",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packages }) });
+    if (!data.success) throw new Error(data.error || "Não foi possível salvar os pacotes.");
+    renderTtsCreditPackages(data.packages || []);
+    status.textContent = "Pacotes salvos.";
+  } catch (error) { status.textContent = error.message || "Não foi possível salvar os pacotes."; }
+}
+
+let activeVoicePreview = null;
+let activeVoicePreviewUrl = "";
+let activeVoicePreviewButton = null;
+let activeVoicePreviewRequest = null;
+let activeVoicePreviewGeneration = 0;
+let voicePreviewAudioContext = null;
+
+function resetVoicePreviewButton(button) {
+  if (!button) return;
+  button.disabled = false;
+  button.dataset.state = "idle";
+  button.setAttribute("aria-label", button.dataset.idleLabel || "Ouvir prévia da voz");
+  button.title = button.dataset.idleLabel || "Ouvir prévia da voz";
+}
+
+function stopVoicePreview() {
+  activeVoicePreviewGeneration += 1;
+  if (activeVoicePreviewRequest) activeVoicePreviewRequest.abort();
+  activeVoicePreviewRequest = null;
+  if (activeVoicePreview) {
+    if (activeVoicePreview instanceof Audio) { activeVoicePreview.pause(); activeVoicePreview.src = ""; }
+    else { try { activeVoicePreview.stop(); } catch {} }
+  }
+  if (activeVoicePreviewUrl) URL.revokeObjectURL(activeVoicePreviewUrl);
+  resetVoicePreviewButton(activeVoicePreviewButton);
+  activeVoicePreview = null;
+  activeVoicePreviewUrl = "";
+  activeVoicePreviewButton = null;
+}
+
+async function previewAdditionalVoice(modelId, voiceId, button) {
+  if (activeVoicePreviewButton === button && activeVoicePreview) {
+    stopVoicePreview();
+    document.getElementById("additionalVoicePreviewStatus").textContent = "Prévia interrompida.";
+    return;
+  }
+  stopVoicePreview();
+  const generation = activeVoicePreviewGeneration;
+  const status = document.getElementById("additionalVoicePreviewStatus");
+  status.textContent = "Gerando uma amostra curta…";
+  button.disabled = true; button.dataset.state = "loading";
+  const idleLabel = button.getAttribute("aria-label") || "Ouvir prévia da voz";
+  button.dataset.idleLabel = idleLabel;
+  button.setAttribute("aria-label", `Gerando prévia de ${voiceId}`);
+  let resumeAudio = Promise.resolve();
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) {
+    try {
+      if (!voicePreviewAudioContext || voicePreviewAudioContext.state === "closed") voicePreviewAudioContext = new AudioContextClass();
+      resumeAudio = voicePreviewAudioContext.resume().then(() => null, error => error);
+    } catch {}
+  }
+  const controller = new AbortController();
+  activeVoicePreviewRequest = controller;
+  try {
+    const response = await fetch("/api/admin/tts/voice-preview", { method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ model_id: modelId, voice_id: voiceId }), signal: controller.signal });
+    if (generation !== activeVoicePreviewGeneration) return;
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      if (response.status === 404) throw new Error("A rota de prévia não está carregada neste servidor (HTTP 404). Reinicie o servidor e atualize o painel.");
+      if (response.status === 401 || response.status === 403) throw new Error("Sua sessão administrativa expirou ou não tem permissão. Entre novamente e tente outra vez.");
+      throw new Error(error.error || `Não foi possível gerar a prévia desta voz (HTTP ${response.status}).`);
+    }
+    const blob = await response.blob();
+    if (generation !== activeVoicePreviewGeneration) return;
+    if (!blob.type.startsWith("audio/")) throw new Error("O provedor não retornou um áudio compatível.");
+    activeVoicePreviewButton = button;
+    button.disabled = false; button.dataset.state = "playing";
+    button.setAttribute("aria-label", `Parar prévia de ${voiceId}`);
+    button.title = `Parar prévia de ${voiceId}`;
+    status.textContent = "Prévia da voz em reprodução.";
+    if (voicePreviewAudioContext) {
+      const audioData = await blob.arrayBuffer();
+      if (generation !== activeVoicePreviewGeneration) return;
+      const audioBuffer = await voicePreviewAudioContext.decodeAudioData(audioData);
+      if (generation !== activeVoicePreviewGeneration) return;
+      const resumeError = await resumeAudio;
+      if (resumeError) throw resumeError;
+      const source = voicePreviewAudioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(voicePreviewAudioContext.destination);
+      source.onended = () => {
+        if (activeVoicePreview === source) { stopVoicePreview(); status.textContent = "Prévia concluída."; }
+      };
+      activeVoicePreview = source;
+      source.start();
+    } else {
+      activeVoicePreviewUrl = URL.createObjectURL(blob);
+      const audio = new Audio(activeVoicePreviewUrl);
+      activeVoicePreview = audio;
+      audio.addEventListener("ended", () => {
+        if (activeVoicePreview === audio) { stopVoicePreview(); status.textContent = "Prévia concluída."; }
+      }, { once: true });
+      await audio.play();
+    }
+  } catch (error) {
+    if (error.name === "AbortError" || generation !== activeVoicePreviewGeneration) return;
+    stopVoicePreview();
+    resetVoicePreviewButton(button);
+    status.textContent = error.name === "NotAllowedError"
+      ? "O navegador bloqueou o áudio. Clique em reproduzir novamente para liberar a prévia."
+      : error.name === "EncodingError"
+        ? "O áudio recebido não pôde ser decodificado. Verifique o formato retornado pelo provedor."
+        : error.message || "Não foi possível reproduzir a prévia desta voz.";
+  } finally {
+    if (activeVoicePreviewRequest === controller) activeVoicePreviewRequest = null;
+    if (generation === activeVoicePreviewGeneration && activeVoicePreviewButton !== button) resetVoicePreviewButton(button);
+  }
+}
+
 async function loadElevenAccess(id) {
   const box = document.getElementById("elevenAdminBox");
   const button = document.getElementById("elevenAdminSave");
@@ -1007,9 +1270,10 @@ async function loadElevenAccess(id) {
     if (editingId !== id) return;
     if (!data.success) throw new Error("Falha ao carregar.");
     document.getElementById("elevenAdminEnabled").checked = data.enabled;
-    document.getElementById("elevenAdminLimit").value = data.monthly_limit;
-    document.getElementById("elevenAdminStatus").textContent = data.configured
-      ? `${data.used_characters} caracteres reservados neste mês.` : "Chave ElevenLabs pendente no servidor.";
+    document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} créditos`;
+    document.getElementById("elevenAdminCreditAdjust").value = "0";
+    document.getElementById("elevenAdminStatus").textContent = data.configured || data.openrouter_configured
+      ? "Acesso e saldo de créditos disponíveis." : "Configure ElevenLabs ou OpenRouter nas integrações globais.";
     button.disabled = false;
   } catch {
     if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível carregar o acesso.";
@@ -1023,12 +1287,22 @@ async function saveElevenAccess() {
   button.disabled = true;
   try {
     const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`, { method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: document.getElementById("elevenAdminEnabled").checked,
-        monthly_limit: Number(document.getElementById("elevenAdminLimit").value) }) });
+      body: JSON.stringify({ enabled: document.getElementById("elevenAdminEnabled").checked }) });
     if (!data.success) throw new Error(data.error || "Falha ao salvar.");
-    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Acesso ElevenLabs salvo.";
-  } catch {
-    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível salvar. Confira o limite e tente novamente.";
+    const amount = Number(document.getElementById("elevenAdminCreditAdjust").value);
+    if (amount) {
+      const adjusted = await apiFetch(`/api/admin/users/${id}/tts-credits`, { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount }) });
+      if (!adjusted.success) throw new Error(adjusted.error || "Ajuste de créditos não foi aplicado.");
+      data.credit_balance = adjusted.balance;
+    }
+    if (editingId === id) {
+      document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} créditos`;
+      document.getElementById("elevenAdminCreditAdjust").value = "0";
+      document.getElementById("elevenAdminStatus").textContent = amount ? "Acesso salvo e saldo ajustado." : "Acesso de voz salvo.";
+    }
+  } catch (error) {
+    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = error.message || "Não foi possível salvar o acesso ou saldo.";
   } finally { if (editingId === id) button.disabled = false; }
 }
 
@@ -1091,6 +1365,8 @@ apiFetch("/api/auth/me").then((data) => {
   }
   document.getElementById("giftCatalogAdminCard").hidden = false;
   loadElevenGlobal();
+  loadAdditionalVoiceModels();
+  loadTtsCreditPackages();
   refreshGiftSyncState();
 });
 
@@ -1149,7 +1425,7 @@ async function pollContextos() {
   try {
     const data = await apiFetch("/api/admin/generate-contexts/status");
     if (!data.success) throw new Error("STATUS_FAILED");
-    if (!data.model || data.generator_version !== 3) {
+    if (!data.model || data.generator_version !== 4) {
       document.getElementById("btnGenContextos").disabled = true;
       document.getElementById("btnStopContextos").disabled = true;
       document.getElementById("ctxMsg").textContent = "Reinicie o servidor em uma janela segura para ativar o novo gerador OpenRouter.";
@@ -1158,8 +1434,19 @@ async function pollContextos() {
       return;
     }
     const bar = document.getElementById("ctxBar");
-    bar.style.width = (data.total ? Math.round(data.done / data.total * 100) : 0) + "%";
+    const runPercent = data.total ? Math.round(data.done / data.total * 100) : 0;
+    bar.style.width = runPercent + "%";
     bar.textContent = `${data.done}/${data.total}`;
+    bar.parentElement.setAttribute("aria-valuenow", String(runPercent));
+    const number = value => Number(value || 0).toLocaleString("pt-BR");
+    const coverage = data.coverage || {};
+    document.getElementById("ctxCoverageTotal").textContent = coverage.available ? number(coverage.total) : "—";
+    document.getElementById("ctxCoverageGenerated").textContent = coverage.available ? number(coverage.generated) : "—";
+    document.getElementById("ctxCoverageRemaining").textContent = coverage.available ? number(coverage.remaining) : "—";
+    document.getElementById("ctxCoveragePercent").textContent = coverage.available ? `${coverage.percent}%` : "—";
+    const coverageBar = document.getElementById("ctxCoverageBar");
+    coverageBar.style.width = coverage.available ? `${coverage.percent}%` : "0%";
+    coverageBar.parentElement.setAttribute("aria-valuenow", coverage.available ? String(coverage.percent) : "0");
     document.getElementById("ctxCurrent").textContent = data.current || "—";
     document.getElementById("ctxErrors").textContent = data.errors || 0;
     const labels = { idle:"Aguardando geração", running:"Gerando", stopping:"Aguardando a chamada atual para parar", completed:"Concluído", failed:"Falhou", stopped:"Interrompido pelo administrador", interrupted:"Interrompido por reinício", pending:"Em andamento", received:"Validando resposta", success:"Salvo" };
@@ -1168,8 +1455,18 @@ async function pollContextos() {
     document.getElementById("btnGenContextos").disabled = !!data.running || !data.configured;
     document.getElementById("btnStopContextos").disabled = !data.running || data.status === "stopping";
     const c = data.consumption || {}, total = data.totals || {};
-    document.getElementById("ctxConsumption").textContent = `Última execução: ${c.requests || 0} chamadas · ${c.succeeded || 0} salvas (${c.ai_words || 0} IA + ${c.local_words || 0} locais) · ${c.partially_completed || 0} completadas localmente · ${c.failed || 0} falhas · ${c.prompt_tokens || 0} tokens de entrada / ${c.completion_tokens || 0} de saída · US$ ${money(c.known_cost_usd)} · ${c.unknown_cost_requests || 0} custos pendentes`;
-    document.getElementById("ctxLifetime").textContent = `Total acumulado: ${total.ai_words || 0} palavras IA + ${total.local_words || 0} locais · ${total.untracked_origin_requests || 0} contextos antigos sem origem registrada · US$ ${money(total.known_cost_usd)} · ${total.requests || 0} chamadas · ${total.unknown_cost_requests || 0} custos pendentes${!data.configured ? " · Configure OPENROUTER_API_KEY no servidor." : ""}`;
+    document.getElementById("ctxRunCalls").textContent = `${number(c.succeeded)} / ${number(c.requests)}`;
+    document.getElementById("ctxRunWords").textContent = `${number(c.ai_words)} IA + ${number(c.local_words)} local`;
+    document.getElementById("ctxRunTokens").textContent = `${number(c.prompt_tokens)} / ${number(c.completion_tokens)}`;
+    document.getElementById("ctxRunCost").textContent = `US$ ${money(c.known_cost_usd)}`;
+    document.getElementById("ctxRunPending").textContent = `${number(c.unknown_cost_requests)} custos pendentes · ${number(c.failed)} falhas`;
+    document.getElementById("ctxTotalCalls").textContent = number(total.requests);
+    document.getElementById("ctxTotalWords").textContent = `${number(total.ai_words)} IA + ${number(total.local_words)} local`;
+    document.getElementById("ctxTotalTokens").textContent = `${number(total.prompt_tokens)} / ${number(total.completion_tokens)}`;
+    document.getElementById("ctxTotalCost").textContent = `US$ ${money(total.known_cost_usd)}`;
+    document.getElementById("ctxTotalPending").textContent = `${number(total.unknown_cost_requests)} custos pendentes`;
+    document.getElementById("ctxConsumption").textContent = "Custos são os informados pela API, antes de taxas. Chamadas sem custo retornado ficam pendentes.";
+    document.getElementById("ctxLifetime").textContent = `${number(total.untracked_origin_requests)} contextos antigos sem origem registrada${!data.configured ? " · Configure OPENROUTER_API_KEY no servidor." : ""}${!coverage.available ? " · Cobertura indisponível nesta versão do servidor." : ""}`;
     renderContextRows("ctxRunRows", data.runs || [], "Nenhuma execução registrada.", row => [
       new Date(row.created_at).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo"}), labels[row.status] || row.status,
       `${row.done}/${row.total}`, row.skipped, row.errors,
@@ -1190,12 +1487,14 @@ document.getElementById('dashboardSearch').addEventListener('input', renderAdmin
 document.getElementById('dashboardRefresh').addEventListener('click', loadUsers);
 document.getElementById('adminStatusFilter').addEventListener('change', renderAdminUsers);
 document.getElementById('adminRefresh').addEventListener('click', loadUsers);
-document.getElementById("bannedWordsInput").disabled = true;
-document.getElementById("bannedWordsInput").addEventListener("input", () => { if(!bannedHydrated) return; bannedPending = true; document.getElementById("bannedMsg").textContent = "Alteração pendente…"; clearTimeout(bannedTimer); bannedTimer = setTimeout(saveBannedWords, 600); });
+document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => {
+  if (document.querySelectorAll("#ttsCreditPackagesList .tp-admin-credit-package-row").length >= 20) return;
+  document.getElementById("ttsCreditPackagesList").appendChild(createTtsCreditPackageRow());
+});
+document.getElementById("ttsCreditPackageSave").addEventListener("click", saveTtsCreditPackages);
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
 document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });
-document.getElementById("wordCatalogCategory").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });
 document.getElementById("wordCatalogPrev").addEventListener("click", () => { if (wordCatalogPage > 1) { wordCatalogPage--; loadWordCatalog(); } });
 document.getElementById("wordCatalogNext").addEventListener("click", () => { if (wordCatalogPage < wordCatalogPages) { wordCatalogPage++; loadWordCatalog(); } });
 document.getElementById("wordImportButton").addEventListener("click", importWordCatalog);
@@ -1203,9 +1502,7 @@ document.getElementById("wordUsageStreamer").addEventListener("change", () => { 
 document.getElementById("wordUsageSearch").addEventListener("input", () => { clearTimeout(window.wordUsageSearchTimer); window.wordUsageSearchTimer = setTimeout(() => { wordUsagePage = 1; loadWordUsage(); }, 250); });
 document.getElementById("wordUsagePrev").addEventListener("click", () => { if (wordUsagePage > 1) { wordUsagePage--; loadWordUsage(); } });
 document.getElementById("wordUsageNext").addEventListener("click", () => { if (wordUsagePage < wordUsagePages) { wordUsagePage++; loadWordUsage(); } });
-document.getElementById("wordDrawSave").addEventListener("click", saveWordDrawFilters);
 document.getElementById("wordCycleReset").addEventListener("click", resetWordCycle);
-loadBannedWords();
 loadUsers();
 loadInvites();
 pollContextos();

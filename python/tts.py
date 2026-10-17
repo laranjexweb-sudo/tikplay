@@ -23,8 +23,8 @@ VOICE_EDGE_ANTONIO = "edge_antonio"
 VOICE_EDGE_FRANCISCA = "edge_francisca"
 
 VOICE_LABELS = {
-    VOICE_EDGE_ANTONIO: "Edge — Antonio (servidor)",
-    VOICE_EDGE_FRANCISCA: "Edge — Francisca (servidor)",
+    VOICE_EDGE_ANTONIO: "Antonio",
+    VOICE_EDGE_FRANCISCA: "Francisca",
 }
 
 EDGE_VOICE_MAP = {

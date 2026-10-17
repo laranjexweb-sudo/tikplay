@@ -2,6 +2,12 @@
 
 Status: implementado com API oficial ElevenLabs e chave global configuravel pelo admin; ativacao real pendente de chave, reinicio inicial e escolha das contas.
 
+Atualizacao 2026-10-16: Super Admin controla quais modelos adicionais aparecem, agrupados em
+vozes padrao (HeyGen Voice Turbo e Kokoro 82M via OpenRouter) e personalizadas (ElevenLabs
+v4 Turbo). Streamer escolhe modelo e voz; acesso individual e limite existente continuam
+valendo. OpenRouter reutiliza `OPENROUTER_API_KEY` do servidor. Mapa de eventos e detalhes
+em `docs/modelos-voz-adicionais.md`.
+
 ## Escopo
 
 Liberar vozes adicionais no leitor de chat apenas para contas autorizadas pelo administrador. Usar inicialmente uma credencial da plataforma, configurada no servidor. Nenhuma conta deve receber acesso automaticamente. Nao alterar o comportamento das charadas por efeito indireto da selecao de voz do chat.
@@ -21,7 +27,7 @@ Integra a API oficial ElevenLabs. A referencia anterior do agente a "NoElevenLab
 
 1. Confirmar o provedor, autenticacao, listagem de vozes, sintese, formato de resposta e limites. Definir variaveis de ambiente e documentar configuracao sem valores secretos.
 2. Persistir habilitacao por tenant em configuracao controlada pelo admin. Validar a permissao no servidor tanto na listagem quanto no teste e na sintese real. A escolha de uma voz nunca concede acesso ao provedor.
-3. Criar adaptador do provedor com timeout, validacao do audio e codigos de falha estaveis. Aplicar limite de caracteres por tenant e periodo antes da chamada externa, incluindo testes. Serializar/reservar consumo para impedir ultrapassagem por concorrencia.
+3. Criar adaptador do provedor com timeout, validacao do audio e codigos de falha estaveis. Calcular e debitar creditos pela tarifa do modelo antes da chamada externa; testar saldo insuficiente e concorrencia.
 4. Separar a preferencia adicional do chat da configuracao compartilhada atual, preservando a voz da charada. Revalidar autorizacao a cada sintese, inclusive apos revogacao ou reinicio.
 5. Entregar catalogo permitido ao painel autenticado. Exibir as vozes adicionais somente nas contas habilitadas, salvar a escolha por tenant e disponibilizar teste com texto fixo em portugues brasileiro.
 6. Integrar sintese a fila existente e entregar o audio somente aos clientes do painel do tenant. Em falha ou revogacao, aplicar fallback para a voz padrao e impedir dupla reproducao.
@@ -70,19 +76,22 @@ Nao registrar texto do chat, chave, cabecalhos, URL autenticada ou resposta brut
 - Node e Python leem o mesmo arquivo; `ELEVENLABS_CONFIG_PATH` permite definir o caminho absoluto para ambos. Em caso de arquivo invalido/inacessivel, a integracao fica desativada em vez de reutilizar silenciosamente uma chave antiga.
 - Catalogo e invalidado ao mudar a chave. Salvar configura a credencial, mas nao comprova validade na ElevenLabs; catalogo e teste exercitam a autenticacao real depois.
 
-- `tenant_elevenlabs`: enabled, voice_id e monthly_limit por tenant; acesso desabilitado por padrao, limite sugerido 10.000 caracteres.
-- `elevenlabs_usage`: reserva atomica por tenant e mes UTC; meses anteriores permanecem armazenados.
-- GET/PUT `/api/admin/users/:id/elevenlabs`: somente admin; habilitacao e limite.
+- `tenant_elevenlabs`: enabled, voice_id e model_id por tenant; acesso desabilitado por padrao. A coluna monthly_limit e preservada para compatibilidade historica.
+- `tts_credit_wallets` e `tts_credit_ledger`: saldo inteiro sem validade mensal e historico append-only de compra, uso e ajuste; debito atomicamente bloqueado quando insuficiente.
+- GET/PUT `/api/admin/users/:id/elevenlabs`: somente admin; habilitacao individual.
+- `additional_voice_models.credits_per_100_chars`: tarifa inteira definida pelo Super Admin. O uso cobra `ceil(caracteres × tarifa / 100)`, com minimo de um credito; cada modelo pode ter tarifa diferente.
+- `tts_credit_packages` e `/api/admin/tts/credit-packages`: pacotes avulsos configuraveis pelo Super Admin; checkout via Mercado Pago Preferences e credito liberado somente apos consulta e validacao do pagamento aprovado, valor, BRL e referencia externa. Webhook idempotente.
+- `/api/tts/credits` mostra saldo, tarifas liberadas, pacotes e movimentacoes recentes. `/api/tts/credits/checkout` cria a compra do streamer autenticado. Ajuste manual fica em `/api/admin/users/:id/tts-credits`.
 - GET/PUT `/api/tts/elevenlabs`: consulta acesso/catalogo e salva a propria voz; identidade vem do token.
 - POST `/api/tts/elevenlabs/test`: voz persistida, texto fixo, tenant do token.
 - Catalogo GET oficial `/v2/voices`, paginado, cache de cinco minutos; retorna somente IDs e nomes.
 - Sintese POST oficial `/v1/text-to-speech/{voice_id}`, MP3, timeout de oito segundos, sem retry automatico pago.
 - Eleven v4 Turbo nao recebe o parametro speed; a velocidade da voz adicional fica natural. Modelos compativeis continuam usando o intervalo de 0,7x a 1,2x. A voz padrao mantem o controle existente.
-- Cache por tenant/texto/voz/modelo/velocidade. Revogacao bloqueia tambem o cache. Cache hit nao reserva caracteres novamente.
-- No painel streamer, a tecnologia nao e citada: aparece como "voz adicional". Sinteses adicionais limitam cada texto a 120 caracteres antes de reservar a quota; a voz padrao mantem seu limite proprio. A previa usa uma frase curta para consumir menos na primeira geracao.
-- O helper compartilhado remove emojis graficos, keycaps, codigos compactos de emote TikTok como `[happy]`, shortcodes como `:heart:` e emoticons ASCII comuns antes de cortar o texto. Conteudo sem letras/numeros nao gera fala; apenas o texto final e enviado e reservado na quota. O log original de chat pode continuar mostrando a mensagem integral; ele nao representa o corpo enviado a API.
+- Cache por tenant/texto/voz/modelo/velocidade. Revogacao bloqueia tambem o cache. Cache hit nao cobra creditos novamente.
+- No painel streamer, a tecnologia nao e citada: aparece como "voz adicional". Sinteses adicionais limitam cada texto a 150 caracteres antes de calcular o debito; a voz padrao mantem seu fluxo proprio. A previa usa uma frase curta e cobra como uso explicito do streamer.
+- O helper compartilhado remove emojis graficos, keycaps, codigos compactos de emote TikTok como `[happy]`, shortcodes como `:heart:` e emoticons ASCII comuns antes de cortar o texto. Conteudo sem letras/numeros nao gera fala; apenas o texto final e enviado e tarifado. O log original de chat pode continuar mostrando a mensagem integral; ele nao representa o corpo enviado a API.
 - Na reproducao adicional, o painel decodifica o arquivo completo e usa o AudioContext persistente com ganho unitario, sem fade. Uma margem silenciosa local de 150 ms precede a fala sem remover qualquer amostra nem consumir caracteres. A fila continua serial, respeita prioridade, expiracao e cancelamento; timeout local de carregamento em 15 s. Navegadores sem WebAudio continuam com o player anterior em volume 1.
-- O limite local mede caracteres reservados, nao creditos ou valor financeiro. Timeout continua reservado conservadoramente porque a chamada pode ter sido cobrada.
+- A carteira mede creditos debitados conforme a tarifa de cada modelo, nao uma cota mensal de caracteres. Timeout depois do inicio da chamada nao estorna o debito porque o provedor pode ter cobrado.
 - Quota, revogacao ou erro aplicam fallback no chat. O teste explicito informa falha, sem trocar silenciosamente a voz testada.
 - Audio usa a infraestrutura de arquivos TTS existente; nao foi criada uma nova camada de anexos privados.
 

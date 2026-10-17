@@ -53,6 +53,27 @@ test('persistent accounting includes failed billed responses and unknown interru
   }
 });
 
+test('coverage counts only current reusable contexts for active non-banned words', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(),'tikplay-context-coverage-'));
+  const db = new Database(path.join(dir,'test.db'));
+  try {
+    db.exec(`CREATE TABLE word_catalog(word TEXT NOT NULL,status TEXT NOT NULL);
+      CREATE TABLE banned_words(word TEXT NOT NULL);
+      CREATE TABLE contextos(alvo TEXT PRIMARY KEY,gerado_em TEXT,ranking TEXT);
+      INSERT INTO word_catalog VALUES('arte','active'),('bola','active'),('banida','active'),('rascunho','review');
+      INSERT INTO banned_words VALUES('banida');
+      INSERT INTO contextos VALUES('bola','now','[]'),('arte','now','[]');`);
+    const poolVersion = require('crypto').createHash('md5').update(JSON.stringify(['arte','banida','bola'])).digest('hex');
+    db.exec(`CREATE TABLE generated_context_metadata(target TEXT PRIMARY KEY,pool_version TEXT,model TEXT,method_version TEXT,top_count INTEGER,created_at TEXT,run_id TEXT);`);
+    db.prepare('INSERT INTO generated_context_metadata VALUES(?,?,?,?,?,?,?)')
+      .run('bola',poolVersion,'anthropic/claude-haiku-5.5','openrouter-top50-v1',50,'now','run');
+    db.prepare('INSERT INTO generated_context_metadata VALUES(?,?,?,?,?,?,?)')
+      .run('arte','old-pool','anthropic/claude-haiku-5.5','openrouter-top50-v1',50,'now','run');
+    const coverage = createContextGenerator({db,pythonBin:'python'}).status().coverage;
+    assert.deepEqual(coverage,{available:true,total:2,generated:1,remaining:1,percent:50});
+  } finally { db.close(); fs.rmSync(dir,{recursive:true,force:true}); }
+});
+
 test('admin endpoints reject ordinary users and malformed generation requests', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(),'tikplay-context-routes-'));
   const db = new Database(path.join(dir,'test.db'));

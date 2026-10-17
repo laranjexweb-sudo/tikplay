@@ -16,10 +16,6 @@
     "diamond_count": 1
   },
   {
-    "name": "Clap Clap",
-    "diamond_count": 1
-  },
-  {
     "name": "Club Cheers",
     "diamond_count": 1
   },
@@ -29,6 +25,10 @@
   },
   {
     "name": "Community Heart",
+    "diamond_count": 1
+  },
+  {
+    "name": "Eye for an Eye",
     "diamond_count": 1
   },
   {
@@ -45,10 +45,6 @@
   },
   {
     "name": "Go Popular",
-    "diamond_count": 1
-  },
-  {
-    "name": "Good Job",
     "diamond_count": 1
   },
   {
@@ -85,6 +81,10 @@
   },
   {
     "name": "Love you so much",
+    "diamond_count": 1
+  },
+  {
+    "name": "Mantap",
     "diamond_count": 1
   },
   {
@@ -272,10 +272,6 @@
     "diamond_count": 10
   },
   {
-    "name": "Intimacy",
-    "diamond_count": 10
-  },
-  {
     "name": "Journey Pass",
     "diamond_count": 10
   },
@@ -293,10 +289,6 @@
   },
   {
     "name": "Magnifying Glass",
-    "diamond_count": 10
-  },
-  {
-    "name": "Mind Blown",
     "diamond_count": 10
   },
   {
@@ -481,6 +473,10 @@
   },
   {
     "name": "Pad Master",
+    "diamond_count": 99
+  },
+  {
+    "name": "Palace Qanun",
     "diamond_count": 99
   },
   {
@@ -1372,6 +1368,10 @@
     "diamond_count": 400
   },
   {
+    "name": "Starry Sax",
+    "diamond_count": 400
+  },
+  {
     "name": "Super Dad",
     "diamond_count": 400
   },
@@ -1516,6 +1516,10 @@
     "diamond_count": 499
   },
   {
+    "name": "Island Uke",
+    "diamond_count": 499
+  },
+  {
     "name": "Key Master",
     "diamond_count": 499
   },
@@ -1541,6 +1545,10 @@
   },
   {
     "name": "DJ Glasses",
+    "diamond_count": 500
+  },
+  {
+    "name": "Do Not Blow",
     "diamond_count": 500
   },
   {
@@ -1934,6 +1942,10 @@
   {
     "name": "Vibrant Stage",
     "diamond_count": 1400
+  },
+  {
+    "name": "Anybody Home?",
+    "diamond_count": 1500
   },
   {
     "name": "Astrobear",
@@ -2368,6 +2380,10 @@
     "diamond_count": 6000
   },
   {
+    "name": "Lovely to Have You",
+    "diamond_count": 6000
+  },
+  {
     "name": "Night of Yokai",
     "diamond_count": 6000
   },
@@ -2514,6 +2530,10 @@
   {
     "name": "Snowmoon Parasol",
     "diamond_count": 14999
+  },
+  {
+    "name": "A Fun House",
+    "diamond_count": 15000
   },
   {
     "name": "Arabian Cheetah",

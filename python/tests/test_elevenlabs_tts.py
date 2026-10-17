@@ -145,13 +145,13 @@ class ElevenLabsTests(unittest.TestCase):
 
     @patch("elevenlabs_tts.urllib.request.urlopen", return_value=AudioResponse())
     def test_long_messages_are_capped_before_synthesis_and_usage_reservation(self, network):
-        text = "palavra " * 100
+        text = "x" * 200
         path, code = provider.synthesize(1, text, self.audio)
         sent_text = json.loads(network.call_args.args[0].data)["text"]
 
         self.assertEqual(code, "SYNTHESIZED")
         self.assertTrue(Path(path).is_file())
-        self.assertLessEqual(len(sent_text), provider.MAX_CHAT_CHARACTERS)
+        self.assertEqual(len(sent_text), 150)
         self.assertEqual(self.usage(), len(sent_text))
 
     @patch("elevenlabs_tts.urllib.request.urlopen", side_effect=TimeoutError("secret raw error"))

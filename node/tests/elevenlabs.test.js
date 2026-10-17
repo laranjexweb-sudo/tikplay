@@ -36,7 +36,8 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     if (String(url).startsWith("https://api.elevenlabs.io/")) {
       upstreamCalls++;
       assert.equal(opts.headers["xi-api-key"], expectedKey);
-      return { ok: true, json: async () => ({ voices: [{ voice_id: "voice_one", name: "Voz BR", secret: "never-return" }], has_more: false }) };
+      return { ok: true, json: async () => ({ voices: [{ voice_id: "voice_one", name: "Voz BR", secret: "never-return",
+        is_owner: true, labels: { accent: "brazilian" } }], has_more: false }) };
     }
     return originalFetch(url, opts);
   };
@@ -54,9 +55,13 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     assert.equal(upstreamCalls, 0);
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one" })).status, 403);
     assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true, monthly_limit: -1 })).status, 400);
-    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true, monthly_limit: 100 })).status, 200);
+    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true })).status, 200);
+    db.db.prepare("UPDATE additional_voice_models SET credits_per_100_chars=2 WHERE model_id=?")
+      .run("elevenlabs/eleven-v4-turbo");
+    db.db.prepare("INSERT INTO additional_voice_options(model_id,voice_id,label,enabled) VALUES(?,?,?,1)")
+      .run("elevenlabs/eleven-v4-turbo", "voice_one", "Voz BR");
     const listing = await request(first, "/api/tts/elevenlabs");
-    assert.deepEqual(listing.data.voices, [{ key: "voice_one", label: "Voz BR" }]);
+    assert.deepEqual(listing.data.voices, [{ key: "voice_one", label: "Voz BR", language: "pt-BR" }]);
     assert.ok(!JSON.stringify(listing.data).includes("test-secret"));
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "forged" })).status, 400);
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one", tenant_id: second })).status, 200);
@@ -67,13 +72,13 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     assert.equal(commands[0].tenant_id, first);
     assert.equal(commands[0].cmd, "elevenlabs_test");
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 429);
-    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: false, monthly_limit: 100 })).status, 200);
+    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: false })).status, 200);
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 403);
     assert.equal((await request(first, "/api/tts/elevenlabs")).data.enabled, false);
     assert.ok(db.getLogEntries({ tenantId: first, event: "tts.provider.access_changed" }).length > 0);
     assert.ok(!JSON.stringify(logs).includes("test-secret"));
     delete process.env.ELEVENLABS_API_KEY;
-    await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true, monthly_limit: 100 });
+    await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true });
     assert.equal((await request(first, "/api/tts/elevenlabs")).data.configured, false);
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 503);
     const configRoute = "/api/admin/integrations/elevenlabs";

@@ -26,6 +26,8 @@ from contexto_public import handle_public_command
 import db
 import tts
 import elevenlabs_tts
+import additional_voice_tts
+import tts_emotions
 
 TTS_AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "public", "tts-audio")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.br")
@@ -46,7 +48,7 @@ from service_common import (
 async def _test_elevenlabs_voice(tid, trace_id):
     try:
         audio_path, code = await asyncio.to_thread(
-            elevenlabs_tts.synthesize, tid,
+            additional_voice_tts.synthesize, tid,
             "Prévia da voz adicional.",
             os.path.join(TTS_AUDIO_ROOT, str(tid)))
     except Exception:
@@ -237,8 +239,12 @@ class GameSession:
         self.caca_prefix = ""
         self.vpet = VPetEngine(tenant_id, emit_cb=self._emit_vpet)
         self._vpet_task = None
-        self.tres = TresPontinhos(tenant_id, emit_cb=self._emit_tres, palavra_provider=self._tres_next_round)
-        self._tres_task = None
+        self.tres = TresPontinhos(
+            tenant_id,
+            emit_cb=self._emit_tres,
+            palavra_provider=self._tres_next_round,
+            can_autostart=self._tres_live_connected,
+        )
         self.corda = CordaEngine(emit_cb=self._emit_duelo)
         self._corda_task = None
         self.duelo = DueloEngine(tenant_id, emit_cb=self._emit_duelo)
@@ -535,8 +541,9 @@ class GameSession:
             self._record_chat_narration("filtered")
             return
 
+        speech_text, emotion = tts_emotions.extract_trailing_emotion(text)
         cleaned = tts.prepare_chat_text(
-            text,
+            speech_text,
             mode=self.settings.get("chat_narr_mode", "all"),
             marker=self.settings.get("chat_narr_char", "#"),
         )
@@ -546,6 +553,7 @@ class GameSession:
 
         item = {
             "text": cleaned,
+            "emotion": emotion,
             "queued_at": time.monotonic(),
             "epoch": self._chat_narration_epoch,
             **self._tts_config_snapshot(),
@@ -640,12 +648,13 @@ class GameSession:
     async def _chat_tts_url(self, item):
         try:
             path, code = await asyncio.to_thread(
-                elevenlabs_tts.synthesize, self.tenant_id, item["text"],
-                os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id)), item["rate"])
+                additional_voice_tts.synthesize, self.tenant_id, item["text"],
+                os.path.join(TTS_AUDIO_ROOT, str(self.tenant_id)), item["rate"],
+                emotion=item.get("emotion"))
             if path:
                 self._record_chat_narration("elevenlabs_synthesized")
                 return f"/tts-audio/{self.tenant_id}/{os.path.basename(path)}"
-        except elevenlabs_tts.ProviderError as exc:
+        except (elevenlabs_tts.ProviderError, additional_voice_tts.ProviderError) as exc:
             code = str(exc)
         except Exception:
             code = "PROVIDER_UNAVAILABLE"
@@ -1021,6 +1030,12 @@ class GameSession:
         return sorted(self.likes.values(), key=lambda e: -e["likes"])[:limit]
 
     def emit_status(self, state, extra=None):
+        if state in ("disconnected", "offline") and (
+            self.tres.active or self.tres.task or self.tres._autostart_task
+        ):
+            # Uma rodada antiga não deve continuar nem preparar novas chamadas pagas
+            # enquanto a live está desconectada.
+            self.tres.stop()
         status = {"state": state, "user": self.username}
         if self.handler._room_id:
             status["room_id"] = self.handler._room_id
@@ -1032,6 +1047,9 @@ class GameSession:
                             details={"from": self._last_logged_status, "to": state, "engine": self.engine})
             self._last_logged_status = state
         emit(self.tenant_id, "status", status)
+
+    def _tres_live_connected(self):
+        return bool(getattr(self.handler, "_connected", False))
 
     def _live_room_id(self) -> str:
         """Room id da live atual (usado no ranking da live)."""
@@ -2552,9 +2570,15 @@ class GameSession:
             cancelled = True
         finally:
             try:
+                tres_tasks = tuple(
+                    task for task in (self.tres.task, self.tres._autostart_task)
+                    if task is not None
+                )
+                if self.tres.active or tres_tasks:
+                    self.tres.stop()
                 tasks = [t for t in (
                     handler_task, cmd_task, narration_task, self._likes_loop_task, self._vpet_task,
-                    self._corda_task, self._tres_task, self._duelo_reset_task,
+                    self._corda_task, *tres_tasks, self._duelo_reset_task,
                     self._duelo_match_task, self._duelo_timer_task, self._duelo_round_result_task,
                 ) if t is not None and not t.done()]
                 for task in tasks:
@@ -2580,7 +2604,6 @@ class GameSession:
                 self._chat_narration_task = None
                 self._vpet_task = None
                 self._corda_task = None
-                self._tres_task = None
                 self._duelo_reset_task = None
                 self._duelo_match_task = None
                 self._duelo_timer_task = None

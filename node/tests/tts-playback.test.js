@@ -22,14 +22,15 @@ function setup() {
       const data = new Float32Array(length);
       return { length, sampleRate, data, copyToChannel: (input, channel, offset) => data.set(input, offset) };
     },
+    createGain: () => ({ gain: { value: 0 }, connect() { return this; }, disconnect() {} }),
     createBufferSource: () => {
-      const source = { connect() {}, disconnect() {}, start() { this.started = true; }, stop() { this.stopped = true; } };
+      const source = { connect() { return this; }, disconnect() {}, start() { this.started = true; }, stop() { this.stopped = true; } };
       sources.push(source);
       return source;
     },
   };
   const sandbox = vm.createContext({
-    connectAudioContext: context, AbortController, setTimeout, clearTimeout,
+    connectAudioContext: context, AbortController, setTimeout, clearTimeout, getTtsVolumeGain: () => 1,
     Date: { now: () => state.now }, unlockAudio() {},
     addLog: event => logs.push(event),
     fetch: async (url, options) => {

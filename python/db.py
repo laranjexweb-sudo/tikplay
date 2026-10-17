@@ -331,21 +331,7 @@ def _ensure_word_usage_schema(conn):
 
 
 def get_word_draw_settings(tenant_id):
-    conn = _conn()
-    try:
-        _ensure_word_usage_schema(conn)
-        row = conn.execute("SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?", (tenant_id,)).fetchone()
-        if not row:
-            return {"categories": [], "difficulties": []}
-        def parsed(value):
-            try:
-                result = json.loads(value or '[]')
-                return result if isinstance(result, list) else []
-            except ValueError:
-                return []
-        return {"categories": parsed(row[0]), "difficulties": parsed(row[1])}
-    finally:
-        conn.close()
+    return {}
 
 
 def reserve_word_for_tenant(tenant_id, fallback_words, banned_words=None, game_type='palavra', game_id=None):
@@ -355,22 +341,14 @@ def reserve_word_for_tenant(tenant_id, fallback_words, banned_words=None, game_t
     try:
         _ensure_word_usage_schema(conn)
         conn.execute('BEGIN IMMEDIATE')
-        catalog = conn.execute("SELECT word,word_key,category,difficulty FROM word_catalog WHERE status='active' ORDER BY id").fetchall()
+        catalog = conn.execute("SELECT word,word_key FROM word_catalog WHERE status='active' ORDER BY id").fetchall()
         if not catalog:
-            catalog = [(word, _norm(word), 'geral', 'media') for word in fallback_words if isinstance(word, str)]
+            catalog = [(word, _norm(word)) for word in fallback_words if isinstance(word, str)]
         eligible = [row for row in catalog if row[1] not in banned]
         if not eligible:
             raise ValueError('NO_ELIGIBLE_WORDS')
-        settings = conn.execute('SELECT categories,difficulties FROM word_draw_settings WHERE tenant_id=?', (tenant_id,)).fetchone()
-        try:
-            categories = set(json.loads(settings[0] or '[]')) if settings else set()
-            difficulties = set(json.loads(settings[1] or '[]')) if settings else set()
-        except (ValueError, TypeError):
-            categories, difficulties = set(), set()
-        filtered = [row for row in eligible if (not categories or row[2] in categories) and (not difficulties or row[3] in difficulties)]
-        filter_fallback = bool((categories or difficulties) and not filtered)
-        if filter_fallback:
-            filtered = eligible
+        filtered = eligible
+        filter_fallback = False
 
         conn.execute('INSERT OR IGNORE INTO word_cycles(tenant_id,current_cycle) VALUES(?,1)', (tenant_id,))
         cycle = conn.execute('SELECT current_cycle FROM word_cycles WHERE tenant_id=?', (tenant_id,)).fetchone()[0]

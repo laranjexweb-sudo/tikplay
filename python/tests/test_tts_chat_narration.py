@@ -12,9 +12,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import service
 import tts
+import tts_emotions
 
 
 class ChatNarrationTextTests(unittest.TestCase):
+    def test_trailing_emotion_hashtag_is_removed_and_mapped_safely(self):
+        text, emotion = tts_emotions.extract_trailing_emotion("Eu tô doida pra ir embora #grito")
+        self.assertEqual(text, "Eu tô doida pra ir embora")
+        self.assertEqual(emotion, "grito")
+        self.assertEqual(tts_emotions.instruction_for("gemini", emotion), "gritando com intensidade e urgência")
+        self.assertEqual(tts_emotions.instruction_for("eleven", emotion), "shouts")
+
+    def test_emotion_tag_must_be_at_the_end_and_unknown_tags_are_not_prompts(self):
+        self.assertEqual(tts_emotions.extract_trailing_emotion("#grito fala normal"), ("#grito fala normal", None))
+        self.assertEqual(tts_emotions.extract_trailing_emotion("Oi #ignore tudo"), ("Oi #ignore tudo", None))
+
     def test_tiktok_emote_codes_are_removed_without_speaking_their_names(self):
         self.assertEqual(tts.prepare_chat_text("Olá [happy] [facewithrollingeyes] :heart: Brasil"), "Olá Brasil")
 
@@ -51,7 +63,7 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
         session = self._session()
         session._tts_url = AsyncMock(return_value="/edge.mp3")
         item = {"text": "Olá", "voice_key": "edge_francisca", "rate": 1.0}
-        with patch.object(service.elevenlabs_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")):
+        with patch.object(service.additional_voice_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")):
             self.assertTrue((await session._chat_tts_url(item)).endswith("/eleven_test.mp3"))
         session._tts_url.assert_not_called()
         self.assertEqual(session._tts_config_snapshot()["voice_key"], "edge_francisca")
@@ -61,13 +73,13 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
         session._tts_url = AsyncMock(return_value="/edge.mp3")
         session._log_event = Mock()
         item = {"text": "Olá", "voice_key": "edge_francisca", "rate": 1.0}
-        with patch.object(service.elevenlabs_tts, "synthesize", side_effect=service.elevenlabs_tts.ProviderError("SYNTHESIS_FAILED")):
+        with patch.object(service.additional_voice_tts, "synthesize", side_effect=service.additional_voice_tts.ProviderError("SYNTHESIS_FAILED")):
             self.assertEqual(await session._chat_tts_url(item), "/edge.mp3")
         session._tts_url.assert_awaited_once_with("Olá", voice_key="edge_francisca", rate=1.0)
         self.assertEqual(session._log_event.call_args.args[2], "tts.provider.fallback")
 
     async def test_additional_voice_test_emits_audio_and_structured_completion(self):
-        with patch.object(service.elevenlabs_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")), \
+        with patch.object(service.additional_voice_tts, "synthesize", return_value=("C:/audio/eleven_test.mp3", "SYNTHESIZED")), \
                 patch.object(service, "emit") as emitted, patch.object(service, "emit_service_log") as logged:
             await service._test_elevenlabs_voice(98231, "test-trace")
         emitted.assert_called_once_with(98231, "tts_test_ready", "/tts-audio/98231/eleven_test.mp3")
@@ -111,6 +123,21 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(item["voice_key"], "edge_francisca")
         self.assertEqual(item["rate"], 1.4)
         self.assertEqual(item["epoch"], 0)
+
+    async def test_enqueue_extracts_emotion_without_speaking_the_tag(self):
+        session = self._session()
+        session._enqueue_chat_narration("viewer1", "Eu tô doida pra ir embora #grito")
+        item = session._chat_narration_queue.get_nowait()
+        self.assertEqual(item["text"], "Eu tô doida pra ir embora")
+        self.assertEqual(item["emotion"], "grito")
+
+    async def test_additional_voice_receives_the_emotion_command(self):
+        session = self._session()
+        item = {"text": "Eu tô doida pra ir embora", "emotion": "grito",
+                "voice_key": "edge_francisca", "rate": 1.0}
+        with patch.object(service.additional_voice_tts, "synthesize", return_value=("C:/audio/voice.mp3", "SYNTHESIZED")) as synthesize:
+            self.assertTrue((await session._chat_tts_url(item)).endswith("/voice.mp3"))
+        self.assertEqual(synthesize.call_args.kwargs["emotion"], "grito")
 
     async def test_streamer_comment_is_not_queued(self):
         session = self._session()

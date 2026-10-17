@@ -3,7 +3,7 @@
 Plano: após limpar o comentário, converter apenas sua primeira letra para
 maiúscula antes de calcular cache, reservar quota e enviar à ElevenLabs.
 Preservar o restante do texto, inclusive siglas, pontuação e números iniciais.
-Manter limite de 120 caracteres inclusive em expansões Unicode.
+Manter limite de 150 caracteres inclusive em expansões Unicode.
 
 Observabilidade: manter eventos existentes de síntese/fallback, categorias,
 níveis e correlação; nenhuma alteração no volume ou inclusão de texto nos logs.

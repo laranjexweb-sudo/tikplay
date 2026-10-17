@@ -916,6 +916,9 @@ async function mpFetch(path, opts = {}) {
   try { return { status: res.status, data: JSON.parse(text) }; } catch { return { status: res.status, data: text }; }
 }
 
+const ttsCreditRoutes = require("./routes/tts-credits")(app, { db, auth, mpFetch,
+  mpConfigured: Boolean(MP_ACCESS_TOKEN), log: processLog });
+
 app.get("/api/plans", (req, res) => {
   res.json({ success: true, plans: Object.values(PLANS).map(({ price_cents, ...p }) => ({ ...p, price: (price_cents / 100).toFixed(2) })) });
 });
@@ -965,7 +968,7 @@ app.post("/api/billing/checkout", auth.requireAuth, async (req, res) => {
 
 app.post("/api/webhooks/mercadopago", async (req, res) => {
   const body = req.body || {};
-  const dataId = body.data && body.data.id;
+  const dataId = (body.data && body.data.id) || req.query["data.id"] || req.query.id;
 
   // Validação opcional de assinatura (se MP_WEBHOOK_SECRET estiver configurado)
   if (MP_WEBHOOK_SECRET) {
@@ -990,7 +993,11 @@ app.post("/api/webhooks/mercadopago", async (req, res) => {
   }
 
   res.status(200).json({ success: true });
-  const topic = body.type || (body.action || "");
+  const topic = body.type || body.action || req.query.type || req.query.topic || "";
+  if (String(topic).toLowerCase().includes("payment") && dataId) {
+    await ttsCreditRoutes.handlePaymentWebhook(dataId);
+    return;
+  }
   if (!String(topic).toLowerCase().includes("preapproval") || !dataId) return;
   try {
     const r = await mpFetch(`/preapproval/${dataId}`);
@@ -1226,8 +1233,8 @@ require("./routes/elevenlabs")(app, { db, auth, daemonSend,
 });
 
 const TTS_VOICES = [
-  { key: "edge_antonio", label: "Edge — Antonio (servidor)" },
-  { key: "edge_francisca", label: "Edge — Francisca (servidor)" },
+  { key: "edge_antonio", label: "Antonio" },
+  { key: "edge_francisca", label: "Francisca" },
 ];
 
 app.get("/api/tts/voices", auth.requireAuth, (req, res) => {

@@ -23,11 +23,12 @@ TRES_COUNTDOWN = 5         # cronômetro pré-jogo (dicas ocultas)
 class TresPontinhos:
     """Motor do Jogo dos 3 Pontinhos. Orquestrado pelo GameSession."""
 
-    def __init__(self, tenant_id, emit_cb=None, palavra_provider=None):
+    def __init__(self, tenant_id, emit_cb=None, palavra_provider=None, can_autostart=None):
         self.tenant_id = tenant_id
         self._emit_cb = emit_cb or (lambda type_, payload: None)
         # palavra_provider() -> (palavra, dicas) usado no auto-reinício da rodada
         self._palavra_provider = palavra_provider
+        self._can_autostart = can_autostart
         self.active = False
         self.round_id = 0
         self.phase = "idle"          # idle | countdown | play | pause
@@ -49,6 +50,7 @@ class TresPontinhos:
         self.stage_times = dict(TRES_STAGE_TIMES)
         self.stage_points = dict(TRES_STAGE_POINTS)
         self.task = None
+        self._autostart_task = None
         self._last_emit = 0
         self._last_wrong_emit = 0
         self.wrong_guess_count = 0
@@ -126,7 +128,7 @@ class TresPontinhos:
             countdown_seconds=TRES_COUNTDOWN,
             clue_count=len(self.dicas),
         )
-        if not self.task:
+        if self.task is None or (hasattr(self.task, "done") and self.task.done()):
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -138,9 +140,11 @@ class TresPontinhos:
         self.active = False
         self.finished = False
         self.timeout = False
-        if self.task:
-            self.task.cancel()
-            self.task = None
+        for task in (self.task, self._autostart_task):
+            if task is not None and hasattr(task, "cancel") and not task.done():
+                task.cancel()
+        self.task = None
+        self._autostart_task = None
         self._emit("tres_state", self.state(public=False))
         self._emit_log("game.stopped", "[3 Dicas] Jogo parado.", round_id=self.round_id)
 
@@ -300,19 +304,40 @@ class TresPontinhos:
         self._emit("tres_tick", {"phase": "pause", "remaining": self.pause_remaining})
         if self.pause_remaining <= 0:
             self.phase = "idle"
-            if self._palavra_provider:
+            if self._palavra_provider and self._auto_start_allowed():
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._autostart())
+                if not self._autostart_task or self._autostart_task.done():
+                    self._autostart_task = loop.create_task(self._autostart())
+
+    def _auto_start_allowed(self):
+        if not self.active:
+            return False
+        if self._can_autostart is None:
+            return True
+        try:
+            return bool(self._can_autostart())
+        except Exception:
+            return False
 
     async def _autostart(self):
         """Gera nova palavra/dicas e inicia a próxima rodada automaticamente."""
         try:
             if not self._palavra_provider:
                 return
+            if not self._auto_start_allowed():
+                self._emit_log("round.auto_start_rejected",
+                               "[3 Dicas] Rodada automática não iniciada: live ou sessão inativa.",
+                               level="warning", code="TRES_SESSION_INACTIVE")
+                return
             trace_id = uuid.uuid4().hex
             res = self._palavra_provider(trace_id)
             if asyncio.iscoroutine(res):
                 res = await res
+            if not self._auto_start_allowed():
+                self._emit_log("round.auto_start_rejected",
+                               "[3 Dicas] Rodada automática cancelada após encerramento da live.",
+                               level="warning", code="TRES_SESSION_INACTIVE")
+                return
             palavra, dicas = res
             if palavra:
                 self.start(palavra, dicas, trace_id=trace_id)
