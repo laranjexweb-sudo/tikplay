@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07111d">
+  <title>Quiz Live · TikPlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/ui/tikplay-theme.css">
+  <link rel="stylesheet" href="/ui/tikplay-streamer-model.css?v=20261016-themed-selects">
+  <link rel="stylesheet" href="/ui/tikplay-quiz-live.css?v=20261017-v4">
+</head>
+<body class="tpql-body">
+  <main class="tpql-page" id="quizRoot" aria-live="polite">
+    <div class="tpql-frame">
+      <header class="tpql-header">
+        <div class="tpql-brand"><span class="tpql-brand-mark" aria-hidden="true">?</span><span>Quiz Live <small>· TikPlay</small></span></div>
+        <div class="tpql-progress-label" id="quizProgress">Aguardando partida</div>
+      </header>
+      <div class="tpql-waiting" id="quizWaiting"><div><h1>Quiz Live</h1><p id="quizWaitingText">A próxima partida começa em instantes.</p></div></div>
+      <section class="tpql-main tpql-hidden" id="quizQuestionView">
+        <section class="tpql-question"><span class="tpql-question-kicker">PERGUNTA DA RODADA</span><h1 id="quizPrompt"></h1></section>
+        <div class="tpql-options" id="quizOptions"></div>
+        <div class="tpql-direct-hint tpql-hidden" id="quizDirectHint">Responda com o resultado no chat da live.</div>
+      </section>
+      <section class="tpql-result tpql-hidden" id="quizResultView">
+        <div class="tpql-result-stage" id="quizRevealStage"><span class="tpql-result-kicker">GABARITO DA RODADA</span><h1 id="quizResultTitle">Resposta correta</h1><div class="tpql-result-answer" id="quizResultAnswer"></div><div class="tpql-round-participation" id="quizRoundParticipation"></div></div>
+        <div class="tpql-result-stage tpql-hidden" id="quizRoundStage"><span class="tpql-result-kicker">PLACAR DA PARTIDA</span><h1>Ranking parcial</h1><div class="tpql-round-participation" id="quizRoundRankingSummary"></div><div class="tpql-ranking tpql-hidden" id="quizFinalRanking"></div></div>
+        <div class="tpql-result-stage tpql-hidden" id="quizFinishedStage"><span class="tpql-result-kicker">FIM DE JOGO</span><h1 id="quizFinishedTitle">Quiz finalizado</h1><div class="tpql-finished-summary" id="quizFinishedSummary"></div><h2>🏆 Ranking final</h2><p class="tpql-round-participation" id="quizFinishedRankingNote"></p><div class="tpql-ranking tpql-hidden" id="quizFinalPodium"></div></div>
+      </section>
+      <footer class="tpql-footer" id="quizFooter">
+        <div class="tpql-timer" id="quizTimer">—</div>
+        <div class="tpql-timer-track"><i id="quizTimerFill"></i></div>
+        <div class="tpql-participation" id="quizParticipation">Aguardando a pergunta</div>
+      </footer>
+    </div>
+  </main>
+<script>
+(() => {
+  const params=new URLSearchParams(location.search),room=params.get('room')||'';
+  const root=document.getElementById('quizRoot');
+  const waiting=document.getElementById('quizWaiting'),waitingText=document.getElementById('quizWaitingText');
+  const questionView=document.getElementById('quizQuestionView'),resultView=document.getElementById('quizResultView'),footer=document.getElementById('quizFooter');
+  let state=null,socket=null,timer=null,resultStageTimer=null,resultSignature='',resultPhase='reveal',lastNarrated='',narrationAudio=null;
+  let questionSignature='',animateQuestion=false;
+  const byId=id=>document.getElementById(id);
+  const safeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function errorState(message){waiting.hidden=false;waitingText.textContent=message;waitingText.classList.add('tpql-error');questionView.classList.add('tpql-hidden');resultView.classList.add('tpql-hidden');footer.classList.add('tpql-hidden');}
+  function applySafeMargins(config){
+    const safe=config?.safe_margins||{};
+    root.style.setProperty('--live-safe-top',`${Math.max(0,Math.min(40,Number(safe.top??12)))}vh`);
+    root.style.setProperty('--live-safe-bottom',`${Math.max(0,Math.min(40,Number(safe.bottom??18)))}vh`);
+    root.style.setProperty('--live-safe-left',`${Math.max(0,Math.min(25,Number(safe.left??5)))}vw`);
+    root.style.setProperty('--live-safe-right',`${Math.max(0,Math.min(25,Number(safe.right??5)))}vw`);
+  }
+  function speakQuestion(question,config){
+    if(!config?.narrate||!question?.narration_url)return;
+    const signature=`${state?.match_id}:${question?.number}`;
+    if(signature===lastNarrated)return;
+    if(sessionStorage.getItem(`tikplay-quiz-narrated:${signature}`))return;
+    lastNarrated=signature;
+    sessionStorage.setItem(`tikplay-quiz-narrated:${signature}`,'1');
+    if(narrationAudio){narrationAudio.pause();narrationAudio=null;}
+    narrationAudio=new Audio(question.narration_url);narrationAudio.preload='auto';
+    const completed=()=>{if(socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:'quiz_narration_finished',match_id:state.match_id,question_no:question.number}));};
+    narrationAudio.onended=completed;narrationAudio.onerror=completed;
+    narrationAudio.play().catch(completed);
+  }
+  function renderRanking(items,hostId,podium=false){
+    const host=byId(hostId);host.classList.toggle('tpql-podium',podium);
+    if(!items?.length){host.classList.add('tpql-hidden');host.replaceChildren();return;}
+    host.classList.remove('tpql-hidden');host.innerHTML=items.slice(0,3).map((item,index)=>`<div class="${podium?'tpql-podium-item':'tpql-rank'} ${podium?`tpql-podium-place-${index+1}`:''}"><b>${index+1}º</b><strong>${safeText(item.nickname||item.username)}</strong><span>${Number(item.score||0).toLocaleString('pt-BR')} pts</span></div>`).join('');
+  }
+  function setResultStage(phase){
+    byId('quizRevealStage').classList.toggle('tpql-hidden',phase!=='reveal');
+    byId('quizRoundStage').classList.toggle('tpql-hidden',phase!=='ranking');
+    byId('quizFinishedStage').classList.toggle('tpql-hidden',phase!=='finished');
+  }
+  function showRoundResult(q,config,current){
+    const signature=`${current.match_id}:${q.number}`;
+    if(current.state==='finished'){
+      if(resultStageTimer){clearTimeout(resultStageTimer);resultStageTimer=null;}
+      resultSignature=signature;resultPhase='finished';setResultStage('finished');
+    }else{
+      if(signature!==resultSignature){
+        if(resultStageTimer)clearTimeout(resultStageTimer);
+        resultSignature=signature;resultPhase='reveal';setResultStage('reveal');
+        resultStageTimer=setTimeout(()=>{if(state?.match_id===current.match_id&&state?.question?.number===q.number&&state?.state!=='finished'){resultPhase='ranking';setResultStage('ranking');}},2800);
+      }else setResultStage(resultPhase);
+    }
+    const answers=Number(q.answers_received||0),participants=Number(q.participants||0);
+    byId('quizRoundParticipation').textContent=`${answers} ${answers===1?'resposta recebida':'respostas recebidas'} · ${participants} ${participants===1?'participante':'participantes'}`;
+    const ranking=current.ranking||[];
+    byId('quizRoundRankingSummary').textContent=config.show_ranking?(ranking.length?'Pontuação acumulada da partida':'Ainda não há pontuação no placar.'):'O ranking público está desativado nas configurações.';
+    renderRanking(config.show_ranking?ranking:[],'quizFinalRanking');
+    byId('quizFinishedSummary').innerHTML=`<span>${Number(current.question_count||q.total||0)} perguntas</span><span>${Number(current.participant_count||0)} participantes</span>`;
+    byId('quizFinishedRankingNote').textContent=config.show_ranking?(ranking.length?'':'Nenhum participante pontuou nesta partida.'):'O ranking público está desativado nas configurações.';
+    renderRanking(config.show_ranking?ranking:[],'quizFinalPodium',true);
+    if(config.show_ranking&&!ranking.length){byId('quizFinalPodium').classList.remove('tpql-hidden');byId('quizFinalPodium').innerHTML='<p class="tpql-no-ranking">Nenhum participante pontuou nesta partida.</p>';}
+    byId('quizTimer').textContent='✓';byId('quizTimer').classList.remove('is-low');byId('quizTimerFill').style.transform='scaleX(1)';
+    byId('quizParticipation').textContent=`${answers} respostas · ${participants} participantes`;
+  }
+  function render(next){
+    state=next||{};const q=state.question,config=state.config||{};root.dataset.state=state.state||'waiting';
+    applySafeMargins(config);
+    const isQuestion=!!q&&!q.revealed&&['preparing','question_active','paused'].includes(state.state);
+    const isResult=!!q&&q.revealed&&['answers_closed','interval','finished'].includes(state.state);
+    const isFinished=state.state==='finished';
+    byId('quizProgress').textContent=q?`Pergunta ${String(q.number).padStart(2,'0')} / ${String(q.total).padStart(2,'0')}`:'Quiz Live';
+    waiting.classList.toggle('tpql-hidden',isQuestion||isResult||isFinished);
+    waiting.hidden=isQuestion||isResult||isFinished;
+    waitingText.classList.remove('tpql-error');
+    if(!q){waitingText.textContent=state.state==='finished'?'A partida terminou. Aguarde a próxima!':'A próxima partida começa em instantes.';}
+    questionView.classList.toggle('tpql-hidden',!isQuestion);
+    resultView.classList.toggle('tpql-hidden',!isResult&&!isFinished);
+    footer.classList.toggle('tpql-hidden',!q||isFinished);
+    if(isQuestion&&resultStageTimer){clearTimeout(resultStageTimer);resultStageTimer=null;}
+    if(q){
+      byId('quizPrompt').textContent=q.prompt||'';
+      const length=Math.max(1,String(q.prompt||'').length);
+      byId('quizPrompt').style.setProperty('--tpql-title-vmin',`${Math.max(3.6,Math.min(7.5,48/Math.sqrt(length)))}vmin`);
+      const signature=`${state.match_id}:${q.number}`;
+      animateQuestion=questionSignature!==signature;
+      if(animateQuestion){const card=document.querySelector('.tpql-question');card.classList.remove('tpql-enter');void card.offsetWidth;card.classList.add('tpql-enter');}
+      const options=byId('quizOptions');
+      options.innerHTML=q.mode==='alternativas'?Object.entries(q.options||{}).map(([key,value])=>`<div class="tpql-option ${animateQuestion?'tpql-option-enter ':''}${q.revealed&&q.answer===key?'is-correct':''}"><b>${safeText(key)}</b><span>${safeText(value)}</span></div>`).join(''):'';
+      byId('quizDirectHint').classList.toggle('tpql-hidden',q.mode!=='calculo');
+      if(isQuestion&&state.state==='preparing')speakQuestion(q,config);
+      if(isResult||isFinished){
+        byId('quizResultTitle').textContent='Resposta correta';
+        byId('quizResultAnswer').textContent=q.mode==='alternativas'?`${q.answer} — ${(q.options||{})[q.answer]||''}`:q.answer_value||q.answer||'';
+        showRoundResult(q,config,state);
+        if(isFinished)byId('quizProgress').textContent='Partida finalizada';
+      }else {if(resultSignature!==`${state.match_id}:${q.number}`){resultSignature='';resultPhase='reveal';}renderRanking([],'quizFinalRanking');renderRanking([],'quizFinalPodium',true);}
+      if(state.state==='preparing')byId('quizParticipation').textContent='Ouvindo a pergunta…';
+      else if(state.state==='paused')byId('quizParticipation').textContent='Partida pausada';
+      else if(state.state==='question_active')byId('quizParticipation').textContent=`${Number(q.answers_received||0)} respostas · ${Number(q.participants||0)} participantes`;
+      else byId('quizParticipation').textContent=isResult?`${Number(q.answers_received||0)} respostas recebidas`:'';
+      questionSignature=signature;
+      if(isQuestion)updateTimer(q,state);
+    } else {
+      byId('quizTimer').textContent='—';byId('quizTimerFill').style.transform='scaleX(0)';
+      if(isFinished){if(resultStageTimer){clearTimeout(resultStageTimer);resultStageTimer=null;}resultView.classList.remove('tpql-hidden');waiting.classList.add('tpql-hidden');setResultStage('finished');byId('quizProgress').textContent='Partida finalizada';byId('quizFinishedSummary').innerHTML=`<span>${Number(state.question_count||0)} perguntas</span><span>${Number(state.participant_count||0)} participantes</span>`;const ranking=state.ranking||[];byId('quizFinishedRankingNote').textContent=config.show_ranking?(ranking.length?'':'Nenhum participante pontuou nesta partida.'):'O ranking público está desativado nas configurações.';renderRanking(config.show_ranking?ranking:[],'quizFinalPodium',true);}
+    }
+  }
+  function updateTimer(question,current){
+    if(timer)clearInterval(timer);
+    const fill=byId('quizTimerFill'),label=byId('quizTimer');
+    const config=current.config||{};
+    if(current.state==='preparing'){label.textContent='♪';fill.style.transform='scaleX(1)';return;}
+    if(current.state==='paused'){label.textContent=`${Math.ceil(Number(question.remaining_ms||0)/1000)}s`;fill.style.transform='scaleX(1)';return;}
+    if(current.state!=='question_active'||!question.deadline){label.textContent='—';fill.style.transform='scaleX(0)';return;}
+    const total=Math.max(1,(Number(config.question_time)||20)*1000),deadline=Number(question.deadline);
+    const tick=()=>{const remaining=Math.max(0,deadline-Date.now());label.textContent=`${Math.ceil(remaining/1000)}s`;label.classList.toggle('is-low',remaining<=5000);fill.style.transform=`scaleX(${Math.max(0,remaining/total)})`;};
+    tick();timer=setInterval(tick,200);
+  }
+  async function load(){
+    if(!room){errorState('O link do Quiz não tem uma sala válida. Peça ao streamer para copiar o link atualizado.');return;}
+    try{const response=await fetch(`/api/quiz-live/public/${encodeURIComponent(room)}`,{cache:'no-store'});if(!response.ok)throw new Error('Sala não encontrada. Confira o link público do Quiz.');render(await response.json());connect();}
+    catch(error){errorState(error.message||'Não foi possível carregar o Quiz Live.');}
+  }
+  function connect(){
+    const protocol=location.protocol==='https:'?'wss':'ws';socket=new WebSocket(`${protocol}://${location.host}/quiz-live-browser?room=${encodeURIComponent(room)}`);
+    socket.onmessage=event=>{try{const message=JSON.parse(event.data);if(message.type==='quiz_state')render(message);}catch{}};
+    socket.onclose=()=>setTimeout(connect,3000);
+  }
+  window.addEventListener('resize',()=>{if(state)applySafeMargins(state.config);});
+  load();
+})();
+</script>
+</body>
+</html>

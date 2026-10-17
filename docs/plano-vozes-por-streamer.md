@@ -79,7 +79,7 @@ Nao registrar texto do chat, chave, cabecalhos, URL autenticada ou resposta brut
 - `tenant_elevenlabs`: enabled, voice_id e model_id por tenant; acesso desabilitado por padrao. A coluna monthly_limit e preservada para compatibilidade historica.
 - `tts_credit_wallets` e `tts_credit_ledger`: saldo inteiro sem validade mensal e historico append-only de compra, uso e ajuste; debito atomicamente bloqueado quando insuficiente.
 - GET/PUT `/api/admin/users/:id/elevenlabs`: somente admin; habilitacao individual.
-- `additional_voice_models.credits_per_100_chars`: tarifa inteira definida pelo Super Admin. O uso cobra `ceil(caracteres × tarifa / 100)`, com minimo de um credito; cada modelo pode ter tarifa diferente.
+- `additional_voice_models.credits_per_150_chars`: tarifa inteira em TikCoins definida pelo Super Admin. O uso cobra `max(1, ceil(caracteres × tarifa / 150))`, arredondado para cima por mensagem; cada modelo pode ter tarifa diferente. Tarifas legadas por 100 caracteres são migradas para essa referência com `ceil(tarifa_antiga × 1,5)`.
 - `tts_credit_packages` e `/api/admin/tts/credit-packages`: pacotes avulsos configuraveis pelo Super Admin; checkout via Mercado Pago Preferences e credito liberado somente apos consulta e validacao do pagamento aprovado, valor, BRL e referencia externa. Webhook idempotente.
 - `/api/tts/credits` mostra saldo, tarifas liberadas, pacotes e movimentacoes recentes. `/api/tts/credits/checkout` cria a compra do streamer autenticado. Ajuste manual fica em `/api/admin/users/:id/tts-credits`.
 - GET/PUT `/api/tts/elevenlabs`: consulta acesso/catalogo e salva a propria voz; identidade vem do token.

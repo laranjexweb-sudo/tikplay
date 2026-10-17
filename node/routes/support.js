@@ -97,10 +97,11 @@ module.exports = function registerSupportRoutes(app, ctx = {}) {
   });
 
   app.get("/api/support/games", auth.requireAuth, (req, res) => {
-    const games = db.SUPPORT_GAME_SLUGS.map((slug) => ({ slug, name: db.SUPPORT_GAME_LABELS[slug] || slug }));
+    const games = db.SUPPORT_VISIBLE_GAME_SLUGS.map((slug) => ({ slug, name: db.SUPPORT_GAME_LABELS[slug] || slug }));
     res.json({
       success: true,
       games,
+      game_labels: db.SUPPORT_GAME_LABELS,
       ticket_statuses: db.SUPPORT_TICKET_STATUSES,
       ticket_priorities: db.SUPPORT_TICKET_PRIORITIES,
       suggestion_types: db.SUPPORT_SUGGESTION_TYPES,

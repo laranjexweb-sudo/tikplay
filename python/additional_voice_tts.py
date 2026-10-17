@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sqlite3
 import struct
+import time
 import urllib.request
 import uuid
 from contextlib import contextmanager
@@ -13,6 +14,7 @@ import tts
 import elevenlabs_tts
 import tts_emotions
 import tts_credits
+import api_costs
 
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
 MAX_CHAT_CHARACTERS = 150
@@ -88,7 +90,7 @@ def _wav_from_pcm(audio, sample_rate):
     return header + audio
 
 
-def _synthesize_openrouter(model, voice, text, key, emotion=None):
+def _synthesize_openrouter(model, voice, text, key, tenant_id=None, emotion=None):
     payload = {"model": model["model_id"], "input": text,
                "voice": voice, "response_format": model.get("response_format", "mp3")}
     if model.get("model_id", "").startswith("google/gemini-"):
@@ -100,26 +102,39 @@ def _synthesize_openrouter(model, voice, text, key, emotion=None):
         "https://openrouter.ai/api/v1/audio/speech", data=body,
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
                  "Accept": "audio/mpeg, audio/pcm, audio/wav"}, method="POST")
+    started = time.monotonic()
+    provider_request_id = None
+    def record_result(status):
+        api_costs.record("openrouter", model["model_id"], "chat_voice", "character", len(text), status,
+                         (time.monotonic() - started) * 1000, tenant_id, provider_request_id=provider_request_id)
     try:
         with urllib.request.urlopen(request, timeout=8) as response:
             if response.status != 200:
                 raise ProviderError("SYNTHESIS_FAILED")
+            provider_request_id = response.headers.get("x-request-id") or response.headers.get("request-id")
             content_type = response.headers.get("Content-Type", "").lower()
             audio = response.read(MAX_AUDIO_BYTES + 1)
     except ProviderError:
+        record_result("failed")
         raise
-    except Exception:
+    except Exception as exc:
+        is_timeout = isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError)
+        record_result("timeout" if is_timeout else "failed")
         raise ProviderError("SYNTHESIS_FAILED") from None
     if not audio or len(audio) > MAX_AUDIO_BYTES:
+        record_result("failed")
         raise ProviderError("INVALID_AUDIO")
     if "audio/mpeg" in content_type or "audio/mp3" in content_type:
-        return audio, ".mp3"
-    if "audio/wav" in content_type or "audio/wave" in content_type:
-        return audio, ".wav"
-    if "audio/pcm" in content_type:
-        return _wav_from_pcm(audio, int(model.get("pcm_sample_rate") or 24000)), ".wav"
-    raise ProviderError("INVALID_AUDIO")
-
+        result = (audio, ".mp3")
+    elif "audio/wav" in content_type or "audio/wave" in content_type:
+        result = (audio, ".wav")
+    elif "audio/pcm" in content_type:
+        result = (_wav_from_pcm(audio, int(model.get("pcm_sample_rate") or 24000)), ".wav")
+    else:
+        record_result("failed")
+        raise ProviderError("INVALID_AUDIO")
+    record_result("success")
+    return result
 
 def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None):
     """Return (path, code), or (None, code) for fallback; never log content or secrets."""
@@ -167,7 +182,7 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None):
             _, charge_code = tts_credits.charge(tenant_id, model_id, len(text))
             if charge_code != "CHARGED":
                 return None, charge_code
-        audio, suffix = _synthesize_openrouter(model, voice, text, key, emotion)
+        audio, suffix = _synthesize_openrouter(model, voice, text, key, tenant_id, emotion)
         output = output_base.with_suffix(suffix)
         output.parent.mkdir(parents=True, exist_ok=True)
         tts._prune_audio_cache(str(output.parent))

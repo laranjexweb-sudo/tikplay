@@ -4,7 +4,7 @@
 
 Super Admin controla individualmente quais vozes aparecem no painel dos streamers,
 agrupadas por tipo e modelo. O streamer escolhe uma voz aprovada em uma única lista;
-ele não escolhe o modelo. O acesso individual e o saldo de créditos são controlados
+ele não escolhe o modelo. O acesso individual e o saldo de TikCoins são controlados
 por streamer. O modelo padrão da conta permanece inalterado até o streamer selecionar
 uma voz adicional.
 
@@ -72,18 +72,18 @@ Prévia administrativa e síntese do chat solicitam PCM e o convertem para WAV m
 | Admin define a tarifa de um modelo | `tts.credits.model_cost_saved` | `billing`/`info` | modelo, tarifa anterior/nova e ator admin; sem texto de chat |
 | Admin salva pacotes | `tts.credits.packages_saved` / `tts.credits.packages_rejected` | `diagnostic`/`info`; `notice`/`warning` | ator e quantidade/IDs; sem dados de pagamento |
 | Admin ajusta saldo | `tts.credits.adjusted` / `tts.credits.adjustment_rejected` | `system`/`info`; `notice`/`warning` | tenant, ator, valor e saldo final |
-| Compra por Mercado Pago | `tts.credits.checkout_created` / `tts.credits.purchase_approved` / `tts.credits.purchase_rejected` | `billing`/`info`; `notice`/`warning` | tenant, pacote, valor em centavos, ID do pagamento e créditos; sem dados de cartão |
+| Compra por Mercado Pago | `tts.credits.checkout_created` / `tts.credits.purchase_approved` / `tts.credits.purchase_rejected` | `billing`/`info`; `notice`/`warning` | tenant, pacote, valor em centavos, ID do pagamento e TikCoins; sem dados de cartão |
 | Uso agregado da narração | `chat.tts.batch` existente | `chat`/`info` | contagem agregada por janela existente; nenhum evento por mensagem |
 
-## Carteira de créditos
+## Carteira de TikCoins
 
-As regras de carteira, tarifa por 100 caracteres, histórico, ajustes, compras avulsas
+As regras de carteira, tarifa por 150 caracteres, histórico, ajustes, compras avulsas
 no Mercado Pago, confirmação idempotente do webhook e limites de segurança estão em
-`creditos-voz.md`. Super Admin configura créditos por 100 caracteres em cada modelo e
-pacotes de créditos; o painel streamer mostra saldo, preço da voz selecionada, pacotes
+`creditos-voz.md`. Super Admin configura TikCoins por 150 caracteres em cada modelo e
+pacotes de TikCoins; o painel streamer mostra saldo, preço da voz selecionada, pacotes
 e as cinco movimentações mais recentes. Uma síntese paga debita antes da chamada ao
-provedor, somente após verificar cache e permissão. O preço é `ceil(caracteres × tarifa
-/ 100)`, com mínimo de um crédito; falhas depois do início da chamada não são estornadas,
+provedor, somente após verificar cache e permissão. O preço é `max(1, ceil(caracteres × tarifa
+/ 150))`, arredondado para cima por mensagem, com cobrança mínima de 1 TikCoin; falhas depois do início da chamada não são estornadas,
 pois o provedor pode ter cobrado. O esquema de caracteres mensal é preservado apenas
 para compatibilidade histórica; o fluxo de produção não o consulta.
 

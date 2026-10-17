@@ -13,6 +13,7 @@ const db = require("./db");
 const auth = require("./auth");
 const corda = require("./lib/corda");
 const contextoPublic = require("./routes/contexto");
+const { createQuizService } = require("./lib/quiz-live");
 
 const logstore = require("./lib/logstore");
 const interactions = require("./lib/interactions");
@@ -22,6 +23,13 @@ const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
 const { processLog } = require("./lib/process-log");
+const integrationSecrets = require("./lib/integration-secrets");
+const checkoutConfig = require("./lib/checkout-config");
+const apiCosts = require("./lib/api-costs");
+
+// Create the cost-metering tables before the Python daemon starts. Python writes
+// only request dimensions/usage; tariff history and reports remain admin-owned.
+apiCosts.ensureSchema(db.db);
 
 // Persiste cada log no ponto único de entrega (daemon/servidor); mantém o contrato legado
 // {type:"log", text, game, level} e adiciona metadados estruturados/correlação.
@@ -76,6 +84,7 @@ const FRIENDLY_PAGES = {
   "/duelo": "duelo.html",
   "/corda": "corda.html",
   "/contexto": "contexto.html",
+  "/quiz-live": "quiz-live.html",
   "/docs": "docs.html",
   "/suporte": "support.html",
   "/ajuda": "help.html",
@@ -97,7 +106,7 @@ app.get("/", (req, res) => {
   }
   return res.redirect("/login");
 });
-const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto"]);
+const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -207,7 +216,7 @@ function liveOnline(tenant) {
 }
 
 // Funcionalidades liberáveis por cliente (abas do painel)
-const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
+const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo", "quiz"];
 
 // features: {} ou chaves ausentes = tudo liberado; false = bloqueada
 function featureAllowed(user, feat) {
@@ -227,6 +236,13 @@ function requireFeature(feat) {
     next();
   };
 }
+
+const quizLiveEngine = createQuizService({ database: db.db, getTenant, getUserByRoomCode: db.getUserByRoomCode,
+  getNarrationConfig: tenantId => { const settings=readTenantSettings(tenantId); return { voice:settings.tts_voice, rate:settings.tts_rate }; },
+  requestNarration: ({tenantId,matchId,questionNo,text,traceId}) => daemonSend({cmd:"quiz_narrate",tenant_id:tenantId,match_id:matchId,question_no:questionNo,text,trace_id:traceId}),
+  broadcastToClients, broadcastLog, auditLog: processLog });
+quizLiveEngine.registerRoutes(app, { auth, requireFeature });
+quizLiveEngine.recoverTimers();
 
 function updateGameState(tenant, msg) {
   const gs = tenant.gameState;
@@ -396,9 +412,11 @@ function updateGameState(tenant, msg) {
     case "battle_ranking":
       gs.battle_ranking = msg;
       break;
-    case "caca_state":
-      tenant.cacaState = msg;
+    case "caca_state": {
+      const cacaConfig = db.getCacaConfig(tenant.id);
+      tenant.cacaState = { ...msg, show_ranking: cacaConfig.show_ranking, display: cacaConfig.display };
       break;
+    }
     case "vpet_state":
       tenant.vpetState = msg;
       break;
@@ -548,7 +566,7 @@ const DAEMON_ENV = {
   ...process.env,
   PYTHONIOENCODING: "utf-8",
   PYTHONUNBUFFERED: "1",
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+  OPENROUTER_API_KEY: integrationSecrets.read("openrouter").secret,
 };
 
 let daemon = null;
@@ -668,7 +686,9 @@ function handleDaemonMessage(msg) {
       broadcastStatus(tenant, status);
     } else if (msg.type === "interaction") {
       // Ingestão em lote (relatórios). Não é difundido aos clientes.
-      interactions.ingest(tenant, msg.interaction || {});
+      const interaction = msg.interaction || {};
+      interactions.ingest(tenant, interaction);
+      quizLiveEngine.handleInteraction(tenant, interaction);
     } else if (msg.type === "live_session") {
       // Nova live (sala) detectada pelo daemon: abre/reaproveita a sessão e zera
       // o ranking de curtidas (dados são por live). NÃO encerra jogos.
@@ -737,6 +757,12 @@ function handleDaemonMessage(msg) {
       broadcastToClients(tenant.logClients, { type: "word", word: tenant.currentWord });
     } else if (msg.type === "tts_test_ready") {
       broadcastToClients(tenant.logClients, { type: "tts_test_ready", url: msg.text || "" });
+    } else if (msg.type === "quiz_narration_ready") {
+      const narration=msg.text||{};
+      quizLiveEngine.narrationReady(tenant.id,narration.match_id,narration.question_no,narration.url,narration.trace_id,narration.duration_ms);
+    } else if (msg.type === "quiz_narration_failed") {
+      const narration=msg.text||{};
+      quizLiveEngine.narrationFailed(tenant.id,narration.match_id,narration.question_no,narration.trace_id,5000,narration.code);
     } else if (msg.type === "narrate") {
       const payload = msg.text || {};
       broadcastToClients(tenant.logClients, {
@@ -890,12 +916,13 @@ require("./routes/support")(app, { db, auth, multer, fs, path });
 require("./routes/monitor")(app, {
   db, auth, metrics, monitor, sse: monitorSse, getDaemonStatus, tenants, ttsConfigured: TTS_CONFIGURED,
 });
+require("./routes/admin-dashboard")(app, { db, auth, log: processLog });
 
 // ---------------- Planos e Assinaturas (Mercado Pago) ----------------
 
 const MP_API = "https://api.mercadopago.com";
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || "";
-const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || "";
+const mpAccessToken = () => integrationSecrets.read("mercadopago").secret;
+const mpWebhookSecret = () => integrationSecrets.read("mercadopago_webhook").secret;
 
 const PLANS = {
   free: { code: "free", name: "Free", price_cents: 0, period: "none", description: "Conta gratuita com recursos basicos" },
@@ -904,11 +931,13 @@ const PLANS = {
 };
 
 async function mpFetch(path, opts = {}) {
+  const accessToken = mpAccessToken();
+  if (!accessToken) return { status: 503, data: { error: "MERCADOPAGO_NOT_CONFIGURED" } };
   const res = await fetch(MP_API + path, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${accessToken}`,
       ...(opts.headers || {}),
     },
   });
@@ -917,7 +946,10 @@ async function mpFetch(path, opts = {}) {
 }
 
 const ttsCreditRoutes = require("./routes/tts-credits")(app, { db, auth, mpFetch,
-  mpConfigured: Boolean(MP_ACCESS_TOKEN), log: processLog });
+  mpConfigured: () => Boolean(mpAccessToken()), getPublicBaseUrl: () => checkoutConfig.read().publicBaseUrl, log: processLog });
+
+require("./routes/admin-integrations")(app, { auth, integrationSecrets, providerConfig: require("./lib/elevenlabs-config"), checkoutConfig,
+  getDaemonOpenRouterKey: () => DAEMON_ENV.OPENROUTER_API_KEY, log: processLog });
 
 app.get("/api/plans", (req, res) => {
   res.json({ success: true, plans: Object.values(PLANS).map(({ price_cents, ...p }) => ({ ...p, price: (price_cents / 100).toFixed(2) })) });
@@ -937,7 +969,7 @@ app.get("/api/billing", auth.requireAuth, (req, res) => {
 app.post("/api/billing/checkout", auth.requireAuth, async (req, res) => {
   const plan = PLANS[req.body && req.body.plan];
   if (!plan || plan.code === "free") return res.json({ success: false, error: "Plano invalido" });
-  if (!MP_ACCESS_TOKEN) return res.json({ success: false, error: "Pagamento nao configurado (MP_ACCESS_TOKEN)" });
+  if (!mpAccessToken()) return res.json({ success: false, error: "Pagamento nao configurado (MP_ACCESS_TOKEN)" });
   const u = db.getUserById(req.user.id);
   const frequency = plan.period === "yearly" ? 12 : 1;
   const payload = {
@@ -950,8 +982,8 @@ app.post("/api/billing/checkout", auth.requireAuth, async (req, res) => {
       transaction_amount: plan.price_cents / 100,
       currency_id: "BRL",
     },
-    back_url: `${req.protocol}://${req.get("host")}/painel`,
-    notification_url: `${req.protocol}://${req.get("host")}/api/webhooks/mercadopago`,
+    back_url: `${checkoutConfig.read().publicBaseUrl}/painel`,
+    notification_url: `${checkoutConfig.read().publicBaseUrl}/api/webhooks/mercadopago`,
     status: "pending",
   };
   try {
@@ -971,14 +1003,15 @@ app.post("/api/webhooks/mercadopago", async (req, res) => {
   const dataId = (body.data && body.data.id) || req.query["data.id"] || req.query.id;
 
   // Validação opcional de assinatura (se MP_WEBHOOK_SECRET estiver configurado)
-  if (MP_WEBHOOK_SECRET) {
+  const webhookSecret = mpWebhookSecret();
+  if (webhookSecret) {
     try {
       const sigHeader = req.headers["x-signature"] || "";
       const reqId = req.headers["x-request-id"] || "";
       const ts = (sigHeader.match(/ts=(\d+)/) || [])[1] || "";
       const v1 = (sigHeader.match(/v1=([a-f0-9]+)/) || [])[1] || "";
       const manifest = `id:${dataId};request-id:${reqId};ts:${ts};`;
-      const expected = crypto.createHmac("sha256", MP_WEBHOOK_SECRET).update(manifest).digest("hex");
+      const expected = crypto.createHmac("sha256", webhookSecret).update(manifest).digest("hex");
       const ok = v1 && expected && v1.length === expected.length &&
         crypto.timingSafeEqual(Buffer.from(v1, "utf8"), Buffer.from(expected, "utf8"));
       if (!ok) {
@@ -1524,14 +1557,25 @@ app.post("/api/caca/stop", auth.requireAuth, (req, res) => {
 
 app.post("/api/caca/config", auth.requireAuth, (req, res) => {
   const prefix = (req.body && typeof req.body.prefix === "string") ? req.body.prefix.trim().slice(0, 8) : "";
+  const answerMode = ["word", "coordinates", "both"].includes(req.body && req.body.answer_mode) ? req.body.answer_mode : "both";
+  const tenant = getTenant(req.user.id);
+  const currentConfig = db.getCacaConfig(req.user.id);
+  const showRanking = req.body && req.body.show_ranking !== undefined
+    ? req.body.show_ranking === true
+    : currentConfig.show_ranking;
+  const display = req.body && req.body.display !== undefined ? req.body.display : currentConfig.display;
+  let saved;
   try {
-    db.saveCacaConfig(req.user.id, { prefix });
+    saved = db.saveCacaConfig(req.user.id, { ...currentConfig, prefix, answer_mode: answerMode, show_ranking: showRanking, display });
   } catch (e) {
     return res.json({ success: false, error: e.message });
   }
-  const ok = daemonSend({ cmd: "caca_config", tenant_id: req.user.id, prefix });
+  const ok = daemonSend({ cmd: "caca_config", tenant_id: req.user.id, prefix, answer_mode: answerMode, show_ranking: saved.show_ranking });
   if (!ok) return res.json({ success: false, error: "Servico Python indisponivel" });
-  res.json({ success: true });
+  const cacaState = tenant.cacaState || { type: "caca_state", active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false };
+  tenant.cacaState = { ...cacaState, answer_mode: answerMode, show_ranking: saved.show_ranking, display: saved.display };
+  broadcastToClients(tenant.browserClients, tenant.cacaState);
+  res.json({ success: true, ...saved });
 });
 
 app.get("/api/caca/config", auth.requireAuth, (req, res) => {
@@ -1551,7 +1595,8 @@ app.get("/api/caca/state", auth.requireAuth, (req, res) => {
   const tid = req.user.id;
   const tenant = tenants.get(tid);
   const st = (tenant && tenant.cacaState) || { active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false };
-  res.json({ success: true, ...st });
+  const config = db.getCacaConfig(tid);
+  res.json({ success: true, ...st, answer_mode: config.answer_mode, show_ranking: config.show_ranking, display: config.display });
 });
 
 app.get("/api/caca/weekly", auth.requireAuth, (req, res) => {
@@ -2575,6 +2620,7 @@ wss.on("connection", (ws, req) => {
     if (tenant.currentWord) {
       ws.send(JSON.stringify({ type: "word", word: tenant.currentWord }));
     }
+    ws.send(JSON.stringify({ type: "quiz_update", state: quizLiveEngine.stateFor(user.id) }));
     return;
   }
 
@@ -2604,7 +2650,8 @@ wss.on("connection", (ws, req) => {
       ws.send(JSON.stringify({ type: "python_connected" }));
     }
     if (tenant.cacaState) {
-      ws.send(JSON.stringify({ type: "caca_state", ...tenant.cacaState }));
+      ws.send(JSON.stringify({ type: "caca_state", ...tenant.cacaState,
+        show_ranking: db.getCacaConfig(user.id).show_ranking, display: db.getCacaConfig(user.id).display }));
     }
     if (tenant.tresState) {
       ws.send(JSON.stringify({ type: "tres_state", ...tenant.tresState }));
@@ -2618,6 +2665,24 @@ wss.on("connection", (ws, req) => {
       ws.send(JSON.stringify({ type: "duelo_state", ...(tenant.dueloState || dueloInitialState(dueloCfg)) }));
       ws.send(JSON.stringify({ type: "duelo_gifts", gifts: dueloGiftsPayload(dueloCfg.gifts) }));
     }
+    return;
+  }
+
+  if (pathname === "/quiz-live-browser") {
+    const room = String(parsed.searchParams.get("room") || "").trim();
+    if (!quizLiveEngine.roomForPublicCode(room)) {
+      ws.close(1008, "sala invalida");
+      return;
+    }
+    ws.isAlive = true;
+    ws.on("pong", () => { ws.isAlive = true; });
+    if (!quizLiveEngine.attachPublic(room, ws)) ws.close(1008, "sala indisponivel");
+    ws.on("message", data => {
+      try {
+        const message=JSON.parse(String(data));
+        if(message.type==="quiz_narration_finished") quizLiveEngine.narrationFinished(room,message.match_id,Number(message.question_no));
+      } catch { /* A fonte pública aceita somente confirmação de fim da narração. */ }
+    });
     return;
   }
 

@@ -4,184 +4,161 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Caça Palavras — Live</title>
+<link rel="stylesheet" href="/ui/tikplay-theme.css?v=20261017-caca-live-safe">
+<link rel="stylesheet" href="/ui/tikplay-components.css?v=20261017-caca-live-safe">
 <style>
   :root {
-    --neon-pink: #ff2ec4;
-    --neon-gold: #ffd700;
-    --neon-purple: #b026ff;
-    --neon-blue: #00e5ff;
-    --bg-1: #050014;
-    --bg-2: #12022b;
+    color-scheme: dark;
+    --caca-bg: var(--tp-black);
+    --caca-surface: color-mix(in srgb, var(--tp-black-2) 88%, var(--tp-blue));
+    --caca-surface-raised: color-mix(in srgb, var(--tp-black-3) 70%, var(--tp-black));
+    --caca-line: color-mix(in srgb, var(--tp-text-inverse) 15%, transparent);
+    --caca-muted: color-mix(in srgb, var(--tp-text-inverse) 66%, var(--tp-black-3));
+    --caca-cyan: color-mix(in srgb, var(--tp-blue) 60%, var(--tp-text-inverse));
+    --caca-gap: clamp(var(--tp-space-2), 2.5vw, var(--tp-space-4));
+    --live-safe-top: 13%;
+    --live-safe-bottom: 22%;
+    --live-safe-left: 4%;
+    --live-safe-right: 4%;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  html { background: var(--caca-bg); }
   body {
-    min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-    color: #fff;
     background:
-      radial-gradient(ellipse at 20% 10%, rgba(255, 46, 196, 0.18), transparent 45%),
-      radial-gradient(ellipse at 85% 85%, rgba(0, 229, 255, 0.18), transparent 45%),
-      radial-gradient(ellipse at 70% 10%, rgba(176, 38, 255, 0.22), transparent 50%),
-      linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    overflow-x: hidden;
-    padding: 16px;
-    display: flex;
-    justify-content: center;
+      radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--tp-purple) 16%, transparent), transparent 48%),
+      linear-gradient(155deg, var(--tp-black), color-mix(in srgb, var(--tp-black-2) 80%, var(--tp-blue)));
+    color: var(--tp-text-inverse);
+    font-family: var(--tp-font-ui);
   }
-
-  .wrap { width: 100%; max-width: 680px; text-align: center; }
-
-  .head-title {
-    font-size: 1.9rem; font-weight: 900; letter-spacing: 5px;
-    color: var(--neon-gold); text-shadow: 0 0 18px rgba(255,215,0,0.8);
-    margin-bottom: 6px;
+  .stage { width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--live-safe-top) minmax(0, 1fr) var(--live-safe-bottom); padding-inline: var(--live-safe-left) var(--live-safe-right); }
+  .wrap { grid-row: 2; justify-self: center; width: 100%; max-width: 110rem; height: 100%; min-width: 0; min-height: 0; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(var(--tp-space-1), 1.2svh, var(--tp-space-3)); container: caca-layout / inline-size; }
+  .game-header { position: relative; flex: 0 0 auto; text-align: center; padding: 0 var(--tp-space-2); }
+  .head-title { margin: 0; color: var(--tp-text-inverse); font: 900 clamp(1.25rem, 3.4vw, 3rem)/1 var(--tp-font-display); letter-spacing: .07em; text-shadow: 0 .08em 0 color-mix(in srgb, var(--tp-black) 80%, transparent); }
+  .head-title span { color: var(--tp-yellow); }
+  .header-line { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: var(--tp-space-2); margin-top: var(--tp-space-2); color: var(--caca-muted); font-size: clamp(.78rem, 1.8vw, 1rem); }
+  .head-sub { margin: 0; }
+  .head-sub b { color: var(--caca-cyan); font-weight: 800; }
+  .status-pill { display: inline-flex; align-items: center; gap: var(--tp-space-1); padding: .1rem var(--tp-space-2); border: var(--tp-line) solid var(--caca-line); border-radius: 999px; background: color-mix(in srgb, var(--caca-surface) 75%, transparent); color: var(--tp-yellow-soft); font-size: .68em; font-weight: 750; white-space: nowrap; }
+  .status-pill::before { content: ""; width: .5em; aspect-ratio: 1; border-radius: 50%; background: var(--tp-yellow); }
+  .status-pill.is-active { color: var(--tp-green); }
+  .status-pill.is-active::before { background: var(--tp-green); }
+  .status-pill.is-finished { color: var(--tp-yellow-soft); }
+  .status-pill.is-finished::before { background: var(--tp-yellow); }
+  .progress-card { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: var(--tp-space-1) var(--tp-space-3); margin: var(--tp-space-1) 0 0; width: 100%; max-width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .progress-count { display: flex; align-items: baseline; gap: var(--tp-space-1); white-space: nowrap; }
+  .progress-count strong { color: var(--caca-cyan); font-size: clamp(1.1rem, 3vw, 2rem); font-weight: 900; line-height: 1; }
+  .progress-count span { color: var(--caca-muted); font-size: .8rem; font-weight: 700; }
+  .progress-track { width: clamp(4rem, 12cqw, 9rem); height: .45rem; flex: 0 1 auto; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--tp-text-inverse) 12%, var(--tp-black)); }
+  .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--tp-blue), var(--tp-purple)); transition: width 300ms ease; }
+  .live-leader { max-width: min(100%, 24rem); overflow: hidden; color: var(--tp-yellow-soft); font-size: clamp(.68rem, 1.3vw, .82rem); font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+  .tp-card.caca-panel { gap: var(--tp-space-2); min-width: 0; padding: clamp(var(--tp-space-2), 2vw, var(--tp-space-4)); border: var(--tp-line) solid var(--caca-line); border-radius: var(--tp-radius-lg); background: linear-gradient(145deg, color-mix(in srgb, var(--caca-surface) 95%, transparent), color-mix(in srgb, var(--tp-black) 88%, transparent)); box-shadow: 0 .5rem 1.75rem color-mix(in srgb, var(--tp-black) 32%, transparent); }
+  .game-content { position: relative; min-width: 0; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(var(--tp-space-1), 1svh, var(--tp-space-3)); overflow: visible; padding-top: clamp(2.75rem, 5svh, 4rem); }
+  .board-panel { width: 100%; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+  .game-content.is-finished.has-final-ranking { justify-content: center; }
+  .game-content.is-finished.has-final-ranking .board-panel { display: none; }
+  .section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--tp-space-2); text-align: left; }
+  .section-heading h2 { margin: 0; color: var(--tp-text-inverse); font-size: clamp(.82rem, 1.8vw, 1rem); font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+  .section-heading span { color: var(--caca-muted); font-size: .75rem; }
+  #boardWrap { width: 100%; min-width: 0; min-height: 0; flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
+  .board { width: min(100%, 82svh); height: auto; max-width: 100%; max-height: 100%; aspect-ratio: 1; flex: 0 1 auto; display: grid; grid-auto-rows: minmax(0, 1fr); grid-template-columns: minmax(1.35rem, 1.75rem) repeat(10, minmax(0, 1fr)); gap: clamp(.12rem, .45vw, .35rem); padding: clamp(.25rem, .8vw, .6rem); border: var(--tp-line) solid color-mix(in srgb, var(--caca-cyan) 58%, transparent); border-radius: var(--tp-radius-lg); background: color-mix(in srgb, var(--tp-black) 78%, transparent); box-shadow: 0 .35rem 1.4rem color-mix(in srgb, var(--tp-blue) 14%, transparent); }
+  .cell-label { min-width: 0; display: flex; align-items: center; justify-content: center; color: var(--caca-cyan); font-size: clamp(.62rem, 1.35vw, .9rem); font-weight: 900; font-variant-numeric: tabular-nums; user-select: none; }
+  .cell { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; border: var(--tp-line) solid color-mix(in srgb, var(--tp-text-inverse) 9%, transparent); border-radius: clamp(.25rem, .65vw, .55rem); background: color-mix(in srgb, var(--tp-text-inverse) 6%, var(--tp-black-2)); color: color-mix(in srgb, var(--tp-text-inverse) 92%, var(--tp-blue)); font-size: clamp(.9rem, 3.8vw, 2.55rem); font-weight: 900; line-height: 1; user-select: none; }
+  .cell.found { border-color: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 76%, transparent); background: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 17%, var(--tp-black-2)); color: var(--pcolor, var(--tp-yellow-soft)); box-shadow: inset 0 0 0 var(--tp-line) color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 40%, transparent); }
+  .cell.found.p-found { background: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 20%, var(--tp-black-2)); }
+  .cell-finder-avatar { position: absolute; z-index: 2; top: 0; right: 0; width: .62rem; height: .62rem; border-width: 0; background: var(--tp-black); box-shadow: 0 0 .2rem color-mix(in srgb, var(--tp-black) 85%, transparent); }
+  .cell-finder-avatar .caca-avatar-fallback { font-size: .34rem; }
+  .words-panel { display: none !important; width: 100%; flex: 0 0 auto; }
+  .words-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--tp-space-1); }
+  .wchip { min-width: 0; min-height: 1.75rem; max-width: 100%; display: inline-flex; align-items: center; gap: var(--tp-space-1); padding: var(--tp-space-1) var(--tp-space-2); overflow: hidden; border: var(--tp-line) solid var(--caca-line); border-radius: 999px; background: color-mix(in srgb, var(--tp-black) 35%, var(--caca-surface)); color: var(--caca-muted); font-size: clamp(.68rem, 1.4vw, .84rem); font-weight: 750; }
+  .word-index { flex: 0 0 auto; color: color-mix(in srgb, var(--caca-muted) 75%, transparent); font-size: .72em; font-variant-numeric: tabular-nums; }
+  .word-mask { color: color-mix(in srgb, var(--tp-text-inverse) 45%, var(--tp-black-3)); letter-spacing: .12em; }
+  .wchip.found { border-color: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 58%, transparent); background: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 11%, var(--caca-surface)); color: var(--pcolor, var(--tp-yellow-soft)); }
+  .caca-avatar { width: 1.45rem; height: 1.45rem; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border: var(--tp-line) solid var(--caca-line); border-radius: 50%; background: var(--caca-surface-raised); color: var(--tp-text-inverse); font-size: .62rem; font-weight: 900; line-height: 1; }
+  .word-finder-avatar { width: 1.45rem; height: 1.45rem; }
+  .caca-avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .caca-avatar-fallback[hidden] { display: none; }
+  .word-finder-name { max-width: 7rem; overflow: hidden; color: var(--tp-text-inverse); font-size: .76em; text-overflow: ellipsis; white-space: nowrap; }
+  .word-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wchip .coord { flex: 0 0 auto; margin-left: auto; color: var(--caca-cyan); font-size: .76em; font-weight: 800; white-space: nowrap; }
+  .wchip.found .coord { color: color-mix(in srgb, var(--pcolor, var(--tp-yellow)) 70%, var(--tp-text-inverse)); }
+  .caca-toast { position: absolute; z-index: var(--z-toast); top: 0; left: 50%; width: min(88%, 30rem); min-height: clamp(2.75rem, 5svh, 3.5rem); display: flex; align-items: center; gap: var(--tp-space-2); padding: var(--tp-space-1) var(--tp-space-3); border: var(--tp-line) solid color-mix(in srgb, var(--tp-green) 55%, var(--caca-line)); border-radius: var(--tp-radius-lg); background: color-mix(in srgb, var(--caca-surface) 96%, transparent); box-shadow: 0 .6rem 2rem color-mix(in srgb, var(--tp-black) 48%, transparent); opacity: 0; pointer-events: none; transform: translate(-50%, -.4rem) scale(.98); transition: opacity 180ms ease, transform 180ms ease; }
+  .caca-toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  .toast-check { flex: 0 0 auto; color: var(--tp-green); font-size: 1.2rem; font-weight: 900; }
+  .caca-toast .caca-avatar { width: 2.1rem; height: 2.1rem; font-size: .82rem; }
+  .toast-copy { min-width: 0; display: flex; flex-direction: column; gap: .15rem; text-align: left; }
+  .toast-title { overflow: hidden; color: var(--tp-text-inverse); font-size: .88rem; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+  .toast-detail { color: var(--caca-muted); font-size: .73rem; }
+  .empty { width: 100%; padding: var(--tp-space-8) var(--tp-space-3); border: var(--tp-line) dashed var(--caca-line); border-radius: var(--tp-radius-lg); color: var(--caca-muted); font-size: clamp(.9rem, 2vw, 1.15rem); text-align: center; }
+  .finished-banner { display: none; padding: var(--tp-space-2) var(--tp-space-3); border: var(--tp-line) solid color-mix(in srgb, var(--tp-yellow) 62%, transparent); border-radius: var(--tp-radius-md); background: color-mix(in srgb, var(--tp-yellow) 12%, var(--caca-surface)); color: var(--tp-yellow-soft); font-size: clamp(.8rem, 1.8vw, 1rem); font-weight: 900; letter-spacing: .08em; text-align: center; }
+  .caca-ranking { display: none; flex: 0 0 auto; padding: var(--tp-space-2) var(--tp-space-3); border: var(--tp-line) solid color-mix(in srgb, var(--tp-yellow) 35%, var(--caca-line)); border-radius: var(--tp-radius-lg); background: color-mix(in srgb, var(--caca-surface) 94%, transparent); }
+  .caca-ranking h3 { margin: 0 0 var(--tp-space-2); color: var(--tp-yellow-soft); font-size: clamp(.8rem, 1.8vw, 1rem); font-weight: 900; letter-spacing: .06em; text-align: left; }
+  .cr-row { min-width: 0; display: flex; align-items: center; gap: var(--tp-space-2); padding: var(--tp-space-1) var(--tp-space-2); border-radius: var(--tp-radius-sm); }
+  .cr-row:nth-child(odd) { background: color-mix(in srgb, var(--tp-text-inverse) 4%, transparent); }
+  .cr-medal { width: 2rem; flex: 0 0 auto; color: var(--tp-yellow-soft); font-size: 1rem; text-align: center; }
+  .cr-avatar { width: 2rem; height: 2rem; flex: 0 0 auto; border: var(--tp-line) solid var(--caca-line); border-radius: 50%; background: var(--caca-surface-raised); object-fit: cover; }
+  .cr-name { min-width: 0; flex: 1; overflow: hidden; color: var(--tp-text-inverse); font-size: .85rem; font-weight: 750; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+  .cr-count { flex: 0 0 auto; color: var(--tp-yellow-soft); font-size: .78rem; font-weight: 850; white-space: nowrap; }
+  .footer { display: none; }
+  @container caca-layout (max-width: 32rem) {
+    .section-heading { flex-direction: column; align-items: flex-start; gap: var(--tp-space-1); }
   }
-  .head-sub { font-size: 0.95rem; color: #cfd0ff; margin-bottom: 14px; }
-  .head-sub b { color: #fff; }
-
-  .board {
-    display: inline-grid;
-    gap: 3px;
-    background: rgba(0,0,0,0.35);
-    border: 2px solid var(--neon-blue);
-    border-radius: 10px;
-    padding: 8px;
-    box-shadow: 0 0 24px 4px rgba(0,229,255,0.35);
+  @media (max-width: 32rem) {
+    .cell { font-size: clamp(.9rem, 5.6vw, 1.6rem); }
+    .cr-row { gap: var(--tp-space-1); }
   }
-  .cell-label {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; font-weight: 900; color: var(--neon-blue);
-    text-shadow: 0 0 8px rgba(0,229,255,0.7);
-    user-select: none;
+  @media (max-height: 64rem) {
+    .head-title { font-size: clamp(1.2rem, 3.2vw, 2.4rem); }
+    .tp-card.caca-panel { padding: var(--tp-space-2); }
+    .section-heading span { font-size: .68rem; }
   }
-  .cell {
-    position: relative;
-    width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem; font-weight: 900; color: #e6e6ff;
-    background: rgba(255,255,255,0.06);
-    border-radius: 8px;
-    user-select: none;
+  @media (max-height: 48rem) {
+    .wrap { gap: var(--tp-space-1); }
+    .header-line { margin-top: var(--tp-space-1); }
+    .progress-card { margin-top: var(--tp-space-1); }
+    .tp-card.caca-panel { padding: var(--tp-space-1) var(--tp-space-2); }
   }
-  .cell.found { background: rgba(255,215,0,0.18); color: #ffe066; box-shadow: inset 0 0 0 2px rgba(255,215,0,0.55); }
-
-  /* Foto + nome sobre a palavra revelada */
-  .cell .finder {
-    position: absolute; left: 50%; bottom: -4px;
-    transform: translateX(-50%);
-    display: flex; align-items: center; gap: 2px;
-    background: rgba(0,0,0,0.85);
-    border: 2px solid var(--pcolor, var(--neon-gold));
-    border-radius: 999px;
-    padding: 0 4px 0 1px;
-    max-width: 68px;
-    white-space: nowrap;
-    overflow: hidden;
-    z-index: 5;
-    font-size: 0.5rem; color: var(--pcolor, #ffd);
-    box-shadow: 0 0 8px var(--pcolor, rgba(255,215,0,0.6));
+  @media (min-aspect-ratio: 4/3) {
+    .game-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; text-align: left; }
+    .head-title { grid-column: 1; }
+    .header-line { grid-column: 1; justify-content: flex-start; margin-top: var(--tp-space-1); }
+    .progress-card { grid-column: 1 / -1; }
+    .board { width: min(100%, 78svh); }
   }
-  .cell.found.p-found { background: color-mix(in srgb, var(--pcolor, #ffd700) 20%, transparent); color: var(--pcolor, #ffe066); box-shadow: inset 0 0 0 2px var(--pcolor, rgba(255,215,0,0.55)); }
-  .cell .finder img { width: 13px; height: 13px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--pcolor, #ffd); }
-  .cell .finder span { overflow: hidden; text-overflow: ellipsis; }
-
-  .words-bar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 30px; }
-  .wchip {
-    padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.25);
-    display: flex; align-items: center; gap: 6px;
-  }
-  .wchip.found { border-color: var(--pcolor, var(--neon-gold)); background: color-mix(in srgb, var(--pcolor, #ffd700) 14%, transparent); color: var(--pcolor, #ffe066); }
-  .wchip span.coord { font-size: 0.65rem; color: var(--neon-blue); font-weight: 600; }
-  .wchip.found span.coord { color: var(--pcolor, #ffd); }
-
-  .footer { margin-top: 16px; font-size: 0.8rem; color: #9a9ac0; }
-  .empty { color: #6b6fa8; font-size: 1rem; padding: 20px; }
-  .finished-banner {
-    margin-top: 14px; padding: 12px; border-radius: 12px; font-weight: 900; letter-spacing: 2px;
-    background: linear-gradient(90deg, rgba(255,215,0,0.25), rgba(255,46,196,0.25));
-    border: 2px solid var(--neon-gold); color: #ffe066;
-    text-shadow: 0 0 12px rgba(255,215,0,0.9);
-  }
-  .caca-ranking {
-    margin-top: 14px;
-    background: rgba(0,0,0,0.5);
-    border: 2px solid var(--neon-gold);
-    border-radius: 14px;
-    padding: 12px 16px;
-    box-shadow: 0 0 20px 3px rgba(255,215,0,0.35);
-  }
-  .caca-ranking h3 { font-size: 1rem; letter-spacing: 3px; color: var(--neon-gold); text-shadow: 0 0 10px var(--neon-gold); margin-bottom: 8px; }
-  .caca-help {
-    margin-top: 14px;
-    background: rgba(0,0,0,0.5);
-    border: 2px solid var(--neon-blue);
-    border-radius: 14px;
-    padding: 14px 18px;
-    box-shadow: 0 0 20px 3px rgba(0,229,255,0.3);
-    text-align: left;
-  }
-  .caca-help h3 { font-size: 1rem; letter-spacing: 3px; color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); margin-bottom: 10px; }
-  .caca-help h4 { font-size: 0.85rem; color: var(--neon-pink); margin: 12px 0 6px; letter-spacing: 1px; }
-  .caca-help p { font-size: 0.9rem; line-height: 1.5; color: #e6e6ff; margin: 4px 0; }
-  .caca-help code {
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 6px; padding: 1px 6px; font-size: 0.85rem; color: var(--neon-gold);
-  }
-  .caca-help ul { margin: 4px 0 4px 20px; }
-  .caca-help li { font-size: 0.88rem; color: #d8d8ff; margin: 3px 0; line-height: 1.45; }
-  .cr-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px 8px; border-radius: 8px;
-  }
-  .cr-row:nth-child(odd) { background: rgba(255,255,255,0.05); }
-  .cr-medal { width: 30px; text-align: center; font-size: 1.1rem; flex-shrink: 0; }
-  .cr-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.4); flex-shrink: 0; }
-  .cr-name { flex: 1; text-align: left; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cr-count { font-weight: 900; color: var(--neon-gold); flex-shrink: 0; }
-
-  /* ===== Menu inferior esquerdo (modos de visualização) ===== */
-  #cacaMenuWrap { position: fixed; bottom: 18px; left: 18px; z-index: 15; }
-  #cacaMenuBtn {
-    background: rgba(10,0,20,0.85); border: 2px solid var(--neon-blue); color: var(--neon-blue);
-    border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px;
-    cursor: pointer; box-shadow: 0 0 14px 2px rgba(0,229,255,0.5);
-  }
-  #cacaMenuBtn:hover { background: rgba(0,229,255,0.15); }
-  #cacaMenu { display: none; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  #cacaMenu.show { display: flex; }
-  .cm-opt {
-    background: rgba(10,0,20,0.9); border: 2px solid var(--neon-blue); color: #fff;
-    border-radius: 10px; padding: 8px 12px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px;
-    cursor: pointer; text-align: left;
-  }
-  .cm-opt:hover { background: rgba(0,229,255,0.18); }
-  .cm-opt.active { border-color: var(--neon-pink); color: var(--neon-pink); }
-
-
+  @media (prefers-reduced-motion: reduce) { .progress-fill, .caca-toast { transition: none; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="head-title">CAÇA PALAVRAS</div>
-  <div class="head-sub">Envie no chat as coordenadas, ex: <b>B2 F6</b> ou <b>B2:F6</b> · Encontradas: <b id="foundCount">0</b>/<span id="totalCount">0</span></div>
+<div class="stage">
+  <div class="wrap">
+    <header class="game-header">
+      <div class="head-title"><span>CAÇA</span> PALAVRAS</div>
+      <div class="header-line">
+        <p class="head-sub" id="cacaAnswerHint"></p>
+        <span class="status-pill" id="roundStatus">Aguardando partida</span>
+      </div>
+      <div class="progress-card" aria-label="Progresso da partida">
+        <div class="progress-count"><strong id="foundCount">0</strong><span>de <span id="totalCount">0</span> palavras</span></div>
+        <div class="progress-track" role="progressbar" aria-label="Palavras encontradas" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="live-leader" id="liveLeader" aria-live="polite"></div>
+      </div>
+    </header>
 
-  <div id="boardWrap"><div class="empty">Aguardando partida...</div></div>
-  <div class="words-bar" id="wordsBar"></div>
-  <div class="finished-banner" id="finishedBanner" style="display:none">TODAS AS PALAVRAS ENCONTRADAS!</div>
-  <div class="caca-ranking" id="cacaRanking" style="display:none"></div>
-  <div class="caca-ranking" id="cacaWeekly" style="display:none"></div>
-  <div class="caca-help" id="cacaHelp" style="display:none"></div>
-  <div class="footer">Jogue pelo chat · coordenadas linha(Letra)+coluna(Número)</div>
-</div>
-
-<div id="cacaMenuWrap">
-  <div id="cacaMenu">
-    <button class="cm-opt" data-view="game" onclick="cacaSetView('game')">⚔️ JOGO</button>
-    <button class="cm-opt" data-view="weekly" onclick="cacaSetView('weekly')">🏆 SEMANAL</button>
-    <button class="cm-opt" data-view="help" onclick="cacaSetView('help')">ℹ️ ORIENTAÇÕES</button>
+    <main class="game-content">
+      <div class="caca-toast" id="cacaToast" role="status" aria-live="polite"></div>
+      <section class="tp-card caca-panel board-panel" id="boardPanel" aria-label="Tabuleiro de caça palavras">
+        <div class="section-heading"><h2>Encontre as palavras</h2><span id="cacaCoordHint">Letra = linha · número = coluna</span></div>
+        <div id="boardWrap"><div class="empty">Aguardando partida...</div></div>
+      </section>
+      <section class="tp-card caca-panel words-panel" id="wordsPanel" aria-label="Lista de palavras">
+        <div class="section-heading"><h2>Acertos recentes</h2><span>Últimas palavras encontradas</span></div>
+        <div class="words-bar" id="wordsBar"></div>
+      </section>
+      <div class="finished-banner" id="finishedBanner">Todas as palavras encontradas!</div>
+      <div class="caca-ranking" id="cacaRanking"></div>
+    </main>
+    <footer class="footer" id="cacaFooterHint"></footer>
   </div>
-  <button id="cacaMenuBtn" onclick="toggleCacaMenu()">☰ OPÇÕES</button>
 </div>
 
 <script>
@@ -191,6 +168,20 @@ if (!token) location.href = "/login";
 const room = new URLSearchParams(location.search).get("room") || "";
 let state = null;
 let ws = null;
+const cacaFoundOrder = new Map();
+
+function recentFoundWords(words) {
+  const found = (words || []).filter(word => word.found);
+  const byId = new Map(found.map(word => [String(word.id), word]));
+  for (const word of found) {
+    const id = String(word.id);
+    if (!cacaFoundOrder.has(id)) cacaFoundOrder.set(id, word);
+  }
+  return [...cacaFoundOrder.keys()]
+    .map(id => byId.get(id) || cacaFoundOrder.get(id))
+    .filter(word => word && (word.found || byId.has(String(word.id))))
+    .slice(-4);
+}
 
 function authFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
@@ -198,6 +189,59 @@ function authFetch(path, opts = {}) {
 }
 
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+function safeAvatarUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, location.origin);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch { return ""; }
+}
+
+function playerInitials(name) {
+  const parts = String(name || "").trim().split(/\s+/u).filter(Boolean);
+  if (!parts.length) return "?";
+  return Array.from(parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0][0]).slice(0, 2).join("").toLocaleUpperCase("pt-BR");
+}
+
+function avatarMarkup(name, avatar, className = "caca-avatar") {
+  const initials = esc(playerInitials(name));
+  const src = safeAvatarUrl(avatar);
+  return `<span class="${className}" aria-label="${esc(name || "Participante")}">${src ? `<img src="${esc(src)}" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false">` : ""}<span class="caca-avatar-fallback"${src ? " hidden" : ""}>${initials}</span></span>`;
+}
+
+function createPlayerAvatar(name, avatar) {
+  const wrapper = document.createElement("span");
+  wrapper.className = "caca-avatar";
+  wrapper.setAttribute("aria-label", name || "Participante");
+  const fallback = document.createElement("span");
+  fallback.className = "caca-avatar-fallback";
+  fallback.textContent = playerInitials(name);
+  const src = safeAvatarUrl(avatar);
+  if (src) {
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = src;
+    image.addEventListener("error", () => { image.hidden = true; fallback.hidden = false; }, { once: true });
+    fallback.hidden = true;
+    wrapper.append(image, fallback);
+  } else wrapper.append(fallback);
+  return wrapper;
+}
+
+function applyDisplaySettings(display) {
+  const safe = display && typeof display === "object" ? display : {};
+  const values = {
+    top: Math.max(0, Math.min(35, Number(safe.safe_top ?? 13))),
+    bottom: Math.max(0, Math.min(35, Number(safe.safe_bottom ?? 22))),
+    left: Math.max(0, Math.min(20, Number(safe.safe_left ?? 4))),
+    right: Math.max(0, Math.min(20, Number(safe.safe_right ?? 4))),
+  };
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(values)) root.style.setProperty(`--live-safe-${key}`, `${value}%`);
+  document.body.dataset.layout = ["vertical", "landscape", "custom"].includes(safe.preset) ? safe.preset : "vertical";
+}
 
 const PLAYER_COLORS = [
   "#ffd700", "#00e5ff", "#ff2ec4", "#b026ff", "#4aff4a",
@@ -213,28 +257,30 @@ function playerColor(user) {
 }
 
 function render() {
+  renderCacaInstructions();
   if (!state || !state.board || !state.board.length) {
     document.getElementById("boardWrap").innerHTML = '<div class="empty">Aguardando partida...</div>';
     document.getElementById("wordsBar").innerHTML = "";
     document.getElementById("foundCount").textContent = "0";
     document.getElementById("totalCount").textContent = "0";
+    document.getElementById("roundStatus").textContent = "Aguardando partida";
+    document.getElementById("roundStatus").className = "status-pill";
+    document.getElementById("progressFill").style.width = "0%";
+    document.querySelector(".progress-track").setAttribute("aria-valuemax", "0");
+    document.querySelector(".progress-track").setAttribute("aria-valuenow", "0");
+    document.getElementById("wordsPanel").style.display = "none";
+    document.getElementById("liveLeader").textContent = "";
+    document.querySelector(".game-content").classList.remove("is-finished", "has-final-ranking");
     document.getElementById("finishedBanner").style.display = "none";
     renderRanking();
+    applyCacaView();
     return;
   }
 
   const size = state.size || 10;
-  const foundByWord = {};
-  const coordOf = {};
-  for (const w of state.words || []) {
-    coordOf[w.start] = w;
-    coordOf[w.end] = w;
-    if (w.found) foundByWord[w.start] = w;
-  }
-
   const boardEl = document.createElement("div");
   boardEl.className = "board";
-  boardEl.style.gridTemplateColumns = `22px repeat(${size}, 40px)`;
+  boardEl.style.gridTemplateColumns = `minmax(1.35rem, 1.75rem) repeat(${size}, minmax(0, 1fr))`;
 
   // Mapa de células que pertencem a palavras encontradas
   const cellMeta = {};
@@ -269,6 +315,8 @@ function render() {
     for (let c = 0; c < size; c++) {
       const cell = document.createElement("div");
       cell.className = "cell";
+      cell.dataset.row = String(r);
+      cell.dataset.col = String(c);
       const meta = cellMeta[r + "_" + c];
       if (meta) {
         const color = playerColor(meta.word.finder || meta.word.finder_nickname);
@@ -276,15 +324,9 @@ function render() {
         cell.style.setProperty("--pcolor", color);
         cell.textContent = state.board[r][c];
         if (meta.idx === 0) {
-          const w = meta.word;
-          const f = document.createElement("div");
-          f.className = "finder";
-          f.style.setProperty("--pcolor", color);
-          if (w.finder_avatar) f.innerHTML = `<img src="${esc(w.finder_avatar)}" onerror="this.style.display='none'">`;
-          const nm = document.createElement("span");
-          nm.textContent = esc(w.finder_nickname || w.finder || "?");
-          f.appendChild(nm);
-          cell.appendChild(f);
+          const avatar = createPlayerAvatar(meta.word.finder_nickname || meta.word.finder || "Participante", meta.word.finder_avatar);
+          avatar.classList.add("cell-finder-avatar");
+          cell.appendChild(avatar);
         }
       } else {
         cell.textContent = state.board[r][c];
@@ -296,14 +338,39 @@ function render() {
   document.getElementById("boardWrap").appendChild(boardEl);
 
   const bar = document.getElementById("wordsBar");
-  bar.innerHTML = (state.words || []).map(w => {
-    if (!w.found) return `<span class="wchip">•••</span>`;
+  const recentFound = recentFoundWords(state.words);
+  document.getElementById("wordsPanel").style.display = "none";
+  bar.innerHTML = recentFound.map(w => {
     const color = playerColor(w.finder || w.finder_nickname);
-    return `<span class="wchip found" style="--pcolor:${color}">${esc(w.text)} <span class="coord">${esc(w.start)}:${esc(w.end)}</span></span>`;
+    const nickname = w.finder_nickname || w.finder || "Participante";
+    return `<span class="wchip found" style="--pcolor:${color}">${avatarMarkup(nickname, w.finder_avatar, "caca-avatar word-finder-avatar")}<span class="word-finder-name">${esc(nickname)}</span><span class="word-name">${esc(w.text)}</span><span class="coord">${esc(w.start)}:${esc(w.end)}</span></span>`;
   }).join("");
 
-  document.getElementById("foundCount").textContent = state.found_count;
-  document.getElementById("totalCount").textContent = state.total;
+  const foundCount = Number(state.found_count || 0);
+  const totalCount = Number(state.total || (state.words || []).length || 0);
+  document.getElementById("foundCount").textContent = foundCount;
+  document.getElementById("totalCount").textContent = totalCount;
+  const progressTrack = document.querySelector(".progress-track");
+  progressTrack.setAttribute("aria-valuemax", String(totalCount));
+  progressTrack.setAttribute("aria-valuenow", String(foundCount));
+  document.getElementById("progressFill").style.width = `${totalCount ? Math.min(100, foundCount / totalCount * 100) : 0}%`;
+  const status = document.getElementById("roundStatus");
+  status.textContent = state.finished ? "Partida finalizada" : state.active ? "Rodada em andamento" : "Aguardando partida";
+  status.className = `status-pill${state.finished ? " is-finished" : state.active ? " is-active" : ""}`;
+  const leaders = Object.values((state.words || []).reduce((acc, word) => {
+    if (!word.found || !word.finder) return acc;
+    const id = word.finder;
+    acc[id] = acc[id] || { name: word.finder_nickname || id, count: 0 };
+    acc[id].count++;
+    return acc;
+  }, {})).sort((a, b) => b.count - a.count);
+  const leader = leaders[0];
+  const topCount = leader?.count || 0;
+  const tiedLeaders = leaders.filter(person => person.count === topCount);
+  const leaderText = tiedLeaders.length > 1 ? `Empate · ${topCount} palavra${topCount === 1 ? "" : "s"}` : leader ? `🏆 Líder: ${leader.name} · ${leader.count} palavra${leader.count === 1 ? "" : "s"}` : "";
+  document.getElementById("liveLeader").textContent = !state.finished ? leaderText : "";
+  document.querySelector(".game-content").classList.toggle("is-finished", !!state.finished);
+  document.querySelector(".game-content").classList.toggle("has-final-ranking", !!state.finished && state.show_ranking !== false && leaders.length > 0);
   document.getElementById("finishedBanner").style.display = state.finished ? "block" : "none";
   renderRanking();
   applyCacaView();
@@ -312,7 +379,7 @@ function render() {
 function renderRanking() {
   const el = document.getElementById("cacaRanking");
   if (!el) return;
-  if (!state || !state.finished) { el.style.display = "none"; el.innerHTML = ""; return; }
+  if (!state || !state.finished || state.show_ranking === false) { el.style.display = "none"; el.innerHTML = ""; return; }
 
   const agg = {};
   for (const w of state.words || []) {
@@ -321,108 +388,46 @@ function renderRanking() {
     agg[k] = agg[k] || { finder: k, nickname: w.finder_nickname || k, avatar: w.finder_avatar || "", count: 0 };
     agg[k].count++;
   }
-  const list = Object.values(agg).sort((a, b) => b.count - a.count);
+  const visiblePlaces = window.innerHeight >= 900 ? 5 : 3;
+  const list = Object.values(agg).sort((a, b) => b.count - a.count).slice(0, visiblePlaces);
   if (!list.length) { el.style.display = "none"; el.innerHTML = ""; return; }
 
   const medals = ["🥇", "🥈", "🥉"];
   el.style.display = "block";
   el.innerHTML =
-    "<h3>🏆 MAIS PALAVRAS ACERTADAS</h3>" +
+    "<h3>🏆 RANKING DA RODADA</h3>" +
     list.map((r, i) =>
       `<div class="cr-row">
          <span class="cr-medal">${medals[i] || (i + 1) + "º"}</span>
-         ${r.avatar ? `<img class="cr-avatar" src="${esc(r.avatar)}" onerror="this.style.visibility='hidden'">` : `<span class="cr-avatar" style="background:rgba(255,255,255,0.1)"></span>`}
+         ${avatarMarkup(r.nickname, r.avatar, "caca-avatar cr-avatar")}
          <span class="cr-name">${esc(r.nickname)}</span>
          <span class="cr-count">${r.count} palavra${r.count > 1 ? "s" : ""}</span>
        </div>`
     ).join("");
 }
 
-// ---------------- Menu / modos de visualização ----------------
-let cacaView = "game";
-
-function toggleCacaMenu() {
-  document.getElementById("cacaMenu").classList.toggle("show");
-}
-
-function cacaSetView(view) {
-  cacaView = view;
-  document.querySelectorAll(".cm-opt").forEach(b => b.classList.toggle("active", b.dataset.view === view));
-  document.getElementById("cacaMenu").classList.remove("show");
-  if (view === "weekly") loadCacaWeekly();
-  applyCacaView();
-}
-
 function applyCacaView() {
-  const showGame = cacaView === "game";
-  const showHelp = cacaView === "help";
-  const board = document.getElementById("boardWrap");
-  const words = document.getElementById("wordsBar");
+  const words = document.getElementById("wordsPanel");
   const banner = document.getElementById("finishedBanner");
   const ranking = document.getElementById("cacaRanking");
-  const weekly = document.getElementById("cacaWeekly");
-  const help = document.getElementById("cacaHelp");
-  if (board) board.style.display = showGame ? "" : "none";
-  if (words) words.style.display = showGame ? "" : "none";
-  if (banner) banner.style.display = showGame ? (state && state.finished ? "block" : "none") : "none";
-  if (ranking) ranking.style.display = showGame ? (state && state.finished ? "block" : "none") : "none";
-  if (weekly) weekly.style.display = showGame ? "none" : "block";
-  if (help) help.style.display = showHelp ? "block" : "none";
+  if (words) words.style.display = "none";
+  if (banner) banner.style.display = state?.finished ? "block" : "none";
+  if (ranking) ranking.style.display = state?.finished && state?.show_ranking !== false ? "block" : "none";
 }
 
-function renderHelp() {
-  const el = document.getElementById("cacaHelp");
-  if (!el) return;
-  el.innerHTML = `
-    <h3>ℹ️ COMO JOGAR</h3>
-    <h4>OBJETIVO</h4>
-    <p>Encontre as palavras escondidas na grade e envie no <b>chat</b> as coordenadas de <b>início</b> e <b>fim</b> da palavra.</p>
-
-    <h4>COMO LER AS COORDENADAS</h4>
-    <p><b>Letra = linha (A a J)</b> · <b>Número = coluna (1 a 10)</b></p>
-    <p>Exemplo: <code>B2 F6</code> vai da linha B, coluna 2 até a linha F, coluna 6.</p>
-
-    <h4>FORMATOS ACEITOS</h4>
-    <ul>
-      <li><code>A1A4</code></li>
-      <li><code>A1:A4</code></li>
-      <li><code>B2 F6</code> (com espaço)</li>
-      <li><code>B2-F6</code>, <code>B2,F6</code>, <code>B2.F6</code></li>
-      <li>Com emoji ao redor: <code>❤️A1:A3✨</code></li>
-      <li>Com prefixo (se configurado): <code>cp A1A4</code></li>
-    </ul>
-
-    <h4>ORDEM NÃO IMPORTA</h4>
-    <p>Tanto <code>A1:A3</code> quanto <code>A3:A1</code> funcionam (o reverso também é aceito).</p>
-
-    <h4>DICA — SE O TIKTOK BLOQUEAR</h4>
-    <p>Comentários como <code>B2F6</code> (só letra+número) podem parecer código e ser barrados. Use <b>espaço ou pontuação</b>, ex: <code>B2 F6</code> ou <code>B2:F6</code>, que passa com mais facilidade.</p>
-
-    <h4>PONTUAÇÃO</h4>
-    <p>Quem acertar a palavra, ela é <b>revelada com a foto e o nome</b> do jogador. Ao encontrar todas, o jogo encerra e mostra o ranking de quem mais acertou.</p>
-  `;
-}
-
-async function loadCacaWeekly() {
-  const el = document.getElementById("cacaWeekly");
-  if (!el) return;
-  try {
-    const res = await authFetch(`/api/caca/weekly`);
-    const d = await res.json();
-    if (!d || !d.success) return;
-    const list = d.weekly || [];
-    const medals = ["🥇", "🥈", "🥉"];
-    el.innerHTML =
-      "<h3>🏆 SEMANAL — MAIS PALAVRAS</h3>" +
-      (list.length ? list.map((r, i) =>
-        `<div class="cr-row">
-           <span class="cr-medal">${medals[i] || (i + 1) + "º"}</span>
-           ${r.avatar ? `<img class="cr-avatar" src="${esc(r.avatar)}" onerror="this.style.visibility='hidden'">` : `<span class="cr-avatar" style="background:rgba(255,255,255,0.1)"></span>`}
-           <span class="cr-name">${esc(r.nickname || r.user)}</span>
-           <span class="cr-count">${r.words} palavra${r.words > 1 ? "s" : ""}</span>
-         </div>`
-      ).join("") : '<div class="empty">Ninguém ainda esta semana.</div>');
-  } catch (e) {}
+function renderCacaInstructions() {
+  const mode = ["word", "coordinates", "both"].includes(state?.answer_mode) ? state.answer_mode : "both";
+  const messages = {
+    word: { header: "Envie a palavra no chat", footer: "Envie a palavra encontrada no chat da live.", coords: false },
+    coordinates: { header: "Envie coordenadas · exemplo: B2 F6", footer: "Envie as coordenadas de início e fim no chat da live.", coords: true },
+    both: { header: "Envie a palavra ou coordenadas · B2 F6", footer: "Envie a palavra encontrada ou as coordenadas no chat da live.", coords: true },
+  }[mode];
+  const header = document.getElementById("cacaAnswerHint");
+  const footer = document.getElementById("cacaFooterHint");
+  const coordHint = document.getElementById("cacaCoordHint");
+  if (header) header.textContent = messages.header;
+  if (footer) footer.textContent = messages.footer;
+  if (coordHint) coordHint.hidden = !messages.coords;
 }
 
 function parse(coord) {
@@ -443,14 +448,53 @@ function segment(p1, p2) {
 
 function handle(msg) {
   if (msg.type === "caca_state") {
+    if (msg.active && state && !state.active && (state.finished || Number(state.found_count) > 0)) cacaFoundOrder.clear();
     state = msg;
+    applyDisplaySettings(state.display);
+    recentFoundWords(state.words);
     render();
   } else if (msg.type === "caca_word_found") {
-    // estado completo chega junto via caca_state
+    if (msg.id !== undefined && msg.id !== null) cacaFoundOrder.set(String(msg.id), {
+      id: msg.id, text: msg.word, found: true, finder: msg.finder,
+      finder_nickname: msg.nickname, finder_avatar: msg.avatar,
+      start: msg.start, end: msg.end,
+    });
+    if (state) render();
+    showCacaToast(msg);
   } else if (msg.type === "caca_finished") {
     if (state) state.finished = true;
     render();
   }
+}
+
+const cacaToastQueue = [];
+let cacaToastBusy = false;
+function showCacaToast(result) {
+  if (!result || !result.word) return;
+  cacaToastQueue.push(result);
+  if (cacaToastQueue.length > 5) cacaToastQueue.shift();
+  if (!cacaToastBusy) showNextCacaToast();
+}
+function showNextCacaToast() {
+  const toast = document.getElementById("cacaToast");
+  const result = cacaToastQueue.shift();
+  if (!toast || !result) { cacaToastBusy = false; return; }
+  cacaToastBusy = true;
+  const copy = document.createElement("div");
+  copy.className = "toast-copy";
+  const title = document.createElement("span");
+  title.className = "toast-title";
+  title.textContent = `${result.nickname || result.finder || "Alguém"} encontrou ${result.word}`;
+  const detail = document.createElement("span");
+  detail.className = "toast-detail";
+  detail.textContent = `${result.start || ""}:${result.end || ""} · +1 palavra`;
+  copy.append(title, detail);
+  toast.replaceChildren(createPlayerAvatar(result.nickname || result.finder || "Alguém", result.avatar), copy);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => { cacaToastBusy = false; showNextCacaToast(); }, 220);
+  }, 3000);
 }
 
 function connectWS() {
@@ -465,13 +509,13 @@ async function loadState() {
   try {
     const res = await authFetch(`/api/caca/state`);
     const d = await res.json();
-    if (d && d.success) { state = d; render(); }
+    if (d && d.success) { state = d; applyDisplaySettings(state.display); render(); }
   } catch (e) {}
 }
 
 connectWS();
 loadState();
-renderHelp();
+renderCacaInstructions();
 applyCacaView();
 </script>
 </body>

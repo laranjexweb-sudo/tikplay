@@ -220,10 +220,16 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS tenant_caca_config (
   tenant_id INTEGER PRIMARY KEY,
   prefix TEXT DEFAULT '',
+  answer_mode TEXT DEFAULT 'both',
+  show_ranking INTEGER DEFAULT 1,
   count INTEGER DEFAULT 10,
+  display_json TEXT DEFAULT '{}',
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
+try { db.exec("ALTER TABLE tenant_caca_config ADD COLUMN answer_mode TEXT DEFAULT 'both'"); } catch {}
+try { db.exec("ALTER TABLE tenant_caca_config ADD COLUMN show_ranking INTEGER DEFAULT 1"); } catch {}
+try { db.exec("ALTER TABLE tenant_caca_config ADD COLUMN display_json TEXT DEFAULT '{}'"); } catch {}
 db.exec(`
 CREATE TABLE IF NOT EXISTS gifts (
   gid INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1064,21 +1070,57 @@ function saveTenantGiftConfig(tenantId, hint_gifts, riddle_gifts, size_gift, let
   `).run(tenantId, JSON.stringify(hint_gifts || []), JSON.stringify(riddle_gifts || []), String(size_gift || ""), String(letter_gift || ""));
 }
 
+function defaultCacaDisplay(preset = "vertical") {
+  if (preset === "landscape") return { preset, safe_top: 8, safe_bottom: 12, safe_left: 5, safe_right: 5 };
+  return { preset: "vertical", safe_top: 13, safe_bottom: 22, safe_left: 4, safe_right: 4 };
+}
+
+function normalizeCacaDisplay(value) {
+  const preset = ["vertical", "landscape", "custom"].includes(value && value.preset) ? value.preset : "vertical";
+  if (preset !== "custom") return defaultCacaDisplay(preset);
+  const pct = (key, fallback, max) => {
+    const raw = Number(value[key]);
+    return Math.max(0, Math.min(max, Math.round(Number.isFinite(raw) ? raw : fallback)));
+  };
+  const display = {
+    preset,
+    safe_top: pct("safe_top", 13, 35),
+    safe_bottom: pct("safe_bottom", 22, 35),
+    safe_left: pct("safe_left", 4, 20),
+    safe_right: pct("safe_right", 4, 20),
+  };
+  return display;
+}
+
 function getCacaConfig(tenantId) {
-  const row = db.prepare("SELECT prefix, count FROM tenant_caca_config WHERE tenant_id = ?").get(tenantId);
-  if (!row) return { prefix: "", count: 10 };
-  return { prefix: row.prefix || "", count: row.count || 10 };
+  const row = db.prepare("SELECT prefix, answer_mode, show_ranking, count, display_json FROM tenant_caca_config WHERE tenant_id = ?").get(tenantId);
+  if (!row) return { prefix: "", answer_mode: "both", show_ranking: true, count: 10, display: defaultCacaDisplay() };
+  let display = {};
+  try { display = JSON.parse(row.display_json || "{}"); } catch {}
+  return {
+    prefix: row.prefix || "",
+    answer_mode: ["word", "coordinates", "both"].includes(row.answer_mode) ? row.answer_mode : "both",
+    show_ranking: row.show_ranking !== 0,
+    count: row.count || 10,
+    display: normalizeCacaDisplay(display),
+  };
 }
 
 function saveCacaConfig(tenantId, cfg) {
   const prefix = String((cfg && cfg.prefix != null) ? cfg.prefix : "").trim().slice(0, 8);
+  const answerMode = ["word", "coordinates", "both"].includes(cfg && cfg.answer_mode) ? cfg.answer_mode : "both";
+  const showRanking = cfg && cfg.show_ranking !== undefined
+    ? (cfg.show_ranking ? 1 : 0)
+    : (getCacaConfig(tenantId).show_ranking ? 1 : 0);
   const count = Math.max(4, Math.min(16, parseInt((cfg && cfg.count != null) ? cfg.count : 10, 10) || 10));
+  const display = normalizeCacaDisplay(cfg && cfg.display !== undefined ? cfg.display : getCacaConfig(tenantId).display);
   db.prepare(`
-    INSERT INTO tenant_caca_config (tenant_id, prefix, count)
-    VALUES (?,?,?)
-    ON CONFLICT(tenant_id) DO UPDATE SET prefix=excluded.prefix, count=excluded.count, updated_at=CURRENT_TIMESTAMP
-  `).run(tenantId, prefix, count);
-  return { prefix, count };
+    INSERT INTO tenant_caca_config (tenant_id, prefix, answer_mode, show_ranking, count, display_json)
+    VALUES (?,?,?,?,?,?)
+    ON CONFLICT(tenant_id) DO UPDATE SET prefix=excluded.prefix, answer_mode=excluded.answer_mode,
+      show_ranking=excluded.show_ranking, count=excluded.count, display_json=excluded.display_json, updated_at=CURRENT_TIMESTAMP
+  `).run(tenantId, prefix, answerMode, showRanking, count, JSON.stringify(display));
+  return { prefix, answer_mode: answerMode, show_ranking: !!showRanking, count, display };
 }
 
 function getTresGiftConfig(tenantId) {
@@ -2199,6 +2241,9 @@ const SUPPORT_SUGGESTION_TYPES = ["nova_funcionalidade", "melhoria", "novo_jogo"
 const SUPPORT_SUGGESTION_STATUSES = ["recebida", "em_avaliacao", "planejada", "em_desenvolvimento", "implementada", "nao_planejada"];
 const SUPPORT_SENDER_TYPES = ["user", "staff"];
 const SUPPORT_GAME_SLUGS = ["palavra-secreta", "tres", "duelo", "caca", "batalha", "bichinho", "corda"];
+// Jogos oferecidos atualmente nos formulários de suporte. Os slugs legados
+// continuam válidos para preservar chamados, sugestões e artigos existentes.
+const SUPPORT_VISIBLE_GAME_SLUGS = ["palavra-secreta", "caca", "quiz-live", "tres"];
 const SUPPORT_GAME_LABELS = {
   "palavra-secreta": "Palavra Secreta",
   tres: "3 Dicas",
@@ -2207,6 +2252,7 @@ const SUPPORT_GAME_LABELS = {
   batalha: "Batalha",
   bichinho: "Bichinho",
   corda: "CORDA",
+  "quiz-live": "Quiz Live",
 };
 
 function slugifySupport(s) {
@@ -2944,6 +2990,7 @@ module.exports = {
   SUPPORT_SUGGESTION_STATUSES,
   SUPPORT_SENDER_TYPES,
   SUPPORT_GAME_SLUGS,
+  SUPPORT_VISIBLE_GAME_SLUGS,
   SUPPORT_GAME_LABELS,
   slugifySupport,
   listSupportCategories,

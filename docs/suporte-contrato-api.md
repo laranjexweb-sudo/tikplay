@@ -27,10 +27,13 @@ ticket.priority:    baixa | normal | alta | urgente
 message.sender_type: user | staff
 suggestion.type:    nova_funcionalidade | melhoria | novo_jogo | melhoria_jogo | interface | integracao | outro
 suggestion.status:  recebida | em_avaliacao | planejada | em_desenvolvimento | implementada | nao_planejada
-game_id (slug):     palavra-secreta | tres | duelo | caca | batalha | bichinho | corda   (ou "" = nenhum)
+game_id (slug):     palavra-secreta | tres | duelo | caca | batalha | bichinho | corda | quiz-live   (ou "" = nenhum)
 ```
 
 `game_id` é **slug** (a tabela `games` existente é histórico de partidas, não um catálogo de jogos).
+Os formulários atualmente exibem `palavra-secreta`, `caca`, `quiz-live` e `tres`; os demais slugs
+permanecem válidos para compatibilidade com dados e fluxos antigos. `/api/support/games` retorna
+essa lista em `games` e os nomes de exibição de todos os slugs em `game_labels`.
 Valores fora da lista são rejeitados com `400`.
 
 ## 3. Tabelas

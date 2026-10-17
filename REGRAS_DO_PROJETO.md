@@ -33,6 +33,18 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - O handler de comentários em `service.py` e `game.py` valida `if self.game.finished: return None`.
 - A função de salvamento em histórico (`save_result`) e emissão de evento `game_over` executa **exclusivamente uma única vez** para o acerto do Rank #1. Palpites recebidos nos segundos posteriores não declaram novos vencedores.
 
+### 1.4 Caça Palavras — envio simples pelo chat
+- Durante uma rodada ativa, o jogador pode enviar a própria palavra encontrada como um comentário de um único termo; acentos e caixa são ignorados, e emojis/pontuação ao redor são aceitos.
+- O prefixo configurado para coordenadas não é obrigatório para o palpite por palavra. Frases com várias palavras não são tratadas como acerto.
+- O envio de coordenadas continua disponível. Acertos pelos dois formatos usam o mesmo fluxo de validação de acesso, persistência e eventos (`caca_word_found` e `caca_state`).
+
+### 1.5 Caça Palavras — formato de participação configurável
+- O painel do streamer salva `answer_mode` por conta: `word`, `coordinates` ou `both` (padrão para contas existentes: `both`). A configuração determina tanto as instruções públicas quanto os formatos aceitos pelo daemon.
+- O estado `caca_state` carrega o modo selecionado para o overlay. A configuração é enviada ao daemon na conexão e aplicada imediatamente durante uma sessão.
+- O painel também salva `show_ranking` por conta (padrão `true`). A página pública permanece no jogo e não oferece menu para alternar entre jogo/ranking; ao fim da rodada, o ranking só aparece quando essa opção está ativada.
+- O estado `caca_state` carrega `answer_mode` e `show_ranking`; mudanças atualizam a página pública aberta imediatamente e permanecem após reconexões.
+- Observabilidade: reutiliza `caca.config.applied`; `details.answer_mode` contém apenas um dos três valores permitidos e `details.show_ranking` é booleano. Nenhum evento novo ou log por comentário foi adicionado.
+
 ---
 
 ## 2. Sistema de Dicas por Presentes (Gift Config)
@@ -236,6 +248,14 @@ no **mesmo daemon `service.py`** (comandos `public_*`, sem `tenant_id`; resposta
 - **Cache:** `localStorage` guarda o identificador anônimo do navegador, o jogo diário daquele
   navegador e as palavras já acertadas no ilimitado. Nenhum dado de jogador é persistido no servidor.
 - **Índice:** reusa o cache (`_INDEX_CACHE` + `palavra_index_cache` do `data.db`). Não altera o jogo da live.
+
+## 9. Dashboard do Super Admin e custos de API
+
+- O dashboard deve separar estado atual do Monitor, credenciais configuradas e saúde testada. Presença de uma chave não prova disponibilidade do provedor.
+- Custo real é mostrado apenas quando retornado e persistido pelo provedor. Tarifas administradas produzem estimativas apenas para chamadas futuras; alterar uma tarifa não recalcula histórico.
+- Créditos consumidos são unidade de produto, não custo monetário da API. Receita bruta considera somente compras aprovadas de pacotes e não representa lucro ou receita líquida.
+- Chamadas externas instrumentadas guardam dimensões de uso, tenant opcional, duração, resultado, custo e ids de requisição. Nunca gravar prompt, texto, segredo, comentário, áudio, credencial ou resposta bruta.
+- Refresh do dashboard não executa health checks pagos nem cria eventos por request. Uso externo segue o mapa, privacidade e limites descritos em `docs/dashboard-super-admin.md`; eventos de ação administrativa seguem `docs/PADRAO_DE_LOGS.md`.
 
 ---
 

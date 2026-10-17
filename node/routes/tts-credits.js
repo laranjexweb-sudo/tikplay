@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const wallet = require("../lib/tts-credit-wallet");
 
-module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigured, log }) {
+module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigured, getPublicBaseUrl, log }) {
   wallet.ensureSchema(db);
   const trace = () => crypto.randomUUID();
   const report = (category, level, event, message, details = {}, code) =>
@@ -14,7 +14,7 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
     res.set("Cache-Control", "no-store").json({ success: true, balance: wallet.getBalance(db, tenantId),
       packages: packages(true).map(item => ({ ...item, price: (item.price_cents / 100).toFixed(2) })),
       ledger: wallet.ledger(db, tenantId, 15),
-      model_costs: db.db.prepare(`SELECT model_id,credits_per_100_chars FROM additional_voice_models
+      model_costs: db.db.prepare(`SELECT model_id,credits_per_150_chars FROM additional_voice_models
         WHERE enabled=1 ORDER BY model_id`).all() });
   });
 
@@ -25,14 +25,15 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
     const item = typeof req.body?.package_id === "string"
       ? db.db.prepare("SELECT * FROM tts_credit_packages WHERE id=? AND enabled=1").get(req.body.package_id) : null;
     if (!user || user.status !== "active" || !access?.enabled || !item)
-      return res.status(400).json({ success: false, error: "Pacote de créditos indisponível para esta conta." });
-    if (!mpConfigured) return res.status(503).json({ success: false, error: "Compra de créditos indisponível no momento." });
+      return res.status(400).json({ success: false, error: "Pacote de TikCoins indisponível para esta conta." });
+    if (!(typeof mpConfigured === "function" ? mpConfigured() : mpConfigured))
+      return res.status(503).json({ success: false, error: "Compra de TikCoins indisponível no momento." });
     const purchaseId = crypto.randomUUID();
     const externalReference = `tts-credit:${purchaseId}`;
     try {
       db.db.prepare(`INSERT INTO tts_credit_purchases(id,tenant_id,package_id,package_name,credits,price_cents)
         VALUES(?,?,?,?,?,?)`).run(purchaseId, tenantId, item.id, item.name, item.credits, item.price_cents);
-      let origin = process.env.PUBLIC_BASE_URL || "https://painel.tikplay.com.br";
+      let origin = typeof getPublicBaseUrl === "function" ? getPublicBaseUrl() : process.env.PUBLIC_BASE_URL || "https://painel.tikplay.com.br";
       try {
         const publicUrl = new URL(origin);
         if (publicUrl.protocol !== "https:" || !publicUrl.host || publicUrl.username || publicUrl.password)
@@ -45,7 +46,7 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         return res.status(503).json({ success: false, error: "Compra indisponível até configurar o endereço HTTPS do painel." });
       }
       const result = await mpFetch("/checkout/preferences", { method: "POST", body: JSON.stringify({
-        items: [{ id: item.id, title: `TikPlay · ${item.name} — créditos de voz`, quantity: 1,
+        items: [{ id: item.id, title: `TikPlay · ${item.name} — TikCoins para vozes`, quantity: 1,
           currency_id: "BRL", unit_price: item.price_cents / 100 }],
         external_reference: externalReference,
         payer: { email: user.email },
@@ -57,7 +58,7 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
         report("error", "error", "tts.credits.checkout_failed", "Não foi possível abrir o checkout de créditos.",
           { tenant_id: tenantId, package_id: item.id, code: "CHECKOUT_CREATE_FAILED" }, "CHECKOUT_CREATE_FAILED");
-        return res.status(502).json({ success: false, error: "Não foi possível gerar o pagamento. Tente novamente." });
+        return res.status(502).json({ success: false, error: "Não foi possível iniciar a compra de TikCoins. Tente novamente." });
       }
       report("billing", "info", "tts.credits.checkout_created", "Checkout de créditos criado.",
         { tenant_id: tenantId, package_id: item.id, credits: item.credits, price_cents: item.price_cents });
@@ -66,12 +67,19 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
       report("error", "error", "tts.credits.checkout_failed", "Não foi possível abrir o checkout de créditos.",
         { tenant_id: tenantId, package_id: item.id, code: "CHECKOUT_CREATE_FAILED" }, "CHECKOUT_CREATE_FAILED");
-      res.status(502).json({ success: false, error: "Não foi possível gerar o pagamento. Tente novamente." });
+      res.status(502).json({ success: false, error: "Não foi possível iniciar a compra de TikCoins. Tente novamente." });
     }
   });
 
   app.get("/api/admin/tts/credit-packages", auth.requireAdmin, (req, res) => {
     res.set("Cache-Control", "no-store").json({ success: true, packages: packages(false) });
+  });
+
+  app.get("/api/admin/tts/credit-balances", auth.requireAdmin, (req, res) => {
+    const accounts = db.db.prepare(`SELECT u.id,u.name,u.email,u.status,COALESCE(w.balance,0) AS balance
+      FROM users u LEFT JOIN tts_credit_wallets w ON w.tenant_id=u.id
+      WHERE COALESCE(u.role,'user')<>'admin' ORDER BY lower(u.name),u.id`).all();
+    res.set("Cache-Control", "no-store").json({ success: true, accounts });
   });
 
   app.put("/api/admin/tts/credit-packages", auth.requireAdmin, (req, res) => {
@@ -84,7 +92,7 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       || typeof item.enabled !== "boolean") || new Set(list.filter(item => item.id).map(item => item.id)).size !== list.filter(item => item.id).length) {
       report("notice", "warning", "tts.credits.packages_rejected", "Configuração de pacotes de crédito rejeitada.",
         { actor_id: req.user.id, package_count: Array.isArray(list) ? list.length : 0, code: "INVALID_PACKAGES" }, "INVALID_PACKAGES");
-      return res.status(400).json({ success: false, error: "Confira nome, créditos e preço de cada pacote." });
+      return res.status(400).json({ success: false, error: "Confira nome, TikCoins e preço de cada pacote." });
     }
     const current = new Set(packages(false).map(item => item.id));
     const save = db.db.prepare(`INSERT INTO tts_credit_packages(id,name,credits,price_cents,enabled)

@@ -16,6 +16,14 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
   process.env.OPENROUTER_API_KEY = "router-test-secret";
   process.env.PUBLIC_BASE_URL = "https://tikplay.test";
   const db = require("../db");
+  db.db.exec(`CREATE TABLE additional_voice_models (
+    model_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0,
+    credits_per_100_chars INTEGER NOT NULL DEFAULT 0
+  )`);
+  db.db.prepare("INSERT INTO additional_voice_models(model_id,enabled,credits_per_100_chars) VALUES(?,?,?)")
+    .run("google/gemini-3.8-flash-lite-tts", 1, 1);
+  db.db.prepare("INSERT INTO additional_voice_models(model_id,enabled,credits_per_100_chars) VALUES(?,?,?)")
+    .run("elevenlabs/eleven-v4-turbo", 1, 3);
   const auth = require("../auth");
   const app = express(); app.use(express.json());
   const commands = [];
@@ -64,6 +72,10 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.equal((await request(streamer, adminRoute)).status, 403);
     let catalog = await request(admin, adminRoute);
     assert.equal(catalog.data.models.find(model => model.id === "elevenlabs/eleven-v4-turbo").enabled, true);
+    assert.equal(catalog.data.models.find(model => model.id === "elevenlabs/eleven-v4-turbo").credits_per_150_chars, 5,
+      "legacy tariff 3/100 is migrated to 5/150");
+    assert.equal(catalog.data.models.find(model => model.id === "google/gemini-3.8-flash-lite-tts").credits_per_150_chars, 2,
+      "legacy tariff 1/100 is migrated to 2/150");
     assert.equal((await request(admin, adminRoute, "PUT", { models: [{ id: "not-allowed", enabled: true }] })).status, 400);
     const openRouterModelIds = catalog.data.models.filter(model => model.provider === "openrouter" && model.catalog_available)
       .map(model => model.id);
@@ -79,22 +91,33 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
       { enabled: true })).status, 200);
     assert.equal((await request(admin, "/api/admin/integrations/elevenlabs", "PUT",
       { api_key: "eleven-test-secret" })).status, 200);
+    const elevenIntegration = await request(admin, "/api/admin/integrations/elevenlabs");
+    assert.match(elevenIntegration.data.api_key_masked, /^ele•+cret$/);
+    assert.equal(JSON.stringify(elevenIntegration.data).includes("eleven-test-secret"), false);
 
     const costSave = await request(admin, adminRoute, "PUT", { voices: approvedVoices, model_ids: openRouterModelIds,
-      model_costs: openRouterModelIds.map(model_id => ({ model_id, credits_per_100_chars: model_id.includes("gemini") ? 3 : 2 })) });
+      model_costs: openRouterModelIds.map(model_id => ({ model_id, credits_per_150_chars: model_id.includes("gemini") ? 2 : 3 })) });
     assert.equal(costSave.status, 200);
     assert.ok(logs.some(entry => entry.event === "tts.credits.model_cost_saved"));
     let credits = await request(streamer, "/api/tts/credits");
     assert.equal(credits.data.balance, 0);
-    assert.equal(credits.data.model_costs.find(item => item.model_id.includes("gemini")).credits_per_100_chars, 3);
+    assert.equal(credits.data.model_costs.find(item => item.model_id.includes("gemini")).credits_per_150_chars, 2);
 
     const savedPackages = await request(admin, "/api/admin/tts/credit-packages", "PUT", { packages: [
       { name: "Pacote de teste", credits: 750, price_cents: 1250, enabled: true },
     ] });
     assert.equal(savedPackages.status, 200);
     const packageId = savedPackages.data.packages[0].id;
+    assert.equal((await request(streamer, "/api/admin/tts/credit-balances")).status, 403);
+    let creditBalances = await request(admin, "/api/admin/tts/credit-balances");
+    assert.equal(creditBalances.status, 200);
+    assert.deepEqual(creditBalances.data.accounts.map(account => [account.id, account.balance]), [[streamer, 0]]);
     const adjusted = await request(admin, `/api/admin/users/${streamer}/tts-credits`, "POST", { amount: 25 });
     assert.equal(adjusted.data.balance, 25);
+    const overRemoval = await request(admin, `/api/admin/users/${streamer}/tts-credits`, "POST", { amount: -26 });
+    assert.equal(overRemoval.status, 409, "manual removals cannot make a wallet negative");
+    creditBalances = await request(admin, "/api/admin/tts/credit-balances");
+    assert.equal(creditBalances.data.accounts[0].balance, 25);
     const checkout = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId });
     assert.equal(checkout.data.checkout_url, "https://mercadopago.test/checkout/123");
     assert.match(checkoutPayload.external_reference, /^tts-credit:/);

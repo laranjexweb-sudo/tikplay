@@ -382,6 +382,24 @@ class CacaPalavras:
 
     def find_word(self, start, end, finder="", nickname="", avatar=""):
         w = self.try_word(start, end)
+        return self._mark_found(w, finder, nickname, avatar)
+
+    def try_word_text(self, text):
+        """Retorna palavra não encontrada que corresponda ao texto exato."""
+        if not self.active or self.finished:
+            return None
+        target = strip_accents(text or "").strip().upper()
+        if not target:
+            return None
+        for w in self.words:
+            if not w["found"] and strip_accents(w["text"]).upper() == target:
+                return w
+        return None
+
+    def find_word_text(self, text, finder="", nickname="", avatar=""):
+        return self._mark_found(self.try_word_text(text), finder, nickname, avatar)
+
+    def _mark_found(self, w, finder="", nickname="", avatar=""):
         if not w:
             return None
         w["found"] = True

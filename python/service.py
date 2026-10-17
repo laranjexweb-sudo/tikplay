@@ -28,6 +28,7 @@ import tts
 import elevenlabs_tts
 import additional_voice_tts
 import tts_emotions
+import api_costs
 
 TTS_AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "node", "public", "tts-audio")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://painel.tikplay.com.br")
@@ -35,6 +36,7 @@ CHAT_NARRATION_QUEUE_SIZE = 10
 CHAT_NARRATION_MAX_AGE_SECONDS = 10.0
 CHAT_NARRATION_STATS_INTERVAL = 30.0
 _elevenlabs_test_tasks = set()
+_quiz_narration_tasks = set()
 
 _gifts_sync_running = False
 
@@ -61,10 +63,52 @@ async def _test_elevenlabs_voice(tid, trace_id):
                      game="tts", trace_id=trace_id, code=code, details={"operation": "test"})
 
 
-async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
+async def _synthesize_quiz_narration(cmd):
+    tid = cmd.get("tenant_id")
+    match_id = str(cmd.get("match_id") or "")
+    question_no = int(cmd.get("question_no") or 0)
+    trace_id = str(cmd.get("trace_id") or uuid.uuid4().hex)
+    text = str(cmd.get("text") or "").strip()[:2000]
+    session = sessions.get(tid)
+    settings = session.settings if session else db.get_tenant_settings(tid)
+    voice_key = str(settings.get("tts_voice") or tts.VOICE_EDGE_FRANCISCA)
+    try:
+        rate = max(0.5, min(2.0, float(settings.get("tts_rate", 1.0))))
+    except (TypeError, ValueError):
+        rate = 1.0
+    started = time.perf_counter()
+    try:
+        audio_path = await asyncio.to_thread(
+            tts.synthesize_edge, text,
+            os.path.join(TTS_AUDIO_ROOT, str(tid)), voice_key, rate)
+    except Exception as exc:
+        audio_path = None
+        error_type = type(exc).__name__
+    else:
+        error_type = "EdgeUnavailable"
+    if audio_path:
+        emit(tid, "quiz_narration_ready", {
+            "match_id": match_id, "question_no": question_no,
+            "url": f"/tts-audio/{tid}/{os.path.basename(audio_path)}", "trace_id": trace_id,
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+        })
+    else:
+        emit(tid, "quiz_narration_failed", {
+            "match_id": match_id, "question_no": question_no,
+            "code": "TTS_SYNTHESIS_FAILED", "trace_id": trace_id,
+        })
+        emit_service_log(tid, "error", "error", "quiz.narration.generation_failed",
+                         "Não foi possível gerar o áudio da pergunta.", game="quiz",
+                         trace_id=trace_id, game_id=match_id, code="TTS_SYNTHESIS_FAILED",
+                         details={"question_no": question_no, "error_type": error_type})
+
+
+async def generate_openrouter_riddle(secret_word: str, words: list, tenant_id=None) -> str:
     api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
     words_str = ", ".join(words)
     if api_key:
+        request_started = time.perf_counter()
+        metered = False
         try:
             import urllib.request
             req_body = json.dumps({
@@ -105,10 +149,21 @@ async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
             loop = asyncio.get_running_loop()
             with await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=8)) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
+                usage = res_data.get("usage") if isinstance(res_data.get("usage"), dict) else {}
+                token_count = (usage.get("prompt_tokens") or 0) + (usage.get("completion_tokens") or 0)
+                if tenant_id is not None:
+                    api_costs.record("openrouter", "openai/gpt-5.6-luna", "riddle_generation", "token",
+                        token_count, "success", (time.perf_counter() - request_started) * 1000, tenant_id,
+                        actual_cost_usd=usage.get("cost"), provider_request_id=resp.headers.get("x-request-id"))
+                metered = True
                 text = res_data["choices"][0]["message"]["content"].strip()
                 if text:
                     return text
-        except Exception:
+        except Exception as exc:
+            if tenant_id is not None and not metered:
+                is_timeout = isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError)
+                api_costs.record("openrouter", "openai/gpt-5.6-luna", "riddle_generation", "token", 0,
+                    "timeout" if is_timeout else "failed", (time.perf_counter() - request_started) * 1000, tenant_id)
             pass
 
     # fallback
@@ -118,7 +173,7 @@ async def generate_openrouter_riddle(secret_word: str, words: list) -> str:
     return f"Estou pensando em algo que tem relação com {word_a}, traz à mente {word_b} e se conecta com {word_c}. Você sabe o que é?"
 
 
-async def generate_tres_dicas(secret_word: str, log_cb=None) -> list:
+async def generate_tres_dicas(secret_word: str, log_cb=None, tenant_id=None) -> list:
     """Gera 3 dicas progressivas (difícil → fácil) para a palavra secreta.
 
     Retorna uma lista de 3 strings. Fallback textual caso a API falhe.
@@ -146,6 +201,8 @@ async def generate_tres_dicas(secret_word: str, log_cb=None) -> list:
     root_len = max(3, len(root_norm) - 2)
     last_error_type = None
     for attempt in range(2):
+        request_started = time.perf_counter()
+        metered = False
         try:
             req_body = json.dumps({
                 "model": "openai/gpt-4o-mini",
@@ -203,6 +260,13 @@ async def generate_tres_dicas(secret_word: str, log_cb=None) -> list:
             loop = asyncio.get_running_loop()
             with await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=10)) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
+                usage = res_data.get("usage") if isinstance(res_data.get("usage"), dict) else {}
+                token_count = (usage.get("prompt_tokens") or 0) + (usage.get("completion_tokens") or 0)
+                if tenant_id is not None:
+                    api_costs.record("openrouter", "openai/gpt-4o-mini", "tres_tips_generation", "token",
+                        token_count, "success", (time.perf_counter() - request_started) * 1000, tenant_id,
+                        actual_cost_usd=usage.get("cost"), provider_request_id=resp.headers.get("x-request-id"))
+                metered = True
                 text = res_data["choices"][0]["message"]["content"].strip()
                 parsed = json.loads(text)
                 dicas = [str(d).strip() for d in parsed.get("dicas", [])]
@@ -217,6 +281,10 @@ async def generate_tres_dicas(secret_word: str, log_cb=None) -> list:
                                duration_ms=round((time.perf_counter() - started_at) * 1000))
                         return dicas[:3]
         except Exception as exc:
+            if tenant_id is not None and not metered:
+                is_timeout = isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError)
+                api_costs.record("openrouter", "openai/gpt-4o-mini", "tres_tips_generation", "token", 0,
+                    "timeout" if is_timeout else "failed", (time.perf_counter() - request_started) * 1000, tenant_id)
             last_error_type = type(exc).__name__
             continue
     report("generation.fallback", reason=last_error_type or "invalid_provider_response",
@@ -237,6 +305,8 @@ class GameSession:
         self.battle = BatalhaEngine(tenant_id)
         self.caca = CacaPalavras()
         self.caca_prefix = ""
+        self.caca_answer_mode = "both"
+        self.caca_show_ranking = True
         self.vpet = VPetEngine(tenant_id, emit_cb=self._emit_vpet)
         self._vpet_task = None
         self.tres = TresPontinhos(
@@ -1274,7 +1344,7 @@ class GameSession:
                 duration_ms=details.get("duration_ms"),
                 details={**details, "word_length": len(palavra), "source": "auto_round"},
             )
-        dicas = await generate_tres_dicas(palavra, log_cb=log_generation)
+        dicas = await generate_tres_dicas(palavra, log_cb=log_generation, tenant_id=self.tenant_id)
         if not dicas or len(dicas) < 3:
             received_clue_count = len(dicas or [])
             dicas = [f"Palavra com {len(palavra)} letras", "É uma palavra comum", "Última dica!"]
@@ -1443,6 +1513,39 @@ class GameSession:
             return None
         return (m.group(1).upper(), m.group(2).upper())
 
+    def _match_caca_word(self, raw: str):
+        """Aceita a palavra exata, mesmo com emoji/pontuação ao redor.
+
+        O prefixo usado em coordenadas continua opcional para esse formato.
+        Comentários com mais de um termo não são tratados como palpite.
+        """
+        s = raw or ""
+        prefix = (getattr(self, "caca_prefix", "") or "").strip()
+        if prefix and s.lower().startswith(prefix.lower()):
+            after_prefix = s[len(prefix):]
+            if not after_prefix or after_prefix[0].isspace():
+                s = after_prefix.strip()
+        tokens = re.findall(r"[^\W_]+", strip_accents(s).upper(), flags=re.UNICODE)
+        if len(tokens) != 1:
+            return None
+        match = self.caca.try_word_text(tokens[0])
+        return match["text"] if match else None
+
+    def _caca_state(self):
+        return {**self.caca.state(public=False), "answer_mode": self.caca_answer_mode,
+                "show_ranking": self.caca_show_ranking}
+
+    def _match_caca_input(self, raw: str):
+        if self.caca_answer_mode in ("word", "both"):
+            word = self._match_caca_word(raw)
+            if word is not None:
+                return ("word", word)
+        if self.caca_answer_mode in ("coordinates", "both"):
+            coordinates = self._match_caca_command(raw)
+            if coordinates is not None:
+                return ("coordinates", coordinates)
+        return None
+
     async def _process_caca_command(self, matched, user, nickname, avatar, user_meta):
         start, end = matched
         allowed, reason = self._check_access(user_meta)
@@ -1462,6 +1565,15 @@ class GameSession:
                 "user": user,
                 "nickname": nickname or user,
             })
+
+    async def _process_caca_word(self, word, user, nickname, avatar, user_meta):
+        allowed, _ = self._check_access(user_meta)
+        if not allowed:
+            return
+        w = self.caca.find_word_text(word, finder=user, nickname=nickname or user, avatar=avatar or "")
+        if w:
+            db.record_caca_found(self.tenant_id, user, nickname or user, avatar or "", w["text"])
+            self._emit_caca_found(w)
 
     async def on_member(self, user, nickname, user_meta=None, room_id=None, event_id=None):
         """Um espectador entrou na live (JoinEvent — apenas motor TikTokLive)."""
@@ -1543,12 +1655,16 @@ class GameSession:
                 return
 
         # ---------------------------------------------------------
-        # CAÇA PALAVRAS: detecta coordenadas (ex: A1A4 / A1:A4 / cp A1A4)
+        # CAÇA PALAVRAS: aceita a palavra diretamente ou coordenadas.
         # ---------------------------------------------------------
         if self.caca.active:
-            matched = self._match_caca_command(raw)
-            if matched is not None:
-                await self._process_caca_command(matched, user, nickname, avatar, user_meta)
+            matched = self._match_caca_input(raw)
+            if matched:
+                kind, value = matched
+                if kind == "word":
+                    await self._process_caca_word(value, user, nickname, avatar, user_meta)
+                else:
+                    await self._process_caca_command(value, user, nickname, avatar, user_meta)
                 return
 
         if not self.game.secret_word or self.game.finished:
@@ -2005,7 +2121,7 @@ class GameSession:
                                               "details": {"stage": stage, "clue_candidate_count": len(cluster_words)}})
 
                 try:
-                    riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
+                    riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words, tenant_id=self.tenant_id)
                 except Exception as exc:
                     self._palavra_debug("riddle.generation_failed", source=source,
                                         game_id=self.game.game_id, stage=stage,
@@ -2278,7 +2394,7 @@ class GameSession:
                         game_id=self.game.game_id, trace_id=trace_id,
                         details={"stage": stage, "clue_candidate_count": len(cluster_words)})
         try:
-            riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words)
+            riddle_text = await generate_openrouter_riddle(self.game.secret_word, cluster_words, tenant_id=self.tenant_id)
         except Exception as exc:
             self._palavra_debug("riddle.generation_failed", source="manual",
                                 game_id=self.game.game_id, stage=stage,
@@ -2331,7 +2447,7 @@ class GameSession:
             "nickname": w["finder_nickname"],
             "avatar": w["finder_avatar"],
         })
-        st = self.caca.state(public=False)
+        st = self._caca_state()
         emit(self.tenant_id, "game", {"type": "caca_state", **st})
         if st["finished"]:
             emit(self.tenant_id, "game", {"type": "caca_finished", "found_count": st["found_count"], "total": st["total"]})
@@ -2377,11 +2493,11 @@ class GameSession:
                 await self.end_game(cause="switch_to_caca")
                 self._stop_other_chat_games(keep="caca")
                 self.caca.start(word_pool=self.game.word_pool, count=int(cmd.get("count") or 10))
-                emit(self.tenant_id, "game", {"type": "caca_state", **self.caca.state(public=False)})
+                emit(self.tenant_id, "game", {"type": "caca_state", **self._caca_state()})
                 emit(self.tenant_id, "log", f"[CacaPalavras] Grade gerada com {len(self.caca.words)} palavras")
             elif c == "caca_stop":
                 self.caca.stop()
-                emit(self.tenant_id, "game", {"type": "caca_state", **self.caca.state(public=False)})
+                emit(self.tenant_id, "game", {"type": "caca_state", **self._caca_state()})
                 emit(self.tenant_id, "log", "[CacaPalavras] Jogo encerrado")
             elif c == "caca_reveal":
                 w = self.caca.find_word(
@@ -2484,7 +2600,7 @@ class GameSession:
                                 duration_ms=details.get("duration_ms"),
                                 details={**details, "word_length": len(palavra)},
                             )
-                        dicas = await generate_tres_dicas(palavra, log_cb=log_generation)
+                        dicas = await generate_tres_dicas(palavra, log_cb=log_generation, tenant_id=self.tenant_id)
                     await self.end_game(cause="switch_to_tres")
                     self._stop_other_chat_games(keep="tres")
                     self.tres.start(palavra, dicas, trace_id=trace_id)
@@ -2753,6 +2869,8 @@ async def process_commands(queue):
             caca_config = cmd.get("caca_config")
             if isinstance(caca_config, dict):
                 session.caca_prefix = str(caca_config.get("prefix") or "").strip()
+                session.caca_answer_mode = caca_config.get("answer_mode") if caca_config.get("answer_mode") in ("word", "coordinates", "both") else "both"
+                session.caca_show_ranking = caca_config.get("show_ranking", True) is not False
             sessions[tid] = session
             session.task = asyncio.create_task(session.run())
             emit(tid, "log", {"text": "Sessão do daemon iniciada.", "category": "connection", "level": "info",
@@ -2868,9 +2986,15 @@ async def process_commands(queue):
             s = sessions.get(tid)
             if s:
                 s.caca_prefix = str(cmd.get("prefix") or "").strip()
+                s.caca_answer_mode = cmd.get("answer_mode") if cmd.get("answer_mode") in ("word", "coordinates", "both") else "both"
+                s.caca_show_ranking = cmd.get("show_ranking", True) is not False
+                if s.caca.active:
+                    emit(tid, "game", {"type": "caca_state", **s._caca_state()})
                 emit_service_log(tid, "game", "info", "caca.config.applied",
                                  "[Caça Palavras] Configuração aplicada.", game="caca",
-                                 trace_id=cmd.get("trace_id"), details={"prefix_enabled": bool(s.caca_prefix),
+                                 trace_id=cmd.get("trace_id"), details={"answer_mode": s.caca_answer_mode,
+                                                                        "show_ranking": s.caca_show_ranking,
+                                                                        "prefix_enabled": bool(s.caca_prefix),
                                                                         "prefix_length": len(s.caca_prefix)})
             else:
                 emit_service_log(tid, "notice", "warning", "caca.config.rejected",
@@ -2956,6 +3080,11 @@ async def process_commands(queue):
             task = asyncio.create_task(_test_elevenlabs_voice(tid, trace_id))
             _elevenlabs_test_tasks.add(task)
             task.add_done_callback(_elevenlabs_test_tasks.discard)
+
+        elif c == "quiz_narrate":
+            task = asyncio.create_task(_synthesize_quiz_narration(cmd))
+            _quiz_narration_tasks.add(task)
+            task.add_done_callback(_quiz_narration_tasks.discard)
 
         elif c == "tts_test":
             text = cmd.get("text") or "Olá! Esta é a voz para as charadas do jogo Contexto."

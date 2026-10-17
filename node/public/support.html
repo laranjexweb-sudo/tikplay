@@ -107,6 +107,8 @@
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const statusNames = { novo:'Novo', em_atendimento:'Em atendimento', aguardando_usuario:'Aguardando você', resolvido:'Resolvido', fechado:'Fechado', recebida:'Recebida', em_avaliacao:'Em avaliação', planejada:'Planejada', em_desenvolvimento:'Em desenvolvimento', implementada:'Implementada', nao_planejada:'Não planejada' };
   const typeNames = { nova_funcionalidade:'Nova funcionalidade', melhoria:'Melhoria', novo_jogo:'Novo jogo', melhoria_jogo:'Melhoria de jogo', interface:'Interface', integracao:'Integração', outro:'Outro' };
+  let supportGameNames = {};
+  const gameName = (id, fallback = 'Geral') => id ? (supportGameNames[id] || id) : fallback;
   let files = [], previewUrls = [], currentTicketId = null, attachmentUrls = [];
   function date(value) {
     if (!value) return '—';
@@ -157,6 +159,7 @@
     select.value=(values||[]).includes(current)?current:((values||[]).includes(preferred)?preferred:'');
   }
   function applyGameOptions(data) {
+    supportGameNames = { ...(data.game_labels || {}), ...(data.games || []).reduce((labels, game) => { labels[game.slug] = game.name; return labels; }, {}) };
     ['suggestionGame','newTicketGame'].forEach((id) => { const select = $(id); select.innerHTML = '<option value="">Nenhum / Geral</option>' + (data.games || []).map(g => `<option value="${esc(g.slug)}">${esc(g.name)}</option>`).join(''); });
     fillEnum('ticketStatusFilter',data.ticket_statuses,statusNames,'Todos');
     fillEnum('suggestionStatusFilter',data.suggestion_statuses,statusNames,'Todos');
@@ -176,7 +179,7 @@
     try {
       const status = $('ticketStatusFilter').value, data = await api('/api/support/tickets?page=1&pageSize=100' + (status ? `&status=${encodeURIComponent(status)}` : ''));
       if (!(data.items || []).length) { list.innerHTML = `<div class="tp-help-panel"><h2>Você ainda não abriu nenhum chamado.</h2><p class="tp-help-muted">Quando precisar de ajuda, nossa equipe acompanha por aqui.</p><button class="tp-help-btn tp-help-btn-primary" data-action="new-ticket">Abrir meu primeiro chamado</button></div>`; return; }
-      list.innerHTML = data.items.map(t => `<a class="tp-help-row" href="/support.html?ticket=${encodeURIComponent(t.id)}${panelEmbed?'&embed=panel':''}" data-ticket-id="${esc(t.id)}"><span><strong>#${esc(t.id)} · ${esc(t.subject)}</strong><p>${esc(t.category_name || 'Geral')} · ${esc(t.game_id || 'Sem jogo')} · Atualizado ${esc(date(t.updated_at))}</p></span>${statusBadge(t.status)}</a>`).join('');
+      list.innerHTML = data.items.map(t => `<a class="tp-help-row" href="/support.html?ticket=${encodeURIComponent(t.id)}${panelEmbed?'&embed=panel':''}" data-ticket-id="${esc(t.id)}"><span><strong>#${esc(t.id)} · ${esc(t.subject)}</strong><p>${esc(t.category_name || 'Geral')} · ${esc(gameName(t.game_id, 'Sem jogo'))} · Atualizado ${esc(date(t.updated_at))}</p></span>${statusBadge(t.status)}</a>`).join('');
       list.querySelectorAll('[data-ticket-id]').forEach(a => a.addEventListener('click',e => { e.preventDefault(); openTicket(a.dataset.ticketId); }));
     } catch (e) { list.innerHTML=''; notice.textContent=e.message; notice.classList.add('tp-help-error'); }
   }
@@ -185,7 +188,7 @@
     try {
       const status = $('suggestionStatusFilter').value, data = await api('/api/support/suggestions?page=1&pageSize=100' + (status ? `&status=${encodeURIComponent(status)}` : ''));
       if (!(data.items || []).length) { list.innerHTML='<div class="tp-help-panel"><h2>Você ainda não enviou sugestões.</h2><p class="tp-help-muted">Sua próxima ideia pode ajudar a melhorar o TikPlay.</p><button class="tp-help-btn tp-help-btn-primary" data-action="new-suggestion">Enviar sugestão</button></div>'; return; }
-      list.innerHTML = data.items.map(s => `<article class="tp-help-row"><span><strong>${esc(s.title)}</strong><p>${esc(typeNames[s.type] || s.type)} · ${esc(s.game_id || 'Geral')} · ${esc(date(s.created_at))}</p></span>${statusBadge(s.status)}</article>`).join('');
+      list.innerHTML = data.items.map(s => `<article class="tp-help-row"><span><strong>${esc(s.title)}</strong><p>${esc(typeNames[s.type] || s.type)} · ${esc(gameName(s.game_id))} · ${esc(date(s.created_at))}</p></span>${statusBadge(s.status)}</article>`).join('');
     } catch (e) { list.innerHTML=''; notice.textContent=e.message; notice.classList.add('tp-help-error'); }
   }
   function releaseAttachmentUrls() { attachmentUrls.forEach(URL.revokeObjectURL); attachmentUrls=[]; $('ticketAttachments').replaceChildren(); }
@@ -193,7 +196,7 @@
     currentTicketId = id; releaseAttachmentUrls(); $('ticketTitle').textContent=`Chamado #${id}`; $('ticketMeta').textContent='Carregando…'; $('ticketMessages').innerHTML='<div class="tp-help-skeleton"></div>';
     try {
       const data = await api(`/api/support/tickets/${encodeURIComponent(id)}`), t = data.ticket;
-      $('ticketTitle').textContent=`#${t.id} · ${t.subject}`; $('ticketMeta').textContent=`${t.category_name || 'Geral'} · ${t.game_id || 'Sem jogo'} · ${statusNames[t.status] || t.status} · Aberto ${date(t.created_at)}`;
+      $('ticketTitle').textContent=`#${t.id} · ${t.subject}`; $('ticketMeta').textContent=`${t.category_name || 'Geral'} · ${gameName(t.game_id, 'Sem jogo')} · ${statusNames[t.status] || t.status} · Aberto ${date(t.created_at)}`;
       $('ticketMessages').innerHTML=(data.messages || []).map(m => `<article class="tp-help-message" data-sender="${esc(m.sender_type)}"><strong>${m.sender_type === 'staff' ? 'Suporte TikPlay' : 'Você'}</strong><time class="tp-help-muted tp-help-time">${esc(date(m.created_at))}</time><p>${esc(m.message)}</p></article>`).join('') || '<p class="tp-help-muted">Nenhuma mensagem neste chamado.</p>';
       $('ticketMessages').scrollTop = $('ticketMessages').scrollHeight;
       const closed = t.status === 'fechado'; $('ticketReplyForm').hidden=closed; $('ticketClosedMessage').hidden=!closed; $('closeTicketBtn').hidden=closed;

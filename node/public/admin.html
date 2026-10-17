@@ -24,10 +24,11 @@
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
-<link rel="stylesheet" href="/ui/tikplay-admin-site.css?v=20261016-voice-card-order">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css?v=20261017-dashboard-ux-v2">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
 <link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v11">
+<link rel="stylesheet" href="/ui/tikplay-admin-quiz-bank.css?v=20261017-v2">
 
 </head>
 <body class="tp-super-admin">
@@ -39,7 +40,9 @@
     <a href="#adminDashboard"><span aria-hidden="true">◫</span>Dashboard</a>
     <a href="#adminAccounts"><span aria-hidden="true">◎</span>Usuários</a>
     <a href="#adminInvites"><span aria-hidden="true">◆</span>Convites</a>
-    <a href="#adminRules"><span aria-hidden="true">⚙</span>Configurações globais</a>
+    <a href="#adminRules"><span aria-hidden="true">⚙</span>Integrações</a>
+    <a href="#adminCredits"><span aria-hidden="true">◈</span>Pacotes e TikCoins</a>
+    <a href="#adminQuizBank"><span aria-hidden="true">▤</span>Banco de Perguntas</a>
     <a href="#adminOperations"><span aria-hidden="true">⌁</span>Operação local</a>
     <span class="tp-admin-caption">INFRAESTRUTURA</span>
     <a href="#adminMonitor"><span aria-hidden="true">⌁</span>Monitor de Servidor</a>
@@ -64,16 +67,18 @@
 </div>
 
 <section class="tp-admin-section" id="adminDashboard" aria-labelledby="dashboardHeading">
-  <div class="tp-admin-dashboard-heading"><div><h2 id="dashboardHeading">Atividade ao vivo</h2><span id="dashboardUpdated" class="text-secondary">Aguardando dados</span></div><button type="button" class="btn btn-nb btn-dark" id="dashboardRefresh">Atualizar</button></div>
+  <div class="tp-admin-dashboard-heading tp-dashboard-toolbar"><div><h2 id="dashboardHeading">Visão operacional</h2><span id="dashboardUpdated" class="text-secondary">Aguardando dados</span></div><div class="tp-dashboard-toolbar-actions"><label>Atualização automática<select id="dashboardRefreshInterval" class="form-select"><option value="0">Manual</option><option value="15000">15 segundos</option><option value="30000" selected>30 segundos</option><option value="60000">1 minuto</option><option value="300000">5 minutos</option></select></label><button type="button" class="btn btn-nb btn-dark" id="dashboardRefresh">Atualizar agora</button></div></div>
   <p id="dashboardMessage" class="text-secondary" role="status" aria-live="polite"></p>
-  <div class="tp-dashboard-metrics">
-    <article class="tp-card"><span>Clientes online</span><strong id="dashboardOnline">—</strong><small id="dashboardOnlineCoverage">Indisponível</small></article>
-    <article class="tp-card"><span>Lives conectadas</span><strong id="dashboardLives">—</strong><small id="dashboardLivesCoverage">Indisponível</small></article>
-    <article class="tp-card"><span>Partidas em andamento</span><strong id="dashboardGames">—</strong><small id="dashboardGamesCoverage">Indisponível</small></article>
+  <div class="tp-dashboard-metrics tp-dashboard-kpis">
+    <article class="tp-card"><span>Clientes online</span><strong id="dashboardOnline">—</strong><small id="dashboardOnlineCoverage">Carregando estado atual</small></article>
+    <article class="tp-card"><span>Lives conectadas</span><strong id="dashboardLives">—</strong><small id="dashboardLivesCoverage">Carregando estado atual</small></article>
+    <article class="tp-card"><span>Partidas em andamento</span><strong id="dashboardGames">—</strong><small id="dashboardGamesCoverage">Carregando estado atual</small></article>
+    <article class="tp-card"><span>Incidentes ativos</span><strong id="dashboardIncidents">—</strong><small id="dashboardIncidentsCoverage">Monitor de servidor</small></article>
   </div>
-  <div class="tp-dashboard-games"><h2>Uso por jogo</h2><div id="dashboardGameList" class="tp-dashboard-game-list"><p class="text-secondary">Dados de uso indisponíveis.</p></div></div>
-  <div class="tp-admin-dashboard-heading"><h2>Atividade dos clientes</h2><label class="tp-dashboard-search" for="dashboardSearch">Buscar cliente<input id="dashboardSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label></div>
-  <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="7">Carregando contas…</td></tr></tbody></table></div>
+  <section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardHealthTitle"><div class="tp-dashboard-panel-heading"><div><h2 id="dashboardHealthTitle">Saúde da plataforma</h2><p>Estado do processo e configuração das integrações. Credencial configurada não significa teste recente.</p></div><span id="dashboardOverallState" class="tp-dashboard-state" data-state="unknown">Verificando…</span></div><div id="dashboardHealthGrid" class="tp-dashboard-health-grid"><p class="text-secondary">Carregando serviços…</p></div></section>
+  <section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardCostTitle"><div class="tp-dashboard-panel-heading tp-dashboard-cost-heading"><div><h2 id="dashboardCostTitle">Custos e consumo de APIs</h2><p id="dashboardCostCoverage">Custos reais e estimados aparecem separados. Períodos anteriores à medição podem estar incompletos.</p></div><label>Período<select id="dashboardCostRange" class="form-select"><option value="24h">Últimas 24 horas</option><option value="7d" selected>7 dias</option><option value="30d">30 dias</option><option value="month">Mês atual</option></select></label></div><div class="tp-dashboard-cost-kpis"><article class="tp-card"><span>Custo real conhecido</span><strong id="dashboardCostActual">—</strong><small id="dashboardCostActualCoverage">Provedores que informaram custo</small></article><article class="tp-card"><span>Custo estimado</span><strong id="dashboardCostEstimated">—</strong><small id="dashboardCostEstimatedCoverage">Tarifas configuradas pelo admin</small></article><article class="tp-card"><span>Chamadas sem custo conhecido</span><strong id="dashboardCostUnknown">—</strong><small id="dashboardCostRequests">Chamadas medidas no período</small></article><article class="tp-card"><span>Receita bruta de TikCoins</span><strong id="dashboardCreditRevenue">—</strong><small id="dashboardCreditRevenueNote">Somente pacotes pagos aprovados</small></article></div><div id="dashboardPeriodOverview" class="tp-dashboard-period-overview" aria-label="Resumo de custo por período"></div><div class="tp-dashboard-cost-grid"><div><h3>Custo por integração</h3><div id="dashboardCostProviders" class="tp-dashboard-breakdown"><p class="text-secondary">Sem chamadas medidas no período.</p></div></div><div><h3>Uso por recurso e modelo</h3><div id="dashboardCostResources" class="tp-dashboard-breakdown"><p class="text-secondary">Sem chamadas medidas no período.</p></div></div><div><h3>Consumo de TikCoins por modelo</h3><div id="dashboardCreditModels" class="tp-dashboard-breakdown"><p class="text-secondary">Sem débitos no período.</p></div><p id="dashboardCreditTotals" class="tp-dashboard-caption">—</p></div></div><details class="tp-dashboard-rate-editor"><summary>Configurar tarifas estimadas</summary><p>Tarifas valem somente para chamadas futuras. Valores antigos não são recalculados. Para tarifas em USD, informe também o câmbio USD → BRL que deseja registrar junto à estimativa.</p><form id="dashboardRateForm" class="tp-dashboard-rate-form"><label>Provedor<input name="provider" class="form-control" required placeholder="openrouter"></label><label>Modelo (opcional)<input name="model" class="form-control" placeholder="modelo exato"></label><label>Recurso<input name="resource" class="form-control" required placeholder="chat_voice"></label><label>Unidade<select name="unit" class="form-select"><option value="character">Por caractere</option><option value="1000_characters">Por 1.000 caracteres</option><option value="1000_tokens">Por 1.000 tokens</option><option value="request">Por chamada</option></select></label><label>Preço por unidade<input name="unit_price" class="form-control" type="number" min="0" step="any" required></label><label>Moeda<select name="currency" class="form-select"><option>USD</option><option>BRL</option></select></label><label>Câmbio USD → BRL<input name="usd_brl" class="form-control" type="number" min="0.0001" step="any" placeholder="obrigatório para USD"></label><button class="btn btn-nb btn-dark" type="submit">Salvar tarifa</button></form><div id="dashboardRatesList" class="tp-dashboard-rate-list" aria-live="polite"></div></details></section>
+  <div class="tp-dashboard-two-column"><section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardGamesTitle"><div class="tp-dashboard-panel-heading"><div><h2 id="dashboardGamesTitle">Jogos em andamento</h2><p>Contas com estado atual identificado.</p></div></div><div id="dashboardGameList" class="tp-dashboard-game-list"><p class="text-secondary">Dados de uso indisponíveis.</p></div></section><section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardIncidentsTitle"><div class="tp-dashboard-panel-heading"><div><h2 id="dashboardIncidentsTitle">Incidentes recentes</h2><p>Alertas ativos do Monitor de Servidor.</p></div><a href="#adminMonitor/incidents">Ver todos</a></div><div id="dashboardIncidentList" class="tp-dashboard-incident-list"><p class="text-secondary">Carregando incidentes…</p></div></section></div>
+  <section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardCustomersTitle"><div class="tp-admin-dashboard-heading"><div><h2 id="dashboardCustomersTitle">Atividade dos clientes</h2><p>Estado atual, consumo de TikCoins e custos medidos por conta.</p></div><label class="tp-dashboard-search" for="dashboardSearch">Buscar cliente<input id="dashboardSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label></div><div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>TikCoins usados</th><th>Custo medido</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="9">Carregando contas…</td></tr></tbody></table></div></section>
 </section>
 <div class="tp-admin-metrics" aria-label="Resumo de contas">
   <div><span>Total de contas</span><strong id="metricTotal">—</strong></div>
@@ -81,32 +86,88 @@
   <div><span>Planos Pro</span><strong id="metricPro">—</strong></div>
   <div><span>Contas desativadas</span><strong id="metricDisabled">—</strong></div>
 </div>
-<section class="tp-admin-section tp-admin-management" id="adminRules" aria-labelledby="adminRulesHeading">
-  <header class="tp-admin-section-heading">
-    <div><h2 id="adminRulesHeading">Configurações globais</h2><p>Integrações da plataforma.</p></div>
-  </header>
-  <div class="tp-admin-operation-block" aria-labelledby="elevenGlobalTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="elevenGlobalTitle">Integração ElevenLabs</h3></div></div>
-    <form id="elevenGlobalForm" onsubmit="saveElevenGlobal(event)">
-      <label class="tp-admin-field" for="elevenGlobalKey">Chave da API
-        <input class="form-control" id="elevenGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Cole a chave da ElevenLabs">
-      </label>
-      <div class="tp-admin-operation-actions">
-        <button class="btn btn-nb btn-success" id="elevenGlobalSave" type="submit" disabled>Salvar chave</button>
-        <button class="btn btn-nb btn-danger" id="elevenGlobalClear" type="button" onclick="clearElevenGlobal()" disabled>Remover chave</button>
-      </div>
-    </form>
-    <div class="tp-admin-feedback" id="elevenGlobalStatus" role="status" aria-live="polite">Carregando configuração da integração…</div>
+<section class="tp-admin-section tp-admin-management tp-admin-management-integrations" id="adminRules" aria-label="Integrações">
+  <div class="tp-integration-summary" aria-label="Resumo das integrações">
+    <article class="tp-integration-metric"><span>Integrações conectadas</span><strong id="integrationConnectedCount">—</strong></article>
+    <article class="tp-integration-metric"><span>Vozes liberadas</span><strong id="integrationEnabledVoiceCount">—</strong></article>
+    <article class="tp-integration-metric"><span>Catálogo de presentes</span><strong id="integrationGiftSyncSummary">Verificando…</strong><small id="integrationGiftSyncLastSummary">Última sincronização: verificando…</small></article>
   </div>
-  <div class="tp-admin-operation-block" aria-labelledby="additionalVoiceModelsTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="additionalVoiceModelsTitle">Vozes liberadas para clientes</h3><p>Ouça uma prévia de cada voz e marque as opções que os streamers autorizados poderão escolher. As prévias usam uma amostra fixa e o saldo da integração.</p></div></div>
+  <section class="tp-integration-services" aria-labelledby="integrationServicesTitle">
+    <div class="tp-integration-section-heading"><div><h3 id="integrationServicesTitle">Serviços e credenciais</h3><p>Teste o acesso rapidamente; abra a edição apenas quando precisar alterar a configuração.</p></div></div>
+    <div class="tp-integration-card-grid">
+      <article class="tp-admin-operation-block tp-integration-card" id="openRouterIntegrationCard" aria-labelledby="openRouterGlobalTitle">
+        <div class="tp-integration-card-head"><div><h4 id="openRouterGlobalTitle">OpenRouter</h4><p>IA, Gemini TTS e recursos de texto.</p></div><span class="tp-integration-state" id="openRouterConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-meta"><span id="openRouterSourceSummary">Origem: verificando…</span><span id="openRouterLastCheck">Ainda não testada nesta sessão</span></div>
+        <div class="tp-admin-feedback tp-integration-test-feedback" id="openRouterTestFeedback" role="status" aria-live="polite"></div>
+        <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="openRouterGlobalTest" type="button" onclick="testIntegration('openrouter')">Testar conexão</button></div>
+        <details class="tp-integration-editor"><summary>Editar configuração</summary><div class="tp-integration-editor-body">
+          <p class="tp-integration-technical-note">Alterações na chave exigem reinício seguro do daemon para atualizar as lives conectadas.</p>
+          <label class="tp-admin-field" for="openRouterGlobalKey">Chave da API<input class="form-control" id="openRouterGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="Cole a chave do OpenRouter"></label>
+          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="openRouterGlobalSave" type="button" onclick="saveOpenRouterGlobal()">Salvar chave</button><button class="btn btn-nb btn-danger" id="openRouterGlobalClear" type="button" onclick="saveOpenRouterGlobal(true)" disabled>Remover chave</button></div>
+          <div class="tp-admin-feedback" id="openRouterGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div>
+        </div></details>
+      </article>
+      <article class="tp-admin-operation-block tp-integration-card" id="elevenIntegrationCard" aria-labelledby="elevenGlobalTitle">
+        <div class="tp-integration-card-head"><div><h4 id="elevenGlobalTitle">ElevenLabs</h4><p>Vozes adicionais liberadas aos clientes.</p></div><span class="tp-integration-state" id="elevenConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-meta"><span id="elevenSourceSummary">Origem: verificando…</span><span id="elevenLastCheck">Ainda não testada nesta sessão</span></div>
+        <div class="tp-admin-feedback tp-integration-test-feedback" id="elevenCardTestFeedback" role="status" aria-live="polite"></div>
+        <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="elevenGlobalTest" type="button" onclick="testIntegration('elevenlabs')" disabled>Testar conexão</button></div>
+        <details class="tp-integration-editor"><summary>Editar configuração</summary><div class="tp-integration-editor-body">
+          <form id="elevenGlobalForm" onsubmit="saveElevenGlobal(event)"><label class="tp-admin-field" for="elevenGlobalKey">Chave da API<input class="form-control" id="elevenGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Cole a chave da ElevenLabs"></label>
+            <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="elevenGlobalSave" type="submit" disabled>Salvar chave</button><button class="btn btn-nb btn-danger" id="elevenGlobalClear" type="button" onclick="clearElevenGlobal()" disabled>Remover chave</button></div></form>
+          <div class="tp-admin-feedback" id="elevenGlobalStatus" role="status" aria-live="polite">Carregando configuração da integração…</div><div class="tp-admin-feedback" id="elevenGlobalTestStatus" role="status" aria-live="polite"></div>
+        </div></details>
+      </article>
+      <article class="tp-admin-operation-block tp-integration-card" id="mercadoPagoIntegrationCard" aria-labelledby="mercadoPagoGlobalTitle">
+        <div class="tp-integration-card-head"><div><h4 id="mercadoPagoGlobalTitle">Mercado Pago</h4><p>Checkout de assinaturas e compra de TikCoins.</p></div><span class="tp-integration-state" id="mercadoPagoConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-meta tp-integration-meta-mp"><span><b>Credencial</b><span id="mercadoPagoCredentialSummary">Verificando…</span></span><span><b>Webhook</b><span id="mercadoPagoWebhookSummary">Verificando…</span></span><span><b>Origem</b><span id="mercadoPagoSourceSummary">Verificando…</span></span><span id="mercadoPagoLastCheck">Ainda não testada nesta tela</span></div>
+        <div class="tp-admin-feedback tp-integration-test-feedback" id="mercadoPagoCardTestFeedback" role="status" aria-live="polite"></div>
+        <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="mercadoPagoTest" type="button" onclick="testIntegration('mercadopago')">Testar conexão</button></div>
+        <details class="tp-integration-editor"><summary>Editar credenciais, webhook e URL</summary><div class="tp-integration-editor-body">
+          <label class="tp-admin-field" for="mercadoPagoAccessToken">Access Token<input class="form-control" id="mercadoPagoAccessToken" type="password" autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="APP_USR-… ou TEST-…"></label>
+          <label class="tp-admin-field" for="mercadoPagoWebhookSecret">Segredo de assinatura do webhook<input class="form-control" id="mercadoPagoWebhookSecret" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Segredo configurado no Mercado Pago"></label>
+          <label class="tp-admin-field" for="mercadoPagoPublicUrl">URL pública HTTPS do painel<input class="form-control" id="mercadoPagoPublicUrl" type="url" autocomplete="url" spellcheck="false" maxlength="2048" placeholder="https://painel.seudominio.com.br"></label>
+          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="mercadoPagoSave" type="button" onclick="saveMercadoPago()">Salvar credenciais</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearAccess" type="button" onclick="saveMercadoPago({clearAccess:true})" disabled>Remover Access Token</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearWebhook" type="button" onclick="saveMercadoPago({clearWebhook:true})" disabled>Remover segredo</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearUrl" type="button" onclick="saveMercadoPago({clearBaseUrl:true})" disabled>Usar URL padrão</button></div>
+          <div class="tp-admin-feedback" id="mercadoPagoGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div><div class="tp-admin-feedback" id="mercadoPagoTestStatus" role="status" aria-live="polite"></div>
+        </div></details>
+      </article>
+      <article class="tp-admin-operation-block tp-integration-card" aria-labelledby="tiktoolsIntegrationTitle">
+        <div class="tp-integration-card-head"><div><h4 id="tiktoolsIntegrationTitle">TikTools</h4><p>Credencial individual por streamer; não há chave compartilhada.</p></div><span class="tp-integration-state" data-state="account">Por conta</span></div>
+        <div class="tp-integration-meta"><span>Origem: configuração de cada usuário</span><span>Teste ao validar a conta correspondente</span></div>
+        <div class="tp-integration-card-actions"><a class="btn btn-nb btn-dark" href="#adminAccounts">Gerenciar credenciais por usuário</a></div>
+      </article>
+    </div>
+  </section>
+  <div class="tp-integration-secondary-sections">
+  <section class="tp-admin-operation-block tp-integration-voices" aria-labelledby="additionalVoiceModelsTitle">
+    <div class="tp-admin-operation-heading"><div><h3 id="additionalVoiceModelsTitle">Vozes liberadas</h3><p>Filtre por serviço, modelo, idioma ou estado. As liberações são salvas automaticamente; as prévias usam uma amostra fixa e o saldo da integração.</p></div></div>
     <div class="tp-voice-model-provider-status" id="additionalVoiceProviderStatus" role="status" aria-live="polite">Carregando catálogo de vozes…</div>
+    <div class="tp-voice-filter-toolbar" aria-label="Filtros de vozes">
+      <label class="tp-voice-filter-search"><span class="visually-hidden">Buscar voz</span><input class="form-control" id="additionalVoiceSearch" type="search" placeholder="Buscar voz ou idioma…" autocomplete="off"></label>
+      <label class="tp-voice-filter-field">Fornecedor<select class="form-select" id="additionalVoiceProviderFilter"><option value="">Todos</option></select></label>
+      <label class="tp-voice-filter-field">Modelo<select class="form-select" id="additionalVoiceModelFilter"><option value="">Todos</option></select></label>
+      <label class="tp-voice-filter-field">Idioma<select class="form-select" id="additionalVoiceLanguageFilter"><option value="">Todos</option></select></label>
+      <label class="tp-voice-filter-field">Status<select class="form-select" id="additionalVoiceReleaseFilter"><option value="all">Todas</option><option value="enabled">Liberadas</option><option value="disabled">Bloqueadas</option></select></label>
+      <div class="tp-voice-filter-actions"><span id="additionalVoiceFilteredCount" aria-live="polite">Carregando…</span><button class="btn btn-nb btn-dark" id="additionalVoiceBulkEnable" type="button">Liberar filtradas</button><button class="btn btn-nb btn-dark" id="additionalVoiceBulkDisable" type="button">Bloquear filtradas</button></div>
+    </div>
     <div class="tp-voice-model-groups" id="additionalVoiceModelsList"><p class="text-secondary">Carregando vozes…</p></div>
     <div class="tp-admin-feedback" id="additionalVoicePreviewStatus" role="status" aria-live="polite"></div>
     <div class="tp-admin-feedback" id="additionalVoiceModelsMsg" role="status" aria-live="polite">As liberações são salvas automaticamente ao ativar ou desativar uma voz.</div>
+  </section>
+  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
+    <div class="tp-integration-catalog-head"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>TikTok Gifts · Os filtros dos seletores no painel são buscas locais e não alteram esta sincronização.</p></div><button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar agora</button></div>
+    <div class="tp-integration-catalog-summary"><span class="tp-integration-state" id="giftSyncStateBadge" data-state="loading">Verificando…</span><strong id="giftCatalogItemCount">— cadastrados</strong><span><b>Última sincronização</b><time id="giftSyncLastTime">Verificando…</time></span></div>
+    <span class="tp-admin-feedback" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
+  </section>
   </div>
+</section>
+
+<section class="tp-admin-section tp-admin-management" id="adminCredits" aria-labelledby="adminCreditsHeading">
+  <header class="tp-admin-section-heading">
+    <div><h2 id="adminCreditsHeading">Pacotes e TikCoins</h2><p>Cadastre os pacotes vendidos e faça ajustes manuais de saldo dos streamers.</p></div>
+  </header>
   <div class="tp-admin-operation-block" aria-labelledby="ttsCreditPackagesTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de créditos de voz</h3><p>Crie pacotes vendidos aos streamers pelo checkout avulso do Mercado Pago.</p></div></div>
+    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de TikCoins</h3><p>Defina o nome, a quantidade de TikCoins e o preço em reais de cada pacote.</p></div></div>
     <div id="ttsCreditPackagesList" class="tp-admin-credit-packages"><p class="text-secondary">Carregando pacotes…</p></div>
     <div class="tp-admin-operation-actions">
       <button class="btn btn-nb btn-dark" type="button" id="ttsCreditPackageAdd">Adicionar pacote</button>
@@ -114,13 +175,12 @@
     </div>
     <div class="tp-admin-feedback" id="ttsCreditPackagesStatus" role="status" aria-live="polite"></div>
   </div>
-  <section id="giftCatalogAdminCard" hidden aria-labelledby="giftCatalogAdminTitle" class="tp-admin-operation-block">
-    <div class="tp-admin-operation-heading"><div><h3 id="giftCatalogAdminTitle">Catálogo global de presentes</h3><p>Sincronize os presentes compartilhados do TikTok. Os filtros dos seletores no painel são buscas locais e não alteram esta operação.</p></div></div>
-    <div class="d-flex flex-wrap align-items-center gap-2">
-      <button type="button" class="btn btn-nb btn-warn" id="btnSyncGifts" title="Sincronizar catálogo global de presentes com o TikTok">↻ Sincronizar catálogo</button>
-      <span class="text-secondary" id="giftSyncStatus" role="status" aria-live="polite">Carregando status do catálogo…</span>
-    </div>
-  </section>
+  <div class="tp-admin-operation-block" aria-labelledby="adminCreditBalancesTitle">
+    <div class="tp-admin-operation-heading"><div><h3 id="adminCreditBalancesTitle">Saldo dos streamers</h3><p>Informe uma quantidade inteira e escolha adicionar ou remover. Remoções não podem deixar o saldo negativo.</p></div></div>
+    <div class="tp-admin-toolbar"><label for="adminCreditSearch">Buscar streamer<input class="form-control" id="adminCreditSearch" type="search" placeholder="Nome ou e-mail"></label><button class="btn btn-nb btn-dark" type="button" id="adminCreditRefresh">Atualizar saldos</button></div>
+    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Conta</th><th>Saldo</th><th>Quantidade</th><th>Ações</th></tr></thead><tbody id="adminCreditRows"><tr><td colspan="5">Carregando saldos…</td></tr></tbody></table></div>
+    <div class="tp-admin-feedback" id="adminCreditStatus" role="status" aria-live="polite"></div>
+  </div>
 </section>
 
 <section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
@@ -190,9 +250,7 @@
     <div class="tp-admin-feature-box" id="elevenAdminBox" hidden>
       <span class="tp-admin-form-title">Voz adicional · Leitor de chat</span>
       <label class="form-check"><input class="form-check-input" type="checkbox" id="elevenAdminEnabled">Liberar vozes adicionais nesta conta</label>
-      <div class="text-secondary small">Saldo atual: <strong id="elevenAdminBalance">0 créditos</strong></div>
-      <label class="form-label" for="elevenAdminCreditAdjust">Ajustar saldo (+ ou − créditos)</label>
-      <input class="form-control form-control-sm" type="number" min="-100000000" max="100000000" step="1" id="elevenAdminCreditAdjust" value="0">
+      <div class="text-secondary small">Saldo atual: <strong id="elevenAdminBalance">0 TikCoins</strong></div>
       <button class="btn btn-nb btn-dark" type="button" id="elevenAdminSave" onclick="saveElevenAccess()">Salvar acesso de voz</button>
       <span id="elevenAdminStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span>
     </div>
@@ -224,6 +282,8 @@
     </table>
   </div>
 </section>
+
+<section class="tp-admin-section tp-admin-quiz-bank" id="adminQuizBank" hidden aria-labelledby="adminQuizBankTitle"><div id="adminQuizBankApp"></div></section>
 
 <section class="tp-admin-section tp-admin-operations" id="adminOperations" aria-label="Operação local">
   <div class="tp-admin-operation-block" id="wordCatalogAdmin">
@@ -447,14 +507,37 @@ function showGiftSyncState(data) {
   giftSyncState = data;
   const status = document.getElementById("giftSyncStatus");
   if (!status) return;
-  status.textContent = data.synced_at
-    ? `Última sincronização: ${new Date(data.synced_at * 1000).toLocaleString("pt-BR")}`
-    : "Catálogo ainda não sincronizado.";
+  const result = parseGiftSyncResult(data.last_sync_result);
+  const hasError = result && (result.error || result.success === false || result.ok === false);
+  const lastTime = data.synced_at ? new Date(data.synced_at * 1000).toLocaleString("pt-BR") : "Ainda não sincronizado";
+  const count = Array.isArray(data.gifts) ? data.gifts.length : 0;
+  document.getElementById("giftSyncLastTime").textContent = lastTime;
+  document.getElementById("giftCatalogItemCount").textContent = `${count.toLocaleString("pt-BR")} cadastrados`;
+  const badge = document.getElementById("giftSyncStateBadge");
+  badge.dataset.state = !data.synced_at ? "missing" : hasError ? "error" : "connected";
+  badge.textContent = !data.synced_at ? "Não sincronizado" : hasError ? "Erro na última sincronização" : "Sincronizado";
+  document.getElementById("integrationGiftSyncSummary").textContent = `${count.toLocaleString("pt-BR")} cadastrados`;
+  document.getElementById("integrationGiftSyncLastSummary").textContent = `Última sincronização: ${lastTime}`;
+  const details = result && !hasError && (result.fetched != null || result.inserted != null || result.updated != null)
+    ? ` · ${Number(result.fetched || 0).toLocaleString("pt-BR")} recebidos, ${Number(result.inserted || 0).toLocaleString("pt-BR")} novos, ${Number(result.updated || 0).toLocaleString("pt-BR")} atualizados`
+    : "";
+  const error = hasError ? `Falha na última sincronização${result.error ? `: ${String(result.error).slice(0, 180)}` : ". Consulte os logs para detalhes."}` : "";
+  status.textContent = `${lastTime}${details}${error ? ` · ${error}` : ""}`;
+}
+
+function parseGiftSyncResult(raw) {
+  if (!raw) return null;
+  try { return JSON.parse(String(raw).replaceAll("'", '"')); } catch { return null; }
 }
 
 async function refreshGiftSyncState() {
   try { showGiftSyncState(await loadGiftSyncState()); }
-  catch (error) { document.getElementById("giftSyncStatus").textContent = error.message; }
+  catch (error) {
+    document.getElementById("giftSyncStatus").textContent = error.message;
+    document.getElementById("integrationGiftSyncSummary").textContent = "Falha ao consultar catálogo";
+    document.getElementById("giftSyncStateBadge").dataset.state = "error";
+    document.getElementById("giftSyncStateBadge").textContent = "Erro";
+  }
 }
 
 async function waitForGiftSync(previousSignature, attempts = 0) {
@@ -515,6 +598,10 @@ function formatAdminDate(value) {
 
 let usersData = [];
 let editingId = null;
+let dashboardData = { costs: null, monitor: null, incidents: null, integrations: null, rates: [] };
+let dashboardLastUpdatedAt = 0;
+let dashboardRefreshTimer = null;
+let dashboardLoading = false;
 
 function inviteStatusBadge(st) {
   const map = { active: ["text-bg-success", "Ativo"], used: ["text-bg-secondary", "Usado"], revoked: ["text-bg-danger", "Revogado"], expired: ["text-bg-warning", "Expirado"] };
@@ -698,10 +785,9 @@ async function resetWordCycle() {
   } catch (error) { document.getElementById("wordUsageNotice").textContent = error.message; button.disabled = false; }
 }
 
-async function loadUsers() {
+async function loadUsers({ silent = false } = {}) {
   const message = document.getElementById('adminLoadMsg');
-  message.textContent = 'Carregando…';
-  document.getElementById('dashboardMessage').textContent = 'Carregando…';
+  if (!silent) { message.textContent = 'Carregando…'; document.getElementById('dashboardMessage').textContent = 'Carregando…'; }
   try {
   const data = await apiFetch("/api/admin/users");
   if (!data.success) throw new Error('Não foi possível carregar as contas.');
@@ -713,9 +799,137 @@ async function loadUsers() {
   document.getElementById('metricPro').textContent = usersData.filter(u => String(u.plan).startsWith('pro_')).length;
   renderAdminUsers();
   renderAdminDashboard();
-  document.getElementById('dashboardUpdated').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
-  message.textContent = '';
-  } catch (error) { message.textContent = error.message; document.getElementById('dashboardMessage').textContent = error.message; if (!usersData.length) document.getElementById('dashboardActivity').innerHTML = '<tr><td colspan="7">Não foi possível carregar a atividade dos clientes.</td></tr>'; }
+  await loadDashboardData();
+  if (!silent) message.textContent = '';
+  } catch (error) { if (!silent) message.textContent = error.message; document.getElementById('dashboardMessage').textContent = error.message; if (!usersData.length) document.getElementById('dashboardActivity').innerHTML = '<tr><td colspan="9">Não foi possível carregar a atividade dos clientes.</td></tr>'; }
+}
+
+const dashboardNumber = value => Number(value || 0).toLocaleString('pt-BR');
+const dashboardMoney = (value, currency) => value == null ? 'Não medido' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency, maximumFractionDigits: 4 });
+function dashboardElapsed() {
+  const node = document.getElementById('dashboardUpdated');
+  if (!dashboardLastUpdatedAt) return;
+  const seconds = Math.max(0, Math.floor((Date.now() - dashboardLastUpdatedAt) / 1000));
+  node.textContent = seconds < 2 ? 'Atualizado agora' : `Atualizado há ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'}`;
+}
+async function loadDashboardData() {
+  if (dashboardLoading) return;
+  dashboardLoading = true;
+  const range = document.getElementById('dashboardCostRange').value;
+  const endpoints = [
+    ['costs', `/api/admin/dashboard/costs?range=${encodeURIComponent(range)}`],
+    ['monitor', '/api/admin/monitor/snapshot'], ['incidents', '/api/admin/monitor/incidents?status=open&limit=5'],
+    ['integrations', '/api/admin/integrations'], ['rates', '/api/admin/dashboard/rates']
+  ];
+  try {
+    const results = await Promise.allSettled(endpoints.map(([, url]) => apiFetch(url)));
+    const failedSources = [];
+    results.forEach((result, index) => {
+      const key = endpoints[index][0];
+      if (result.status === 'fulfilled' && result.value?.success) dashboardData[key] = key === 'monitor' ? result.value.snapshot : key === 'incidents' ? result.value : key === 'integrations' ? result.value.integrations : key === 'rates' ? result.value.rates : result.value;
+      else failedSources.push(key);
+    });
+    renderAdminDashboard(); renderDashboardHealth(); renderDashboardCosts(); renderDashboardIncidents(); renderDashboardRates();
+    if (failedSources.length) document.getElementById('dashboardMessage').textContent = `Dados temporariamente indisponíveis: ${failedSources.join(', ')}. Exibindo a última leitura válida quando disponível.`;
+    dashboardLastUpdatedAt = Date.now(); dashboardElapsed();
+  } catch (error) {
+    document.getElementById('dashboardMessage').textContent = 'Alguns dados operacionais não puderam ser atualizados.';
+  } finally { dashboardLoading = false; }
+}
+function dashboardStatusLabel(status) {
+  return ({ healthy: 'Saudável', warning: 'Atenção', attention: 'Atenção', degraded: 'Degradado', down: 'Indisponível', unknown: 'Sem dados' })[status] || 'Sem dados';
+}
+function renderDashboardHealth() {
+  const snap = dashboardData.monitor;
+  const overall = document.getElementById('dashboardOverallState');
+  const state = snap?.overall?.status || 'unknown';
+  overall.textContent = snap?.overall?.label || dashboardStatusLabel(state); overall.dataset.state = state;
+  if (snap?.platform) {
+    document.getElementById('dashboardOnline').textContent = dashboardNumber(snap.platform.streamers_online);
+    document.getElementById('dashboardOnlineCoverage').textContent = 'Painéis conectados agora';
+    document.getElementById('dashboardLives').textContent = dashboardNumber(snap.platform.lives_connected);
+    document.getElementById('dashboardLivesCoverage').textContent = 'Conexões reportadas agora';
+    document.getElementById('dashboardGames').textContent = dashboardNumber(snap.platform.games_active);
+    document.getElementById('dashboardGamesCoverage').textContent = `${dashboardNumber(snap.platform.games_today)} partidas de Contexto concluídas hoje · ${dashboardNumber(snap.platform.games_active)} ativas agora`;
+  }
+  const serviceNames = { api: 'API Node', ws: 'Tempo real', db: 'Banco de dados', daemon: 'Daemon Python', storage: 'Armazenamento', tts: 'TTS do servidor', tiktok: 'TikTok Live' };
+  const services = (snap?.services || []).map(item => ({ name: serviceNames[item.id] || item.name, state: item.status, note: item.note || '', metrics: item.metrics || '', href: item.id === 'api' || item.id === 'db' || item.id === 'daemon' ? '#adminMonitor' : null }));
+  const configured = dashboardData.integrations || {};
+  for (const [key, name] of [['openrouter','OpenRouter'],['elevenlabs','ElevenLabs'],['mercadopago','Mercado Pago']]) {
+    services.push({ name, state: configured[key]?.configured ? 'configured' : 'unconfigured',
+      note: configured[key]?.configured ? 'Credencial configurada · teste manual' : 'Credencial ausente', href: '#adminRules' });
+  }
+  services.push({ name: 'TikTools', state: 'unknown', note: 'Estado de conexão não monitorado pelo painel', href: '#adminRules' });
+  const mainServices = services.filter(item => item.href !== '#adminRules');
+  const externalServices = services.filter(item => item.href === '#adminRules');
+  const renderServiceGroup = (title, items) => `<div class="tp-dashboard-health-group"><h3>${title}</h3><div class="tp-dashboard-health-group-grid">${items.map(item => `<a class="tp-dashboard-health-item tp-card" ${item.href ? `href="${item.href}"` : ''} data-state="${esc(item.state)}"><span><strong>${esc(item.name)}</strong><small>${esc(item.note || '')}</small></span><b>${esc(item.state === 'configured' ? 'Configurada' : item.state === 'unconfigured' ? 'Não configurada' : dashboardStatusLabel(item.state))}</b></a>`).join('')}</div></div>`;
+  document.getElementById('dashboardHealthGrid').innerHTML = services.length
+    ? `${mainServices.length ? renderServiceGroup('Serviços principais', mainServices) : ''}${externalServices.length ? renderServiceGroup('Integrações externas', externalServices) : ''}`
+    : '<p class="text-secondary">Estado dos serviços indisponível.</p>';
+  const alerts = snap?.rates;
+  if (alerts) document.getElementById('dashboardHealthGrid').insertAdjacentHTML('beforeend', `<div class="tp-dashboard-health-footer">API: ${alerts.requests_per_min ?? '—'} req/min · erros ${(Number(alerts.error_rate || 0) * 100).toFixed(1)}% · latência p95 ${snap.latency?.p95 == null ? '—' : `${Math.round(snap.latency.p95)} ms`}</div>`);
+}
+function renderDashboardCosts() {
+  const data = dashboardData.costs;
+  if (!data) return;
+  const total = data.totals || {};
+  const usage = data.usage || [];
+  const contexts = data.contexts || [];
+  const sum = (rows, key) => rows.reduce((n, row) => n + Number(row[key] || 0), 0);
+  const actualRows = usage.filter(row => row.cost_source === 'actual');
+  const estimateRows = usage.filter(row => row.cost_source === 'estimated');
+  const actualUsd = sum(actualRows, 'cost_usd') + sum(contexts, 'cost_usd');
+  const actualBrl = sum(actualRows, 'cost_brl');
+  const estimateUsd = sum(estimateRows, 'cost_usd');
+  const estimateBrl = sum(estimateRows, 'cost_brl');
+  const costText = (usd, brl, has) => !has ? 'Não medido' : `${usd != null ? `US$ ${Number(usd).toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4})}` : ''}${usd != null && brl != null ? ' · ' : ''}${brl != null ? dashboardMoney(brl,'BRL') : ''}`;
+  document.getElementById('dashboardCostActual').textContent = costText(actualUsd, actualBrl, actualRows.length > 0 || contexts.some(row => row.cost_usd != null));
+  document.getElementById('dashboardCostEstimated').textContent = costText(estimateUsd, estimateBrl, estimateRows.length > 0);
+  document.getElementById('dashboardCostUnknown').textContent = dashboardNumber(total.unknown_cost_requests);
+  document.getElementById('dashboardCostRequests').textContent = `${dashboardNumber(total.requests)} chamadas · ${(Number(total.success_rate || 0) * 100).toFixed(1)}% concluídas`;
+  document.getElementById('dashboardCostActualCoverage').textContent = `${dashboardNumber(total.actual_requests)} chamadas com custo informado pelo provedor`;
+  document.getElementById('dashboardCostEstimatedCoverage').textContent = `${dashboardNumber(total.estimated_requests)} chamadas estimadas por tarifa cadastrada`;
+  document.getElementById('dashboardCreditRevenue').textContent = dashboardMoney(data.revenue?.gross_brl ?? 0, 'BRL');
+  document.getElementById('dashboardCreditRevenueNote').textContent = `${dashboardNumber(data.revenue?.purchases)} compras aprovadas · valor bruto`;
+  const periodCard = (title, row, projection = false) => {
+    if (!row || (projection && !row.available)) return `<article class="tp-card"><span>${title}</span><strong>Sem base medida</strong><small>Configure tarifas e aguarde chamadas registradas.</small></article>`;
+    if (!projection && !row.requests) return `<article class="tp-card"><span>${title}</span><strong>Sem chamadas</strong><small>${dashboardNumber(row.credits)} TikCoins consumidos no período.</small></article>`;
+    const actual = row.actual_usd, estimate = row.estimated_usd;
+    const actualBrl = row.actual_brl, estimateBrl = row.estimated_brl;
+    const actualText = row.actual_requests && actualBrl != null ? dashboardMoney(actualBrl, 'BRL') : row.actual_requests && actual != null ? dashboardMoney(actual, 'USD') : 'Não medido';
+    const estimateText = row.estimated_requests && estimateBrl != null ? dashboardMoney(estimateBrl, 'BRL') : row.estimated_requests && estimate != null ? dashboardMoney(estimate, 'USD') : 'Não medido';
+    const sub = projection ? `Projeção linear parcial · só chamadas medidas${row.unknown_cost_requests ? ` · ${dashboardNumber(row.unknown_cost_requests)} sem custo conhecido` : ''}`
+      : `${dashboardNumber(row.credits)} TikCoins consumidos · ${dashboardNumber(row.requests)} chamadas`;
+    return `<article class="tp-card"><span>${title}</span><strong>${projection ? `${actualText} real + ${estimateText} estimado` : `${actualText} real · ${estimateText} estimado`}</strong><small>${sub}</small></article>`;
+  };
+  const periods = data.period_overview || {};
+  document.getElementById('dashboardPeriodOverview').innerHTML = [
+    periodCard('Hoje · custo conhecido', periods.today), periodCard('Últimos 7 dias · custo conhecido', periods.last_7d),
+    periodCard('Mês atual · custo conhecido', periods.month), periodCard('Projeção de fim do mês', data.month_projection, true)
+  ].join('');
+  const providerRows = data.by_provider || [];
+  document.getElementById('dashboardCostProviders').innerHTML = providerRows.length ? providerRows.map(row => `<div class="tp-dashboard-breakdown-row"><span><strong>${esc(row.provider)}</strong><small>${dashboardNumber(row.requests)} chamadas · ${(Number(row.success_rate || 0)*100).toFixed(1)}% concluídas${row.avg_duration_ms == null ? '' : ` · média ${Math.round(row.avg_duration_ms)} ms`}</small></span><b>${row.cost_usd == null && row.cost_brl == null ? 'Custo pendente' : costText(row.cost_usd,row.cost_brl,true)}</b></div>`).join('') : '<p class="text-secondary">Nenhuma chamada medida nesse período.</p>';
+  const resources = data.by_resource || [];
+  document.getElementById('dashboardCostResources').innerHTML = resources.length ? resources.map(row => `<div class="tp-dashboard-breakdown-row"><span><strong>${esc(row.resource)} · ${esc(row.model || row.provider)}</strong><small>${esc(row.provider)} · ${dashboardNumber(row.requests)} chamadas · ${dashboardNumber(row.quantity)} ${esc(row.unit)}${row.avg_duration_ms == null ? '' : ` · média ${Math.round(row.avg_duration_ms)} ms`}</small></span><b>${row.cost_usd == null && row.cost_brl == null ? 'Pendente' : costText(row.cost_usd,row.cost_brl,true)}</b></div>`).join('') : '<p class="text-secondary">Nenhuma chamada medida nesse período.</p>';
+  const models = data.credits?.by_model || [];
+  document.getElementById('dashboardCreditModels').innerHTML = models.length ? models.map(row => `<div class="tp-dashboard-breakdown-row"><span><strong>${esc(row.model || 'Modelo não identificado')}</strong><small>${dashboardNumber(row.characters)} caracteres · ${dashboardNumber(row.requests)} narrações</small></span><b>${dashboardNumber(row.credits)} TikCoins</b></div>`).join('') : '<p class="text-secondary">Nenhum débito de TikCoins no período.</p>';
+  document.getElementById('dashboardCreditTotals').textContent = `${dashboardNumber(data.credits?.credits)} TikCoins consumidos · ${dashboardNumber(data.credits?.characters)} caracteres · ${dashboardNumber(data.credits?.requests)} narrações`;
+  const notes = [];
+  if (data.coverage?.historical_tts_before_instrumentation) notes.push('Chamadas antigas de TTS não possuem medição por chamada.');
+  else notes.push('Chamadas históricas de TTS anteriores à ativação não são recuperáveis.');
+  if (total.unknown_cost_requests) notes.push(`${dashboardNumber(total.unknown_cost_requests)} chamadas ainda sem tarifa/custo informado.`);
+  document.getElementById('dashboardCostCoverage').textContent = notes.join(' ');
+}
+function renderDashboardIncidents() {
+  const data = dashboardData.incidents;
+  const items = data?.items || [];
+  document.getElementById('dashboardIncidents').textContent = dashboardNumber(data?.active ?? '—');
+  document.getElementById('dashboardIncidentsCoverage').textContent = 'Incidentes ativos no Monitor';
+  document.getElementById('dashboardIncidentList').innerHTML = items.length ? items.slice(0, 5).map(item => `<a class="tp-dashboard-incident" href="#adminMonitor/incidents" data-state="${esc(item.severity || 'unknown')}"><span><strong>${esc(item.title || item.key || 'Incidente')}</strong><small>${esc(item.detail || item.source || '')}</small></span><time>${esc(item.first_seen ? new Date(item.first_seen).toLocaleString('pt-BR') : '—')}</time></a>`).join('') : '<p class="text-secondary">Nenhum incidente ativo reportado.</p>';
+}
+function renderDashboardRates() {
+  const rows = dashboardData.rates || [];
+  document.getElementById('dashboardRatesList').innerHTML = rows.length ? rows.map(row => `<span>${esc(row.provider)} · ${esc(row.model || 'todos os modelos')} · ${esc(row.resource)} · ${dashboardNumber(row.unit_price)} ${esc(row.currency)} / ${esc(row.unit)}${row.usd_brl ? ` · câmbio ${dashboardNumber(row.usd_brl)}` : ''}</span>`).join('') : '<span>Nenhuma tarifa estimada cadastrada.</span>';
 }
 
 function renderAdminDashboard() {
@@ -746,11 +960,22 @@ function renderAdminDashboard() {
     usage.innerHTML = renderAdminUsage(u.activity);
     const values = [...usage.querySelectorAll('dd')].map(el => esc(el.textContent));
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${esc(u.name)}</strong><small class="tp-dashboard-email">${esc(u.email)}</small></td><td>${esc(u.tiktok_username) || '—'}</td>${values.map(value => `<td>${value}</td>`).join('')}<td><button class="btn btn-nb btn-dark" type="button">Ver conta</button></td>`;
+    const cost = (dashboardData.costs?.top_clients || []).find(row => Number(row.tenant_id) === Number(u.id));
+    const costValue = cost && (cost.cost_brl != null || cost.cost_usd != null)
+      ? [cost.cost_brl != null ? dashboardMoney(cost.cost_brl, 'BRL') : '', cost.cost_usd != null ? dashboardMoney(cost.cost_usd, 'USD') : ''].filter(Boolean).join(' · ')
+      : (cost ? 'Sem custo conhecido' : '—');
+    const activityCells = values.map((value, index) => {
+      const state = index < 2
+        ? (/\bOnline\b|\bConectado\b/.test(value) ? 'online' : /Reconectando|Conectando/.test(value) ? 'pending' : /\bOffline\b|Desconectado/.test(value) ? 'offline' : 'unknown')
+        : index === 2 && /Sem partida/.test(value) ? 'idle'
+          : index === 2 && /Em andamento/.test(value) ? 'active' : 'plain';
+      return `<td><span class="tp-dashboard-activity-state" data-state="${state}">${value}</span></td>`;
+    }).join('');
+    tr.innerHTML = `<td><strong>${esc(u.name)}</strong><small class="tp-dashboard-email">${esc(u.email)}</small></td><td>${esc(u.tiktok_username) || '—'}</td>${activityCells}<td>${dashboardNumber(cost?.credits)}${cost ? ' TikCoins' : '—'}</td><td>${esc(costValue)}</td><td><button class="btn btn-nb btn-dark tp-dashboard-account-action" type="button">Ver conta</button></td>`;
     tr.querySelector('button').addEventListener('click', () => { location.hash = 'adminAccounts'; document.getElementById('adminSearch').value = String(u.email || u.name || ''); document.getElementById('adminStatusFilter').value = ''; renderAdminUsers(); });
     body.appendChild(tr);
   }
-  if (!filtered.length) body.innerHTML = '<tr><td colspan="7">' + (clients.length ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.') + '</td></tr>';
+  if (!filtered.length) body.innerHTML = '<tr><td colspan="9">' + (clients.length ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.') + '</td></tr>';
   document.getElementById('dashboardMessage').textContent = clients.some(u => !u.activity || metrics.some(([,known]) => !known(u.activity))) ? 'Dados de atividade incompletos. Os totais consideram apenas clientes com dados disponíveis.' : '';
 }
 
@@ -898,13 +1123,173 @@ function editUser(id) {
 
 let elevenGlobalConfigured = false;
 
+function integrationSourceLabel(source) {
+  return source === "admin" ? "salva pelo Super Admin" : source === "environment" ? "variável do servidor"
+    : source === "default" ? "padrão da plataforma" : "não configurada";
+}
+
+const integrationUiState = { openrouter: null, elevenlabs: null, mercadopago: null };
+const integrationChecksInMemory = {};
+function updateIntegrationSummary() {
+  const connected = Object.values(integrationUiState).filter(Boolean).length;
+  document.getElementById("integrationConnectedCount").textContent = String(connected);
+}
+
+function setIntegrationCardState(provider, connected, source, detail = "") {
+  integrationUiState[provider] = connected === true;
+  updateIntegrationSummary();
+  const ids = { openrouter: ["openRouterConnectionState", "openRouterSourceSummary"], elevenlabs: ["elevenConnectionState", "elevenSourceSummary"], mercadopago: ["mercadoPagoConnectionState", "mercadoPagoSourceSummary"] }[provider];
+  if (!ids) return;
+  const state = document.getElementById(ids[0]);
+  state.dataset.state = connected ? "connected" : "missing";
+  state.textContent = connected ? "Conectado" : "Não configurado";
+  const sourceSummary = document.getElementById(ids[1]);
+  sourceSummary.textContent = detail || `Origem: ${source || "não configurada"}`;
+  sourceSummary.title = detail || `Origem: ${source || "não configurada"}`;
+}
+
+function integrationLastCheck(provider) {
+  const check = integrationChecksInMemory[provider];
+  if (!check?.at) return "Ainda não testada nesta tela";
+  const seconds = Math.max(0, Math.floor((Date.now() - check.at) / 1000));
+  const when = seconds < 60 ? "agora" : seconds < 3600 ? `há ${Math.floor(seconds / 60)} min` : new Date(check.at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `Último teste: ${when} · ${check.success ? "sucesso" : "falhou"}`;
+}
+
+function showIntegrationCheck(provider, success) {
+  if (success === null) {
+    const targetId = { openrouter: "openRouterLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+    const target = document.getElementById(targetId);
+    if (target) target.textContent = integrationLastCheck(provider);
+    return;
+  }
+  integrationChecksInMemory[provider] = { at: Date.now(), success };
+  const id = { openrouter: "openRouterLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+  const target = document.getElementById(id);
+  if (target) target.textContent = integrationLastCheck(provider);
+}
+
+function initializeIntegrationChecks() {
+  for (const provider of ["openrouter", "elevenlabs", "mercadopago"]) showIntegrationCheck(provider, null);
+}
+
+function showAdminIntegrationState(data) {
+  const integrations = data.integrations || {};
+  const openrouter = integrations.openrouter || {};
+  document.getElementById("openRouterGlobalStatus").textContent = openrouter.configured
+    ? `Conectada · ${openrouter.api_key_masked || "chave mascarada"} · ${integrationSourceLabel(openrouter.source)}${openrouter.daemon_restart_required ? " · reinicie o daemon em uma janela segura para aplicar às lives" : " · daemon atualizado"}`
+    : "Sem chave configurada.";
+  document.getElementById("openRouterGlobalClear").disabled = !openrouter.configured;
+  setIntegrationCardState("openrouter", openrouter.configured, openrouter.source,
+    `Origem: ${integrationSourceLabel(openrouter.source)}${openrouter.api_key_masked ? ` · chave ${openrouter.api_key_masked}` : ""}${openrouter.daemon_restart_required ? " · reinício seguro pendente" : ""}`);
+  document.getElementById("openRouterLastCheck").textContent = integrationLastCheck("openrouter");
+  const mercado = integrations.mercadopago || {};
+  document.getElementById("mercadoPagoPublicUrl").placeholder = mercado.public_base_url
+    ? `${mercado.public_base_url} · endereço atual` : "https://painel.seudominio.com.br";
+  document.getElementById("mercadoPagoCredentialSummary").textContent = mercado.configured ? "Configurada" : "Ausente";
+  document.getElementById("mercadoPagoWebhookSummary").textContent = mercado.webhook_secret_configured ? "Configurado" : "Não configurado";
+  document.getElementById("mercadoPagoGlobalStatus").textContent = mercado.configured
+    ? `Access Token ${mercado.access_token_masked || "mascarado"} · ${integrationSourceLabel(mercado.source)} · webhook ${mercado.webhook_secret_configured ? `configurado (${mercado.webhook_secret_masked || "mascarado"})` : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`
+    : `Access Token não configurado · webhook ${mercado.webhook_secret_configured ? "com assinatura configurada" : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`;
+  document.getElementById("mercadoPagoClearAccess").disabled = !mercado.configured;
+  document.getElementById("mercadoPagoClearWebhook").disabled = !mercado.webhook_secret_configured;
+  document.getElementById("mercadoPagoClearUrl").disabled = mercado.public_base_url_source === "default";
+  setIntegrationCardState("mercadopago", mercado.configured, mercado.source,
+    `URL do checkout: ${mercado.public_base_url || "padrão"} · ${integrationSourceLabel(mercado.source)}`);
+  document.getElementById("mercadoPagoLastCheck").textContent = integrationLastCheck("mercadopago");
+}
+
+async function loadAdminIntegrationState() {
+  try {
+    const data = await apiFetch("/api/admin/integrations");
+    if (!data.success) throw new Error("Falha ao carregar integrações.");
+    showAdminIntegrationState(data);
+  } catch {
+    document.getElementById("openRouterGlobalStatus").textContent = "Não foi possível carregar a configuração.";
+    document.getElementById("mercadoPagoGlobalStatus").textContent = "Não foi possível carregar a configuração.";
+  }
+}
+
+async function saveOpenRouterGlobal(clear = false) {
+  const input = document.getElementById("openRouterGlobalKey");
+  const status = document.getElementById("openRouterGlobalStatus");
+  if (!clear && !input.value.trim()) { status.textContent = "Cole a chave da API antes de salvar."; input.focus(); return; }
+  const buttons = ["openRouterGlobalSave", "openRouterGlobalTest", "openRouterGlobalClear"].map(id => document.getElementById(id));
+  buttons.forEach(button => { button.disabled = true; });
+  status.textContent = "Salvando configuração…";
+  let resultMessage = "";
+  try {
+    const data = await apiFetch("/api/admin/integrations/openrouter", { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clear ? { clear: true } : { api_key: input.value.trim() }) });
+    if (!data.success) throw new Error(data.error || "Falha ao salvar a chave.");
+    input.value = "";
+    showAdminIntegrationState(data);
+    resultMessage = clear ? "Chave removida." : "Chave salva. Use “Testar conexão” para validar.";
+  } catch (error) { resultMessage = error.message || "Não foi possível salvar a chave."; }
+  finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
+}
+
+async function saveMercadoPago(options = {}) {
+  const accessInput = document.getElementById("mercadoPagoAccessToken");
+  const webhookInput = document.getElementById("mercadoPagoWebhookSecret");
+  const urlInput = document.getElementById("mercadoPagoPublicUrl");
+  const clearAccess = options.clearAccess === true, clearWebhook = options.clearWebhook === true, clearBaseUrl = options.clearBaseUrl === true;
+  if (!clearAccess && !clearWebhook && !clearBaseUrl && !accessInput.value.trim() && !webhookInput.value.trim() && !urlInput.value.trim()) {
+    document.getElementById("mercadoPagoGlobalStatus").textContent = "Informe pelo menos uma credencial para salvar."; return;
+  }
+  const buttons = ["mercadoPagoSave", "mercadoPagoTest", "mercadoPagoClearAccess", "mercadoPagoClearWebhook", "mercadoPagoClearUrl"].map(id => document.getElementById(id));
+  buttons.forEach(button => { button.disabled = true; });
+  const status = document.getElementById("mercadoPagoGlobalStatus"); status.textContent = "Salvando configuração…";
+  let resultMessage = "";
+  const body = clearAccess || clearWebhook || clearBaseUrl ? { clear_access_token: clearAccess, clear_webhook_secret: clearWebhook, clear_public_base_url: clearBaseUrl } : {
+    ...(accessInput.value.trim() ? { access_token: accessInput.value.trim() } : {}),
+    ...(webhookInput.value.trim() ? { webhook_secret: webhookInput.value.trim() } : {}),
+    ...(urlInput.value.trim() ? { public_base_url: urlInput.value.trim() } : {}),
+  };
+  try {
+    const data = await apiFetch("/api/admin/integrations/mercadopago", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!data.success) throw new Error(data.error || "Falha ao salvar credenciais.");
+    if (!clearAccess) accessInput.value = "";
+    if (!clearWebhook) webhookInput.value = "";
+    if (!clearBaseUrl) urlInput.value = "";
+    showAdminIntegrationState(data);
+    resultMessage = clearAccess ? "Access Token removido." : clearWebhook ? "Segredo do webhook removido." : clearBaseUrl ? "URL padrão restaurada." : "Configurações salvas. Teste o Access Token para validar.";
+  } catch (error) { resultMessage = error.message || "Não foi possível salvar as credenciais."; }
+  finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
+}
+
+async function testIntegration(provider) {
+  const inputId = { elevenlabs: "elevenGlobalKey", openrouter: "openRouterGlobalKey", mercadopago: "mercadoPagoAccessToken" }[provider];
+  const statusId = { elevenlabs: "elevenCardTestFeedback", openrouter: "openRouterTestFeedback", mercadopago: "mercadoPagoCardTestFeedback" }[provider];
+  const buttonId = { elevenlabs: "elevenGlobalTest", openrouter: "openRouterGlobalTest", mercadopago: "mercadoPagoTest" }[provider];
+  const input = document.getElementById(inputId), status = document.getElementById(statusId), button = document.getElementById(buttonId);
+  button.disabled = true; status.textContent = "Testando conexão…";
+  try {
+    const draft = input?.value.trim();
+    const data = await apiFetch(`/api/admin/integrations/${provider}/test`, { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft
+        ? provider === "mercadopago" ? { access_token: draft } : { api_key: draft } : {}) });
+    if (!data.success) throw new Error(data.error || "Teste não concluído.");
+    status.textContent = `Conexão validada · ${data.account}.`;
+    showIntegrationCheck(provider, true);
+  } catch (error) {
+    status.textContent = error.message || "Não foi possível testar a conexão.";
+    showIntegrationCheck(provider, false);
+  }
+  finally { button.disabled = false; }
+}
+
 function showElevenGlobalState(data) {
   elevenGlobalConfigured = data.configured === true;
   document.getElementById("elevenGlobalSave").disabled = false;
   document.getElementById("elevenGlobalClear").disabled = !elevenGlobalConfigured;
+  document.getElementById("elevenGlobalTest").disabled = false;
   document.getElementById("elevenGlobalStatus").textContent = data.source === "unavailable"
     ? "Não foi possível ler a configuração. Salve uma chave para atualizar."
-    : elevenGlobalConfigured ? "Chave configurada. A liberação continua individual por streamer." : "Nenhuma chave configurada.";
+    : elevenGlobalConfigured ? `Chave ${data.api_key_masked || "mascarada"} · ${integrationSourceLabel(data.source)}. A liberação continua individual por streamer.` : "Nenhuma chave configurada.";
+  setIntegrationCardState("elevenlabs", elevenGlobalConfigured, data.source,
+    `Origem: ${integrationSourceLabel(data.source)}${data.api_key_masked ? ` · chave ${data.api_key_masked}` : ""}`);
+  document.getElementById("elevenLastCheck").textContent = integrationLastCheck("elevenlabs");
 }
 
 async function loadElevenGlobal() {
@@ -952,42 +1337,56 @@ function clearElevenGlobal() {
 let additionalVoiceModels = [];
 let additionalVoiceSaveQueue = Promise.resolve();
 let additionalVoiceSaveRevision = 0;
+const additionalVoiceGroupOpen = new Map();
+let additionalVoiceFiltersInitialized = false;
+function populateVoiceFilter(select, options) {
+  const selected = select.value;
+  while (select.options.length > 1) select.remove(1);
+  for (const [value, label] of options) select.add(new Option(label, value));
+  select.value = options.some(([value]) => value === selected) ? selected : "";
+}
 function renderAdditionalVoiceModels() {
   const container = document.getElementById("additionalVoiceModelsList");
   container.replaceChildren();
-  const groups = [
-    { id: "padrao", label: "Vozes padrão" },
-    { id: "personalizada", label: "Vozes personalizadas" },
-  ];
-  for (const group of groups) {
-    const models = additionalVoiceModels.filter(model => model.voice_type === group.id);
-    if (!models.length) continue;
-    const section = document.createElement("section");
-    section.className = "tp-voice-model-group";
-    const title = document.createElement("h4"); title.textContent = group.label; section.appendChild(title);
-    for (const model of models) {
-      const modelHeading = document.createElement("h5");
-      modelHeading.className = "tp-voice-model-name";
-      modelHeading.textContent = model.label + (model.configured ? "" : " · integração sem chave");
-      section.appendChild(modelHeading);
+  const searchInput = document.getElementById("additionalVoiceSearch");
+  const filterValues = {
+    search: searchInput.value,
+    provider: document.getElementById("additionalVoiceProviderFilter").value,
+    model: document.getElementById("additionalVoiceModelFilter").value,
+    language: document.getElementById("additionalVoiceLanguageFilter").value,
+    status: document.getElementById("additionalVoiceReleaseFilter").value,
+  };
+  for (const model of additionalVoiceModels) {
+      const section = document.createElement("details");
+      section.className = "tp-voice-model-group";
+      section.dataset.modelId = model.id;
+      const summaryHeading = document.createElement("summary"); summaryHeading.className = "tp-voice-model-summary";
+      const title = document.createElement("span"); title.className = "tp-voice-model-name"; title.textContent = model.label;
+      const meta = document.createElement("span"); meta.className = "tp-voice-model-summary-meta";
+      meta.textContent = formatAdditionalVoiceModelSummary(model.voices.length, model.voices.filter(voice => voice.enabled).length, Number(model.credits_per_150_chars || 0));
+      summaryHeading.append(title, meta); section.appendChild(summaryHeading);
+      if (additionalVoiceGroupOpen.has(model.id)) section.open = additionalVoiceGroupOpen.get(model.id);
+      else if (additionalVoiceModels.findIndex(item => item.id === model.id) === 0) section.open = true;
+      section.addEventListener("toggle", () => additionalVoiceGroupOpen.set(model.id, section.open));
+      const modelBody = document.createElement("div"); modelBody.className = "tp-voice-model-body";
       const costField = document.createElement("label");
       costField.className = "tp-admin-field tp-admin-field-compact tp-admin-credit-rate";
-      costField.append(document.createTextNode("Custo ao cliente · créditos por 100 caracteres"));
+      costField.append(document.createTextNode("Tarifa · TikCoins por 150 caracteres"));
       const costInput = document.createElement("input");
       costInput.type = "number"; costInput.min = "0"; costInput.max = "100000"; costInput.step = "1";
-      costInput.className = "form-control form-control-sm"; costInput.value = String(model.credits_per_100_chars || 0);
+      costInput.className = "form-control form-control-sm"; costInput.value = String(model.credits_per_150_chars || 0);
       costInput.dataset.creditRate = model.id;
-      costInput.setAttribute("aria-label", `Créditos por 100 caracteres para ${model.label}`);
+      costInput.setAttribute("aria-label", `TikCoins por 150 caracteres para ${model.label}`);
       costInput.addEventListener("change", () => saveAdditionalVoiceModels());
-      costField.appendChild(costInput); section.appendChild(costField);
+      costField.appendChild(costInput); modelBody.appendChild(costField);
       if (model.admin_note) {
         const note = document.createElement("p"); note.className = "text-secondary";
-        note.textContent = model.admin_note; section.appendChild(note);
+        note.textContent = model.admin_note; modelBody.appendChild(note);
       }
       if (!model.voices.length) {
         const empty = document.createElement("p"); empty.className = "text-secondary";
         empty.textContent = model.configured ? (model.pt_br_note || "Nenhuma voz identificada como português brasileiro neste modelo.") : "Configure a integração para carregar as vozes.";
-        section.appendChild(empty); continue;
+        modelBody.appendChild(empty); section.appendChild(modelBody); container.appendChild(section); continue;
       }
       const voiceGrid = document.createElement("div"); voiceGrid.className = "tp-voice-model-voice-grid";
       for (const voice of model.voices) {
@@ -1013,12 +1412,114 @@ function renderAdditionalVoiceModels() {
         const check = document.createElement("label"); check.className = "tp-voice-release-control";
         const switchTrack = document.createElement("span"); switchTrack.className = "tp-voice-release-track"; switchTrack.setAttribute("aria-hidden", "true");
         check.append(toggle, switchTrack);
+        const releaseState = document.createElement("small"); releaseState.className = "tp-voice-release-state";
+        releaseState.textContent = voice.enabled ? "Liberada" : "Bloqueada";
+        row.dataset.voiceName = voice.label;
+        row.dataset.voiceLanguage = voice.language || "Português (Brasil)";
+        row.dataset.provider = model.provider || "";
+        row.dataset.modelName = model.label || model.id;
+        row.dataset.releaseStatus = voice.enabled ? "enabled" : "disabled";
+        check.appendChild(releaseState);
         row.append(preview, summary, check); voiceGrid.appendChild(row);
       }
-      section.appendChild(voiceGrid);
-    }
+      modelBody.appendChild(voiceGrid);
+      section.appendChild(modelBody);
     container.appendChild(section);
   }
+  initializeAdditionalVoiceFilters();
+  searchInput.value = filterValues.search;
+  document.getElementById("additionalVoiceProviderFilter").value = filterValues.provider;
+  document.getElementById("additionalVoiceModelFilter").value = filterValues.model;
+  document.getElementById("additionalVoiceLanguageFilter").value = filterValues.language;
+  document.getElementById("additionalVoiceReleaseFilter").value = filterValues.status;
+  applyAdditionalVoiceFilters();
+  updateAdditionalVoiceCounts();
+}
+
+function voiceProviderLabel(provider) {
+  const labels = { elevenlabs: "ElevenLabs", openrouter: "OpenRouter", heygen: "HeyGen", kokoro: "Kokoro" };
+  return labels[String(provider || "").toLowerCase()] || provider || "Fornecedor";
+}
+
+function initializeAdditionalVoiceFilters() {
+  const firstInitialization = !additionalVoiceFiltersInitialized;
+  const provider = document.getElementById("additionalVoiceProviderFilter");
+  const model = document.getElementById("additionalVoiceModelFilter");
+  const language = document.getElementById("additionalVoiceLanguageFilter");
+  populateVoiceFilter(provider, [...new Set(additionalVoiceModels.map(item => item.provider).filter(Boolean))].map(value => [value, voiceProviderLabel(value)]));
+  populateVoiceFilter(model, additionalVoiceModels.map(item => [item.id, item.label]));
+  populateVoiceFilter(language, [...new Set(additionalVoiceModels.flatMap(item => item.voices.map(voice => voice.language || "Português (Brasil)")))].map(value => [value, value]));
+  if (firstInitialization) {
+    for (const id of ["additionalVoiceSearch", "additionalVoiceProviderFilter", "additionalVoiceModelFilter", "additionalVoiceLanguageFilter", "additionalVoiceReleaseFilter"]) {
+      document.getElementById(id).addEventListener(id.endsWith("Search") ? "input" : "change", applyAdditionalVoiceFilters);
+    }
+    document.getElementById("additionalVoiceBulkEnable").addEventListener("click", () => bulkSetAdditionalVoices(true));
+    document.getElementById("additionalVoiceBulkDisable").addEventListener("click", () => bulkSetAdditionalVoices(false));
+  }
+  additionalVoiceFiltersInitialized = true;
+}
+
+function applyAdditionalVoiceFilters() {
+  const search = document.getElementById("additionalVoiceSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const provider = document.getElementById("additionalVoiceProviderFilter").value;
+  const model = document.getElementById("additionalVoiceModelFilter").value;
+  const language = document.getElementById("additionalVoiceLanguageFilter").value;
+  const status = document.getElementById("additionalVoiceReleaseFilter").value;
+  for (const group of document.querySelectorAll("#additionalVoiceModelsList .tp-voice-model-group")) {
+    let visible = 0;
+    for (const row of group.querySelectorAll(".tp-voice-model-row")) {
+      const matches = (!search || `${row.dataset.voiceName} ${row.dataset.voiceLanguage} ${row.dataset.modelName} ${voiceProviderLabel(row.dataset.provider)}`.toLocaleLowerCase("pt-BR").includes(search))
+        && (!provider || row.dataset.provider === provider) && (!model || group.dataset.modelId === model)
+        && (!language || row.dataset.voiceLanguage === language) && (status === "all" || row.dataset.releaseStatus === status);
+      row.hidden = !matches;
+      if (matches) visible++;
+    }
+    group.hidden = visible === 0;
+    if (search && visible) group.open = true;
+  }
+  updateAdditionalVoiceCounts();
+}
+
+function updateAdditionalVoiceCounts() {
+  const toggles = Array.from(document.querySelectorAll("#additionalVoiceModelsList [data-voice-id]"));
+  const enabled = toggles.filter(input => input.checked).length;
+  const disabled = toggles.length - enabled;
+  const visible = document.querySelectorAll("#additionalVoiceModelsList .tp-voice-model-row:not([hidden])").length;
+  document.getElementById("integrationEnabledVoiceCount").textContent = `${enabled}/${toggles.length}`;
+  document.getElementById("additionalVoiceFilteredCount").textContent = `${enabled} liberadas · ${disabled} bloqueadas · ${visible} resultados`;
+  for (const group of document.querySelectorAll("#additionalVoiceModelsList .tp-voice-model-group")) {
+    const model = additionalVoiceModels.find(item => item.id === group.dataset.modelId);
+    const meta = group.querySelector(".tp-voice-model-summary-meta");
+    if (model && meta) {
+      const togglesInModel = Array.from(group.querySelectorAll("[data-voice-id]"));
+      const enabledInModel = togglesInModel.filter(input => input.checked).length;
+      meta.textContent = formatAdditionalVoiceModelSummary(togglesInModel.length, enabledInModel, Number(model.credits_per_150_chars || 0));
+    }
+  }
+  document.getElementById("additionalVoiceBulkEnable").disabled = visible === 0;
+  document.getElementById("additionalVoiceBulkDisable").disabled = visible === 0;
+}
+
+function formatAdditionalVoiceModelSummary(total, enabled, credits) {
+  return `${total} ${total === 1 ? "voz" : "vozes"} · ${enabled} ${enabled === 1 ? "liberada" : "liberadas"} · ${credits} TikCoins / 150 caracteres`;
+}
+
+async function bulkSetAdditionalVoices(enabled) {
+  const rows = Array.from(document.querySelectorAll("#additionalVoiceModelsList .tp-voice-model-row:not([hidden])"));
+  let changed = 0;
+  for (const row of rows) {
+    const toggle = row.querySelector("[data-voice-id]");
+    if (!toggle || toggle.disabled || toggle.checked === enabled) continue;
+    if (enabled && (toggle.dataset.stale === "true" || !additionalVoiceModels.find(model => model.id === toggle.dataset.modelId)?.catalog_available)) continue;
+    toggle.checked = enabled; row.dataset.releaseStatus = enabled ? "enabled" : "disabled";
+    row.querySelector(".tp-voice-release-state").textContent = enabled ? "Liberada" : "Bloqueada";
+    changed++;
+  }
+  if (!changed) return;
+  updateAdditionalVoiceCounts();
+  const message = document.getElementById("additionalVoiceModelsMsg");
+  message.textContent = `Salvando ${changed} ${changed === 1 ? "voz" : "vozes"} filtradas…`;
+  await saveAdditionalVoiceModels();
 }
 
 async function loadAdditionalVoiceModels() {
@@ -1046,7 +1547,7 @@ function saveAdditionalVoiceModels(changedToggle) {
       .map(input => ({ model_id: input.dataset.modelId, voice_id: input.dataset.voiceId }));
     const model_ids = additionalVoiceModels.filter(model => model.catalog_available).map(model => model.id);
     const model_costs = Array.from(document.querySelectorAll("#additionalVoiceModelsList [data-credit-rate]"))
-      .map(input => ({ model_id: input.dataset.creditRate, credits_per_100_chars: Number(input.value) }));
+      .map(input => ({ model_id: input.dataset.creditRate, credits_per_150_chars: Number(input.value) }));
     if (revision === additionalVoiceSaveRevision) message.textContent = "Salvando alteração…";
     try {
       const data = await apiFetch("/api/admin/tts/additional-models", { method: "PUT",
@@ -1062,12 +1563,14 @@ function saveAdditionalVoiceModels(changedToggle) {
           document.querySelector("#additionalVoiceModelsList [data-voice-id]");
         nextToggle?.focus();
       }
+      updateAdditionalVoiceCounts();
       message.textContent = "Alteração salva automaticamente.";
       if (model_costs.length) {
-        const saved = new Map(model_costs.map(item => [item.model_id, item.credits_per_100_chars]));
-        for (const model of additionalVoiceModels) if (saved.has(model.id)) model.credits_per_100_chars = saved.get(model.id);
-        message.textContent = "Vozes e tarifas em créditos salvas automaticamente.";
+        const saved = new Map(model_costs.map(item => [item.model_id, item.credits_per_150_chars]));
+        for (const model of additionalVoiceModels) if (saved.has(model.id)) model.credits_per_150_chars = saved.get(model.id);
+        message.textContent = "Vozes e tarifas em TikCoins salvas automaticamente.";
       }
+      renderAdditionalVoiceModels();
     } catch (error) {
       if (revision !== additionalVoiceSaveRevision) return;
       const errorMessage = error?.message || "Não foi possível salvar as vozes.";
@@ -1093,7 +1596,7 @@ function createTtsCreditPackageRow(item = {}) {
     label.appendChild(input); return { label, input };
   };
   const name = field("Nome do pacote", "text", item.name || "", { maxlength: "80", placeholder: "Ex.: Básico" });
-  const credits = field("Créditos", "number", item.credits ?? "", { min: "1", max: "100000000", step: "1" });
+  const credits = field("TikCoins", "number", item.credits ?? "", { min: "1", max: "100000000", step: "1" });
   const price = field("Preço (R$)", "number", item.price_cents ? (item.price_cents / 100).toFixed(2) : "",
     { min: "0.01", max: "1000000", step: "0.01" });
   const enabled = field("Vendido aos clientes", "checkbox", item.enabled !== false && item.enabled !== 0);
@@ -1109,7 +1612,7 @@ function renderTtsCreditPackages(items = []) {
   const list = document.getElementById("ttsCreditPackagesList");
   list.replaceChildren();
   if (!items.length) list.appendChild(Object.assign(document.createElement("p"), {
-    className: "text-secondary", textContent: "Nenhum pacote criado. Adicione um pacote para começar a vender créditos.",
+    className: "text-secondary", textContent: "Nenhum pacote criado. Adicione um pacote para começar a vender TikCoins.",
   }));
   for (const item of items) list.appendChild(createTtsCreditPackageRow(item));
 }
@@ -1120,9 +1623,76 @@ async function loadTtsCreditPackages() {
     const data = await apiFetch("/api/admin/tts/credit-packages");
     if (!data.success) throw new Error(data.error || "Falha ao carregar os pacotes.");
     renderTtsCreditPackages(data.packages || []);
-    status.textContent = "Defina o preço e os créditos de cada pacote; pagamentos aprovados no Mercado Pago entram automaticamente no saldo.";
+    status.textContent = "Defina o preço e os TikCoins de cada pacote; pagamentos aprovados no Mercado Pago entram automaticamente no saldo.";
   } catch {
-    status.textContent = "Não foi possível carregar os pacotes de créditos.";
+    status.textContent = "Não foi possível carregar os pacotes de TikCoins.";
+  }
+}
+
+let adminCreditAccounts = [];
+
+function renderAdminCreditAccounts() {
+  const body = document.getElementById("adminCreditRows");
+  const query = document.getElementById("adminCreditSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const items = adminCreditAccounts.filter(item => [item.name, item.email]
+    .some(value => String(value || "").toLocaleLowerCase("pt-BR").includes(query)));
+  body.replaceChildren();
+  if (!items.length) {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td colspan="5">${adminCreditAccounts.length ? "Nenhum streamer encontrado." : "Nenhuma conta de streamer cadastrada."}</td>`;
+    body.appendChild(row);
+    return;
+  }
+  for (const item of items) {
+    const row = document.createElement("tr");
+    const name = esc(item.name || "Streamer"), email = esc(item.email || "—");
+    row.innerHTML = `<td><strong>${name}</strong><small class="tp-dashboard-email">${email}</small></td>
+      <td><span class="badge ${item.status === "active" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${item.status === "active" ? "Ativa" : "Desativada"}</span></td>
+      <td><strong data-credit-balance>${Number(item.balance || 0).toLocaleString("pt-BR")} TikCoins</strong></td>
+      <td><input class="form-control form-control-sm" type="number" min="1" max="100000000" step="1" inputmode="numeric" aria-label="Quantidade de TikCoins para ${name}" placeholder="Ex.: 100"></td>
+      <td><div class="tp-admin-row-actions"><button type="button" class="btn btn-nb btn-success" data-credit-add>Adicionar</button><button type="button" class="btn btn-nb btn-danger" data-credit-remove>Remover</button></div><small class="tp-admin-feedback" data-credit-feedback role="status" aria-live="polite"></small></td>`;
+    const input = row.querySelector("input");
+    const feedback = row.querySelector("[data-credit-feedback]");
+    const balance = row.querySelector("[data-credit-balance]");
+    const adjust = async sign => {
+      const amount = Number(input.value);
+      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
+        feedback.textContent = "Informe um número inteiro entre 1 e 100.000.000.";
+        return;
+      }
+      if (sign < 0 && !confirm(`Remover ${amount.toLocaleString("pt-BR")} TikCoins de ${item.name || item.email}?`)) return;
+      const buttons = [...row.querySelectorAll("button")];
+      buttons.forEach(button => { button.disabled = true; });
+      feedback.textContent = "Atualizando saldo…";
+      try {
+        const result = await apiFetch(`/api/admin/users/${item.id}/tts-credits`, { method: "POST",
+          headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: sign * amount }) });
+        if (!result.success) throw new Error(result.error || "Não foi possível ajustar o saldo.");
+        item.balance = result.balance;
+        balance.textContent = `${Number(item.balance).toLocaleString("pt-BR")} TikCoins`;
+        input.value = "";
+        feedback.textContent = sign > 0 ? "TikCoins adicionados." : "TikCoins removidos.";
+      } catch (error) { feedback.textContent = error.message || "Não foi possível ajustar o saldo."; }
+      finally { buttons.forEach(button => { button.disabled = false; }); }
+    };
+    row.querySelector("[data-credit-add]").addEventListener("click", () => adjust(1));
+    row.querySelector("[data-credit-remove]").addEventListener("click", () => adjust(-1));
+    body.appendChild(row);
+  }
+}
+
+async function loadAdminCreditAccounts() {
+  const status = document.getElementById("adminCreditStatus");
+  status.textContent = "Carregando saldos…";
+  try {
+    const result = await apiFetch("/api/admin/tts/credit-balances");
+    if (!result.success) throw new Error(result.error || "Falha ao carregar saldos.");
+    adminCreditAccounts = result.accounts || [];
+    renderAdminCreditAccounts();
+    status.textContent = `${adminCreditAccounts.length} streamer(s) carregado(s). Os ajustes ficam registrados no histórico financeiro.`;
+  } catch (error) {
+    document.getElementById("adminCreditRows").innerHTML = '<tr><td colspan="5">Não foi possível carregar os saldos.</td></tr>';
+    status.textContent = error.message || "Não foi possível carregar os saldos.";
   }
 }
 
@@ -1134,7 +1704,7 @@ async function saveTtsCreditPackages() {
     enabled: row._fields.enabled.checked }));
   if (packages.some(item => !item.name || !Number.isSafeInteger(item.credits) || item.credits < 1
       || !Number.isSafeInteger(item.price_cents) || item.price_cents < 1)) {
-    status.textContent = "Preencha o nome, a quantidade de créditos e o preço válido de cada pacote.";
+    status.textContent = "Preencha o nome, a quantidade de TikCoins e o preço válido de cada pacote.";
     return;
   }
   status.textContent = "Salvando pacotes…";
@@ -1270,10 +1840,9 @@ async function loadElevenAccess(id) {
     if (editingId !== id) return;
     if (!data.success) throw new Error("Falha ao carregar.");
     document.getElementById("elevenAdminEnabled").checked = data.enabled;
-    document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} créditos`;
-    document.getElementById("elevenAdminCreditAdjust").value = "0";
+    document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} TikCoins`;
     document.getElementById("elevenAdminStatus").textContent = data.configured || data.openrouter_configured
-      ? "Acesso e saldo de créditos disponíveis." : "Configure ElevenLabs ou OpenRouter nas integrações globais.";
+      ? "Acesso e saldo de TikCoins disponíveis." : "Configure ElevenLabs ou OpenRouter nas integrações globais.";
     button.disabled = false;
   } catch {
     if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível carregar o acesso.";
@@ -1289,17 +1858,9 @@ async function saveElevenAccess() {
     const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`, { method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: document.getElementById("elevenAdminEnabled").checked }) });
     if (!data.success) throw new Error(data.error || "Falha ao salvar.");
-    const amount = Number(document.getElementById("elevenAdminCreditAdjust").value);
-    if (amount) {
-      const adjusted = await apiFetch(`/api/admin/users/${id}/tts-credits`, { method: "POST",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount }) });
-      if (!adjusted.success) throw new Error(adjusted.error || "Ajuste de créditos não foi aplicado.");
-      data.credit_balance = adjusted.balance;
-    }
     if (editingId === id) {
-      document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} créditos`;
-      document.getElementById("elevenAdminCreditAdjust").value = "0";
-      document.getElementById("elevenAdminStatus").textContent = amount ? "Acesso salvo e saldo ajustado." : "Acesso de voz salvo.";
+      document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} TikCoins`;
+      document.getElementById("elevenAdminStatus").textContent = "Acesso de voz salvo.";
     }
   } catch (error) {
     if (editingId === id) document.getElementById("elevenAdminStatus").textContent = error.message || "Não foi possível salvar o acesso ou saldo.";
@@ -1364,9 +1925,12 @@ apiFetch("/api/auth/me").then((data) => {
     return;
   }
   document.getElementById("giftCatalogAdminCard").hidden = false;
+  initializeIntegrationChecks();
   loadElevenGlobal();
+  loadAdminIntegrationState();
   loadAdditionalVoiceModels();
   loadTtsCreditPackages();
+  loadAdminCreditAccounts();
   refreshGiftSyncState();
 });
 
@@ -1484,7 +2048,26 @@ async function pollContextos() {
 
 document.getElementById('adminSearch').addEventListener('input', renderAdminUsers);
 document.getElementById('dashboardSearch').addEventListener('input', renderAdminDashboard);
-document.getElementById('dashboardRefresh').addEventListener('click', loadUsers);
+document.getElementById('dashboardRefresh').addEventListener('click', async () => { await loadUsers(); });
+document.getElementById('dashboardCostRange').addEventListener('change', loadDashboardData);
+document.getElementById('dashboardRefreshInterval').addEventListener('change', event => {
+  const value = Number(event.target.value) || 0;
+  localStorage.setItem('tp-admin-dashboard-refresh-ms', String(value));
+  clearInterval(dashboardRefreshTimer);
+if (value) dashboardRefreshTimer = setInterval(() => { if (!dashboardLoading && !document.getElementById('adminDashboard').hidden) loadUsers({ silent: true }); }, value);
+});
+document.getElementById('dashboardRateForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const body = Object.fromEntries(new FormData(form).entries());
+  try {
+    const result = await apiFetch('/api/admin/dashboard/rates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!result.success) throw new Error(result.error || 'Não foi possível salvar a tarifa.');
+    form.reset();
+    await loadDashboardData();
+    document.getElementById('dashboardMessage').textContent = 'Tarifa salva. Ela será aplicada apenas a chamadas futuras.';
+  } catch (error) { document.getElementById('dashboardMessage').textContent = error.message; }
+});
 document.getElementById('adminStatusFilter').addEventListener('change', renderAdminUsers);
 document.getElementById('adminRefresh').addEventListener('click', loadUsers);
 document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => {
@@ -1492,6 +2075,8 @@ document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => {
   document.getElementById("ttsCreditPackagesList").appendChild(createTtsCreditPackageRow());
 });
 document.getElementById("ttsCreditPackageSave").addEventListener("click", saveTtsCreditPackages);
+document.getElementById("adminCreditSearch").addEventListener("input", renderAdminCreditAccounts);
+document.getElementById("adminCreditRefresh").addEventListener("click", loadAdminCreditAccounts);
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
 document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });
@@ -1503,6 +2088,14 @@ document.getElementById("wordUsageSearch").addEventListener("input", () => { cle
 document.getElementById("wordUsagePrev").addEventListener("click", () => { if (wordUsagePage > 1) { wordUsagePage--; loadWordUsage(); } });
 document.getElementById("wordUsageNext").addEventListener("click", () => { if (wordUsagePage < wordUsagePages) { wordUsagePage++; loadWordUsage(); } });
 document.getElementById("wordCycleReset").addEventListener("click", resetWordCycle);
+
+const savedDashboardInterval = Number(localStorage.getItem('tp-admin-dashboard-refresh-ms'));
+if (Number.isFinite(savedDashboardInterval) && [0,15000,30000,60000,300000].includes(savedDashboardInterval))
+  document.getElementById('dashboardRefreshInterval').value = String(savedDashboardInterval);
+const initialDashboardInterval = Number(document.getElementById('dashboardRefreshInterval').value) || 0;
+if (initialDashboardInterval) dashboardRefreshTimer = setInterval(() => { if (!dashboardLoading && !document.getElementById('adminDashboard').hidden) loadUsers({ silent: true }); }, initialDashboardInterval);
+window.addEventListener('hashchange', () => { if (location.hash === '#adminDashboard' && usersData.length) loadUsers(); });
+setInterval(dashboardElapsed, 1000);
 loadUsers();
 loadInvites();
 pollContextos();
@@ -1531,6 +2124,7 @@ loadWordUsage();
     const [sc,hc,gd,qr]=await Promise.all([api('/api/admin/support/categories'),api('/api/admin/help/categories'),api('/api/support/games'),api('/api/admin/support/quick-replies')]);
     supportCategories=sc.categories||[]; helpCategories=hc.categories||[]; helpGames=gd.games||[]; quickReplies=qr.quick_replies||[];
     ticketStatusValues=gd.ticket_statuses||[]; ticketPriorityValues=gd.ticket_priorities||[]; suggestionStatusValues=gd.suggestion_statuses||[]; suggestionTypeValues=gd.suggestion_types||[];
+    Object.assign(gameNames,gd.game_labels||{});
     helpGames.forEach(g=>gameNames[g.slug]=g.name);
     fillEnumSelect('adminTicketStatus',ticketStatusValues,ticketStatus,'Todos');
     fillEnumSelect('adminTicketPriority',ticketPriorityValues,ticketPriority,'Todas');
@@ -1666,5 +2260,6 @@ loadWordUsage();
   if(location.hash==='#adminMonitor'||location.hash==='#adminMonitor/incidents')start();
 })();
 </script>
+<script src="/ui/admin-quiz-bank.js?v=20261017-v2"></script>
 </body>
 </html>

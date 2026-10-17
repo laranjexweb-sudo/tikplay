@@ -54,6 +54,13 @@ class ElevenLabsTests(unittest.TestCase):
             conn.executescript("""CREATE TABLE users(id INTEGER PRIMARY KEY,status TEXT);
                 CREATE TABLE tenant_elevenlabs(tenant_id INTEGER PRIMARY KEY,enabled INTEGER,voice_id TEXT,monthly_limit INTEGER);
                 CREATE TABLE elevenlabs_usage(tenant_id INTEGER,month TEXT,characters INTEGER DEFAULT 0,PRIMARY KEY(tenant_id,month));
+                CREATE TABLE api_cost_rates(id INTEGER PRIMARY KEY AUTOINCREMENT,provider TEXT NOT NULL,model TEXT NOT NULL DEFAULT '',
+                    resource TEXT NOT NULL,unit TEXT NOT NULL,unit_price REAL NOT NULL,currency TEXT NOT NULL,usd_brl REAL,
+                    effective_from TEXT NOT NULL,effective_until TEXT,actor_id INTEGER);
+                CREATE TABLE api_cost_usage(id TEXT PRIMARY KEY,request_id TEXT NOT NULL UNIQUE,provider_request_id TEXT,
+                    tenant_id INTEGER,provider TEXT NOT NULL,model TEXT NOT NULL DEFAULT '',resource TEXT NOT NULL,unit TEXT NOT NULL,
+                    quantity REAL NOT NULL DEFAULT 0,status TEXT NOT NULL,duration_ms INTEGER,cost_source TEXT NOT NULL,
+                    cost_usd REAL,cost_brl REAL,rate_id INTEGER,fx_usd_brl REAL,occurred_at TEXT NOT NULL);
                 INSERT INTO users VALUES(1,'active'),(2,'active');
                 INSERT INTO tenant_elevenlabs VALUES(1,1,'voice_one',10000),(2,0,'voice_two',10000);""")
 
@@ -132,6 +139,9 @@ class ElevenLabsTests(unittest.TestCase):
         self.assertEqual(json.loads(request.data)["text"], "Olá Brasil")
         self.assertEqual(provider.synthesize(1, "Olá Brasil", self.audio)[1], "CACHE_HIT")
         self.assertEqual(network.call_count, 1)
+        with closing(sqlite3.connect(self.db)) as conn:
+            row = conn.execute("SELECT provider,resource,quantity,status,cost_source FROM api_cost_usage").fetchone()
+        self.assertEqual(row, ("elevenlabs", "chat_voice", len("Olá Brasil"), "success", "unknown"))
         self.assertEqual(provider.synthesize(2, "Olá Brasil", self.audio)[1], "NOT_SELECTED")
         self.update("UPDATE tenant_elevenlabs SET enabled=0 WHERE tenant_id=1")
         self.assertIsNone(provider.synthesize(1, "Olá Brasil", self.audio)[0])

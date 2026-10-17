@@ -1,10 +1,60 @@
+> 2026-10-17: Caça Palavras → ações “Iniciar rodada” e “Encerrar rodada” integradas à faixa do contador de palavras; em telas estreitas, ações se reorganizam para manter os botões utilizáveis. IDs, handlers e bloqueios de estado preservados.
+
+> 2026-10-17: Caça Palavras público → acertos recentes e aviso de acerto identificam o participante com foto ou iniciais como fallback; ranking segue a mesma apresentação. Eventos e ordem dos acertos preservados. Mapa de observabilidade: somente apresentação de dados já existentes; nenhum log, evento, dado persistido ou contrato alterado.
+
+> 2026-10-17: Caça Palavras público → a primeira letra de cada palavra encontrada recebe um avatar pequeno da pessoa que acertou; identificação por nome permanece nos acertos recentes. Sem sobreposição de etiquetas em outras letras; eventos, ordem e regras preservados.
+
+> 2026-10-17: Caça Palavras → quantidade da rodada controlada por stepper de menos/mais com limites 4–16; seletores de modo do chat e formato das coordenadas explicitamente estendidos a toda a largura do card. Contagem enviada ao mesmo início de rodada, sem alterar contrato ou regra.
+
+> 2026-10-17: Caça Palavras → controle de palavras movido para uma linha compacta abaixo do progresso e convertido em seletor de tamanho normal com opções de 4 a 16 palavras; divisor acima das ações removido. Campos de participação agora ocupam a largura do card. Valor, limite e eventos de jogo preservados.
+
+> 2026-10-17: Caça Palavras → refinamento final do painel: “Controle da rodada” permanece como título e o badge comunica o estado; progresso e quantidade de palavras usam colunas próprias; participação pelo chat ganhou subtítulo e switch padrão. O card “Tela pública” ficou compacto, com abrir/copy lado a lado. A configuração OBS foi removida somente desta interface; rotas, endpoints e helpers técnicos permanecem. Sem mudança de regras, APIs, eventos ou logs.
+
+> 2026-10-17: Painel do streamer → Caça Palavras reorganizado em operação da rodada, palavras com estados, acertos recentes, participação do chat e exibição pública/OBS; layout responsivo segue o modelo compartilhado de controle de jogos. IDs, endpoints, configurações, regras e eventos existentes preservados; sem novos logs.
+
+> 2026-10-17: Caça Palavras refinado: controle da rodada em cabeçalho, progresso e ações; coluna principal em 65/35 com participação/exibição; palavras acertadas na tela pública agora seguem a ordem dos eventos recebidos, evitando esconder um palpite recente por causa da posição dele no gabarito. Regras de jogo, contratos e eventos preservados.
+
+> 2026-10-17: Console de logs do streamer ganhou filtro opcional “Somente Caça Palavras”, salvo localmente; mensagens legadas identificadas pela etiqueta CacaPalavras passam a receber o filtro de jogo. Nenhum evento ou dado novo foi gerado.
+
+> 2026-10-17: O console do streamer agora exibe comentários recebidos, limitados a 130 caracteres e a um por segundo; durante uma rodada ativa são classificados como Caça Palavras para facilitar o diagnóstico de palpites. O transporte de chat já existente foi reutilizado; nenhuma persistência adicional foi criada.
+
+> 2026-10-17: Exemplo de hashtag em “Como usar os estilos” simplificado para texto corrido; somente a tag recebe destaque ciano, sem caixa, fundo ou borda.
+
+> 2026-10-17: Acabamento de Sons → Narração: volume, amplificação, teste e observação final mais próximos; exemplo de hashtag apresentado como snippet; seletor rotulado apenas “Voz”; seção de pacotes vazia ocultada sem mensagem de indisponibilidade.
+
+> 2026-10-17: Refinamento final em Sons → Narração: estado “Narração ativada/desativada” integrado ao toggle sem badge; autosave aproximado das abas; crédito total e tarifa expressos em duas linhas curtas; controles de velocidade/volume com valores alinhados à direita; instrução breve das tags abaixo do teste; limite da amplificação explicado somente quando aberto. IDs/handlers e eventos existentes preservados.
+
+> 2026-10-17: Sons → Narração reorganizada para consumo rápido: estado principal do chat alinhado à esquerda com status e controle à direita, voz padrão, voz expressiva, regras e créditos em blocos separados; cards empilham conforme a largura útil e os limites dos sliders ficam recuados/alinhados aos marcadores. IDs, autosave, API e eventos existentes preservados; nenhuma telemetria nova introduzida (alteração visual).
+
+> 2026-10-17: Refinamento de densidade em Sons → Narração: controle mestre mais compacto, cards com altura conforme o conteúdo, créditos em linha única com custo logo abaixo, botões de teste com largura igual, feedback de prévia em estado visual acessível e textos secundários/status de conexão mais discretos. Fluxo e eventos de TTS existentes preservados; nenhum evento novo.
+
 # TikPlay — Design System Oficial (tema reutilizável)
+
+> 2026-10-17: Caça Palavras público adaptado à proporção real da fonte de navegador com áreas seguras configuráveis (presets vertical/horizontal e personalizado), prévia e salvamento automático no painel. Progresso compacto, tabuleiro quadrado responsivo, acertos temporários e ranking final sem scroll; eventos e regras do jogo preservados. Mapa de observabilidade: `caca-transmission-layout.md`.
+
+> 2026-10-17: Super Admin → Dashboard ampliado com refresh configurável, saúde da plataforma, incidentes, custo real/estimado por período, projeção mensal parcial, uso de APIs por recurso/modelo, créditos por modelo e consumo por cliente; tarifas futuras versionadas. Custos desconhecidos e lacunas históricas ficam explícitos; APIs de jogo e cobrança existentes preservadas. O código está no working tree, mas ainda depende de atualização segura do processo para ativar a coleta. Ver `dashboard-super-admin.md`.
+
+> 2026-10-17: Refinamento visual do Dashboard do Super Admin: KPIs com hierarquia consistente, saúde separada entre serviços internos e integrações, resumo financeiro com métricas principais e faixa secundária de períodos, análises divididas em três blocos, formulário de tarifas responsivo, estados de atividade em badges e estados vazios mais claros. Cálculos, endpoints e estados funcionais preservados.
+
+> 2026-10-17: Super Admin → Integrações reorganizada em resumo de estados, cartões compactos de serviços com edição recolhida, filtros/actions em massa no catálogo de vozes, grupos recolhíveis por modelo com tarifa e contagem, e resumo final do catálogo de presentes. IDs, handlers, rotas e autosave preservados; status de credenciais usa os valores mascarados fornecidos pelo servidor. Ver `integracoes-super-admin.md`.
+
+> 2026-10-17: Integrações refinada visualmente: cards de voz reservam coluna fixa para status/switch e limitam nomes a duas linhas, grupos usam uma linha-resumo adaptável, contadores distinguem liberadas/bloqueadas/resultados, e catálogo prioriza quantidade. Cartões técnicos usam labels explícitas; nenhuma regra, ID, handler, endpoint ou persistência foi alterada.
+
+> 2026-10-17: Integrações refinada para larguras estreitas: grid de vozes usa breakpoints baseados na largura real do card, reduzindo para uma coluna quando necessário para manter legível a área do nome e a coluna fixa de status/toggle. Cards de serviço seguem alinhados; sections de vozes e catálogo compartilham o wrapper da página. Ajuste apenas visual, sem novos eventos ou alterações de contrato.
+
+> 2026-10-17: Resumo dos grupos de vozes usa singular correto para catálogos unitários (“1 voz · 1 liberada · 1 crédito / 100 caracteres”).
+
+> 2026-10-17: Corrigida a hierarquia HTML de Integrações: fechamento explícito de “Serviços e credenciais” mantém Vozes e Catálogo dentro de Integrações, com Pacotes, Convites e Usuários como seções independentes. Validado no DOM e na navegação do painel.
+
+> 2026-10-17: Super Admin separa o cadastro dos pacotes e os ajustes manuais de saldo da aba Integrações; a nova aba Pacotes e Créditos lista saldos por streamer, com ações distintas para adicionar/remover e confirmação antes da remoção.
 
 > 2026-10-17: Carteira do streamer deixa explícito o preço em reais nos pacotes, estima créditos para uma mensagem digitada conforme tarifa da voz e limite de 150 caracteres, e mostra referência média de 75 caracteres (metade do limite da live). O histórico informa o tamanho da narração; hashtags finais de emoção não entram na contagem.
 
 > 2026-10-17: Voz adicional do chat agora pode narrar até 150 caracteres, alinhada ao limite da mensagem da live; o débito continua calculado sobre o texto efetivamente falado.
 
 > 2026-10-17: Ajuda de hashtags de emoção movida para o cartão de voz adicional do chat; nomes visíveis das vozes padrão Antonio e Francisca não exibem mais “(servidor)”. IDs internos preservados.
+
+> 2026-10-17: Relatórios do streamer refinados para leitura analítica: filtros compactos com atualização automática, período agrupado em um único controle sem sobrepor o filtro de interação e exportação no cabeçalho; comparação absoluta/percentual, rótulo “Diamantes recebidos”, avatares com fallback por inicial e prévia de 12 interações com expansão paginada.
 
 > 2026-10-16: Narração adicional passou de cota mensal por caracteres para carteira de créditos: Super Admin define tarifa por 100 caracteres em cada modelo e pacotes avulsos; streamer vê saldo, tarifa da voz, compra via Mercado Pago e histórico recente. Débitos são atômicos e pagamentos aprovados são processados de forma idempotente. Ver `creditos-voz.md` e `modelos-voz-adicionais.md`.
 
@@ -611,8 +661,27 @@ node/public/
 
 **Concluído:**
 
+- 2026-10-17 — Caça Palavras: ações de iniciar/encerrar movidas para a mesma faixa do stepper de quantidade; em viewport estreita, os botões podem usar uma linha própria. IDs, handlers e estado desabilitado preservados.
+- 2026-10-17 — Caça Palavras: contador de palavras trocado por botões de diminuir/aumentar, com valor central, limites visíveis e estado desabilitado nos extremos; seletores de participação e coordenadas ocupam toda a largura do card. O handler de início continua enviando a mesma contagem numérica (4–16). Nenhum evento ou log alterado/adicionado.
+- 2026-10-17 — Caça Palavras: removido o divisor entre o progresso e as ações; a quantidade da próxima rodada ficou abaixo da barra e os seletores de participação foram expandidos à largura do card. O controle de quantidade foi posteriormente refinado para botões de diminuir/aumentar. IDs, handlers e limites 4–16 mantidos; sem novos eventos ou logs.
+- 2026-10-17 — Caça Palavras no painel do streamer: controle com título fixo, estado em badge e progresso separado da quantidade de palavras; participação com switch padrão e resumo explicativo; “Tela pública” com abrir/copiar lado a lado. A interface deixou de mostrar a configuração de fonte OBS, preservando rotas/helpers técnicos. Mapa de observabilidade: nenhum evento ou log alterado/adicionado (ajuste de UX); validação cobre IDs/handlers preservados, script embutido e CSS responsivo.
+- 2026-10-17 — Quiz Live: painel de controle, configurações, banco e histórico usando tokens `--tp-*`; overlay público responsivo com margens seguras para 9:16 e 16:9, narração com o TTS Edge padrão e atualização por WebSocket com confirmação de reprodução. Validados estado do jogo, gabarito oculto antes do fechamento, ranking e fluxo de perguntas. Testes: `node --test node/tests/quiz-live.test.js` (7 testes Node e 2 testes Python aprovados). Falta conferir a composição dentro do OBS/Live Studio nos quatro tamanhos previstos.
+- 2026-10-17 — Caça Palavras público: composição vertical 9:16 com área segura, tabuleiro responsivo de células quadradas, instrução/progresso compactos, lista de palavras em duas colunas e ranking final enxuto. IDs, ações e eventos WebSocket existentes preservados. Mapa de observabilidade: nenhuma transição ou log alterado/adicionado; validação cobre página servida, sintaxe do script, prévia com rodada ativa e troca entre jogo/orientações.
+- 2026-10-17 — Caça Palavras público: refinamento para live TikTok; acertos aparecem em aviso temporário com participante, palavra e coordenadas; tabuleiro sem nomes ou badges nas células; lista limitada aos quatro acertos mais recentes durante a rodada; ranking completo destacado no encerramento. Eventos e regras do jogo preservados.
+- 2026-10-17 — Caça Palavras público ajustado como canvas 9:16 de altura fixa, sem rolagem vertical; orçamento de tela prioriza tabuleiro, usa safe areas configuráveis e aviso sobreposto em faixa reservada. Exibição durante a rodada inclui líder compacto; encerramento mostra apenas Top 3. Validação visual e métricas de viewport confirmaram scrollHeight igual a clientHeight em 720×1280 e 1080×1920, nos estados ativo e final.
+- 2026-10-17 — Instruções do Caça Palavras simplificadas: o público pode enviar a palavra encontrada diretamente no chat; coordenadas seguem disponíveis como alternativa. Sem mudança de componentes visuais, eventos ou layout.
+- 2026-10-17 — Formato de participação do Caça Palavras controlado no painel do streamer: palavra, coordenadas ou ambos. O backend persiste a escolha, valida apenas os formatos habilitados e atualiza as instruções públicas pelo estado existente `caca_state`; padrão preservado como ambos.
+- 2026-10-17 — Super Admin → Dashboard (código pronto; ativação runtime pendente): estado atual do Monitor, serviços e credenciais claramente separados, incidentes ativos, uso e custo de APIs em faixas limitadas, créditos consumidos por modelo e receita bruta de pacotes aprovados. Após carregar a versão nova, chamadas de TTS, prévia admin, charada e 3 Dicas serão medidas sem conteúdo textual; custo estimado exige tarifa versionada e não reprecifica o passado. Resumos diário/semanal/mensal e projeção mensal parcial; refresh automático configurável e responsivo.
+- 2026-10-17 — Super Admin → Integrações reúne OpenRouter, ElevenLabs, Mercado Pago, URL de checkout, pacotes de créditos, catálogo de vozes e catálogo global de presentes; status e testes de conexão ficam junto da configuração. Credenciais não são devolvidas à interface; o daemon Python sinaliza quando uma atualização do OpenRouter depende de reinício seguro.
+- 2026-10-17 — Super Admin → Pacotes e Créditos separa o cadastro de pacotes das configurações de integração e centraliza ajustes manuais de saldo por streamer; listagem restrita ao admin, sem criar carteiras durante leitura, e remoção com confirmação e validação transacional para impedir saldo negativo.
+- 2026-10-17 — Relatórios: gráfico de atividade passa a ocupar a altura disponível do card, com barras alinhadas ao espaço vertical; rolagem horizontal do intervalo por minuto usa scrollbar fina com tokens do tema streamer.
 - 2026-10-15 — Login/cadastro: composição do site, botões compartilhados, campos e alertas com contraste escuro, layout responsivo e seleção de aba pelo caminho amigável. Contratos e lógica de autenticação preservados.
 
+- 2026-10-17 — Sons → Narração: hierarquia voltada ao streamer, com estado geral alinhado à esquerda, voz padrão, voz expressiva, regras de leitura e créditos separados. Cards empilham quando a largura útil é inferior a 1100 px; sliders recuam seus extremos e alinham os marcadores aos pontos de ajuste. Autosave e contratos preservados; amplificação acima de 100% recolhida em ajuste avançado.
+- 2026-10-17 — Sons → Narração: controle mestre compactado; cards acompanham a altura do conteúdo; saldo e unidade de créditos ficam na mesma linha, com a tarifa logo abaixo. Botões de teste têm largura igual e falhas de prévia usam estado de alerta legível. Contrato de logs já existente preservado, sem novos eventos.
+- 2026-10-17 — Sons → Narração: badge de estado removida e ativação integrada ao toggle; estado de autosave aparece junto das abas; bloco de créditos resume saldo, tarifa e limite; valores da velocidade/volume alinhados aos controles; instrução de hashtags movida para baixo do teste; limite da amplificação aparece somente ao expandir.
+- 2026-10-17 — Sons → Narração: ajustes finais de densidade no card padrão, exemplo de hashtag em snippet, rótulo do seletor simplificado e lista de pacotes oculta quando vazia; nenhum evento ou contrato alterado.
+- 2026-10-17 — Sons → Narração: exemplo de hashtag convertido de snippet com aparência de campo para texto simples, com destaque só na tag.
 - 2026-10-15 — Sons → Narração: preferências persistidas para habilitar a fala do chat, selecionar filtro e caractere; Edge TTS usa voz/velocidade compartilhadas com charadas. Fila serial e playback no painel respeitam prioridade de charada.
 - 2026-10-16 — Sons → Narração: slider de volume de 0% a 300% persistido por conta; ganho aplicado às narrações TTS e prévias, inclusive durante áudio em execução. Alertas por presente não usam esse ganho. Teste auditivo e carregamento no processo atualizado pendentes.
 - 2026-10-16 — Sons → Narração: configurações gerais organizadas na coluna esquerda; controles da voz adicional agrupados com o limite mensal na direita. Removido o cartão de status de áudio; instruções de efeitos sonoros ficam restritas à aba de alertas.
@@ -844,3 +913,19 @@ node/public/
 > 2026-10-16: Gestor de vozes do Super Admin compactado em cards responsivos, com quatro colunas em telas largas, três em médias, duas em tablets e uma em celulares.
 
 > 2026-10-16: Cards de voz ajustados ao padrão visual do Monitor de Servidor: fundo escuro em gradiente, borda discreta e tipografia neutra; grade compacta preservada.
+
+> 2026-10-17: Carteira de narração apresentada como TikCoins, com tarifas inteiras por 150 caracteres, arredondamento para cima por mensagem e estimativa antes do envio; carteira e histórico existentes preservados durante a migração.
+
+> 2026-10-17: Caça Palavras mantém a página pública sempre no tabuleiro e remove o menu de alternância jogo/ranking/ajuda. O painel controla por conta se o ranking da rodada aparece ao finalizar; estado, espaçamento e visual do tabuleiro preservados.
+
+> 2026-10-17: Quiz Live → corrigido o seletor de temas do painel para interpretar o formato de tuplas retornado pela API; nomes e seleção voltam a aparecer sem alterar o contrato do endpoint.
+
+> 2026-10-17: Quiz Live → painel reorganizado em Controle, Configurações, Banco de perguntas e Histórico; temas compactos, seções de configuração, presets de margem com prévia e biblioteca paginada com filtros e editor em diálogo. Contratos, handlers, validações, salvamento explícito e regras do jogo preservados.
+
+> 2026-10-17: Quiz Live público → identidade de game show TikPlay e estados visuais separados para espera, pergunta, revelação do gabarito, ranking parcial e encerramento com pódio. Layout responsivo, áreas seguras e movimento reduzido preservados; sem mudança em API, pontuação ou observabilidade. O contrato público não fornece nomes/contagem de acertos por rodada.
+
+> 2026-10-17: Quiz Live público → legibilidade priorizada: card claro uniforme, enunciado escuro sem sombra, alternativas com texto escuro e relógio menos dominante. Tamanho mínimo de fonte ajustado para leitura vertical; lógica e contratos preservados.
+
+> 2026-10-17: Quiz Live público → corrigido contraste em todos os estados: cartões claros só na pergunta/alternativas; resultado, espera, selo da rodada e rodapé usam superfícies escuras com texto claro. Sem alteração de lógica ou API.
+
+> 2026-10-17: Quiz Live → Banco global no Super Admin e biblioteca do streamer separada por catálogo oficial e perguntas particulares, com origem configurável da partida, importação revisável, filtros, métricas de uso e layout responsivo alinhado aos sistemas existentes.

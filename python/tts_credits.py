@@ -23,18 +23,18 @@ def cost_for(model_id, character_count):
         return None, "EMPTY_TEXT"
     try:
         with _connect() as conn:
-            row = conn.execute("""SELECT credits_per_100_chars FROM additional_voice_models
+            row = conn.execute("""SELECT credits_per_150_chars FROM additional_voice_models
                 WHERE model_id=? AND enabled=1""", (model_id,)).fetchone()
         rate = int(row[0]) if row else 0
         if rate <= 0:
             return None, "COST_NOT_CONFIGURED"
-        return max(1, math.ceil(character_count * rate / 100)), "OK"
+        return max(1, math.ceil(character_count * rate / 150)), "OK"
     except sqlite3.OperationalError:
         return None, "NOT_AVAILABLE"
 
 
 def charge(tenant_id, model_id, character_count):
-    """Debit an integer, model-priced charge before a paid provider request."""
+    """Debit rounded whole TikCoins using each model's tariff per 150 characters."""
     cost, code = cost_for(model_id, character_count)
     if code != "OK":
         return None, code

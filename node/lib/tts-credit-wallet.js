@@ -21,6 +21,8 @@ function ensureSchema(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_tts_credit_ledger_tenant_created
       ON tts_credit_ledger(tenant_id, created_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_tts_credit_ledger_created
+      ON tts_credit_ledger(created_at DESC, kind);
     CREATE TABLE IF NOT EXISTS tts_credit_packages (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

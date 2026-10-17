@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS context_generation_attempts (
   ai_count INTEGER, local_fill_count INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_context_attempt_run ON context_generation_attempts(run_id);
+CREATE INDEX IF NOT EXISTS idx_context_attempt_created ON context_generation_attempts(created_at DESC);
 CREATE TABLE IF NOT EXISTS generated_context_metadata (
   target TEXT PRIMARY KEY, pool_version TEXT NOT NULL, model TEXT NOT NULL,
   method_version TEXT NOT NULL, top_count INTEGER NOT NULL,

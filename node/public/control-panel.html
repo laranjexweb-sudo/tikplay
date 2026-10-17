@@ -242,20 +242,20 @@
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
 <link rel="stylesheet" href="/ui/tikplay-streamer-reference.css">
 <link rel="stylesheet" href="/ui/tikplay-streamer-model.css?v=20261016-themed-selects">
-<link rel="stylesheet" href="/ui/tikplay-sounds-model.css?v=20261017-credit-estimator">
+<link rel="stylesheet" href="/ui/tikplay-sounds-model.css?v=20261017-tikcoins-v1">
 <link rel="stylesheet" href="/ui/tikplay-word-model.css?v=20261013-history">
 <link rel="stylesheet" href="/ui/tikplay-threedicas-model.css?v=20261014">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-native1">
-<link rel="stylesheet" href="/ui/tikplay-reports.css?v=20261014-v4">
+<link rel="stylesheet" href="/ui/tikplay-reports.css?v=20261017-analytics-v7">
+<link rel="stylesheet" href="/ui/tikplay-quiz-live.css?v=20261017-v3">
 
 </head>
 <body class="tp-panel-streamer">
 <aside class="sidebar tp-streamer-sidebar" id="streamerSidebar" aria-label="Navegação do painel">
   <div class="sidebar-top"><a class="brand" href="#dashboard" onclick="switchTab('dashboard');return false"><span class="brand-mark"><span></span></span><span class="brand-name">Tik<span>Play</span></span></a><button type="button" class="icon-button sidebar-close" id="streamerMenuClose" aria-label="Fechar menu">&times;</button></div>
-  <div class="workspace-card"><div class="workspace-avatar">TP</div><div><small>SALA ATUAL</small><strong id="streamerRoom">Carregando…</strong></div><button type="button" class="icon-button mini" title="Copiar código da sala" aria-label="Copiar código da sala" onclick="copyStreamerRoom()">&#10697;</button></div>
   <div id="streamerNavSlot"></div>
-  <div class="sidebar-section-label">SISTEMA</div><nav class="side-nav compact"><button class="nav-item" onclick="toggleBilling()"><span aria-hidden="true">&#9881;</span><b>Assinatura</b></button><button class="nav-item" type="button" onclick="switchTab('support')"><span aria-hidden="true">?</span><b>Ajuda e Suporte</b></button></nav>
+  <div class="sidebar-section-label">SISTEMA</div><nav class="side-nav compact"><button class="nav-item" onclick="toggleBilling()" hidden><span aria-hidden="true">&#9881;</span><b>Assinatura</b></button><button class="nav-item" type="button" onclick="switchTab('support')"><span aria-hidden="true">?</span><b>Ajuda e Suporte</b></button></nav>
   <div class="sidebar-footer"><div class="connection-chip"><i id="streamerServerDot"></i><span id="streamerServerStatus">Conectando ao servidor</span></div></div>
 </aside>
 <button type="button" id="streamerBackdrop" class="tp-streamer-backdrop" aria-label="Fechar menu ou console" hidden></button>
@@ -269,8 +269,7 @@
         <label class="search-box tp-streamer-search"><span aria-hidden="true">⌕</span><input id="streamerGlobalSearch" type="search" placeholder="Buscar no painel..." aria-label="Buscar seção no painel"><kbd>Ctrl K</kbd></label>
         <span class="badge text-bg-light border border-dark border-2" id="userBadge"></span>
         <span class="badge text-bg-warning border border-dark border-2" id="roleBadge"></span>
-        <span class="badge text-bg-dark" id="roomBadge" title="Código da sua sala"></span>
-        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none">Plano: -</button>
+        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none" hidden>Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
         <button type="button" class="btn btn-nb btn-dark btn-sm" id="streamerLogsOpen">Logs</button>
         <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
@@ -286,13 +285,14 @@
       <button type="button" class="tab-btn" data-tab="sons" onclick="switchTab('sons')"><span class="tp-model-nav-icon" aria-hidden="true">&#9834;</span>Sons</button>
       <button type="button" class="tab-btn" data-tab="overlays" onclick="switchTab('overlays')"><span class="tp-model-nav-icon" aria-hidden="true">&#9635;</span>Sobreposições</button>
       <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')"><span class="tp-model-nav-icon" aria-hidden="true">&#8984;</span>Palavra Secreta</button>
+      <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg>Caça Palavras</button>
+      <button type="button" class="tab-btn" data-tab="quiz" onclick="switchTab('quiz')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9.5 9a2.7 2.7 0 1 1 4.8 1.7c-.9.8-1.8 1.1-1.8 2.3M12.5 17.2h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Quiz Live</button>
       <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5c-.9.7-1.3 1.4-1.5 2.5h-4c-.2-1.1-.6-1.8-1.5-2.5Z"></path><path d="M12 2v2M4.9 5l1.4 1.4M19.1 5l-1.4 1.4"></path></svg>3 Dicas</button>
-      <button type="button" class="tab-btn" data-tab="corda" onclick="switchTab('corda')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12c3-6 6 6 9 0s6 6 9 0M3 9v6M21 9v6"></path></svg>CORDA</button>
-      <details class="tp-extra-games" id="extraGamesNav">
+      <button type="button" class="tab-btn" data-tab="corda" onclick="switchTab('corda')" hidden><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12c3-6 6 6 9 0s6 6 9 0M3 9v6M21 9v6"></path></svg>CORDA</button>
+      <details class="tp-extra-games" id="extraGamesNav" data-nav-hidden="true" hidden>
         <summary class="tp-extra-games-trigger" aria-expanded="false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>Mais jogos</summary>
         <div class="tp-extra-games-menu">
           <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Batalha</button>
-          <button type="button" class="tab-btn" data-tab="caca" onclick="switchTab('caca');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg>Caça Palavras</button>
           <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 13c-2.7 0-6 1.3-6 4a3 3 0 0 0 3 3c1.3 0 2-.7 3-.7s1.7.7 3 .7a3 3 0 0 0 3-3c0-2.7-3.3-4-6-4Z"></path><circle cx="5.5" cy="9" r="1.7"></circle><circle cx="9.5" cy="6.5" r="1.7"></circle><circle cx="14.5" cy="6.5" r="1.7"></circle><circle cx="18.5" cy="9" r="1.7"></circle></svg>Bichinho</button>
           <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Duelo 1x1</button>
         </div>
@@ -323,8 +323,8 @@
         <div class="game-shortcuts">
           <article class="game-card secret-card" data-streamer-feature="games"><div class="game-card-top"><div class="game-symbol">?</div></div><h3>Palavra Secreta</h3><p>Palpites pelo chat, letras reveladas e ranking ao vivo.</p><div class="tags"><span>Chat</span><span>Presentes</span><span>Ranking</span></div><button class="btn btn-primary btn-full" onclick="switchTab('games')">Abrir controle</button></article>
           <article class="game-card tips-card" data-streamer-feature="tres"><div class="game-card-top"><div class="game-symbol">3</div></div><h3>3 Dicas</h3><p>Três pistas progressivas com pontuação por velocidade.</p><div class="tags"><span>Rodadas</span><span>Dicas</span><span>Pontos</span></div><button class="btn btn-dark btn-full" onclick="switchTab('tres')">Abrir controle</button></article>
-          <article class="game-card duel-card" data-streamer-feature="duelo"><div class="game-card-top"><div class="game-symbol">VS</div></div><h3>Duelo 1x1</h3><p>Arena interativa com votos, golpes e eventos especiais.</p><div class="tags"><span>Combos</span><span>Times</span><span>Presentes</span></div><button class="btn btn-dark btn-full" onclick="switchTab('duelo')">Abrir controle</button></article>
-          <article class="game-card voice-card" data-streamer-feature="sons"><div class="game-card-top"><div class="game-symbol">♪</div></div><h3>Sons e Chat</h3><p>Configure os recursos de voz e os alertas da sua live.</p><div class="tags"><span>Voz</span><span>Chat</span><span>Presentes</span></div><button class="btn btn-dark btn-full" onclick="switchTab('sons')">Configurar</button></article>
+          <article class="game-card quiz-card" data-streamer-feature="quiz"><div class="game-card-top"><div class="game-symbol">?</div></div><h3>Quiz Live</h3><p>Perguntas no chat, respostas em tempo real e ranking da partida.</p><div class="tags"><span>Chat</span><span>Quiz</span><span>Ranking</span></div><button class="btn btn-dark btn-full" onclick="switchTab('quiz')">Abrir controle</button></article>
+          <article class="game-card caca-card" data-streamer-feature="caca"><div class="game-card-top"><div class="game-symbol">⌕</div></div><h3>Caça Palavras</h3><p>Encontre palavras no tabuleiro e participe pelo chat.</p><div class="tags"><span>Chat</span><span>Tabuleiro</span><span>Ranking</span></div><button class="btn btn-dark btn-full" onclick="switchTab('caca')">Abrir controle</button></article>
         </div>
         <div class="dashboard-grid">
           <article class="panel links-panel"><div class="panel-head"><div><span class="panel-icon">◫</span><h3>Tela pública e links</h3></div></div><div class="link-list"><div><span>Jogo</span><code>/jogo</code><button class="copy-btn" onclick="copyRoomLink('/jogo','streamerLinkMsg')">Copiar</button></div><div><span>Ranking</span><code>/ranking</code><button class="copy-btn" onclick="copyRoomLink('/ranking','streamerLinkMsg')">Copiar</button></div><div><span>Sobreposições</span><code>OBS / Live Studio</code><button class="copy-btn" onclick="switchTab('overlays')">Gerenciar</button></div></div><span id="streamerLinkMsg" role="status" aria-live="polite"></span></article>
@@ -336,30 +336,34 @@
       </section>
 
       <section class="tab-page tp-reports-page" id="tab-reports" style="display:none" aria-label="Relatórios da live">
-        <header class="page-head"><div><div class="eyebrow"><i></i> DESEMPENHO DA LIVE</div><h1>Relatórios</h1><p>Compare interações, presentes e participação por transmissão.</p></div></header>
-        <form class="tp-report-filters" id="reportFilters">
-          <label>Live<select id="reportRoom"><option value="">Todas as lives</option></select></label>
-          <label>De<input type="date" id="reportFrom" required></label>
-          <label>Até<input type="date" id="reportTo" required></label>
-          <label>Interação<select id="reportType"><option value="">Todas</option><option value="like">Curtidas</option><option value="gift">Presentes</option><option value="comment">Comentários</option><option value="follow">Novos seguidores</option><option value="share">Compartilhamentos</option><option value="join">Entradas</option><option value="guess">Palpites</option><option value="hint">Dicas</option><option value="winner">Vitórias</option><option value="level_up">Subidas de nível</option></select></label>
-          <label id="reportAxisFilter" hidden>Eixo<select id="reportAxis"><option value="">Todos os eixos</option><option value="gifter">Presenteador</option><option value="fanclub">Comunidade</option></select></label>
-          <button class="btn btn-nb btn-primary" type="submit">Atualizar</button>
-        </form>
+        <header class="page-head tp-report-page-head"><div><div class="eyebrow"><i></i> DESEMPENHO DA LIVE</div><h1>Relatórios</h1><p>Compare interações, presentes e participação por transmissão.</p></div><details class="tp-report-export-menu"><summary class="btn btn-nb btn-dark"><span aria-hidden="true">⇩</span> Exportar relatório <span class="tp-report-export-caret" aria-hidden="true">⌄</span></summary><div class="tp-report-export-options" role="group" aria-label="Formato do relatório"><button type="button" id="reportExport">CSV</button><button type="button" disabled title="Disponível em breve">Excel · em breve</button><button type="button" disabled title="Disponível em breve">PDF · em breve</button></div></details></header>
+        <div class="tp-report-filters" id="reportFilters">
+          <label class="tp-report-filter-live">Live<select id="reportRoom"><option value="">Todas as lives</option></select></label>
+          <label class="tp-report-filter-period">Período<span class="tp-report-date-range"><input type="date" id="reportFrom" aria-label="Data inicial"><span aria-hidden="true">→</span><input type="date" id="reportTo" aria-label="Data final"></span></label>
+          <label class="tp-report-filter-type">Interação<select id="reportType"><option value="">Todas</option><option value="like">Curtidas</option><option value="gift">Presentes</option><option value="comment">Comentários</option><option value="follow">Novos seguidores</option><option value="share">Compartilhamentos</option><option value="join">Entradas</option><option value="guess">Palpites</option><option value="hint">Dicas</option><option value="winner">Vitórias</option><option value="level_up">Subidas de nível</option></select></label>
+          <label id="reportAxisFilter" class="tp-report-filter-axis" hidden>Eixo<select id="reportAxis"><option value="">Todos os eixos</option><option value="gifter">Presenteador</option><option value="fanclub">Comunidade</option></select></label>
+          <div class="tp-report-presets" role="group" aria-label="Períodos rápidos">
+            <button type="button" data-report-preset="today" aria-pressed="false">Hoje</button>
+            <button type="button" data-report-preset="yesterday" aria-pressed="false">Ontem</button>
+            <button type="button" data-report-preset="7" aria-pressed="true">7 dias</button>
+            <button type="button" data-report-preset="30" aria-pressed="false">30 dias</button>
+            <button type="button" data-report-preset="custom" aria-pressed="false">Personalizado</button>
+          </div>
+        </div>
         <p id="reportNotice" class="tp-report-notice" role="status" aria-live="polite"></p>
         <div class="tp-report-metrics" aria-live="polite">
-          <article><span>INTERAÇÕES</span><strong id="reportTotal">—</strong></article>
           <article><span>PESSOAS ÚNICAS</span><strong id="reportPeople">—</strong></article>
-          <article><span>Curtidas</span><strong id="reportLikes">—</strong></article>
-          <article><span>Presentes · diamantes</span><strong id="reportGifts">—</strong></article>
+          <article><span>Diamantes recebidos</span><strong id="reportGifts">—</strong></article>
           <article><span>Comentários</span><strong id="reportComments">—</strong></article>
-          <article><span>Subidas de nível</span><strong id="reportLevelUps">—</strong><small id="reportLevelUpsByAxis">Presenteador — · Comunidade —</small></article>
+          <article><span>Curtidas</span><strong id="reportLikes">—</strong></article>
+          <article class="tp-report-primary-total"><span>INTERAÇÕES TOTAIS</span><strong id="reportTotal">—</strong><small id="reportComparison">Comparação com o período anterior</small></article>
         </div>
         <div class="tp-report-grid">
-          <section class="tp-report-panel"><header><div><h2>Atividade no período</h2><p>Volume de interações ao longo do tempo.</p></div><label>Intervalo<select id="reportBucket"><option value="minute">Minuto</option><option value="hour" selected>Hora</option><option value="day">Dia</option></select></label></header><div id="reportSeries" class="tp-report-series" role="img" aria-label="Gráfico de interações"></div></section>
+          <section class="tp-report-panel"><header><div><h2>Atividade no período</h2><p>Volume ao longo do tempo.</p></div><label>Intervalo<select id="reportBucket"><option value="minute">Minuto</option><option value="hour" selected>Hora</option><option value="day">Dia</option></select></label></header><div class="tp-report-series-tabs" role="group" aria-label="Métrica do gráfico"><button type="button" data-report-series="all" aria-pressed="true">Interações</button><button type="button" data-report-series="comment" aria-pressed="false">Comentários</button><button type="button" data-report-series="like" aria-pressed="false">Curtidas</button><button type="button" data-report-series="gift" aria-pressed="false">Presentes</button></div><div id="reportSeries" class="tp-report-series" role="group" aria-label="Gráfico de atividade"></div></section>
           <section class="tp-report-panel"><header><div><h2>Participantes</h2><p id="reportRankingCaption">Destaques por interação.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>#</th><th>Usuário</th><th>Eventos</th><th>Valor</th></tr></thead><tbody id="reportRanking"></tbody></table></div></section>
         </div>
-        <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Níveis dos participantes</h2><p>Últimos níveis conhecidos; selecione uma live para consultar o registro daquela transmissão.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>#</th><th>Participante</th><th>Nível de fã-clube</th><th>Nível de presenteador</th><th>Atualizado</th></tr></thead><tbody id="reportLevels"></tbody></table></div></section>
-        <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Interações recentes</h2><p>Eventos registrados nesta seleção.</p></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>Horário</th><th>Tipo</th><th>Participante</th><th>Detalhes</th><th>Valor</th></tr></thead><tbody id="reportEvents"></tbody></table></div><button type="button" class="btn btn-nb btn-dark" id="reportLoadMore" hidden>Carregar mais</button></section>
+        <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Níveis dos participantes</h2><p>Últimos níveis conhecidos; selecione uma live para consultar o registro daquela transmissão.</p></div><div class="tp-report-level-summary"><strong><span id="reportLevelUps">—</span> subidas</strong><small id="reportLevelUpsByAxis">Presenteador — · Comunidade —</small></div></header><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>#</th><th>Participante</th><th>Fã-clube</th><th>Presenteador</th><th>Atualizado</th></tr></thead><tbody id="reportLevels"></tbody></table></div></section>
+        <section class="tp-report-panel tp-report-events-panel"><header><div><h2>Interações recentes</h2><p>Últimas atividades registradas nesta seleção.</p></div></header><div class="tp-report-events-toolbar"><div class="tp-report-event-tabs" role="group" aria-label="Filtrar interações"><button type="button" data-report-event-filter="all" aria-pressed="true">Todas</button><button type="button" data-report-event-filter="comment" aria-pressed="false">Comentários</button><button type="button" data-report-event-filter="like" aria-pressed="false">Curtidas</button><button type="button" data-report-event-filter="gift" aria-pressed="false">Presentes</button><button type="button" data-report-event-filter="join" aria-pressed="false">Entradas</button></div><input type="search" id="reportEventsSearch" placeholder="Buscar participante ou mensagem" aria-label="Buscar participante ou mensagem"></div><div class="tp-report-table-wrap"><table class="tp-report-table"><thead><tr><th>Horário</th><th>Tipo</th><th>Participante</th><th>Detalhes</th><th>Valor</th></tr></thead><tbody id="reportEvents"></tbody></table></div><button type="button" class="btn btn-nb btn-dark" id="reportLoadMore" hidden>Ver todas as interações</button></section>
       </section>
       <div class="tab-page" id="tab-connect">
         <div class="page-head"><div><div class="eyebrow"><i></i> CONEXÃO</div><h1>Conectar <span>Live</span></h1><p>Conecte a transmissão e acompanhe o estado da integração em tempo real.</p></div></div>
@@ -406,45 +410,76 @@
       <div>
         <div class="eyebrow"><i></i> ÁUDIO DA LIVE</div>
         <h1>Sons e <span>Narração</span></h1>
-        <p>Configure a voz da charada e associe efeitos sonoros aos presentes recebidos. </p>
+        <p>Escolha como as mensagens serão lidas e configure os alertas sonoros dos presentes.</p>
       </div>
-      <div class="save-state"><i></i><span id="settingsSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente</span></div>
     </header>
 
-    <nav class="local-tabs" aria-label="Seções de áudio">
-      <button class="local-tab active" type="button" data-local-tab="voice">Narração</button>
-      <button class="local-tab" type="button" data-local-tab="alerts">Alertas por presente</button>
-    </nav>
+    <div class="tts-toolbar">
+      <nav class="local-tabs" aria-label="Seções de áudio">
+        <button class="local-tab active" type="button" data-local-tab="voice">Narração</button>
+        <button class="local-tab" type="button" data-local-tab="alerts">Alertas por presente</button>
+      </nav>
+      <div class="save-state"><i></i><span id="settingsSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente</span></div>
+    </div>
 
-    <section class="content-grid">
-      <div class="stack">
-        <section class="card page-section tp-sound-section" data-feature-section="chat" data-section="voice" id="tab-chat">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz do narrador</h2><p>Compartilhada pela narração do chat e pelas charadas da Palavra Secreta.</p></div></div></div>
+    <section class="content-grid tts-consumer-grid">
+        <section class="card tts-narration-overview tp-sound-section" id="chatNarrationOverview" data-feature-section="chat" data-section="voice" aria-labelledby="chatNarrationHeading">
+          <div class="tts-overview-copy"><span class="tts-card-kicker">NARRAÇÃO DO CHAT</span><h2 id="chatNarrationHeading">Leitura dos comentários na live</h2><p>Ative para ler as mensagens recebidas durante a transmissão.</p></div>
+          <div class="tts-overview-control"><label class="switch-row tts-overview-toggle" for="chatNarrEnabled"><span id="chatNarrStatus" class="tts-state-text" role="status" aria-live="polite">Narração desativada</span><input type="checkbox" id="chatNarrEnabled" onchange="onSettingsChanged()"><span class="switch" aria-hidden="true"></span></label></div>
+        </section>
+
+        <section class="card page-section tp-sound-section" data-feature-section="chat" data-section="voice" id="tab-chat" aria-labelledby="ttsPlaybackHeading">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">◖</div><div><h2>Voz padrão</h2><p>Esta voz é usada no chat e nas charadas da Palavra Secreta.</p></div></div></div>
           <div class="card-body">
-            <section class="tts-settings-section" aria-labelledby="chatNarrationHeading">
-              <h3 class="tts-subsection-title" id="chatNarrationHeading">Narração do chat</h3>
-              <label class="switch-row tts-chat-toggle" for="chatNarrEnabled">
-                <input type="checkbox" id="chatNarrEnabled" onchange="onSettingsChanged()">
-                <span class="switch"></span>
-                <div><b>Ler mensagens do chat em voz alta</b><small>Os comentários são sintetizados e reproduzidos em sequência no painel.</small></div>
-              </label>
-              <div class="form-grid tts-chat-filters">
-                <div class="field"><label for="chatNarrMode">Comentários narrados</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos</option><option value="exclude">Todos, exceto os que começam com o caractere</option><option value="only">Somente os que começam com o caractere</option></select></div>
-                <div class="field"><label for="chatNarrChar">Caractere de filtro</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado nos modos de filtro; o caractere não é falado.</small></div>
-              </div>
-            </section>
-            <div class="divider tts-section-divider"></div>
             <section class="tts-settings-section" aria-labelledby="ttsPlaybackHeading">
               <h3 class="tts-subsection-title" id="ttsPlaybackHeading">Voz e reprodução</h3>
               <div class="form-grid tts-playback-grid">
-                <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio</option><option value="edge_francisca" selected>Francisca</option></select><small>Aplicada ao chat e às charadas.</small></div>
-                <div class="field"><label for="ttsRate">Velocidade · <span id="ttsRateLabel">1x</span></label><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
-                <div class="field tts-volume-field"><label for="ttsVolume">Volume da narração · <span id="ttsVolumeLabel">100%</span></label><input type="range" id="ttsVolume" min="0" max="100" step="0.1" value="50" oninput="onTtsVolumeChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>0%</span><span>100%</span><span>300%</span></div><small>100% fica no centro da escala; acima disso, a amplificação pode distorcer dependendo do áudio e da saída.</small></div>
+                <div class="field"><label for="ttsVoiceSelect">Voz</label><select class="control" id="ttsVoiceSelect" onchange="onPanelVoicePick(this.value)"><option value="edge_antonio">Antonio</option><option value="edge_francisca" selected>Francisca</option></select></div>
+                <div class="field tts-speed-field"><div class="tts-range-heading"><label for="ttsRate">Velocidade</label><output id="ttsRateLabel" for="ttsRate">1x</output></div><input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" oninput="onTtsRateChanged(this)" onchange="onSettingsChanged()"><div class="range-line tts-rate-markers"><span>0,5x</span><span>1x</span><span>2x</span></div></div>
+                <div class="field tts-volume-field"><div class="tts-range-heading"><label for="ttsVolume">Volume</label><output id="ttsVolumeLabel" for="ttsVolume">100%</output></div><input type="range" id="ttsVolume" min="0" max="100" step="0.1" value="100" oninput="onTtsVolumeChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>0%</span><span>100%</span></div>
+                  <details class="tts-volume-advanced" id="ttsVolumeAdvanced"><summary>Amplificação avançada</summary><small>Até 300%</small><label for="ttsVolumeBoost">Amplificação · <span id="ttsVolumeBoostLabel">100%</span></label><input type="range" id="ttsVolumeBoost" min="100" max="300" step="1" value="100" oninput="onTtsVolumeChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>100%</span><span>200%</span><span>300%</span></div></details>
+                </div>
               </div>
               <div class="row-actions tts-test-action"><button class="btn btn-primary" type="button" onclick="testPanelVoice()"><span aria-hidden="true">▶</span> Testar voz</button></div>
+              <div class="tts-riddle-note"><span aria-hidden="true">ⓘ</span><span>Desativar o chat não desativa a narração das charadas.</span></div>
             </section>
-            <div class="divider tts-section-divider"></div>
-            <div class="info-card tts-riddle-info"><span aria-hidden="true">ⓘ</span><p><strong>A voz e a velocidade também são usadas nas charadas.</strong> A narração automática das charadas continua independente da leitura do chat.</p></div>
+          </div>
+        </section>
+
+        <section class="card eleven-chat-voice-card tts-emotive-card" id="elevenChatBox" hidden data-section="voice" aria-labelledby="elevenChatVoiceTitle">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">♫</div><div><h2 id="elevenChatVoiceTitle">Voz expressiva</h2><p>Uma voz alternativa com estilos de interpretação.</p></div></div></div>
+          <div class="card-body">
+            <div class="field"><label for="elevenChatVoice">Voz</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
+            <div class="tts-emotion-guide"><strong>Estilos disponíveis</strong><div class="tts-emotion-chips"><code>#grito</code><code>#feliz</code><code>#triste</code><code>#sussurro</code></div></div>
+            <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()"><span aria-hidden="true">▶</span> Testar voz</button></div>
+            <div class="tts-emotion-howto"><strong>Como usar os estilos</strong><span>Adicione uma tag ao final da mensagem.</span><p>Obrigado pelo presente! <code>#feliz</code></p></div>
+            <small id="elevenChatStatus" class="tts-inline-status" role="status" aria-live="polite"></small>
+          </div>
+        </section>
+
+        <section class="card tts-filter-card tp-sound-section" id="chatNarrationFilters" data-feature-section="chat" data-section="voice" aria-labelledby="chatNarrationFiltersHeading">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">⌕</div><div><h2 id="chatNarrationFiltersHeading">Quais mensagens narrar</h2><p>Defina quais comentários serão lidos na live.</p></div></div></div>
+          <div class="card-body"><div class="form-grid tts-chat-filters">
+            <div class="field"><label for="chatNarrMode">Comentários</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos os comentários</option><option value="exclude">Todos, exceto os que começam com o prefixo</option><option value="only">Somente os que começam com o prefixo</option></select></div>
+            <div class="field"><label for="chatNarrChar">Prefixo das mensagens</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado na regra acima; o prefixo não é falado.</small></div>
+          </div></div>
+        </section>
+
+        <section class="card eleven-usage-card tts-credits-card" id="elevenUsageCard" hidden data-section="voice" aria-labelledby="elevenUsageTitle">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">◴</div><div><h2 id="elevenUsageTitle">Seus TikCoins</h2><p>Saldo e consumo da voz expressiva.</p></div></div></div>
+          <div class="card-body">
+            <div class="eleven-usage-summary"><strong id="voiceCreditBalance">—</strong><span>TikCoins disponíveis</span></div>
+            <div class="tts-credit-cost"><strong>Custo da voz expressiva</strong><span id="voiceCreditRate">Carregando…</span></div>
+            <span class="tts-message-limit">Máx. 150 caracteres por mensagem</span>
+            <small class="tts-credit-explainer">Cada mensagem consome proporcionalmente aos caracteres falados, com arredondamento para cima e mínimo de 1 TikCoin. A tag de emoção não é cobrada.</small>
+            <div class="field voice-credit-estimator">
+              <label for="voiceCreditEstimateText">Simule o custo</label>
+              <input class="control" id="voiceCreditEstimateText" type="text" maxlength="150" placeholder="Digite uma mensagem" oninput="renderVoiceCreditEstimate()">
+              <small id="voiceCreditEstimate" role="status" aria-live="polite">Digite uma mensagem para ver a estimativa.</small>
+            </div>
+            <div id="voiceCreditPackages" class="voice-credit-packages" aria-label="Pacotes para comprar TikCoins"></div>
+            <small id="voiceCreditStatus" class="d-block mt-2" role="status" aria-live="polite"></small>
+            <div id="voiceCreditHistory" class="voice-credit-history" aria-label="Movimentações recentes"></div>
           </div>
         </section>
 
@@ -461,36 +496,7 @@
             <div class="alert-list" id="soundAlertsList"></div>
           </div>
         </section>
-      </div>
-
-      <aside class="stack">
-        <section class="card eleven-chat-voice-card" id="elevenChatBox" hidden aria-labelledby="elevenChatVoiceTitle">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">♫</div><div><h2 id="elevenChatVoiceTitle">Voz adicional do chat</h2><p>Selecione e teste a voz alternativa para a narração do chat.</p></div></div></div>
-          <div class="card-body">
-            <div class="field"><label for="elevenChatVoice">Voz disponível</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
-            <div class="info-card tts-riddle-info"><span aria-hidden="true">ⓘ</span><p>No final da mensagem, use <code>#grito</code>, <code>#feliz</code>, <code>#triste</code> ou <code>#sussurro</code>. A tag não é falada; vozes compatíveis recebem a instrução de interpretação.</p></div>
-            <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz adicional</button></div>
-            <small id="elevenChatStatus" role="status" aria-live="polite"></small>
-          </div>
-        </section>
-        <section class="card eleven-usage-card" id="elevenUsageCard" hidden aria-labelledby="elevenUsageTitle">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">◴</div><div><h2 id="elevenUsageTitle">Créditos de voz</h2><p>Saldo disponível para narração do chat.</p></div></div></div>
-          <div class="card-body">
-            <div class="eleven-usage-summary"><strong id="voiceCreditBalance">—</strong><span>créditos</span></div>
-            <small id="voiceCreditRate" class="d-block mb-2">Tarifa da voz: carregando…</small>
-            <small id="voiceCreditAverage" class="d-block mb-2">Média de referência: calculando…</small>
-            <div class="field voice-credit-estimator">
-              <label for="voiceCreditEstimateText">Estime o custo de uma mensagem</label>
-              <input class="control" id="voiceCreditEstimateText" type="text" maxlength="150" placeholder="Digite um exemplo de mensagem" oninput="renderVoiceCreditEstimate()">
-              <small id="voiceCreditEstimate" role="status" aria-live="polite">A voz adicional narra até 150 caracteres; hashtags finais de emoção não são faladas nem cobradas.</small>
-            </div>
-            <div id="voiceCreditPackages" class="voice-credit-packages" aria-label="Pacotes para comprar créditos"></div>
-            <small id="voiceCreditStatus" class="d-block mt-2" role="status" aria-live="polite"></small>
-            <div id="voiceCreditHistory" class="voice-credit-history" aria-label="Movimentações recentes"></div>
-          </div>
-        </section>
-        <section class="card hidden" data-section="alerts"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione o presente no catálogo.<br><br><strong>2.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>3.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
-      </aside>
+        <section class="card hidden tts-alert-help" data-section="alerts"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione o presente no catálogo.<br><br><strong>2.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>3.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
     </section>
       </div>
 
@@ -975,58 +981,67 @@
 
       <!-- ===================== Caça Palavras ===================== -->
       <div class="tab-page" id="tab-caca" style="display:none">
-        <div class="nb-card mb-3 tp-game-control">
-          <h2>CAÇA PALAVRAS</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded tp-game-status">
-            <div class="kv"><strong>Encontradas:</strong> <span id="cacaFound">0</span>/<span id="cacaTotal">0</span></div>
-            <div class="kv"><strong>Status:</strong> <span id="cacaStatus">Parado</span></div>
-          </div>
-          <div class="row g-2 mb-2">
-            <div class="col-4">
-              <label class="form-label mb-0" for="cacaCount">Palavras na grade</label>
-              <input type="number" class="form-control form-control-sm" id="cacaCount" value="10" min="4" max="16">
-            </div>
-            <div class="col-8 d-flex align-items-end gap-2 tp-game-actions">
-              <button class="btn btn-nb btn-primary flex-fill tp-icon-action" id="btnCacaStart" onclick="startCaca()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Iniciar</button>
-              <button class="btn btn-nb btn-danger flex-fill tp-icon-action" id="btnCacaStop" onclick="stopCaca()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Encerrar</button>
-            </div>
-          </div>
-        </div>
+        <header class="tp-game-hub-head">
+          <div><div class="tp-game-hub-eyebrow">JOGO INTERATIVO</div><h1>Caça Palavras</h1><p>Gerencie a rodada, acompanhe os acertos e configure como o chat participa.</p></div>
+        </header>
+        <div class="tp-game-hub">
+          <div class="tp-game-hub__primary">
+            <section class="nb-card tp-game-hub__card tp-game-hub__operation" id="cacaOperationCard" data-state="stopped" aria-labelledby="cacaOperationTitle">
+              <div class="tp-game-hub__card-head"><h2 id="cacaOperationTitle">Controle da rodada</h2><span class="tp-game-hub__state" id="cacaOperationState"><i aria-hidden="true"></i><span id="cacaStatus">Parada</span></span></div>
+              <div class="tp-game-hub__operation-body">
+                <div class="tp-game-hub__progress-block">
+                  <div class="tp-game-hub__progress-heading"><div><span class="tp-game-hub__label">Palavras encontradas</span><strong><span id="cacaFound">0</span><span class="tp-game-hub__progress-divider">/</span><span id="cacaTotal">10</span></strong></div><span class="tp-game-hub__progress-caption" id="cacaProgressCaption">0 de 10</span></div>
+                  <div class="tp-game-hub__progress-track" id="cacaProgressTrack" role="progressbar" aria-label="Palavras encontradas" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span id="cacaProgressFill"></span></div>
+                </div>
+                <div class="tp-game-hub__round-controls"><div class="tp-game-hub__round-setting"><span class="tp-game-hub__round-label">Palavras por rodada</span><div class="tp-game-hub__stepper" role="group" aria-label="Quantidade de palavras por rodada"><button type="button" class="btn btn-nb btn-dark tp-game-hub__stepper-button" id="cacaCountDown" aria-label="Diminuir quantidade de palavras" onclick="adjustCacaCount(-1)">−</button><div class="tp-game-hub__stepper-value" role="spinbutton" aria-label="Quantidade de palavras" aria-valuemin="4" aria-valuemax="16" aria-valuenow="10"><output id="cacaCountDisplay" aria-live="polite">10</output><span>palavras</span></div><button type="button" class="btn btn-nb btn-dark tp-game-hub__stepper-button" id="cacaCountUp" aria-label="Aumentar quantidade de palavras" onclick="adjustCacaCount(1)">+</button></div><span class="tp-game-hub__round-help">De 4 a 16 · vale para a próxima rodada</span><input type="hidden" id="cacaCount" value="10"></div><div class="tp-game-hub__actions tp-game-hub__round-actions"><button class="btn btn-nb btn-primary tp-icon-action" id="btnCacaStart" onclick="startCaca()"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"></path></svg>Iniciar rodada</button><button class="btn btn-nb btn-danger tp-icon-action" id="btnCacaStop" onclick="stopCaca()" disabled><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>Encerrar rodada</button></div></div>
+              </div>
+            </section>
 
-        <div class="nb-card mb-3">
-          <h2>Como o público acerta</h2>
-          <div class="mb-3 p-2 bg-light border border-dark rounded">
-            <label class="form-label mb-0" for="cacaCmdMode">Formato do comando no chat</label>
-            <select class="form-select form-select-sm mt-1" id="cacaCmdMode" onchange="onCacaCmdMode()">
-              <option value="plain">Só coordenadas — ex: A1A4 ou A1:A4</option>
-              <option value="prefix">Com prefixo — ex: cp A1A4 ou cp A1:A4</option>
-              <option value="emoji">Com emoji ao redor — ex: [EMOJI]A1:A3[EMOJI]</option>
-            </select>
-            <div class="d-flex align-items-center gap-2 mt-2" id="cacaPrefixRow" style="display:none">
-              <label class="form-label mb-0" for="cacaPrefix">Prefixo</label>
-              <input type="text" class="form-control form-control-sm" id="cacaPrefix" value="cp" style="max-width:120px">
-              <span id="cacaSaveStatus" role="status" aria-live="polite">Aplicação automática somente no serviço em execução; não persiste ao reiniciar.</span>
-            </div>
-            <div class="text-secondary" style="font-size:0.75rem;margin-top:4px">
-              Formato A1:A4 = linha (letra) : coluna (número). A página pública exibe o tabuleiro para o público.
-            </div>
-          </div>
-        </div>
+            <section class="nb-card tp-game-hub__card" aria-labelledby="cacaWordsTitle">
+              <div class="tp-game-hub__card-head"><div><span class="tp-game-hub__eyebrow">GABARITO DA RODADA</span><h2 id="cacaWordsTitle">Palavras</h2></div><span class="tp-game-hub__count" id="cacaWordsCount">0</span></div>
+              <p class="tp-game-hub__description">Clique em uma palavra para revelá-la e marcar o acerto na partida.</p>
+              <div id="cacaWordsList" class="tp-game-hub__word-list"><div class="tp-game-hub__empty">Inicie uma rodada para ver as palavras.</div></div>
+            </section>
 
-        <div class="nb-card mb-3">
-          <h2>Onde assistir</h2>
-          <div class="text-secondary" style="font-size:0.85rem">
-            Acompanhe ao vivo na página: <a href="#" id="linkCaca" target="_blank">Abrir página CAÇA PALAVRAS</a>.
+            <section class="nb-card tp-game-hub__card" aria-labelledby="cacaRecentTitle">
+              <div class="tp-game-hub__card-head"><div><span class="tp-game-hub__eyebrow">ATIVIDADE DA RODADA</span><h2 id="cacaRecentTitle">Acertos da rodada</h2></div><span class="tp-game-hub__count" id="cacaRecentCount">0</span></div>
+              <div id="cacaRecentHits" class="tp-game-hub__recent-list"><div class="tp-game-hub__empty">Os acertos aparecem aqui durante a rodada.</div></div>
+            </section>
           </div>
-          <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-nb btn-dark btn-sm flex-fill" onclick="copyRoomLink('/caca-palavra')">Link público Caça Palavras</button>
-          </div>
-        </div>
 
-        <div class="nb-card mb-3">
-          <h2>Respostas (visão do painel)</h2>
-          <div class="text-secondary" style="font-size:0.8rem;margin-bottom:8px">Palavras do tabuleiro atual. Clique em uma palavra para revelar manualmente.</div>
-          <div id="cacaWordsList" class="text-secondary" style="font-size:0.85rem">Nenhuma grade ativa.</div>
+          <aside class="tp-game-hub__side" aria-label="Configurações do Caça Palavras">
+            <section class="nb-card tp-game-hub__card" aria-labelledby="cacaParticipationTitle">
+              <div class="tp-game-hub__card-head"><div><h2 id="cacaParticipationTitle">Participação pelo chat</h2><p>Configure como o público envia respostas.</p></div></div>
+              <div class="tp-game-hub__field"><label for="cacaAnswerMode">Como o chat pode responder</label><select class="form-select tp-game-hub__select" id="cacaAnswerMode" onchange="onCacaAnswerMode()"><option value="word">Digitando a palavra</option><option value="coordinates">Pelas coordenadas</option><option value="both">Palavra ou coordenadas</option></select></div>
+              <div class="tp-game-hub__field" id="cacaCoordinateOptions"><label for="cacaCmdMode">Formato das coordenadas</label><select class="form-select tp-game-hub__select" id="cacaCmdMode" onchange="onCacaCmdMode()"><option value="plain">Sem prefixo · A1A4</option><option value="prefix">Com prefixo · cp A1A4</option><option value="emoji">Com emoji ao redor</option></select><div class="tp-game-hub__prefix-row" id="cacaPrefixRow" style="display:none"><label for="cacaPrefix">Prefixo</label><input type="text" class="form-control form-control-sm" id="cacaPrefix" value="cp"></div><p class="tp-game-hub__help">Esse formato também orienta as respostas na tela pública.</p></div>
+              <div class="tp-game-hub__subsection"><strong>Final da rodada</strong><label class="switch-row tp-game-hub__switch" for="cacaShowRanking"><input type="checkbox" role="switch" id="cacaShowRanking" checked><span class="switch" aria-hidden="true"></span><div><b>Mostrar ranking ao finalizar</b><small>Exibe o ranking quando a rodada terminar.</small></div></label></div>
+              <span id="cacaSaveStatus" class="tp-game-hub__save-status" role="status" aria-live="polite">Salvo automaticamente.</span>
+            </section>
+
+            <section class="nb-card tp-game-hub__card tp-caca-transmission" aria-labelledby="cacaTransmissionTitle">
+              <div class="tp-game-hub__card-head"><div><h2 id="cacaTransmissionTitle">Exibição na transmissão</h2><p>Configure a área segura para o formato da sua fonte no OBS ou TikTok Live Studio.</p></div></div>
+              <div class="tp-game-hub__field"><label for="cacaDisplayPreset">Formato da tela</label><select class="form-select tp-game-hub__select" id="cacaDisplayPreset" onchange="onCacaDisplayPreset()"><option value="vertical">TikTok vertical · 9:16</option><option value="landscape">Horizontal · 16:9</option><option value="custom">Personalizado</option></select></div>
+              <div class="tp-caca-safe-preview-head"><strong>Prévia da área útil</strong><span id="cacaDisplayRatio">9:16</span></div>
+              <div class="tp-caca-safe-preview-frame" id="cacaSafePreviewFrame" data-layout="vertical" aria-label="Prévia das margens de transmissão"><div class="tp-caca-safe-preview-area" id="cacaSafePreviewArea"><span>ÁREA DO JOGO</span></div></div>
+              <details class="tp-caca-safe-settings" id="cacaSafeSettings">
+                <summary>Margens seguras</summary>
+                <div class="tp-caca-safe-range-grid">
+                  <label for="cacaSafeTop">Superior <output id="cacaSafeTopValue">13%</output><input type="range" id="cacaSafeTop" min="0" max="35" step="1" value="13" oninput="onCacaDisplayMargin()"></label>
+                  <label for="cacaSafeBottom">Inferior <output id="cacaSafeBottomValue">22%</output><input type="range" id="cacaSafeBottom" min="0" max="35" step="1" value="22" oninput="onCacaDisplayMargin()"></label>
+                  <label for="cacaSafeLeft">Esquerda <output id="cacaSafeLeftValue">4%</output><input type="range" id="cacaSafeLeft" min="0" max="20" step="1" value="4" oninput="onCacaDisplayMargin()"></label>
+                  <label for="cacaSafeRight">Direita <output id="cacaSafeRightValue">4%</output><input type="range" id="cacaSafeRight" min="0" max="20" step="1" value="4" oninput="onCacaDisplayMargin()"></label>
+                </div>
+                <small>As margens são referências ajustáveis para sua composição de live, não medidas oficiais das plataformas.</small>
+              </details>
+            </section>
+
+            <section class="nb-card tp-game-hub__card" aria-labelledby="cacaDisplayTitle">
+              <div class="tp-game-hub__card-head"><h2 id="cacaDisplayTitle">Tela pública</h2></div>
+              <p class="tp-game-hub__description">Acesse ou compartilhe a tela do jogo.</p>
+              <div class="tp-game-hub__actions tp-game-hub__display-actions"><button type="button" class="btn btn-nb btn-primary tp-icon-action" onclick="cacaPublicAction(false)"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3h7v7M10 14 21 3M19 13v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h7"></path></svg>Abrir tela pública</button><button type="button" class="btn btn-nb btn-dark tp-icon-action" onclick="cacaPublicAction(true)"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>Copiar link</button></div>
+              <span id="cacaPublicStatus" class="tp-game-hub__save-status" role="status" aria-live="polite"></span>
+            </section>
+          </aside>
         </div>
       </div>
 
@@ -1171,6 +1186,43 @@
           </aside>
         </div>
       </div>
+
+        <section class="tab-page tp-quiz" id="tab-quiz" style="display:none" aria-label="Quiz Live">
+          <header class="tp-quiz-page-head"><div><span class="tp-quiz-eyebrow">JOGO INTERATIVO</span><h1>Quiz Live</h1><p>Configure perguntas, acompanhe respostas e controle a competição em tempo real.</p></div><div class="tp-quiz-tabs" role="tablist" aria-label="Seções do Quiz Live"><button type="button" role="tab" aria-selected="true" class="is-active" data-quiz-tab="control" onclick="switchQuizSection('control')">Controle</button><button type="button" role="tab" aria-selected="false" data-quiz-tab="settings" onclick="switchQuizSection('settings')">Configurações</button><button type="button" role="tab" aria-selected="false" data-quiz-tab="bank" onclick="switchQuizSection('bank')">Banco de perguntas</button><button type="button" role="tab" aria-selected="false" data-quiz-tab="history" onclick="switchQuizSection('history')">Histórico</button></div></header>
+          <p class="tp-quiz-notice" id="quizNotice" role="status" aria-live="polite"></p>
+          <div data-quiz-section="control" class="tp-quiz-section">
+            <section class="tp-quiz-share"><div><span class="tp-quiz-eyebrow">TELA PÚBLICA / OBS</span><h2>Quiz Live na transmissão</h2><p>Abra a fonte em uma janela ou copie o link público. A tela é somente leitura.</p><code id="quizPublicUrl">Conecte sua conta para gerar o link.</code></div><div class="tp-quiz-share-actions"><a class="tp-quiz-btn tp-quiz-btn-secondary" id="quizOpenPublic" href="#" target="_blank" rel="noopener" aria-disabled="true">Abrir tela pública ↗</a><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="copyQuizPublicLink()">Copiar link</button></div></section>
+            <div class="tp-quiz-live-banner"><span>LIVE</span><strong id="quizConnectionState">Verificando conexão</strong><span id="quizLatencyNote">O cronômetro usa a hora de recebimento dos comentários no servidor.</span></div>
+            <div class="tp-quiz-control-grid">
+              <article class="tp-quiz-panel tp-quiz-game-panel"><header><div><span class="tp-quiz-eyebrow">CONTROLE DA PARTIDA</span><h2 id="quizMatchTitle">Aguardando partida</h2></div><span class="tp-quiz-state" id="quizStateBadge">Aguardando</span></header><div class="tp-quiz-metrics"><div><small>PERGUNTA</small><strong id="quizQuestionProgress">—</strong></div><div><small>PARTICIPANTES</small><strong id="quizParticipants">0</strong></div><div><small>RESPOSTAS</small><strong id="quizResponses">0</strong></div><div><small>ACERTOS</small><strong id="quizCorrect">0</strong></div></div><div class="tp-quiz-question-card"><span id="quizQuestionTheme">Configure o Quiz e conecte a live</span><h3 id="quizQuestionPrompt">Sua próxima partida aparecerá aqui.</h3><div id="quizQuestionOptions" class="tp-quiz-answer-options"></div><div class="tp-quiz-answer-key" id="quizAnswerKey" hidden></div></div><div class="tp-quiz-progress"><div id="quizTimerBar"></div></div><div class="tp-quiz-timer-row"><span id="quizTimerLabel">—</span><span id="quizAnswerLatency">Respostas recebidas pelo servidor</span></div><div class="tp-quiz-controls"><button class="tp-quiz-btn tp-quiz-btn-primary" id="quizStartButton" type="button" onclick="quizAction('start')">Iniciar partida</button><button class="tp-quiz-btn tp-quiz-btn-secondary" id="quizPauseButton" type="button" onclick="quizAction('pause')" disabled>Pausar</button><button class="tp-quiz-btn tp-quiz-btn-secondary" id="quizResumeButton" type="button" onclick="quizAction('resume')" disabled>Retomar</button><button class="tp-quiz-btn tp-quiz-btn-secondary" id="quizRevealButton" type="button" onclick="quizAction('reveal')" disabled>Revelar resposta</button><button class="tp-quiz-btn tp-quiz-btn-secondary" id="quizNextButton" type="button" onclick="quizAction('next')" disabled>Próxima pergunta</button><button class="tp-quiz-btn tp-quiz-btn-danger" id="quizStopButton" type="button" onclick="quizAction('stop')" disabled>Encerrar partida</button></div></article>
+              <div class="tp-quiz-side-stack"><article class="tp-quiz-panel"><header><div><span class="tp-quiz-eyebrow">PARTICIPAÇÃO</span><h2>Respostas ao vivo</h2></div><span class="tp-quiz-count" id="quizAnswerCount">0</span></header><div id="quizBreakdown" class="tp-quiz-breakdown"><p>A distribuição das respostas aparece quando a pergunta começar.</p></div><div class="tp-quiz-divider"></div><h3 class="tp-quiz-subtitle">Últimas respostas</h3><div id="quizLatestAnswers" class="tp-quiz-latest"><p>Aguardando comentários válidos.</p></div></article><article class="tp-quiz-panel"><header><div><span class="tp-quiz-eyebrow">CLASSIFICAÇÃO</span><h2>Ranking da partida</h2></div><span class="tp-quiz-count" id="quizRankCount">0</span></header><div id="quizRanking" class="tp-quiz-ranking"><p>O ranking será formado pelas respostas da partida.</p></div></article><article class="tp-quiz-panel"><header><div><span class="tp-quiz-eyebrow">SEMANA ATUAL</span><h2>Ranking semanal</h2></div></header><div id="quizWeeklyRanking" class="tp-quiz-ranking"><p>Carregando classificação semanal…</p></div></article></div>
+            </div>
+          </div>
+          <div data-quiz-section="settings" class="tp-quiz-section" hidden>
+            <form id="quizConfigForm" class="tp-quiz-settings-form">
+              <section class="tp-quiz-panel tp-quiz-settings-block"><header><div><span class="tp-quiz-eyebrow">01 · FORMATO DA PARTIDA</span><h2>Escolha os temas e o tipo de desafio</h2></div></header>
+                <div class="tp-quiz-format-grid"><fieldset class="tp-quiz-field tp-quiz-theme-field"><legend>Temas <small>Escolha um ou mais; sem seleção, o modo misto usa todos.</small></legend><div class="tp-quiz-theme-actions"><button type="button" class="tp-quiz-inline-link" onclick="quizSelectAllThemes(true)">Selecionar todos</button><button type="button" class="tp-quiz-inline-link" onclick="quizSelectAllThemes(false)">Limpar seleção</button><span id="quizThemeCount" aria-live="polite">Todos os temas</span></div><div id="quizThemes" class="tp-quiz-check-grid tp-quiz-theme-grid"></div></fieldset>
+                  <div class="tp-quiz-format-options"><label class="tp-quiz-field">Origem das perguntas<select id="quizQuestionSource"><option value="all">Catálogo TikPlay + Minhas perguntas</option><option value="global">Somente catálogo TikPlay</option><option value="streamer">Somente minhas perguntas</option></select><small>A partida usa somente as origens e os filtros selecionados.</small></label><label class="tp-quiz-field">Dificuldade<select id="quizDifficulty"><option value="facil">Fácil</option><option value="medio">Médio</option><option value="dificil">Difícil</option><option value="misto">Misturado</option></select></label><label class="tp-quiz-field">Modo de resposta<select id="quizResponseMode"><option value="alternativas">Alternativas A–D</option><option value="calculo">Cálculo direto</option></select><small id="quizResponseModeHint">Cálculo direto exige que somente Matemática esteja marcada.</small></label>
+                    <fieldset class="tp-quiz-field tp-quiz-math-field" id="quizMathContentsField" hidden><legend>Conteúdos de Matemática</legend><div id="quizMathContents" class="tp-quiz-check-grid"></div></fieldset>
+                  </div>
+                </div>
+              </section>
+              <section class="tp-quiz-panel tp-quiz-settings-block"><header><div><span class="tp-quiz-eyebrow">02 · RITMO DA PARTIDA</span><h2>Defina duração e intervalo</h2></div></header><div class="tp-quiz-pace-grid"><label class="tp-quiz-field">Quantidade de perguntas<select id="quizQuestionCount"><option>5</option><option>10</option><option>15</option><option>20</option><option>30</option><option value="custom">Personalizada</option></select></label><label class="tp-quiz-field" id="quizCustomCountWrap" hidden>Quantidade personalizada<input type="number" id="quizCustomCount" min="1" max="100" value="10"></label><label class="tp-quiz-field">Tempo por pergunta<select id="quizQuestionTime"><option>10</option><option>15</option><option>20</option><option>30</option><option>45</option><option>60</option></select><small>segundos</small></label><label class="tp-quiz-field">Pausa entre perguntas<input type="number" id="quizPauseSeconds" min="0" max="300" value="5"><small>segundos</small></label></div></section>
+              <section class="tp-quiz-panel tp-quiz-settings-block"><header><div><span class="tp-quiz-eyebrow">03 · AUTOMAÇÕES E PONTUAÇÃO</span><h2>Comportamento durante a live</h2></div></header><div class="tp-quiz-toggles tp-quiz-toggle-list"><label><span><b>Avanço automático</b><small>Vai para a próxima pergunta após o intervalo.</small></span><input type="checkbox" id="quizAutoAdvance" role="switch"></label><label><span><b>Narrar perguntas</b><small>Usa a voz padrão configurada na sua conta TikPlay.</small></span><input type="checkbox" id="quizNarrate" role="switch"></label><label id="quizNarrateOptionsRow"><span><b>Narrar alternativas</b><small>Lê as opções depois do enunciado. Só funciona com a narração de perguntas ativa.</small></span><input type="checkbox" id="quizNarrateOptions" role="switch"></label><label><span><b>Mostrar ranking ao finalizar</b><small>Exibe os três primeiros na tela pública.</small></span><input type="checkbox" id="quizShowRanking" role="switch"></label><label><span><b>Bônus de velocidade</b><small>Premia os três primeiros acertos (+30, +20 e +10).</small></span><input type="checkbox" id="quizSpeedBonus" role="switch"></label></div></section>
+              <section class="tp-quiz-panel tp-quiz-settings-block"><header><div><span class="tp-quiz-eyebrow">04 · EXIBIÇÃO NA TRANSMISSÃO</span><h2>Áreas seguras da fonte</h2><p>Reserve espaço para que a interface do TikTok não cubra o Quiz.</p></div></header><div class="tp-quiz-safe-layout"><div class="tp-quiz-safe-controls"><label class="tp-quiz-field">Formato da transmissão<select id="quizSafePreset"><option value="tiktok">TikTok vertical</option><option value="horizontal">Horizontal</option><option value="custom">Personalizado</option></select></label><fieldset class="tp-quiz-field tp-quiz-safe-field" id="quizSafeCustomFields" hidden><legend>Margens personalizadas (%)</legend><div class="tp-quiz-safe-grid"><label>Topo<input type="number" id="quizSafeTop" min="0" max="40"></label><label>Base<input type="number" id="quizSafeBottom" min="0" max="40"></label><label>Esquerda<input type="number" id="quizSafeLeft" min="0" max="25"></label><label>Direita<input type="number" id="quizSafeRight" min="0" max="25"></label></div></fieldset></div><div class="tp-quiz-safe-preview" aria-label="Prévia da área segura"><div class="tp-quiz-safe-preview-frame"><span>Área do Quiz</span></div><small id="quizSafePreviewLabel">TikTok vertical · topo 12% · base 18%</small></div></div></section>
+              <div class="tp-quiz-settings-save"><button class="tp-quiz-btn tp-quiz-btn-primary" type="submit">Salvar configurações</button><span class="tp-quiz-save-status" id="quizConfigStatus" role="status" aria-live="polite">Alterações salvas</span></div>
+            </form>
+          </div>
+          <div data-quiz-section="bank" class="tp-quiz-section" hidden>
+            <section class="tp-quiz-panel tp-quiz-bank"><header class="tp-quiz-bank-header"><div><span class="tp-quiz-eyebrow">BIBLIOTECA</span><h2>Banco de perguntas</h2><p>Consulte o catálogo TikPlay e gerencie perguntas exclusivas da sua conta.</p></div><div class="tp-quiz-bank-actions"><button type="button" class="tp-quiz-btn tp-quiz-btn-primary" id="quizNewQuestionButton" onclick="openQuizQuestionEditor()">+ Nova pergunta</button><details class="tp-quiz-import" id="quizImportDetails"><summary class="tp-quiz-btn tp-quiz-btn-secondary">Importar perguntas</summary><div class="tp-quiz-import-panel"><p>Uma pergunta por linha: <code>tema|dificuldade|pergunta|A|B|C|D|resposta|explicação</code></p><textarea id="quizImportText" rows="5" placeholder="historia|facil|Em que ano foi proclamada a Independência do Brasil?|1808|1822|1888|1889|B|A Independência foi proclamada em 1822."></textarea><button type="button" class="tp-quiz-btn tp-quiz-btn-secondary" onclick="previewQuizQuestions()">Pré-visualizar importação</button><span id="quizImportStatus" role="status"></span><div id="quizImportPreview"></div></div></details></div></header>
+              <div class="tp-quiz-bank-scopes" role="tablist" aria-label="Origem das perguntas"><button type="button" class="is-active" data-bank-scope="global" onclick="setQuizBankScope('global')">Catálogo TikPlay</button><button type="button" data-bank-scope="streamer" onclick="setQuizBankScope('streamer')">Minhas perguntas</button><span id="quizBankScopeHelp">Perguntas oficiais, disponíveis para todos os streamers.</span></div><div class="tp-quiz-bank-stats"><article><small>Total de perguntas</small><strong id="quizBankCount">—</strong></article><article><small>Disponíveis</small><strong id="quizBankAvailable">—</strong></article><article><small>Desativadas</small><strong id="quizBankInactive">—</strong></article><article class="tp-quiz-bank-theme-stat"><small>Por tema</small><div id="quizBankThemes">Carregando…</div></article></div>
+              <div class="tp-quiz-bank-toolbar"><label>Buscar enunciado<input type="search" id="quizQuestionSearch" placeholder="Digite parte da pergunta"></label><label>Tema<select id="quizQuestionThemeFilter"><option value="">Todos os temas</option></select></label><label>Dificuldade<select id="quizQuestionDifficultyFilter"><option value="">Todas</option><option value="facil">Fácil</option><option value="medio">Média</option><option value="dificil">Difícil</option></select></label><label>Tipo<select id="quizQuestionModeFilter"><option value="">Todos</option><option value="alternativas">Alternativas</option><option value="calculo">Cálculo direto</option></select></label><label>Status<select id="quizQuestionFilter"><option value="">Todos</option><option value="active">Ativas</option><option value="inactive">Desativadas</option></select></label><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="clearQuizQuestionFilters()">Limpar filtros</button></div>
+              <div class="tp-quiz-question-table-wrap"><div class="tp-quiz-question-table-head" aria-hidden="true"><span>Pergunta</span><span>Tema</span><span>Dificuldade</span><span>Tipo</span><span>Origem · usos</span><span>Ações</span></div><div id="quizQuestionList" class="tp-quiz-question-list" aria-live="polite"><p>Carregando perguntas…</p></div></div><div id="quizQuestionUsage" class="tp-quiz-usage" aria-live="polite"></div><div class="tp-quiz-pagination"><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizQuestionPage(-1)">Anterior</button><span id="quizQuestionPage">Página 1</span><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizQuestionPage(1)">Próxima</button></div>
+            </section>
+            <dialog id="quizQuestionEditor" class="tp-quiz-editor-dialog"><form id="quizQuestionForm"><header><div><span class="tp-quiz-eyebrow">EDITOR DE PERGUNTA</span><h2 id="quizQuestionEditorTitle">Nova pergunta</h2></div><button type="button" class="tp-quiz-dialog-close" aria-label="Fechar editor" onclick="closeQuizQuestionEditor()">×</button></header><input type="hidden" id="quizEditId"><div class="tp-quiz-form-grid"><label class="tp-quiz-field">Tema<select id="quizQuestionThemeSelect" required></select></label><label class="tp-quiz-field">Dificuldade<select id="quizQuestionDifficulty"><option value="facil">Fácil</option><option value="medio">Média</option><option value="dificil">Difícil</option></select></label><label class="tp-quiz-field">Tipo<select id="quizQuestionMode"><option value="alternativas">Alternativas A–D</option><option value="calculo" disabled>Cálculo direto (indisponível para perguntas próprias)</option></select><small>O cadastro de perguntas próprias aceita alternativas A–D.</small></label><label class="tp-quiz-field tp-quiz-field-full">Enunciado<textarea id="quizQuestionText" maxlength="500" rows="3" required></textarea></label><label class="tp-quiz-field">Alternativa A<input id="quizOptionA" maxlength="180" required></label><label class="tp-quiz-field">Alternativa B<input id="quizOptionB" maxlength="180" required></label><label class="tp-quiz-field">Alternativa C<input id="quizOptionC" maxlength="180" required></label><label class="tp-quiz-field">Alternativa D<input id="quizOptionD" maxlength="180" required></label><label class="tp-quiz-field">Resposta correta<select id="quizQuestionAnswer"><option>A</option><option>B</option><option>C</option><option>D</option></select></label><label class="tp-quiz-field tp-quiz-field-full">Explicação opcional<textarea id="quizQuestionExplanation" maxlength="500" rows="2"></textarea></label></div><p class="tp-quiz-save-status" id="quizQuestionStatus" role="status" aria-live="polite"></p><footer><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="resetQuizQuestionForm();closeQuizQuestionEditor()">Cancelar</button><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="resetQuizQuestionForm()">Limpar</button><button class="tp-quiz-btn tp-quiz-btn-primary" id="quizQuestionSave" type="submit">Salvar pergunta</button></footer></form></dialog>
+          </div>
+          <div data-quiz-section="history" class="tp-quiz-section" hidden><section class="tp-quiz-panel"><header><div><span class="tp-quiz-eyebrow">PARTIDAS ENCERRADAS</span><h2>Histórico do Quiz</h2><p>Resultados, participação e classificação de cada partida.</p></div></header><div id="quizHistoryList" class="tp-quiz-history-list"><p>Carregando histórico…</p></div><div class="tp-quiz-pagination"><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizHistoryPage(-1)">Anterior</button><span id="quizHistoryPage">Página 1</span><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizHistoryPage(1)">Próxima</button></div><div id="quizHistoryDetail" class="tp-quiz-history-detail"></div></section></div>
+        </section>
 
         <div class="tab-page" id="tab-corda" style="display:none">
           <iframe id="cordaPanel" title="Controles do CORDA" style="width:100%;height:var(--tp-corda-panel-height);border:0" loading="lazy"></iframe>
@@ -1463,6 +1515,7 @@
         </div>
         <div id="logSettings" class="tp-log-settings" hidden aria-label="Categorias exibidas nos logs">
           <div class="tp-log-settings-title">Exibir categorias</div>
+          <label class="tp-log-game-filter"><input type="checkbox" data-log-only-caca onchange="setLogCategories(true)"> Somente Caça Palavras</label>
           <label><input type="checkbox" data-log-category="connection" checked onchange="setLogCategories(true)"> Conexão</label>
           <label><input type="checkbox" data-log-category="chat" checked onchange="setLogCategories(true)"> Chat</label>
           <label><input type="checkbox" data-log-category="game" checked onchange="setLogCategories(true)"> Eventos dos jogos</label>
@@ -1503,6 +1556,7 @@ function switchTab(tab) {
   const btn = document.querySelector(`.tab-btn[data-tab="${menuTab}"]`);
   if (btn && btn.style.display === "none") return;
   document.body.classList.toggle('tp-sounds-active', menuTab === 'sons');
+  document.body.classList.toggle('tp-quiz-active', menuTab === 'quiz');
   if(menuTab === 'games') updateWordModelSummary();
   document.querySelectorAll(".tab-page").forEach((el) => (el.style.display = "none"));
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === menuTab));
@@ -1520,6 +1574,7 @@ function switchTab(tab) {
   if (menuTab === "caca") { loadCacaState(); }
   if (menuTab === "bichinho") { vpetLoadState(); }
   if (menuTab === "tres") { tresLoadState(); }
+  if (menuTab === "quiz") quizInit();
   if (menuTab === "duelo") { loadDueloState(); }
   if (menuTab === "corda") { const frame = document.getElementById("cordaPanel"); if (!frame.getAttribute("src")) frame.src = "/corda?control=1"; }
   if (menuTab === "support") nativeSupportInit();
@@ -1552,6 +1607,8 @@ async function nativeSupportInit() {
   const supportToken = localStorage.getItem('token');
   const statusNames = {novo:'Novo',em_atendimento:'Em atendimento',aguardando_usuario:'Aguardando você',resolvido:'Resolvido',fechado:'Fechado',recebida:'Recebida',em_avaliacao:'Em avaliação',planejada:'Planejada',em_desenvolvimento:'Em desenvolvimento',implementada:'Implementada',nao_planejada:'Não planejada'};
   const typeNames = {nova_funcionalidade:'Nova funcionalidade',melhoria:'Melhoria',novo_jogo:'Novo jogo',melhoria_jogo:'Melhoria de jogo',interface:'Interface',integracao:'Integração',outro:'Outro'};
+  let nativeSupportGameNames = {};
+  const nativeSupportGameName = (id, fallback='Geral') => id ? (nativeSupportGameNames[id] || id) : fallback;
   const escText = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const api = async (url, options = {}, auth = true) => {
     const headers = new Headers(options.headers || {});
@@ -1579,6 +1636,7 @@ async function nativeSupportInit() {
   };
   async function loadGameOptions() {
     const data=await api('/api/support/games');
+    nativeSupportGameNames={...(data.game_labels||{}),...(data.games||[]).reduce((labels,game)=>{labels[game.slug]=game.name;return labels;},{})};
     ['TicketGame','SuggestionGame'].forEach(id=>{const select=$(id);if(select)select.innerHTML='<option value="">Nenhum / Geral</option>'+(data.games||[]).map(g=>`<option value="${escText(g.slug)}">${escText(g.name)}</option>`).join('');});
     setOptions('TicketStatus',data.ticket_statuses,statusNames,'Todos'); setOptions('SuggestionStatus',data.suggestion_statuses,statusNames,'Todos');
     setOptions('SuggestionType',data.suggestion_types,typeNames,'Selecione um tipo');
@@ -1624,19 +1682,19 @@ async function nativeSupportInit() {
   async function loadTickets() {
     notice('TicketNotice','Carregando chamados…');
     try { const status=$('TicketStatus').value, data=await api('/api/support/tickets?page=1&pageSize=100'+(status?`&status=${encodeURIComponent(status)}`:''));const items=data.items||[];
-      $('TicketList').innerHTML=items.length?items.map(t=>`<button type="button" class="tp-help-row" data-native-ticket="${escText(t.id)}"><span><strong>#${escText(t.id)} · ${escText(t.subject)}</strong><p>${escText(t.category_name||'Geral')} · ${escText(t.game_id||'Sem jogo')} · Atualizado ${escText(date(t.updated_at))}</p></span>${statusBadge(t.status)}</button>`).join(''):'<div class="tp-help-panel"><h2>Nenhum chamado encontrado</h2><p class="tp-help-muted">Se precisar, abra um novo chamado.</p></div>';
+      $('TicketList').innerHTML=items.length?items.map(t=>`<button type="button" class="tp-help-row" data-native-ticket="${escText(t.id)}"><span><strong>#${escText(t.id)} · ${escText(t.subject)}</strong><p>${escText(t.category_name||'Geral')} · ${escText(nativeSupportGameName(t.game_id,'Sem jogo'))} · Atualizado ${escText(date(t.updated_at))}</p></span>${statusBadge(t.status)}</button>`).join(''):'<div class="tp-help-panel"><h2>Nenhum chamado encontrado</h2><p class="tp-help-muted">Se precisar, abra um novo chamado.</p></div>';
       $('OpenTicketCount').textContent=`${items.filter(t=>!['resolvido','fechado'].includes(t.status)).length} em aberto`;notice('TicketNotice','');
     }catch(e){notice('TicketNotice',e.message,true);}
   }
   async function loadSuggestions() {
     notice('SuggestionNotice','Carregando sugestões…');
     try {const status=$('SuggestionStatus').value,data=await api('/api/support/suggestions?page=1&pageSize=100'+(status?`&status=${encodeURIComponent(status)}`:'')),items=data.items||[];
-      $('SuggestionList').innerHTML=items.length?items.map(s=>`<article class="tp-help-row"><span><strong>${escText(s.title)}</strong><p>${escText(typeNames[s.type]||s.type)} · ${escText(s.game_id||'Geral')} · ${escText(date(s.created_at))}</p></span>${statusBadge(s.status)}</article>`).join(''):'<div class="tp-help-panel"><h2>Nenhuma sugestão enviada</h2><p class="tp-help-muted">Sua próxima ideia pode ajudar a melhorar o TikPlay.</p></div>';notice('SuggestionNotice','');
+      $('SuggestionList').innerHTML=items.length?items.map(s=>`<article class="tp-help-row"><span><strong>${escText(s.title)}</strong><p>${escText(typeNames[s.type]||s.type)} · ${escText(nativeSupportGameName(s.game_id))} · ${escText(date(s.created_at))}</p></span>${statusBadge(s.status)}</article>`).join(''):'<div class="tp-help-panel"><h2>Nenhuma sugestão enviada</h2><p class="tp-help-muted">Sua próxima ideia pode ajudar a melhorar o TikPlay.</p></div>';notice('SuggestionNotice','');
     }catch(e){notice('SuggestionNotice',e.message,true);}
   }
   async function loadTicket(id) {
     nativeSupportTicketId=id; nativeSupportAttachmentUrls.forEach(URL.revokeObjectURL);nativeSupportAttachmentUrls=[];$('TicketTitle').textContent=`Chamado #${id}`;$('TicketMeta').textContent='Carregando…';
-    try {const data=await api(`/api/support/tickets/${encodeURIComponent(id)}`),t=data.ticket;$('TicketTitle').textContent=`#${t.id} · ${t.subject}`;$('TicketMeta').textContent=`${t.category_name||'Geral'} · ${t.game_id||'Sem jogo'} · ${statusNames[t.status]||t.status} · Aberto ${date(t.created_at)}`;
+    try {const data=await api(`/api/support/tickets/${encodeURIComponent(id)}`),t=data.ticket;$('TicketTitle').textContent=`#${t.id} · ${t.subject}`;$('TicketMeta').textContent=`${t.category_name||'Geral'} · ${nativeSupportGameName(t.game_id,'Sem jogo')} · ${statusNames[t.status]||t.status} · Aberto ${date(t.created_at)}`;
       $('TicketMessages').innerHTML=(data.messages||[]).map(m=>`<article class="tp-help-message" data-sender="${escText(m.sender_type)}"><strong>${m.sender_type==='staff'?'Suporte TikPlay':'Você'}</strong><time class="tp-help-muted tp-help-time">${escText(date(m.created_at))}</time><p>${escText(m.message)}</p></article>`).join('')||'<p class="tp-help-muted">Nenhuma mensagem neste chamado.</p>';$('TicketMessages').scrollTop=$('TicketMessages').scrollHeight;
       const closed=t.status==='fechado';$('TicketReplyForm').hidden=closed;$('CloseTicket').hidden=closed;$('TicketAttachments').replaceChildren();
       for(const item of data.attachments||[]){try{const r=await fetch(`/api/support/attachments/${encodeURIComponent(item.id)}`,{headers:{Authorization:`Bearer ${supportToken}`}});if(!r.ok)continue;const url=URL.createObjectURL(await r.blob());nativeSupportAttachmentUrls.push(url);const img=document.createElement('img');img.src=url;img.alt=`Anexo do chamado #${t.id}`;$('TicketAttachments').append(img);}catch(_){}}
@@ -1713,15 +1771,19 @@ function connectLogs() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if(msg.active_gift !== undefined) renderWordCurrentGift(msg.active_gift);
-    if (msg.type === "log") {
+    if (msg.type === "chat") {
+      addIncomingChatLog(msg);
+    } else if (msg.type === "log") {
       addLog(msg);
       if (msg.event === "tts.provider.failed" && msg.details && msg.details.operation === "test")
-        document.getElementById("elevenChatStatus").textContent = "A prévia não pôde ser gerada. Confira o limite e a configuração da voz.";
+        setElevenChatStatus("Não foi possível reproduzir esta voz agora. Tente outra voz ou verifique seu saldo de TikCoins.", "error");
     } else if (msg.type === "status") {
       updateStatus(msg);
     } else if (msg.type === "word") {
       const el = document.getElementById("currentWord");
       if (el) el.textContent = msg.word || "-";
+    } else if (msg.type === "quiz_update") {
+      renderQuizState(msg.state || {});
     } else if (msg.type === "riddle_ready" || (msg.type === "roulette_drop" && msg.reward_type === "riddle_ready")) {
       panelRiddleAudioUrl = msg.audio_url || "";
       renderPanelRiddle(msg.text, msg.stage);
@@ -2370,10 +2432,79 @@ function setStatus(ok, text) {
 
 // ---------------- Caça Palavras ----------------
 let cacaState = { active: false, board: [], words: [], found_count: 0, total: 0, finished: false };
+let cacaRecentEvents = [];
+let cacaConfigHydrated = false;
 
 function onCacaCmdMode() {
   const mode = document.getElementById("cacaCmdMode").value;
   document.getElementById("cacaPrefixRow").style.display = mode === "prefix" ? "flex" : "none";
+}
+
+function onCacaAnswerMode() {
+  const mode = document.getElementById("cacaAnswerMode").value;
+  document.getElementById("cacaCoordinateOptions").hidden = mode === "word";
+}
+
+const CACA_DISPLAY_PRESETS = {
+  vertical: { safe_top: 13, safe_bottom: 22, safe_left: 4, safe_right: 4 },
+  landscape: { safe_top: 8, safe_bottom: 12, safe_left: 5, safe_right: 5 },
+};
+const CACA_DISPLAY_FIELDS = ["safe_top", "safe_bottom", "safe_left", "safe_right"];
+function cacaDisplayRead() {
+  const preset = document.getElementById("cacaDisplayPreset").value;
+  const inputs = { safe_top: "cacaSafeTop", safe_bottom: "cacaSafeBottom", safe_left: "cacaSafeLeft", safe_right: "cacaSafeRight" };
+  return { preset, ...Object.fromEntries(CACA_DISPLAY_FIELDS.map(key => [key, Number(document.getElementById(inputs[key]).value)])) };
+}
+
+function renderCacaDisplayPreview() {
+  const display = cacaDisplayRead();
+  const frame = document.getElementById("cacaSafePreviewFrame");
+  if (!frame) return;
+  frame.dataset.layout = display.preset;
+  document.getElementById("cacaDisplayRatio").textContent = display.preset === "landscape" ? "16:9" : display.preset === "custom" ? "Personalizado" : "9:16";
+  const area = document.getElementById("cacaSafePreviewArea");
+  area.style.setProperty("--caca-preview-top", `${display.safe_top}%`);
+  area.style.setProperty("--caca-preview-bottom", `${display.safe_bottom}%`);
+  area.style.setProperty("--caca-preview-left", `${display.safe_left}%`);
+  area.style.setProperty("--caca-preview-right", `${display.safe_right}%`);
+  for (const key of CACA_DISPLAY_FIELDS) {
+    const suffix = key.slice("safe_".length);
+    const fieldId = `cacaSafe${suffix[0].toUpperCase()}${suffix.slice(1)}`;
+    const output = document.getElementById(`${fieldId}Value`);
+    if (output) output.value = `${display[key]}%`;
+  }
+}
+
+function onCacaDisplayPreset() {
+  const preset = document.getElementById("cacaDisplayPreset").value;
+  document.getElementById("cacaSafeSettings").open = preset === "custom";
+  if (CACA_DISPLAY_PRESETS[preset]) {
+    for (const [key, value] of Object.entries(CACA_DISPLAY_PRESETS[preset])) {
+      const suffix = key.slice("safe_".length);
+      document.getElementById(`cacaSafe${suffix[0].toUpperCase()}${suffix.slice(1)}`).value = String(value);
+    }
+  }
+  renderCacaDisplayPreview();
+  if (cacaConfigHydrated) cacaSaver.schedule(500);
+}
+
+function onCacaDisplayMargin() {
+  document.getElementById("cacaDisplayPreset").value = "custom";
+  document.getElementById("cacaSafeSettings").open = true;
+  renderCacaDisplayPreview();
+  if (cacaConfigHydrated) cacaSaver.schedule(500);
+}
+
+function loadCacaDisplay(display) {
+  const value = display && typeof display === "object" ? display : { preset: "vertical", ...CACA_DISPLAY_PRESETS.vertical };
+  document.getElementById("cacaDisplayPreset").value = ["vertical", "landscape", "custom"].includes(value.preset) ? value.preset : "vertical";
+  document.getElementById("cacaSafeSettings").open = value.preset === "custom";
+  for (const key of CACA_DISPLAY_FIELDS) {
+    const suffix = key.slice("safe_".length);
+    const fallback = CACA_DISPLAY_PRESETS[value.preset]?.[key] ?? CACA_DISPLAY_PRESETS.vertical[key];
+    document.getElementById(`cacaSafe${suffix[0].toUpperCase()}${suffix.slice(1)}`).value = String(Number.isFinite(Number(value[key])) ? value[key] : fallback);
+  }
+  renderCacaDisplayPreview();
 }
 
 async function saveCacaConfig() { return cacaSaver.flush(); }
@@ -2389,6 +2520,7 @@ async function startCaca() {
     });
     if (data.success) {
       addLog("[CaçaPalavras] Nova grade gerada!");
+      cacaRecentEvents = [];
       cacaState = { ...cacaState, active: true, finished: false, found_count: 0 };
       renderCaca();
       loadCacaState();
@@ -2404,6 +2536,7 @@ async function stopCaca() {
     const data = await apiFetch("/api/caca/stop", { method: "POST" });
     if (data.success) {
       addLog("[CaçaPalavras] Jogo encerrado.");
+      cacaRecentEvents = [];
       cacaState = { ...cacaState, active: false, finished: false };
       renderCaca();
       loadCacaState();
@@ -2427,22 +2560,80 @@ async function revealCaca(start, end) {
 function renderCacaWords() {
   const list = document.getElementById("cacaWordsList");
   if (!list) return;
-  if (!cacaState.active || !cacaState.words || !cacaState.words.length) {
-    list.textContent = "Nenhuma grade ativa.";
+  const words = Array.isArray(cacaState.words) ? cacaState.words : [];
+  const wordsCount = document.getElementById("cacaWordsCount");
+  if (wordsCount) wordsCount.textContent = words.length;
+  if (!words.length) {
+    list.innerHTML = '<div class="tp-game-hub__empty">Inicie uma rodada para ver as palavras.</div>';
+    renderCacaRecentHits();
     return;
   }
-  const chips = cacaState.words.map(w => {
-    const done = w.found ? "✅" : "";
-    const who = w.found && (w.finder_nickname || w.finder) ? ` — ${esc(w.finder_nickname || w.finder)}` : "";
-    return `<button class="btn btn-nb btn-tiny mb-1 me-1 ${w.found ? "btn-success" : "btn-dark"}" onclick="revealCaca('${esc(w.start)}','${esc(w.end)}')" title="Revelar manualmente">${esc(w.text)} ${esc(w.start)}:${esc(w.end)} ${done}${who}</button>`;
+  list.innerHTML = words.map(w => {
+    const found = Boolean(w.found);
+    const manual = found && String(w.finder || "").toLowerCase() === "streamer";
+    const state = found ? (manual ? "manual" : "found") : "pending";
+    const label = found ? (manual ? "Revelada manualmente" : "Encontrada") : "Não encontrada";
+    const finder = found && !manual && (w.finder_nickname || w.finder) ? `<span class="tp-game-hub__word-finder">Por ${esc(w.finder_nickname || w.finder)}</span>` : "";
+    const manualLabel = manual ? '<span class="tp-game-hub__word-finder">Pelo streamer</span>' : "";
+    const disabled = found || !cacaState.active ? "disabled" : "";
+    return `<button type="button" class="tp-game-hub__word-card" data-state="${state}" onclick="revealCaca('${esc(w.start)}','${esc(w.end)}')" title="Revelar manualmente" aria-label="Revelar ${esc(w.text)}, coordenadas ${esc(w.start)} a ${esc(w.end)}" ${disabled}><span class="tp-game-hub__word-main"><strong>${esc(w.text)}</strong><span>${esc(w.start)}:${esc(w.end)}</span></span><span class="tp-game-hub__word-meta"><span class="tp-game-hub__word-status">${label}</span>${finder}${manualLabel}</span></button>`;
   }).join("");
-  list.innerHTML = chips || "Nenhuma palavra.";
+  renderCacaRecentHits();
+}
+
+function renderCacaRecentHits() {
+  const list = document.getElementById("cacaRecentHits");
+  if (!list) return;
+  const count = document.getElementById("cacaRecentCount");
+  const eventHits = cacaRecentEvents.slice(-5).reverse();
+  const fallbackHits = (Array.isArray(cacaState.words) ? cacaState.words : []).filter(word => word.found).slice(-5).reverse().map(word => ({
+    id: word.id, word: word.text, nickname: word.finder_nickname || word.finder || "Participante", finder: word.finder
+  }));
+  const hits = eventHits.length ? eventHits : fallbackHits;
+  if (count) count.textContent = hits.length;
+  if (!hits.length) {
+    list.innerHTML = '<div class="tp-game-hub__empty">Os acertos aparecem aqui durante a rodada.</div>';
+    return;
+  }
+  list.innerHTML = hits.map(hit => {
+    const manual = String(hit.finder || "").toLowerCase() === "streamer";
+    return `<div class="tp-game-hub__recent-hit" data-state="${manual ? "manual" : "found"}"><span class="tp-game-hub__recent-mark" aria-hidden="true">${manual ? "✦" : "✓"}</span><span class="tp-game-hub__recent-copy"><strong>${esc(hit.word || "Palavra")}</strong><small>${manual ? "Revelada pelo streamer" : `Encontrada por ${esc(hit.nickname || hit.finder || "Participante")}`}</small></span></div>`;
+  }).join("");
 }
 
 function renderCaca() {
-  document.getElementById("cacaFound").textContent = cacaState.found_count || 0;
-  document.getElementById("cacaTotal").textContent = cacaState.total || 0;
-  document.getElementById("cacaStatus").textContent = cacaState.active ? (cacaState.finished ? "Finalizado" : "Ativo") : "Parado";
+  const countInput = document.getElementById("cacaCount");
+  const selectedCount = Math.max(4, Math.min(16, parseInt(countInput?.value, 10) || 10));
+  if (countInput) countInput.value = String(selectedCount);
+  const hasRound = Boolean(cacaState.active || cacaState.finished || (Array.isArray(cacaState.words) && cacaState.words.length));
+  const total = hasRound ? (Number(cacaState.total) || 0) : selectedCount;
+  const found = Number(cacaState.found_count) || 0;
+  const phase = cacaState.active ? "running" : cacaState.finished ? "finished" : "stopped";
+  const operation = document.getElementById("cacaOperationCard");
+  if (operation) operation.dataset.state = phase;
+  const foundNode = document.getElementById("cacaFound");
+  const totalNode = document.getElementById("cacaTotal");
+  const statusNode = document.getElementById("cacaStatus");
+  const progress = document.getElementById("cacaProgressTrack");
+  const progressFill = document.getElementById("cacaProgressFill");
+  const progressCaption = document.getElementById("cacaProgressCaption");
+  const countDisplay = document.getElementById("cacaCountDisplay");
+  const countStepper = countDisplay?.parentElement;
+  const countDown = document.getElementById("cacaCountDown");
+  const countUp = document.getElementById("cacaCountUp");
+  if (countDisplay) countDisplay.textContent = String(selectedCount);
+  if (countStepper) countStepper.setAttribute("aria-valuenow", String(selectedCount));
+  if (countDown) countDown.disabled = selectedCount <= 4;
+  if (countUp) countUp.disabled = selectedCount >= 16;
+  if (foundNode) foundNode.textContent = found;
+  if (totalNode) totalNode.textContent = total;
+  if (statusNode) statusNode.textContent = phase === "running" ? "Em andamento" : phase === "finished" ? "Finalizada" : "Parada";
+  if (progress) {
+    progress.setAttribute("aria-valuemax", String(total));
+    progress.setAttribute("aria-valuenow", String(Math.min(found, total)));
+  }
+  if (progressFill) progressFill.style.width = `${total ? Math.min(100, found / total * 100) : 0}%`;
+  if (progressCaption) progressCaption.textContent = `${found} de ${total}`;
   const bs = document.getElementById("btnCacaStart");
   const bp = document.getElementById("btnCacaStop");
   if (bs) bs.disabled = (!!cacaState.active && !cacaState.finished) || window.lastStateStr !== "connected";
@@ -2450,10 +2641,55 @@ function renderCaca() {
   renderCacaWords();
 }
 
+function adjustCacaCount(delta) {
+  const countInput = document.getElementById("cacaCount");
+  if (!countInput) return;
+  const current = parseInt(countInput.value, 10) || 10;
+  countInput.value = String(Math.max(4, Math.min(16, current + Number(delta || 0))));
+  renderCaca();
+}
+
 function handleCacaMsg(msg) {
   if (msg.type === "caca_state") { cacaState = msg; renderCaca(); }
-  else if (msg.type === "caca_word_found") { renderCacaWords(); }
+  else if (msg.type === "caca_word_found") {
+    cacaRecentEvents.push({ id: msg.id, word: msg.word, finder: msg.finder, nickname: msg.nickname });
+    cacaRecentEvents = cacaRecentEvents.slice(-5);
+    renderCacaWords();
+  }
   else if (msg.type === "caca_finished") { cacaState.finished = true; renderCaca(); }
+}
+
+
+async function cacaPublicAction(copy) {
+  const status = document.getElementById("cacaPublicStatus");
+  const opened = copy ? null : window.open("about:blank", "_blank");
+  if (opened) opened.opener = null;
+  try {
+    let url = technicalSourceCache.get("/caca-palavra");
+    if (!url) {
+      const data = await apiFetch("/api/game/room-link", { method: "POST" });
+      if (!data.success) throw Error(data.error || "Link público indisponível.");
+      url = new URL("/caca-palavra", location.origin);
+      url.searchParams.set("room", data.room);
+      url.searchParams.set("tk", data.token);
+      technicalSourceCache.set("/caca-palavra", url);
+    }
+    refreshTechnicalPreviews();
+    if (copy) {
+      await navigator.clipboard.writeText(url.href);
+      status.textContent = "Link público copiado.";
+    } else if (opened) {
+      opened.location.href = url.href;
+      status.textContent = "Tela pública aberta.";
+    } else throw Error("Permita abrir a tela pública no navegador.");
+  } catch (error) {
+    if (opened) opened.close();
+    status.textContent = error.message;
+  }
+}
+
+function cacaSourceAction(button, copy) {
+  return technicalSourceAction(button.closest("[data-source-path]"), copy);
 }
 
 async function loadCacaState() {
@@ -2461,6 +2697,20 @@ async function loadCacaState() {
     const data = await apiFetch("/api/caca/state");
     if (data.success) { cacaState = data; renderCaca(); }
   } catch (e) {}
+}
+
+async function loadCacaConfig() {
+  try {
+    const data = await apiFetch("/api/caca/config");
+    if (!data.success) return;
+    document.getElementById("cacaAnswerMode").value = ["word", "coordinates", "both"].includes(data.answer_mode) ? data.answer_mode : "both";
+    document.getElementById("cacaShowRanking").checked = data.show_ranking !== false;
+    document.getElementById("cacaPrefix").value = data.prefix || "";
+    document.getElementById("cacaCmdMode").value = data.prefix ? "prefix" : "plain";
+    loadCacaDisplay(data.display);
+    onCacaAnswerMode();
+    onCacaCmdMode();
+  } catch (e) {} finally { cacaConfigHydrated = true; }
 }
 
 // ---------------- Bichinho Virtual ----------------
@@ -2888,9 +3138,10 @@ function updateStatus(s) {
 
 const LOG_GAMES = ["palavra", "batalha", "caca", "bichinho", "tres", "duelo", "corda"];
 
-function normLogGame(g) {
+function normLogGame(g, text = "") {
   const s = String(g || "").toLowerCase();
   if (s === "vpet") return "bichinho";
+  if ((!s || s === "sistema") && /^\s*\[(?:caca\s*palavras|cacapalavras|caca)\]/i.test(String(text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return "caca";
   return s || "sistema";
 }
 
@@ -2900,7 +3151,7 @@ function classifyLog(text, game, level, category) {
   if (["connection", "chat", "game", "notice", "error", "diagnostic", "system"].includes(explicitCategory)) return explicitCategory;
   if (categoryAliases[explicitCategory]) return categoryAliases[explicitCategory];
   const normalizedLevel = String(level || "").toLowerCase();
-  const normalizedGame = normLogGame(game);
+  const normalizedGame = normLogGame(game, text);
   const content = String(text || "").toLowerCase();
   if (["err", "error", "critical"].includes(normalizedLevel) || /\berro\b|\berror\b|\[stderr\]/i.test(text)) return "error";
   if (["debug", "trace"].includes(normalizedLevel) || /\[diag(?:nostico)?\]|\[debug\]|\[trace\]/i.test(text)) return "diagnostic";
@@ -2924,14 +3175,32 @@ function normalizeLogLevel(level) {
   return ["debug", "info", "warning", "error", "critical", "unknown"].includes(value) ? value : "unknown";
 }
 
+let lastDisplayedChatLogAt = 0;
+function addIncomingChatLog(msg) {
+  const now = Date.now();
+  if (!msg || !msg.text || now - lastDisplayedChatLogAt < 1000) return;
+  lastDisplayedChatLogAt = now;
+  addLog({
+    text: String(msg.text).slice(0, 130),
+    game: cacaState?.active ? "caca" : "chat",
+    category: "chat",
+    level: "info",
+    source: "python",
+  });
+}
+
 function setLogCategories(persist = false) {
   const area = document.getElementById("logArea");
   const settings = document.getElementById("logSettings");
   if (!area || !settings) return;
   const enabled = new Set(Array.from(settings.querySelectorAll("[data-log-category]:checked"), (input) => input.dataset.logCategory));
+  const cacaOnly = !!settings.querySelector("[data-log-only-caca]")?.checked;
   if (persist) try { localStorage.setItem("tikplay.logCategories", JSON.stringify([...enabled])); } catch (e) {}
+  if (persist) try { localStorage.setItem("tikplay.logOnlyCaca", String(cacaOnly)); } catch (e) {}
   Array.from(area.querySelectorAll(".log-line")).forEach((line) => {
-    line.style.display = enabled.has(line.dataset.category) ? "" : "none";
+    const categoryMatches = enabled.has(line.dataset.category);
+    const gameMatches = !cacaOnly || line.dataset.game === "caca";
+    line.style.display = categoryMatches && gameMatches ? "" : "none";
   });
 }
 
@@ -2952,7 +3221,7 @@ function addLog(item) {
   const game = (item && item.game) || "sistema";
   const rawLevel = (item && item.level) || "";
   const level = normalizeLogLevel(rawLevel);
-  line.dataset.game = normLogGame(game);
+  line.dataset.game = normLogGame(game, text);
   line.dataset.level = level;
   line.dataset.category = classifyLog(text, game, rawLevel, item && item.category);
   line.dataset.event = (item && typeof item === "object" && item.event) || "legacy.message";
@@ -3387,8 +3656,11 @@ const ttsRateInput = document.getElementById("ttsRate");
 const ttsRateLabel = document.getElementById("ttsRateLabel");
 const ttsVolumeInput = document.getElementById("ttsVolume");
 const ttsVolumeLabel = document.getElementById("ttsVolumeLabel");
+const ttsVolumeBoostInput = document.getElementById("ttsVolumeBoost");
+const ttsVolumeBoostLabel = document.getElementById("ttsVolumeBoostLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
 const chatNarrEnabledInput = document.getElementById("chatNarrEnabled");
+const chatNarrStatus = document.getElementById("chatNarrStatus");
 const chatNarrModeInput = document.getElementById("chatNarrMode");
 const chatNarrCharInput = document.getElementById("chatNarrChar");
 let currentTtsVoice = "";
@@ -3978,9 +4250,14 @@ const tresSaver = createPreferenceSaver({ statusId: "tresSaveStatus", ready: () 
     stage_points: [1,2,3].map(n => Number(document.getElementById("tresPts"+n).value)) }); },
   send: config => preferencePost("/api/tres/config", { config }), commit: snapshot => { savedTresConfig = snapshot; }
 });
-const cacaSaver = createPreferenceSaver({ statusId: "cacaSaveStatus",
-  read: () => ({ prefix: document.getElementById("cacaCmdMode").value === "prefix" ? (document.getElementById("cacaPrefix").value.trim() || "cp") : "" }),
-  send: body => preferencePost("/api/caca/config", body), success: "Aplicado ao serviço em execução. Não persiste ao reiniciar; emoji e coordenadas usam o mesmo prefixo vazio."
+const cacaSaver = createPreferenceSaver({ statusId: "cacaSaveStatus", ready: () => cacaConfigHydrated,
+  read: () => ({
+    answer_mode: document.getElementById("cacaAnswerMode").value,
+    show_ranking: document.getElementById("cacaShowRanking").checked,
+    prefix: document.getElementById("cacaCmdMode").value === "prefix" ? (document.getElementById("cacaPrefix").value.trim() || "cp") : "",
+    display: cacaDisplayRead()
+  }),
+  send: body => preferencePost("/api/caca/config", body), success: "Configuração salva automaticamente."
 });
 let dueloRequestChain = Promise.resolve();
 function dueloRequest(path, body) {
@@ -4052,8 +4329,13 @@ function applySettingsUI(settings) {
   const volume = Math.max(0, Math.min(3, Number(s.tts_volume ?? 1)));
   ttsVolumeInput.value = ttsVolumeGainToPosition(volume);
   if (ttsVolumeLabel) ttsVolumeLabel.textContent = `${Math.round(volume * 100)}%`;
+  if (ttsVolumeBoostInput) ttsVolumeBoostInput.value = Math.max(100, Math.min(300, Math.round(volume * 100)));
+  if (ttsVolumeBoostLabel) ttsVolumeBoostLabel.textContent = `${Math.round(volume * 100)}%`;
+  const volumeAdvanced = document.getElementById("ttsVolumeAdvanced");
+  if (volumeAdvanced) volumeAdvanced.open = volume > 1;
   currentTtsVoice = s.tts_voice || "";
   chatNarrEnabledInput.checked = !!s.chat_narr_enabled;
+  syncChatNarrationStatus();
   chatNarrModeInput.value = ["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all";
   chatNarrCharInput.value = (s.chat_narr_char || "#").slice(0, 1);
   const autoRoundEl = document.getElementById("autoRound");
@@ -4079,22 +4361,33 @@ function onTtsRateChanged(el) {
 }
 
 function getTtsVolumeGain() {
+  const boost = Number(ttsVolumeBoostInput && ttsVolumeBoostInput.value);
+  if (Number.isFinite(boost) && boost > 100) return Math.max(1, Math.min(3, boost / 100));
   const position = Number(ttsVolumeInput && ttsVolumeInput.value);
-  const value = Math.max(0, Math.min(100, Number.isFinite(position) ? position : 50));
-  return value <= 50 ? value / 50 : 1 + ((value - 50) / 50) * 2;
+  return Math.max(0, Math.min(1, Number.isFinite(position) ? position / 100 : 1));
 }
 
 function ttsVolumeGainToPosition(gain) {
   const value = Math.max(0, Math.min(3, Number(gain) || 0));
-  return value <= 1 ? value * 50 : 50 + ((value - 1) / 2) * 50;
+  return Math.min(100, value * 100);
 }
 
 function onTtsVolumeChanged(el) {
+  if (el === ttsVolumeInput && ttsVolumeBoostInput) ttsVolumeBoostInput.value = "100";
+  if (el === ttsVolumeBoostInput && ttsVolumeInput) ttsVolumeInput.value = "100";
   if (ttsVolumeLabel) ttsVolumeLabel.textContent = `${Math.round(getTtsVolumeGain() * 100)}%`;
+  if (ttsVolumeBoostLabel) ttsVolumeBoostLabel.textContent = `${Math.round(getTtsVolumeGain() * 100)}%`;
   if (ttsPlaybackGainNode && connectAudioContext) {
     ttsPlaybackGainNode.gain.setTargetAtTime(getTtsVolumeGain(), connectAudioContext.currentTime, 0.015);
   }
   onSettingsChanged();
+}
+
+function syncChatNarrationStatus() {
+  if (!chatNarrStatus || !chatNarrEnabledInput) return;
+  const enabled = chatNarrEnabledInput.checked;
+  chatNarrStatus.textContent = enabled ? "Narração ativada" : "Narração desativada";
+  chatNarrStatus.classList.toggle("is-active", enabled);
 }
 
 
@@ -4194,7 +4487,7 @@ async function loadElevenChatVoices() {
     await loadVoiceCredits();
     renderSelectedVoiceCreditRate();
     status.textContent = data.catalog_error ? "Não foi possível carregar parte do catálogo de vozes. Recarregue o painel para tentar novamente."
-      : !elevenChatVoices.length && Number(data.unpriced_voice_count) > 0 ? "Vozes aprovadas aguardam a definição de uma tarifa em créditos pelo administrador."
+      : !elevenChatVoices.length && Number(data.unpriced_voice_count) > 0 ? "Vozes aprovadas aguardam a definição de uma tarifa em TikCoins pelo administrador."
       : !elevenChatVoices.length ? "Nenhuma voz foi liberada pelo administrador no momento."
       : selectedIndex >= 0 || !data.voice_id ? "" : "A voz selecionada não está mais disponível. Escolha outra voz ou volte à voz padrão.";
   } catch {
@@ -4211,15 +4504,17 @@ async function loadVoiceCredits() {
   const status = document.getElementById("voiceCreditStatus");
   try {
     const data = await apiFetch("/api/tts/credits");
-    if (!data?.success) throw new Error("Falha ao carregar créditos");
+    if (!data?.success) throw new Error("Falha ao carregar TikCoins");
     balance.textContent = Number(data.balance || 0).toLocaleString("pt-BR");
-    elevenCreditCosts = new Map((data.model_costs || []).map(item => [item.model_id, Number(item.credits_per_100_chars)]));
+    elevenCreditCosts = new Map((data.model_costs || []).map(item => [item.model_id, Number(item.credits_per_150_chars)]));
     packages.replaceChildren();
-    (data.packages || []).forEach(item => {
+    const availablePackages = data.packages || [];
+    packages.hidden = availablePackages.length === 0;
+    availablePackages.forEach(item => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "btn btn-dark btn-small voice-credit-package";
-      button.textContent = `${Number(item.credits).toLocaleString("pt-BR")} créditos · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      button.textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
       button.addEventListener("click", () => buyTtsCreditPackage(item.id, button));
       packages.append(button);
     });
@@ -4230,22 +4525,22 @@ async function loadVoiceCredits() {
       const row = document.createElement("div"); row.className = "voice-credit-history-row";
       const label = document.createElement("span");
       const units = Number(item.unit_count || 0);
-      label.textContent = item.kind === "purchase" ? "Compra"
+      label.textContent = item.kind === "purchase" ? "Compra de TikCoins"
         : item.kind === "usage" ? `Narração${units > 0 ? ` · ${units} caractere${units === 1 ? "" : "s"}` : ""}`
-        : "Ajuste";
+        : "Ajuste de saldo";
       const amount = document.createElement("strong");
       const value = Number(item.amount || 0);
-      amount.textContent = `${value > 0 ? "+" : ""}${value.toLocaleString("pt-BR")}`;
+      amount.textContent = `${value > 0 ? "+" : ""}${value.toLocaleString("pt-BR")} TikCoins`;
       amount.dataset.kind = value > 0 ? "credit" : "debit";
       row.append(label, amount); history.append(row);
     });
     const paymentResult = new URLSearchParams(location.search).get("tts-credit");
     if (paymentResult === "success") status.textContent = "Pagamento recebido. O saldo será atualizado após a confirmação do Mercado Pago.";
-    else if (paymentResult === "pending") status.textContent = "Pagamento pendente. Os créditos entram após a confirmação.";
+    else if (paymentResult === "pending") status.textContent = "Pagamento pendente. Os TikCoins entram após a confirmação.";
     else if (paymentResult === "failure") status.textContent = "Pagamento não concluído. Você pode tentar novamente.";
-    else status.textContent = data.packages?.length ? "Os créditos são adicionados após a confirmação do pagamento." : "Nenhum pacote disponível no momento.";
+    else status.textContent = availablePackages.length ? "Os TikCoins são adicionados após a confirmação do pagamento." : "";
   } catch {
-    status.textContent = "Não foi possível carregar o saldo e os pacotes de créditos.";
+    status.textContent = "Não foi possível carregar o saldo e os pacotes de TikCoins.";
   }
 }
 
@@ -4254,13 +4549,8 @@ function renderSelectedVoiceCreditRate() {
   const modelId = option?.dataset.modelId;
   const rate = modelId ? elevenCreditCosts.get(modelId) : null;
   document.getElementById("voiceCreditRate").textContent = modelId
-    ? rate > 0 ? `Esta voz consome ${rate} crédito${rate === 1 ? "" : "s"} a cada 100 caracteres.` : "Esta voz ainda não está disponível para uso com créditos."
-    : "A voz padrão do painel não consome créditos da carteira.";
-  const average = document.getElementById("voiceCreditAverage");
-  average.textContent = modelId && rate > 0
-    ? `Referência média: 75 caracteres (metade do limite de 150) ≈ ${Math.max(1, Math.ceil(75 * rate / 100))} crédito${Math.max(1, Math.ceil(75 * rate / 100)) === 1 ? "" : "s"}. A voz narra até 150 caracteres por mensagem.`
-    : modelId ? "Esta voz ainda não está disponível para uso com créditos."
-      : "A voz padrão do painel não consome créditos.";
+    ? rate > 0 ? `${rate} TikCoins a cada 150 caracteres · consumo arredondado por mensagem` : "Esta voz ainda não está disponível para uso com TikCoins."
+    : "A voz padrão não consome TikCoins.";
   renderVoiceCreditEstimate();
 }
 
@@ -4279,17 +4569,17 @@ function renderVoiceCreditEstimate() {
     : input.value).trim();
   const characters = [...spokenText].slice(0, 150).length;
   if (!input.value.trim()) {
-    output.textContent = "A voz adicional narra até 150 caracteres; hashtags finais de emoção não são faladas nem cobradas.";
+    output.textContent = "Digite uma mensagem para ver a estimativa.";
   } else if (!modelId) {
-    output.textContent = "A voz padrão do painel não consome créditos.";
+    output.textContent = "A voz padrão do painel não consome TikCoins.";
   } else if (!(rate > 0)) {
-    output.textContent = "Esta voz ainda não está disponível para uso com créditos.";
+    output.textContent = "Esta voz ainda não está disponível para uso com TikCoins.";
   } else if (!characters) {
     output.textContent = "A hashtag de emoção não é falada nem cobrada.";
   } else {
-    const cost = Math.max(1, Math.ceil(characters * rate / 100));
+    const cost = Math.max(1, Math.ceil(characters * rate / 150));
     const truncated = [...spokenText].length > 150;
-    output.textContent = `Estimativa: ${cost} crédito${cost === 1 ? "" : "s"} para ${characters} caractere${characters === 1 ? "" : "s"}${truncated ? " (limite de 150 aplicado)" : ""}.`;
+    output.textContent = `≈ ${cost} TikCoin${cost === 1 ? "" : "s"}${truncated ? " · limite de 150 caracteres aplicado" : ""}`;
   }
 }
 
@@ -4310,7 +4600,6 @@ async function buyTtsCreditPackage(packageId, button) {
 
 async function saveElevenChatVoice() {
   const select = document.getElementById("elevenChatVoice");
-  const status = document.getElementById("elevenChatStatus");
   const previousSelection = select.dataset.saved || "";
   const option = select.selectedOptions[0];
   const voice = option?.dataset.voiceId || "";
@@ -4326,7 +4615,7 @@ async function saveElevenChatVoice() {
     await loadElevenChatVoices();
   } catch {
     select.value = previousSelection;
-    status.textContent = "Não foi possível salvar a voz. Tente novamente.";
+    setElevenChatStatus("Não foi possível salvar a voz. Tente novamente.", "error");
   } finally {
     select.disabled = elevenChatVoices.length === 0;
     document.getElementById("elevenChatTest").disabled = !select.selectedOptions[0]?.dataset.voiceId;
@@ -4335,15 +4624,21 @@ async function saveElevenChatVoice() {
 
 async function testElevenChatVoice() {
   const button = document.getElementById("elevenChatTest");
-  const status = document.getElementById("elevenChatStatus");
   button.disabled = true;
   try {
     const result = await apiFetch("/api/tts/elevenlabs/test", { method: "POST" });
     if (!result.success) throw new Error("Falha no teste.");
-    status.textContent = "Gerando prévia da voz. O áudio será reproduzido quando estiver pronto.";
+    setElevenChatStatus("Gerando prévia da voz. O áudio será reproduzido quando estiver pronto.", "info");
     setTimeout(loadVoiceCredits, 5000);
-  } catch { status.textContent = "Não foi possível iniciar a prévia. Confira o limite e a disponibilidade da voz."; }
+  } catch { setElevenChatStatus("Não foi possível reproduzir esta voz agora. Tente outra voz ou verifique seu saldo de TikCoins.", "error"); }
   finally { button.disabled = false; }
+}
+function setElevenChatStatus(message, state = "") {
+  const status = document.getElementById("elevenChatStatus");
+  if (!status) return;
+  status.textContent = message;
+  if (state) status.dataset.state = state;
+  else delete status.dataset.state;
 }
 window.addEventListener("focus", () => {
   if (!document.getElementById("elevenUsageCard")?.hidden) loadVoiceCredits();
@@ -4393,6 +4688,7 @@ function isSettingsDirty() {
 }
 
 function onSettingsChanged() {
+  syncChatNarrationStatus();
   syncBossGiftConfig();
   settingsDirty = isSettingsDirty();
   updateSettingsSaveState();
@@ -4506,10 +4802,8 @@ async function loadMe() {
     document.getElementById("roleBadge").style.display = user.role === "admin" ? "" : "none";
     if (user.role === "admin") document.getElementById("btnAdmin").style.display = "";
     roomCode = user.room_code || "";
-    document.getElementById('streamerRoom').textContent = roomCode || 'Sem sala';
     document.getElementById('streamerProfile').textContent = user.tiktok_username ? '@' + user.tiktok_username.replace(/^@/,'') : 'Não configurado';
     document.getElementById('streamerDashUser').textContent = user.tiktok_username ? '@' + user.tiktok_username.replace(/^@/,'') : 'Nenhuma conta configurada';
-    document.getElementById("roomBadge").textContent = "Sala: " + roomCode;
     if (user.tiktok_username) document.getElementById("username").value = user.tiktok_username;
     if (user.has_api_key) {
       document.getElementById("apiKey").placeholder = "•••••••• (salva)";
@@ -4522,11 +4816,192 @@ async function loadMe() {
   } catch {}
 }
 
-const FEATURE_TABS = ["connect", "sons", "overlays", "games", "batalha", "caca", "bichinho", "tres", "duelo"];
+let quizReady = false, quizLoading = null, quizCurrentState = null, quizQuestionPage = 1, quizQuestionPages = 1, quizHistoryPage = 1, quizHistoryPages = 1, quizQuestionRows = [], quizQuestionAllRows = [], quizQuestionCacheLoaded = false, quizQuestionSearchTimer = null, quizTimerHandle = null, quizLoadedThemes = [], quizQuestionBankScope = 'global', quizImportPreviewData = null;
+const QUIZ_MATH_CONTENTS = [
+  ["adicao_subtracao","Adição e subtração"],["multiplicacao_divisao","Multiplicação e divisão"],["porcentagem","Porcentagem"],
+  ["potenciacao","Potenciação"],["raiz_quadrada","Raiz quadrada"],["equacoes","Equações simples"],
+  ["expressoes","Expressões numéricas"],["sequencias","Sequências lógicas"],["problemas","Problemas matemáticos"]
+];
+function quizNotice(message, error=false) { const el=document.getElementById('quizNotice'); if(!el)return; el.textContent=message||''; el.classList.toggle('is-error',!!error); }
+async function quizApi(path, options={}) {
+  const response=await fetch(path,{...options,headers:{...(options.headers||{}),Authorization:'Bearer '+token,...(options.body?{'Content-Type':'application/json'}:{})}});
+  const data=await response.json().catch(()=>({success:false,error:'Resposta inválida do servidor.'}));
+  if(response.status===401){logout();throw new Error('Sua sessão expirou.');}
+  if(!response.ok||data.success===false)throw new Error(data.error||`Falha HTTP ${response.status}`);
+  return data;
+}
+function switchQuizSection(section) {
+  document.querySelectorAll('[data-quiz-section]').forEach(el=>el.hidden=el.dataset.quizSection!==section);
+  document.querySelectorAll('[data-quiz-tab]').forEach(el=>{const active=el.dataset.quizTab===section;el.classList.toggle('is-active',active);el.setAttribute('aria-selected',String(active));});
+  if(section==='bank'){setQuizBankScope(quizQuestionBankScope);loadQuizQuestions(1);}
+  if(section==='history')loadQuizHistory(1);
+}
+function updateQuizPublicLink() {
+  const url=roomCode?`${location.origin}/quiz-live?room=${encodeURIComponent(roomCode)}`:'';
+  const text=document.getElementById('quizPublicUrl'),link=document.getElementById('quizOpenPublic');
+  if(text)text.textContent=url||'Conecte sua conta para gerar o link.';
+  if(link){link.href=url||'#';link.setAttribute('aria-disabled',String(!url));}
+}
+async function copyQuizPublicLink(){
+  updateQuizPublicLink();const value=document.getElementById('quizPublicUrl').textContent;
+  if(!value.startsWith('http')){quizNotice('Não foi possível gerar o link público.',true);return;}
+  try{await navigator.clipboard.writeText(value);quizNotice('Link público do Quiz copiado.');}catch{quizNotice('O navegador bloqueou a cópia do link.',true);}
+}
+function renderQuizChoices(hostId,items,selectedIds,namePrefix) {
+  const host=document.getElementById(hostId);if(!host)return;
+  host.innerHTML=items.map(([id,label])=>`<label><input type="checkbox" name="${namePrefix}" value="${esc(id)}" ${selectedIds.includes(id)?'checked':''}>${namePrefix==='quiz-theme'?'<span class="tp-quiz-choice-mark" aria-hidden="true"></span>':''}<span>${esc(label)}</span></label>`).join('');
+}
+function quizSelectAllThemes(select){document.querySelectorAll('input[name="quiz-theme"]').forEach(input=>input.checked=select);quizSyncMathControls();quizMarkConfigDirty();}
+function quizUpdateThemeCount(){const checked=document.querySelectorAll('input[name="quiz-theme"]:checked').length,total=document.querySelectorAll('input[name="quiz-theme"]').length,el=document.getElementById('quizThemeCount');if(el)el.textContent=checked?`${checked} tema${checked===1?'':'s'} selecionado${checked===1?'':'s'}`:`Todos os temas (${total})`;}
+function quizSafePresetFor(safe){if(Number(safe.top??12)===12&&Number(safe.bottom??18)===18&&Number(safe.left??5)===5&&Number(safe.right??5)===5)return'tiktok';if(Number(safe.top??12)===5&&Number(safe.bottom??18)===5&&Number(safe.left??5)===5&&Number(safe.right??5)===5)return'horizontal';return'custom';}
+function quizUpdateSafePreview(){const preset=document.getElementById('quizSafePreset').value,safe={top:Number(document.getElementById('quizSafeTop').value)||0,bottom:Number(document.getElementById('quizSafeBottom').value)||0,left:Number(document.getElementById('quizSafeLeft').value)||0,right:Number(document.getElementById('quizSafeRight').value)||0};document.getElementById('quizSafeCustomFields').hidden=preset!=='custom';const frame=document.querySelector('.tp-quiz-safe-preview-frame');if(frame){frame.classList.toggle('is-horizontal',preset==='horizontal');frame.style.setProperty('--safe-top',`${Math.min(40,safe.top)}%`);frame.style.setProperty('--safe-bottom',`${Math.min(40,safe.bottom)}%`);frame.style.setProperty('--safe-left',`${Math.min(25,safe.left)}%`);frame.style.setProperty('--safe-right',`${Math.min(25,safe.right)}%`);}const label=preset==='tiktok'?'TikTok vertical':preset==='horizontal'?'Horizontal':'Personalizado';document.getElementById('quizSafePreviewLabel').textContent=`${label} · topo ${safe.top}% · base ${safe.bottom}% · laterais ${safe.left}% / ${safe.right}%`;}
+function quizSetSafePreset(preset){if(preset==='tiktok'){document.getElementById('quizSafeTop').value=12;document.getElementById('quizSafeBottom').value=18;document.getElementById('quizSafeLeft').value=5;document.getElementById('quizSafeRight').value=5;}else if(preset==='horizontal'){document.getElementById('quizSafeTop').value=5;document.getElementById('quizSafeBottom').value=5;document.getElementById('quizSafeLeft').value=5;document.getElementById('quizSafeRight').value=5;}quizUpdateSafePreview();}
+function setQuizConfigForm(config={}) {
+  renderQuizChoices('quizThemes',quizLoadedThemes.map(x=>[x.id,x.label]),config.themes||[],'quiz-theme');
+  renderQuizChoices('quizMathContents',QUIZ_MATH_CONTENTS,config.math_contents||QUIZ_MATH_CONTENTS.map(x=>x[0]),'quiz-math-content');
+  const count=Number(config.question_count)||10,select=document.getElementById('quizQuestionCount');
+  select.value=[5,10,15,20,30].includes(count)?String(count):'custom';
+  document.getElementById('quizCustomCountWrap').hidden=select.value!=='custom';document.getElementById('quizCustomCount').value=count;
+  document.getElementById('quizDifficulty').value=config.difficulty||'misto';
+  document.getElementById('quizResponseMode').value=config.response_mode||'alternativas';
+  document.getElementById('quizQuestionSource').value=config.question_source||'all';
+  document.getElementById('quizQuestionTime').value=String(config.question_time||20);
+  document.getElementById('quizPauseSeconds').value=Number(config.pause_seconds)||0;
+  document.getElementById('quizAutoAdvance').checked=config.auto_advance!==false;
+  document.getElementById('quizNarrate').checked=!!config.narrate;
+  document.getElementById('quizNarrateOptions').checked=config.narrate_options!==false;
+  document.getElementById('quizShowRanking').checked=config.show_ranking!==false;
+  document.getElementById('quizSpeedBonus').checked=config.speed_bonus!==false;
+  const safe=config.safe_margins||{};
+  document.getElementById('quizSafeTop').value=safe.top??12;document.getElementById('quizSafeBottom').value=safe.bottom??18;
+  document.getElementById('quizSafeLeft').value=safe.left??5;document.getElementById('quizSafeRight').value=safe.right??5;
+  document.getElementById('quizSafePreset').value=quizSafePresetFor(safe);quizUpdateSafePreview();quizUpdateThemeCount();
+  quizSyncMathControls();
+}
+function quizSyncMathControls(){
+  const selected=Array.from(document.querySelectorAll('input[name="quiz-theme"]:checked')).map(el=>el.value);
+  document.getElementById('quizMathContentsField').hidden=!selected.includes('matematica');
+  const mode=document.getElementById('quizResponseMode'),calc=mode.value==='calculo',canCalculate=selected.length===1&&selected[0]==='matematica';
+  Array.from(mode.options).find(option=>option.value==='calculo').disabled=!canCalculate;
+  if(calc&&!canCalculate)mode.value='alternativas';
+  document.getElementById('quizResponseModeHint').textContent=canCalculate?'Cálculo direto disponível para Matemática.':'Para usar cálculo direto, selecione somente Matemática.';
+  const narration=document.getElementById('quizNarrate'),options=document.getElementById('quizNarrateOptions'),row=document.getElementById('quizNarrateOptionsRow');options.disabled=!narration.checked;row.classList.toggle('is-disabled',!narration.checked);quizUpdateThemeCount();
+}
+async function quizInit(){
+  updateQuizPublicLink();
+  if(quizReady){loadQuizState();return;}
+  if(quizLoading)return quizLoading;
+  quizLoading=(async()=>{
+    try{
+      const data=await quizApi('/api/quiz-live/config');quizLoadedThemes=(data.themes||[]).map(item=>Array.isArray(item)?{id:item[0],label:item[1]}:item);setQuizConfigForm(data.config||{});
+      document.getElementById('quizQuestionThemeSelect').innerHTML=(quizLoadedThemes.filter(x=>x.id!=='matematica').map(x=>`<option value="${esc(x.id)}">${esc(x.label)}</option>`).join(''));
+      document.getElementById('quizQuestionThemeFilter').innerHTML='<option value="">Todos os temas</option>'+quizLoadedThemes.map(x=>`<option value="${esc(x.id)}">${esc(x.label)}</option>`).join('');
+      await Promise.all([loadQuizState(),loadQuizWeekly(),loadQuizHistory(1)]);
+      quizReady=true;quizNotice('Quiz Live pronto.');
+    }catch(error){quizNotice(error.message||'Não foi possível carregar o Quiz Live.',true);}
+    finally{quizLoading=null;}
+  })();
+  return quizLoading;
+}
+async function loadQuizState(){try{const state=await quizApi('/api/quiz-live/state');renderQuizState(state);}catch(error){quizNotice(error.message,true);}}
+function quizStateLabel(state){return({waiting:'Aguardando',preparing:'Preparando pergunta',question_active:'Pergunta ativa',answers_closed:'Respostas encerradas',interval:'Intervalo',paused:'Pausada',finished:'Finalizada'})[state]||'Aguardando';}
+function renderQuizState(state={}){
+  quizCurrentState=state;const q=state.question||null,config=state.config||{};
+  document.getElementById('quizStateBadge').textContent=quizStateLabel(state.state);
+  document.getElementById('quizMatchTitle').textContent=state.match_id?(state.state==='finished'?'Partida finalizada':'Partida em andamento'):'Aguardando partida';
+  document.getElementById('quizConnectionState').textContent=state.live_connected?'Live conectada':'Conecte à TikTok Live para iniciar';
+  document.getElementById('quizQuestionProgress').textContent=q?`${q.number}/${q.total}`:'—';
+  document.getElementById('quizParticipants').textContent=Number(state.participant_count||0).toLocaleString('pt-BR');
+  document.getElementById('quizResponses').textContent=Number(q?.answers_received||0).toLocaleString('pt-BR');
+  document.getElementById('quizCorrect').textContent=Number(q?.correct_count||0).toLocaleString('pt-BR');
+  document.getElementById('quizAnswerCount').textContent=Number(q?.answers_received||0).toLocaleString('pt-BR');
+  document.getElementById('quizRankCount').textContent=Number((state.all_ranking||[]).length).toLocaleString('pt-BR');
+  document.getElementById('quizQuestionTheme').textContent=q?`${(quizLoadedThemes.find(item=>item.id===q.theme)||{}).label||q.theme} · ${({facil:'Fácil',medio:'Médio',dificil:'Difícil'})[q.difficulty]||'Misto'}`:'Quiz Live';
+  document.getElementById('quizQuestionPrompt').textContent=q?.prompt||(state.state==='finished'?'A partida terminou. Veja o ranking final.':'Configure o Quiz e conecte a live para começar.');
+  const options=document.getElementById('quizQuestionOptions');
+  options.innerHTML=q&&q.mode==='alternativas'?Object.entries(q.options||{}).map(([key,value])=>`<div class="tp-quiz-answer-option ${q.revealed&&key===q.answer?'is-correct':''}"><b>${esc(key)}</b><span>${esc(value)}</span></div>`).join(''):q?'<span class="tp-quiz-direct-hint">Cálculo direto · participantes respondem com o resultado numérico.</span>':'';
+  const answer=document.getElementById('quizAnswerKey');answer.hidden=!(q&&q.revealed);answer.textContent=q?.revealed?`Resposta correta: ${q.mode==='alternativas'?`${q.answer} — ${(q.options||{})[q.answer]||''}`:q.answer_value||q.answer}${q.explanation?` · ${q.explanation}`:''}`:'';
+  renderQuizBreakdown(q);renderQuizLatest(q);renderQuizRanking('quizRanking',state.all_ranking||state.ranking||[]);renderQuizRanking('quizWeeklyRanking',state.weekly_ranking||[]);
+  const start=document.getElementById('quizStartButton'),pause=document.getElementById('quizPauseButton'),resume=document.getElementById('quizResumeButton'),reveal=document.getElementById('quizRevealButton'),next=document.getElementById('quizNextButton'),stop=document.getElementById('quizStopButton');
+  const active=!!state.match_id&&state.state!=='finished';start.disabled=active||!state.live_connected;pause.disabled=state.state!=='question_active';resume.disabled=state.state!=='paused';reveal.disabled=state.state!=='question_active';next.disabled=!['answers_closed','interval'].includes(state.state);stop.disabled=!active;
+  document.getElementById('quizTimerLabel').textContent=state.state==='preparing'?'A pergunta será narrada antes de abrir as respostas.':state.state==='paused'?'Cronômetro pausado.':q?.deadline?`${Math.ceil(Math.max(0,q.remaining_ms)/1000)}s restantes`:'Cronômetro inicia com a pergunta.';
+  document.getElementById('quizAnswerLatency').textContent=state.state==='question_active'?'A ordem considera o recebimento no servidor; atrasos de rede podem afetar bônus de velocidade.':'Respostas aceitas apenas durante a pergunta ativa.';
+  updateQuizTimer(q);
+}
+function renderQuizBreakdown(q){
+  const host=document.getElementById('quizBreakdown');if(!q){host.innerHTML='<p>As respostas aparecerão quando a pergunta começar.</p>';return;}
+  const choices=q.mode==='alternativas'?['A','B','C','D']:['Correta','Incorreta'],counts=q.mode==='alternativas'?(q.answer_counts||{}):{Correta:q.correct_count||0,Incorreta:Math.max(0,(q.answers_received||0)-(q.correct_count||0))},max=Math.max(1,...choices.map(key=>Number(counts[key])||0));
+  host.innerHTML=choices.map(key=>{const count=Number(counts[key])||0;return `<div class="tp-quiz-breakdown-row"><b>${esc(key)}</b><span class="tp-quiz-breakdown-track"><i style="width:${Math.round(count/max*100)}%"></i></span><span>${count}</span></div>`;}).join('');
+}
+function renderQuizLatest(q){const host=document.getElementById('quizLatestAnswers');const items=q?.latest_answers||[];host.innerHTML=items.length?items.map(item=>`<div class="tp-quiz-latest-row ${item.correct?'is-correct':''}"><span><b>${esc(item.nickname||item.username)}</b><small> · ${esc(item.username?`@${item.username}`:'')}</small></span><span class="tp-quiz-answer-label">${esc(item.answer)}${item.correct?' ✓':''}</span></div>`).join(''):'<p>Aguardando respostas válidas da pergunta.</p>';}
+function renderQuizRanking(hostId,items){const host=document.getElementById(hostId);host.innerHTML=items.length?items.slice(0,100).map((item,index)=>`<div class="tp-quiz-rank-row"><span><b class="tp-quiz-rank-position">${index+1}º</b> <b>${esc(item.nickname||item.username)}</b><small> · ${esc(item.username?`@${item.username}`:'')}</small></span><span><b>${Number(item.score||0).toLocaleString('pt-BR')} pts</b><small> · ${Number(item.correct_count||0)} acertos</small></span></div>`).join(''):'<p>Ninguém pontuou ainda.</p>';}
+function updateQuizTimer(q){
+  if(quizTimerHandle)clearInterval(quizTimerHandle);const bar=document.getElementById('quizTimerBar'),label=document.getElementById('quizTimerLabel');
+  if(!q?.deadline||quizCurrentState?.state!=='question_active'){bar.style.width='0%';bar.classList.remove('is-low');return;}
+  const total=Math.max(1,(Number(quizCurrentState.config?.question_time)||20)*1000),deadline=Number(q.deadline);
+  const tick=()=>{const remaining=Math.max(0,deadline-Date.now()),pct=Math.min(100,remaining/total*100);bar.style.width=`${pct}%`;bar.classList.toggle('is-low',remaining<5000);label.textContent=`${Math.ceil(remaining/1000)}s restantes`;if(!remaining){clearInterval(quizTimerHandle);quizTimerHandle=null;}};tick();quizTimerHandle=setInterval(tick,250);
+}
+async function quizAction(action){
+  const start=action==='start',url=start?'/api/quiz-live/start':`/api/quiz-live/${action}`;
+  if(action==='stop'&&!confirm('Encerrar esta partida e registrar o ranking atual?'))return;
+  try{if(start){if(document.getElementById('quizConfigStatus').textContent.includes('pendentes'))throw new Error('Salve as configurações antes de iniciar para validar a origem e a quantidade corretas.');quizNotice('Conferindo disponibilidade das perguntas…');const saved=await quizApi('/api/quiz-live/config');const availability=await quizApi('/api/quiz-live/availability',{method:'POST',body:JSON.stringify(saved.config||{})});if(!availability.sufficient)throw new Error(`Há ${Number(availability.available)} perguntas disponíveis para esta origem e filtros, mas a partida pede ${Number(availability.requested)}. Amplie os filtros ou cadastre mais perguntas.`);}quizNotice(start?'Preparando a partida…':'Aplicando ação…');const data=await quizApi(url,{method:'POST',body:'{}'});renderQuizState(data.state||{});quizNotice(start?'Partida iniciada.':'Ação aplicada.');}
+  catch(error){quizNotice(error.message,true);}
+}
+function quizConfigPayload(){
+  const countSelect=document.getElementById('quizQuestionCount'),count=countSelect.value==='custom'?Number(document.getElementById('quizCustomCount').value):Number(countSelect.value);
+  return{themes:Array.from(document.querySelectorAll('input[name="quiz-theme"]:checked')).map(input=>input.value),difficulty:document.getElementById('quizDifficulty').value,
+    response_mode:document.getElementById('quizResponseMode').value,question_source:document.getElementById('quizQuestionSource').value,question_count:count,question_time:Number(document.getElementById('quizQuestionTime').value),
+    pause_seconds:Number(document.getElementById('quizPauseSeconds').value),auto_advance:document.getElementById('quizAutoAdvance').checked,
+    narrate:document.getElementById('quizNarrate').checked,narrate_options:document.getElementById('quizNarrateOptions').checked,
+    show_ranking:document.getElementById('quizShowRanking').checked,speed_bonus:document.getElementById('quizSpeedBonus').checked,
+    math_contents:Array.from(document.querySelectorAll('input[name="quiz-math-content"]:checked')).map(input=>input.value),
+    safe_margins:{top:Number(document.getElementById('quizSafeTop').value),bottom:Number(document.getElementById('quizSafeBottom').value),left:Number(document.getElementById('quizSafeLeft').value),right:Number(document.getElementById('quizSafeRight').value)}};
+}
+function quizMarkConfigDirty(){const status=document.getElementById('quizConfigStatus');if(status){status.textContent='Há alterações pendentes';status.classList.remove('is-error');}}
+document.getElementById('quizQuestionCount').addEventListener('change',event=>document.getElementById('quizCustomCountWrap').hidden=event.target.value!=='custom');
+document.getElementById('quizThemes').addEventListener('change',quizSyncMathControls);
+document.getElementById('quizResponseMode').addEventListener('change',quizSyncMathControls);
+document.getElementById('quizConfigForm').addEventListener('input',quizMarkConfigDirty);
+document.getElementById('quizConfigForm').addEventListener('change',event=>{if(event.target.id==='quizSafePreset')quizSetSafePreset(event.target.value);if(event.target.id.startsWith('quizSafe'))quizUpdateSafePreview();quizMarkConfigDirty();});
+document.getElementById('quizNarrate').addEventListener('change',quizSyncMathControls);
+document.getElementById('quizConfigForm').addEventListener('submit',async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;document.getElementById('quizConfigStatus').textContent='Salvando…';try{const data=await quizApi('/api/quiz-live/config',{method:'PUT',body:JSON.stringify(quizConfigPayload())});setQuizConfigForm(data.config);document.getElementById('quizConfigStatus').textContent='Alterações salvas';}catch(error){document.getElementById('quizConfigStatus').textContent=error.message;document.getElementById('quizConfigStatus').classList.add('is-error');}finally{button.disabled=false;}});
+function resetQuizQuestionForm(){document.getElementById('quizQuestionForm').reset();document.getElementById('quizEditId').value='';document.getElementById('quizQuestionMode').value='alternativas';document.getElementById('quizQuestionSave').textContent='Salvar pergunta';document.getElementById('quizQuestionEditorTitle').textContent='Nova pergunta';document.getElementById('quizQuestionStatus').textContent='';document.getElementById('quizQuestionStatus').classList.remove('is-error');}
+function openQuizQuestionEditor(){if(quizQuestionBankScope!=='streamer'){quizNotice('Perguntas do Catálogo TikPlay são somente leitura.');return;}resetQuizQuestionForm();const dialog=document.getElementById('quizQuestionEditor');if(!dialog.open)dialog.showModal();document.getElementById('quizQuestionThemeSelect').focus();}
+function closeQuizQuestionEditor(){const dialog=document.getElementById('quizQuestionEditor');if(dialog.open)dialog.close();}
+function quizQuestionPayload(){return{theme:document.getElementById('quizQuestionThemeSelect').value,difficulty:document.getElementById('quizQuestionDifficulty').value,prompt:document.getElementById('quizQuestionText').value,
+  options:{A:document.getElementById('quizOptionA').value,B:document.getElementById('quizOptionB').value,C:document.getElementById('quizOptionC').value,D:document.getElementById('quizOptionD').value},answer:document.getElementById('quizQuestionAnswer').value,explanation:document.getElementById('quizQuestionExplanation').value};}
+document.getElementById('quizQuestionForm').addEventListener('submit',async event=>{event.preventDefault();const id=document.getElementById('quizEditId').value,button=document.getElementById('quizQuestionSave');button.disabled=true;document.getElementById('quizQuestionStatus').textContent='Salvando…';try{await quizApi(id?`/api/quiz-live/questions/${id}`:'/api/quiz-live/questions',{method:id?'PUT':'POST',body:JSON.stringify(quizQuestionPayload())});quizNotice(id?'Pergunta atualizada.':'Pergunta adicionada.');closeQuizQuestionEditor();resetQuizQuestionForm();quizQuestionCacheLoaded=false;await loadQuizQuestions(1);}catch(error){document.getElementById('quizQuestionStatus').textContent=error.message;document.getElementById('quizQuestionStatus').classList.add('is-error');}finally{button.disabled=false;}});
+function renderQuizQuestionList(data){
+  quizQuestionPages=Math.max(1,Math.ceil(data.total/25));document.getElementById('quizBankCount').textContent=Number(data.allTotal??data.total??0).toLocaleString('pt-BR');document.getElementById('quizBankAvailable').textContent=Number(data.available||0).toLocaleString('pt-BR');document.getElementById('quizBankInactive').textContent=Number(data.inactive||0).toLocaleString('pt-BR');
+  document.getElementById('quizQuestionPage').textContent=`Página ${data.page||1} de ${quizQuestionPages} · ${Number(data.total||0).toLocaleString('pt-BR')} perguntas`;
+  const host=document.getElementById('quizQuestionList');host.innerHTML=data.items.length?data.items.map(row=>{const theme=(quizLoadedThemes.find(x=>x.id===row.theme)||{}).label||row.theme,origin=row.editable?'Personalizada':'Catálogo TikPlay',answer=row.editable?`<p><b>Resposta correta:</b> ${esc(row.answer||'—')} · ${(row.options||{})[row.answer]||''}</p>`:'<p>Gabarito protegido pelo catálogo TikPlay.</p>',options=Object.entries(row.options||{}).map(([key,value])=>`<span><b>${esc(key)}.</b> ${esc(value)}</span>`).join('');return`<article class="tp-quiz-question-row"><details class="tp-quiz-question-detail"><summary><strong title="${esc(row.prompt)}">${esc(row.prompt)}</strong><small>Ver detalhes</small></summary><div class="tp-quiz-question-expanded"><p>${esc(row.prompt)}</p><div>${options}</div>${answer}${row.editable&&row.explanation?`<p><b>Explicação:</b> ${esc(row.explanation)}</p>`:''}</div></details><span>${esc(theme)}</span><span>${({facil:'Fácil',medio:'Média',dificil:'Difícil'})[row.difficulty]||esc(row.difficulty)}</span><span>${row.mode==='calculo'?'Cálculo':'Alternativas'}</span><span>${origin}<small>${Number(row.usage_count||0)} usos</small></span><span class="tp-quiz-question-actions">${row.editable?`<button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="editQuizQuestion(${Number(row.id)})">Editar</button>${row.status==='active'?`<button class="tp-quiz-btn tp-quiz-btn-danger" type="button" onclick="deactivateQuizQuestion(${Number(row.id)})">Desativar</button>`:''}`:''}<button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="showQuizQuestionUsage(${Number(row.id)})">Usos</button></span></article>`}).join(''):'<div class="tp-quiz-bank-empty"><strong>Nenhuma pergunta encontrada</strong><p>Ajuste os filtros ou cadastre uma nova pergunta.</p></div>';
+  const themes=data.themeCounts||{};document.getElementById('quizBankThemes').innerHTML=Object.entries(themes).map(([id,count])=>`<span>${esc((quizLoadedThemes.find(x=>x.id===id)||{}).label||id)} <b>${Number(count)}</b></span>`).join('')||'<span>Sem perguntas cadastradas.</span>';
+}
+function filterQuizQuestions(){const search=document.getElementById('quizQuestionSearch').value.trim().toLocaleLowerCase('pt-BR'),theme=document.getElementById('quizQuestionThemeFilter').value,difficulty=document.getElementById('quizQuestionDifficultyFilter').value,mode=document.getElementById('quizQuestionModeFilter').value,status=document.getElementById('quizQuestionFilter').value;return quizQuestionAllRows.filter(row=>row.scope===quizQuestionBankScope&&(!search||row.prompt.toLocaleLowerCase('pt-BR').includes(search))&&(!theme||row.theme===theme)&&(!difficulty||row.difficulty===difficulty)&&(!mode||(row.mode||'alternativas')===mode)&&(!status||row.status===status));}
+function setQuizBankScope(scope){quizQuestionBankScope=scope==='streamer'?'streamer':'global';document.querySelectorAll('[data-bank-scope]').forEach(button=>{const active=button.dataset.bankScope===quizQuestionBankScope;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});document.getElementById('quizNewQuestionButton').hidden=quizQuestionBankScope!=='streamer';document.getElementById('quizImportDetails').hidden=quizQuestionBankScope!=='streamer';document.getElementById('quizBankScopeHelp').textContent=quizQuestionBankScope==='global'?'Catálogo oficial administrado pelo Super Admin; perguntas somente para consulta.':'Perguntas privadas da sua conta, disponíveis somente nas suas partidas.';if(quizQuestionCacheLoaded)renderQuizQuestionPage(1);}
+function renderQuizQuestionPage(page=1){const filtered=filterQuizQuestions(),scoped=quizQuestionAllRows.filter(row=>row.scope===quizQuestionBankScope),themeCounts={};scoped.forEach(row=>themeCounts[row.theme]=(themeCounts[row.theme]||0)+1);quizQuestionPage=Math.min(Math.max(1,page),Math.max(1,Math.ceil(filtered.length/25)));const inactive=scoped.filter(row=>row.status==='inactive').length,available=scoped.filter(row=>row.status==='active').length;renderQuizQuestionList({items:filtered.slice((quizQuestionPage-1)*25,quizQuestionPage*25),total:filtered.length,allTotal:scoped.length,available,inactive,themeCounts,page:quizQuestionPage});}
+async function loadQuizQuestions(page=1){const host=document.getElementById('quizQuestionList');try{if(!quizQuestionCacheLoaded){host.innerHTML='<p>Carregando banco de perguntas…</p>';const first=await quizApi('/api/quiz-live/questions?page=1&page_size=100'),items=first.items||[];for(let start=2;start<=first.pages;start+=5){const pages=Array.from({length:Math.min(5,first.pages-start+1)},(_,index)=>start+index),batch=await Promise.all(pages.map(current=>quizApi(`/api/quiz-live/questions?page=${current}&page_size=100`)));batch.forEach(result=>items.push(...(result.items||[])));}quizQuestionAllRows=items;quizQuestionCacheLoaded=true;}renderQuizQuestionPage(page);}catch(error){host.innerHTML=`<div class="tp-quiz-bank-empty tp-quiz-bank-error"><strong>Não foi possível carregar as perguntas.</strong><p>${esc(error.message)}</p><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="quizQuestionCacheLoaded=false;loadQuizQuestions(1)">Tentar novamente</button></div>`;}}
+function changeQuizQuestionPage(delta){const next=quizQuestionPage+delta;if(next>0&&next<=quizQuestionPages)renderQuizQuestionPage(next);}
+function clearQuizQuestionFilters(){['quizQuestionSearch','quizQuestionThemeFilter','quizQuestionDifficultyFilter','quizQuestionModeFilter','quizQuestionFilter'].forEach(id=>document.getElementById(id).value='');loadQuizQuestions(1);}
+['quizQuestionThemeFilter','quizQuestionDifficultyFilter','quizQuestionModeFilter','quizQuestionFilter'].forEach(id=>document.getElementById(id).addEventListener('change',()=>renderQuizQuestionPage(1)));
+document.getElementById('quizQuestionSearch').addEventListener('input',()=>{clearTimeout(quizQuestionSearchTimer);quizQuestionSearchTimer=setTimeout(()=>renderQuizQuestionPage(1),180);});
+async function showQuizQuestionUsage(id){const host=document.getElementById('quizQuestionUsage');host.textContent='Carregando histórico…';try{const data=await quizApi(`/api/quiz-live/questions/${id}/usage`);host.innerHTML=`<strong>Utilizações desta pergunta: ${Number(data.total||0)}</strong>${data.items?.length?data.items.map(item=>`<div>${quizDate(item.used_at)} · Pergunta ${Number(item.question_no)} da partida · <button class="tp-quiz-inline-link" type="button" onclick="switchQuizSection('history');openQuizHistory('${esc(item.match_id)}')">Ver partida</button></div>`).join(''):'<p>Esta pergunta ainda não foi usada em uma partida.</p>'}`;}catch(error){host.textContent=error.message;}}
+function editQuizQuestion(id){const row=quizQuestionAllRows.find(item=>Number(item.id)===Number(id));if(!row||!row.editable||row.scope!=='streamer')return;document.getElementById('quizEditId').value=row.id;document.getElementById('quizQuestionThemeSelect').value=row.theme;document.getElementById('quizQuestionDifficulty').value=row.difficulty;document.getElementById('quizQuestionMode').value=row.mode||'alternativas';document.getElementById('quizQuestionText').value=row.prompt;for(const key of ['A','B','C','D'])document.getElementById('quizOption'+key).value=row.options?.[key]||'';document.getElementById('quizQuestionAnswer').value=row.answer||'A';document.getElementById('quizQuestionExplanation').value=row.explanation||'';document.getElementById('quizQuestionSave').textContent='Salvar alterações';document.getElementById('quizQuestionEditorTitle').textContent='Editar pergunta';const dialog=document.getElementById('quizQuestionEditor');if(!dialog.open)dialog.showModal();document.getElementById('quizQuestionText').focus();}
+async function deactivateQuizQuestion(id){if(!confirm('Desativar esta pergunta do seu banco? Ela deixa de participar de novos sorteios.'))return;try{await quizApi(`/api/quiz-live/questions/${id}`,{method:'DELETE'});quizNotice('Pergunta desativada.');quizQuestionCacheLoaded=false;loadQuizQuestions(quizQuestionPage);}catch(error){quizNotice(error.message,true);}}
+async function previewQuizQuestions(){const status=document.getElementById('quizImportStatus'),text=document.getElementById('quizImportText').value;try{const data=await quizApi('/api/quiz-live/questions/import/preview',{method:'POST',body:JSON.stringify({text})});quizImportPreviewData={text,rows:data.preview||[]};const host=document.getElementById('quizImportPreview'),rows=quizImportPreviewData.rows,valid=rows.filter(row=>row.status==='valid').length,duplicates=rows.filter(row=>row.status==='duplicate').length,invalid=rows.filter(row=>row.status==='invalid').length;host.innerHTML=`<p>${valid} prontas · ${duplicates} duplicadas · ${invalid} inválidas</p>${rows.map(row=>`<label class="tp-quiz-import-preview-row" data-state="${row.status}"><input type="checkbox" value="${row.line}" ${row.status==='valid'?'checked':''} ${row.status!=='valid'?'disabled':''}><span><b>Linha ${row.line} · ${row.status==='valid'?'Pronta':row.status==='duplicate'?'Duplicada':'Inválida'}</b><small>${esc(row.message)}${row.question?` · ${esc(row.question.prompt)}`:''}</small></span></label>`).join('')}<button type="button" class="tp-quiz-btn tp-quiz-btn-primary" onclick="importQuizQuestions()" ${valid?'':'disabled'}>Adicionar selecionadas</button>`;status.textContent='Revise a prévia; somente as linhas válidas selecionadas serão adicionadas.';status.classList.remove('is-error');}catch(error){status.textContent=error.message;status.classList.add('is-error');}}
+async function importQuizQuestions(){const status=document.getElementById('quizImportStatus');if(!quizImportPreviewData){status.textContent='Gere a prévia antes de importar.';status.classList.add('is-error');return;}const accept_lines=Array.from(document.querySelectorAll('#quizImportPreview input[type="checkbox"]:checked')).map(input=>Number(input.value));if(!accept_lines.length){status.textContent='Selecione ao menos uma linha válida para adicionar.';status.classList.add('is-error');return;}try{const data=await quizApi('/api/quiz-live/questions/import',{method:'POST',body:JSON.stringify({text:quizImportPreviewData.text,accept_lines})});status.textContent=`${data.created} adicionadas · ${data.duplicate_count} duplicadas · ${data.invalid_count} inválidas · ${data.skipped_count} não selecionadas`;status.classList.remove('is-error');quizImportPreviewData=null;document.getElementById('quizImportPreview').replaceChildren();quizQuestionCacheLoaded=false;await loadQuizQuestions(1);}catch(error){status.textContent=error.message;status.classList.add('is-error');}}
+async function loadQuizWeekly(){try{const data=await quizApi('/api/quiz-live/weekly');renderQuizRanking('quizWeeklyRanking',data.ranking||[]);}catch(error){document.getElementById('quizWeeklyRanking').textContent=error.message;}}
+function quizDate(value){return value?new Date(Number(value)).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';}
+async function loadQuizHistory(page=1){quizHistoryPage=Math.max(1,page);try{const data=await quizApi(`/api/quiz-live/history?page=${quizHistoryPage}&page_size=10`);quizHistoryPages=data.pages||1;document.getElementById('quizHistoryPage').textContent=`Página ${data.page||1} de ${quizHistoryPages}`;const host=document.getElementById('quizHistoryList');host.innerHTML=data.items?.length?data.items.map(item=>`<article class="tp-quiz-history-card"><button type="button" onclick="openQuizHistory('${esc(item.id)}')"><strong>${quizDate(item.started_at)} · ${(item.themes||[]).map(t=>esc((quizLoadedThemes.find(x=>x.id===t.theme)||{}).label||t.theme)).join(', ')||'Quiz misto'}</strong><small>${Number(item.question_count)} perguntas</small><small>${Number(item.participants)} participantes</small><small>${item.winner?`${esc(item.winner.nickname)} · ${Number(item.winner.score)} pts`:'Sem vencedor'}</small><span>Detalhes →</span></button></article>`).join(''):'<p>Nenhuma partida finalizada ainda.</p>';}catch(error){document.getElementById('quizHistoryList').textContent=error.message;}}
+function changeQuizHistoryPage(delta){const next=quizHistoryPage+delta;if(next>0&&next<=quizHistoryPages)loadQuizHistory(next);}
+async function openQuizHistory(id){const host=document.getElementById('quizHistoryDetail');host.textContent='Carregando detalhes…';try{const data=await quizApi('/api/quiz-live/history/'+encodeURIComponent(id));host.innerHTML=`<h3>Ranking completo</h3>${data.ranking.map((item,index)=>`<div class="tp-quiz-rank-row"><span>${index+1}º · <b>${esc(item.nickname)}</b></span><span>${Number(item.score)} pts · ${Number(item.correct_count)} acertos</span></div>`).join('')}<h3 class="mt-3">Perguntas da partida</h3>${data.rounds.map(round=>`<details class="tp-quiz-answer-history"><summary>${round.question_no}. ${esc(round.prompt)} · resposta ${esc(round.mode==='alternativas'?`${round.answer} — ${(round.options||{})[round.answer]||''}`:round.answer_value||round.answer)}</summary><p>${esc(round.explanation||'')}</p><p>${round.responses.length} respostas · ${round.responses.filter(item=>item.is_correct).length} acertos</p></details>`).join('')}`;}catch(error){host.textContent=error.message;}}
+
+const FEATURE_TABS = ["connect", "sons", "overlays", "games", "batalha", "caca", "bichinho", "tres", "duelo", "quiz"];
 
 function syncExtraGamesNav() {
   const menu = document.getElementById("extraGamesNav");
   if (!menu) return;
+  if (menu.dataset.navHidden === "true") { menu.hidden = true; return; }
   menu.hidden = !Array.from(menu.querySelectorAll(".tab-btn")).some((button) => button.style.display !== "none");
 }
 
@@ -5660,28 +6135,47 @@ function copyRoomUrl() {
   }).catch(() => {});
 }
 
-const REPORT_TYPE_LABELS={like:'Curtidas',gift:'Presente',comment:'Comentário',follow:'Novo seguidor',share:'Compartilhamento',join:'Entrada',guess:'Palpite',hint:'Dica',winner:'Vitória',level_up:'Subida de nível',size_reveal:'Revelação de tamanho',letter_reveal:'Revelação de letra'};
-let reportRequestRevision=0,reportEventCursor=null;
+const REPORT_TYPE_LABELS={like:'Curtidas',gift:'Presentes',comment:'Comentários',follow:'Novos seguidores',share:'Compartilhamentos',join:'Entradas',guess:'Palpites',hint:'Dicas',winner:'Vitórias',level_up:'Subidas de nível',size_reveal:'Revelação de tamanho',letter_reveal:'Revelação de letra'};
+let reportRequestRevision=0,reportAutoReloadTimer=0,reportEventCursor=null,reportSeriesPoints=[],reportSeriesMetric='all',reportEventsCache=[],reportEventsFilter='all',reportEventsExpanded=false,reportKnownProfiles=new Map();
 function reportDateValue(id){const value=document.getElementById(id).value;if(!value)return null;const [y,m,d]=value.split('-').map(Number);return new Date(y,m-1,d,id==='reportTo'?23:0,id==='reportTo'?59:0,id==='reportTo'?59:0,id==='reportTo'?999:0).getTime();}
 function reportQuery({includeType=true}={}){const params=new URLSearchParams(),from=reportDateValue('reportFrom'),to=reportDateValue('reportTo'),room=document.getElementById('reportRoom').value,type=document.getElementById('reportType').value;if(from!=null)params.set('from',String(from));if(to!=null)params.set('to',String(to));if(room)params.set('room_id',room);if(includeType&&type){params.set('type',type);if(type==='level_up'){const axis=document.getElementById('reportAxis').value;if(axis)params.set('axis',axis);}}return params;}
 function reportDateLabel(value){const n=Number(value),date=new Date(Number.isFinite(n)&&n>0?(n<1e11?n*1000:n):String(value||''));return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date);}
 function reportNumber(value){return Math.max(0,Number(value)||0).toLocaleString('pt-BR');}
 function reportNotice(message,error=false){const node=document.getElementById('reportNotice');node.textContent=message||'';node.dataset.error=String(error);}
+function scheduleReportReload(){clearTimeout(reportAutoReloadTimer);const from=document.getElementById('reportFrom').value,to=document.getElementById('reportTo').value;if(!from||!to||to<from){reportNotice('Selecione um período válido para atualizar os relatórios.',true);return;}reportNotice('Filtros alterados · atualizando…');reportAutoReloadTimer=setTimeout(loadStreamerReports,250);}
+function reportInputDate(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+function setReportPreset(preset){document.querySelectorAll('[data-report-preset]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.reportPreset===preset)));if(preset==='custom'){document.getElementById('reportFrom').focus();return;}const end=new Date();end.setHours(0,0,0,0);const start=new Date(end);if(preset==='yesterday'){start.setDate(start.getDate()-1);end.setDate(end.getDate()-1);}else if(preset==='7')start.setDate(start.getDate()-6);else if(preset==='30')start.setDate(start.getDate()-29);document.getElementById('reportFrom').value=reportInputDate(start);document.getElementById('reportTo').value=reportInputDate(end);loadStreamerReports();}
 function reportLevelQuery(){const params=new URLSearchParams(),room=document.getElementById('reportRoom').value;if(room)params.set('room_id',room);params.set('limit','100');return params;}
-function renderReportLevels(rows){const body=document.getElementById('reportLevels');body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='report-empty';cell.textContent='Nenhum nível registrado para estes participantes.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr');for(const value of [String(index+1),item.nickname||item.user_id||'—',Number(item.fan_club_level)>0?reportNumber(item.fan_club_level):'—',Number(item.gifter_level)>0?reportNumber(item.gifter_level):'—',reportDateLabel(item.updated_at)]){const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}body.append(row);}}
+function reportParticipant(item){const id=String(item.user_id||''),profile=reportKnownProfiles.get(id)||{},known=item.nickname||profile.nickname||item.username||'';return {name:known?(String(known).startsWith('@')?String(known):item.nickname||profile.nickname?String(known):`@${known}`):'Participante',id,avatar:item.avatar||profile.avatar||''};}
+function reportAddCell(row,value,{className='',title=''}={}){const cell=document.createElement('td');cell.textContent=String(value??'—');if(className)cell.className=className;if(title)cell.title=title;row.append(cell);return cell;}
+function reportAddParticipantCell(row,item){const participant=reportParticipant(item),cell=document.createElement('td'),view=document.createElement('span'),avatar=document.createElement('span'),name=document.createElement('span'),initial=Array.from(participant.name.replace(/^@/,'').trim())[0]?.toLocaleUpperCase('pt-BR')||'?';cell.className='tp-report-participant';view.className='tp-report-participant-view';avatar.className='tp-report-avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent=initial;if(participant.avatar){const image=document.createElement('img');image.src=participant.avatar;image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';image.addEventListener('error',()=>{avatar.textContent=initial;},{once:true});avatar.append(image);}name.className='tp-report-participant-name';name.textContent=participant.name;view.append(avatar,name);cell.append(view);if(participant.id)cell.title=`ID TikTok: ${participant.id}`;row.append(cell);return cell;}
+function renderReportLevels(rows){const body=document.getElementById('reportLevels');body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='report-empty';cell.textContent='Nenhum nível registrado para estes participantes.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr');reportAddCell(row,String(index+1));reportAddParticipantCell(row,item);for(const level of [item.fan_club_level,item.gifter_level]){const cell=document.createElement('td');if(Number(level)>0){const badge=document.createElement('span');badge.className='tp-report-level-badge';badge.textContent=`Nível ${reportNumber(level)}`;cell.append(badge);}else cell.textContent='—';row.append(cell);}reportAddCell(row,reportDateLabel(item.updated_at));body.append(row);}}
 async function loadReportSessions(revision){const params=reportQuery({includeType:false});params.set('limit','100');const data=await apiFetch('/api/live-sessions?'+params);if(revision!==reportRequestRevision)return;const select=document.getElementById('reportRoom'),selected=select.value,sessions=Array.isArray(data.sessions)?data.sessions:[];select.innerHTML='<option value="">Todas as lives</option>'+sessions.map(session=>{const label=[reportDateLabel(session.started_at),session.username?'@'+session.username:'Live',session.ended_at?'Encerrada':'Em andamento'].join(' · ');return `<option value="${esc(session.room_id)}">${esc(label)}</option>`;}).join('');if(sessions.some(session=>String(session.room_id)===selected))select.value=selected;}
-function renderReportSeries(points){const root=document.getElementById('reportSeries');root.replaceChildren();const list=(Array.isArray(points)?points:[]).slice(-48);if(!list.length){root.innerHTML='<div class="tp-report-series-empty">Sem interações neste período.</div>';return;}const maximum=Math.max(1,...list.map(point=>Number(point.count)||0));for(const point of list){const item=document.createElement('div');item.className='tp-report-bar';item.title=`${reportDateLabel(point.t)} · ${reportNumber(point.count)} interações`;const track=document.createElement('div');track.className='tp-report-bar-track';const fill=document.createElement('div');fill.className='tp-report-bar-fill';fill.style.height=`${Math.max(2,(Number(point.count)||0)/maximum*100)}%`;track.append(fill);const time=document.createElement('time');time.dateTime=new Date(Number(point.t)).toISOString();time.textContent=new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',...(document.getElementById('reportBucket').value==='day'?{day:'2-digit',month:'2-digit'}:{})}).format(new Date(Number(point.t)));item.append(track,time);root.append(item);}}
-function renderReportRows(id,rows,kind){const body=document.getElementById(id);body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=kind==='events'?5:4;cell.className='report-empty';cell.textContent='Nenhum registro para estes filtros.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr'),cells=kind==='events'?[reportDateLabel(item.ts),REPORT_TYPE_LABELS[item.type]||item.type,item.nickname||item.username||item.user_id||'—',reportEventDetails(item),reportNumber(item.value)]:[String(index+1),item.nickname||item.username||item.user_id||'—',reportNumber(item.count),reportNumber(item.value_sum)];for(const value of cells){const cell=document.createElement('td');cell.textContent=String(value??'—');row.append(cell);}body.append(row);}}
-function reportEventDetails(item){let meta={};try{meta=typeof item.meta==='string'?JSON.parse(item.meta||'{}'):(item.meta||{});}catch{};if(item.type==='level_up'){const axis=(item.axis||meta.axis)==='fanclub'?'Comunidade':(item.axis||meta.axis)==='gifter'?'Presenteador':'usuário',before=item.before??meta.before,after=item.after??meta.after;if(after!=null&&before==null)return `Nível anterior não identificado · ${axis}: ${reportNumber(after)}`;if(before!=null&&after!=null)return `${axis}: ${reportNumber(before)} → ${reportNumber(after)}`;}return meta.text||meta.gift_name||meta.gift||meta.word||meta.hint_word||meta.label||'—';}
-async function loadReportEvents({append=false,revision=reportRequestRevision}={}){const params=reportQuery();params.set('limit','50');if(append&&reportEventCursor)params.set('cursor',String(reportEventCursor));const data=await apiFetch('/api/reports/events?'+params);if(revision!==reportRequestRevision)return;const body=document.getElementById('reportEvents'),items=Array.isArray(data.events)?data.events:[];if(append){body.querySelector('.report-empty')?.closest('tr')?.remove();renderReportRowsInto(body,items);}else renderReportRows('reportEvents',items,'events');reportEventCursor=data.next_cursor||null;document.getElementById('reportLoadMore').hidden=!reportEventCursor;}
-function renderReportRowsInto(body,rows){for(const item of rows){const row=document.createElement('tr');for(const value of [reportDateLabel(item.ts),REPORT_TYPE_LABELS[item.type]||item.type,item.nickname||item.username||item.user_id||'—',reportEventDetails(item),reportNumber(item.value)]){const cell=document.createElement('td');cell.textContent=String(value??'—');row.append(cell);}body.append(row);}}
-async function loadStreamerReports(){const revision=++reportRequestRevision;reportNotice('Carregando relatórios…');try{if(!document.getElementById('reportFrom').value){const today=new Date(),start=new Date(today);start.setDate(start.getDate()-6);document.getElementById('reportFrom').value=`${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;document.getElementById('reportTo').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;}await loadReportSessions(revision);if(revision!==reportRequestRevision)return;const params=reportQuery(),seriesParams=new URLSearchParams(params),rankingParams=new URLSearchParams(params),eventsParams=new URLSearchParams(params),levelParams=reportLevelQuery();seriesParams.set('bucket',document.getElementById('reportBucket').value);rankingParams.set('limit','10');eventsParams.set('limit','50');const [summary,series,ranking,events,levels]=await Promise.all([apiFetch('/api/reports/summary?'+params),apiFetch('/api/reports/series?'+seriesParams),apiFetch('/api/reports/ranking?'+rankingParams),apiFetch('/api/reports/events?'+eventsParams),apiFetch('/api/reports/levels?'+levelParams)]);if(revision!==reportRequestRevision)return;const types=summary.by_type||{},likes=types.like||{},gifts=types.gift||{},comments=types.comment||{},levelUps=summary.level_up||{};document.getElementById('reportTotal').textContent=reportNumber(summary.events);document.getElementById('reportPeople').textContent=reportNumber(summary.people);document.getElementById('reportLikes').textContent=reportNumber(likes.value_sum??likes.count);document.getElementById('reportGifts').textContent=reportNumber(gifts.value_sum);document.getElementById('reportComments').textContent=reportNumber(comments.count);document.getElementById('reportLevelUps').textContent=reportNumber(levelUps.total);document.getElementById('reportLevelUpsByAxis').textContent=`Presenteador ${reportNumber(levelUps.gifter)} · Comunidade ${reportNumber(levelUps.fanclub)}`;renderReportSeries(series.points);document.getElementById('reportRankingCaption').textContent=document.getElementById('reportType').value?`Por ${REPORT_TYPE_LABELS[document.getElementById('reportType').value]||'interação'}.`:'Destaques por interação.';renderReportRows('reportRanking',ranking.ranking||[],'ranking');renderReportRows('reportEvents',events.events||[],'events');renderReportLevels(levels.levels||[]);reportEventCursor=events.next_cursor||null;document.getElementById('reportLoadMore').hidden=!reportEventCursor;reportNotice(`${reportNumber(summary.events)} interações · ${summary.room_id?'live selecionada':'período selecionado'}`);}catch(error){if(revision===reportRequestRevision)reportNotice(`Não foi possível carregar os relatórios: ${error.message}`,true);}}
-document.getElementById('reportFilters').addEventListener('submit',event=>{event.preventDefault();loadStreamerReports();});
-document.getElementById('reportBucket').addEventListener('change',loadStreamerReports);
-document.getElementById('reportRoom').addEventListener('change',loadStreamerReports);
-document.getElementById('reportType').addEventListener('change',()=>{const isLevelUp=document.getElementById('reportType').value==='level_up';document.getElementById('reportAxisFilter').hidden=!isLevelUp;if(!isLevelUp)document.getElementById('reportAxis').value='';loadStreamerReports();});
-document.getElementById('reportAxis').addEventListener('change',loadStreamerReports);
-document.getElementById('reportLoadMore').addEventListener('click',()=>loadReportEvents({append:true}));
+function reportSeriesValue(point,metric=reportSeriesMetric){const byType=point.by_type||{};if(metric==='comment')return Number(byType.comment?.count)||0;if(metric==='like')return Number(byType.like?.value_sum??byType.like?.count)||0;if(metric==='gift')return Number(byType.gift?.count)||0;return Number(point.count)||0;}
+function renderReportSeries(points=reportSeriesPoints){reportSeriesPoints=Array.isArray(points)?points:[];const root=document.getElementById('reportSeries');root.replaceChildren();const list=reportSeriesPoints.slice(-48);if(!list.length){root.innerHTML='<div class="tp-report-series-empty">Sem interações neste período.</div>';return;}const values=list.map(point=>reportSeriesValue(point)),maximum=Math.max(1,...values),bucket=document.getElementById('reportBucket').value;for(let index=0;index<list.length;index++){const point=list[index],value=values[index],byType=point.by_type||{},comments=Number(byType.comment?.count)||0,likes=Number(byType.like?.value_sum??byType.like?.count)||0,gifts=Number(byType.gift?.count)||0,date=new Date(Number(point.t)),timeText=new Intl.DateTimeFormat('pt-BR',bucket==='day'?{day:'2-digit',month:'2-digit'}:{hour:'2-digit',minute:'2-digit'}).format(date),item=document.createElement('div');item.className='tp-report-bar';item.tabIndex=0;item.setAttribute('role','img');item.title=`${reportDateLabel(point.t)}\n${reportNumber(Number(point.count)||0)} interações\n${reportNumber(comments)} comentários\n${reportNumber(likes)} curtidas\n${reportNumber(gifts)} presentes`;item.setAttribute('aria-label',item.title);const track=document.createElement('div');track.className='tp-report-bar-track';const fill=document.createElement('div');fill.className='tp-report-bar-fill';fill.style.height=`${Math.max(2,value/maximum*100)}%`;track.append(fill);const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=timeText;item.append(track,time);root.append(item);}}
+function reportEventDetails(item){let meta={};try{meta=typeof item.meta==='string'?JSON.parse(item.meta||'{}'):(item.meta||{});}catch{}if(item.type==='level_up'){const axis=(item.axis||meta.axis)==='fanclub'?'Comunidade':(item.axis||meta.axis)==='gifter'?'Presenteador':'usuário',before=item.before??meta.before,after=item.after??meta.after;if(after!=null&&before==null)return `Nível anterior não identificado · ${axis}: ${reportNumber(after)}`;if(before!=null&&after!=null)return `${axis}: ${reportNumber(before)} → ${reportNumber(after)}`;}return meta.text||meta.gift_name||meta.gift||meta.word||meta.hint_word||meta.label||'—';}
+function renderReportRows(id,rows,kind){const body=document.getElementById(id);body.replaceChildren();if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=kind==='events'?5:4;cell.className='report-empty';cell.textContent='Nenhum registro para estes filtros.';row.append(cell);body.append(row);return;}for(let index=0;index<rows.length;index++){const item=rows[index],row=document.createElement('tr');if(kind==='events'){reportAddCell(row,reportDateLabel(item.ts));reportAddCell(row,REPORT_TYPE_LABELS[item.type]||item.type);reportAddParticipantCell(row,item);const details=reportEventDetails(item);reportAddCell(row,details,{className:'tp-report-event-detail',title:details});reportAddCell(row,reportNumber(item.value));}else{reportAddCell(row,String(index+1));reportAddParticipantCell(row,item);reportAddCell(row,reportNumber(item.count));reportAddCell(row,reportNumber(item.value_sum));}body.append(row);}}
+function renderReportRecentEvents(){const search=document.getElementById('reportEventsSearch').value.trim().toLocaleLowerCase('pt-BR'),filtered=reportEventsCache.filter(item=>{const matchesType=reportEventsFilter==='all'||item.type===reportEventsFilter;if(!matchesType)return false;if(!search)return true;const participant=reportParticipant(item).name,details=reportEventDetails(item);return `${participant} ${details} ${REPORT_TYPE_LABELS[item.type]||item.type}`.toLocaleLowerCase('pt-BR').includes(search);}),visible=reportEventsExpanded?filtered:filtered.slice(0,12);renderReportRows('reportEvents',visible,'events');const more=document.getElementById('reportLoadMore');more.hidden=!reportEventCursor;more.textContent=reportEventsExpanded?'Carregar mais interações':'Ver todas as interações';}
+async function loadReportEvents({append=false,revision=reportRequestRevision}={}){const button=document.getElementById('reportLoadMore'),params=reportQuery();button.disabled=true;button.textContent='Carregando…';try{params.set('limit',append?'50':'12');if(append&&reportEventCursor)params.set('cursor',String(reportEventCursor));const data=await apiFetch('/api/reports/events?'+params);if(revision!==reportRequestRevision)return;const items=Array.isArray(data.events)?data.events:[];reportEventsCache=append?[...reportEventsCache,...items]:items;reportEventCursor=data.next_cursor||null;}catch(error){reportNotice('Não foi possível carregar mais interações agora. Tente novamente.',true);}finally{button.disabled=false;renderReportRecentEvents();}}
+function previousReportRange(){const from=reportDateValue('reportFrom'),to=reportDateValue('reportTo');if(from==null||to==null||to<from)return null;const fromDate=new Date(from),days=Math.max(1,Math.round((to-from)/86400000)+1);return {from:from-days*86400000,to:from-1};}
+function renderReportComparison(current,previous){const node=document.getElementById('reportComparison');if(!previous){node.textContent='Selecione um período válido para comparar';return;}const before=Number(previous.events)||0,now=Number(current.events)||0,delta=now-before;if(!before){node.textContent=now?`+${reportNumber(delta)} · novo volume no período`:'Sem interações nos períodos';node.dataset.direction=now?'new':'flat';return;}const change=(delta/before)*100,direction=change>0?'up':change<0?'down':'flat',arrow=change>0?'▲':change<0?'▼':'•',amount=delta>0?`+${reportNumber(delta)}`:delta<0?`−${reportNumber(Math.abs(delta))}`:'0';node.dataset.direction=direction;node.textContent=`${amount} · ${arrow} ${Math.abs(change).toLocaleString('pt-BR',{maximumFractionDigits:1})}% vs. período anterior`;}
+async function loadStreamerReports(){clearTimeout(reportAutoReloadTimer);const revision=++reportRequestRevision;reportNotice('Carregando relatórios…');try{const fromInput=document.getElementById('reportFrom'),toInput=document.getElementById('reportTo');if(!fromInput.value&&!toInput.value){const today=new Date(),start=new Date(today);start.setDate(start.getDate()-6);fromInput.value=reportInputDate(start);toInput.value=reportInputDate(today);}if(!fromInput.value||!toInput.value||toInput.value<fromInput.value){reportNotice('Selecione um período válido para atualizar os relatórios.',true);return;}await loadReportSessions(revision);if(revision!==reportRequestRevision)return;const params=reportQuery(),seriesParams=reportQuery({includeType:false}),rankingParams=new URLSearchParams(params),levelParams=reportLevelQuery(),previousRange=previousReportRange(),comparisonParams=previousRange?new URLSearchParams(params):null;seriesParams.set('bucket',document.getElementById('reportBucket').value);rankingParams.set('limit','10');if(comparisonParams){comparisonParams.set('from',String(previousRange.from));comparisonParams.set('to',String(previousRange.to));}reportEventsExpanded=false;const eventsParams=new URLSearchParams(params);eventsParams.set('limit','12');const requests=[apiFetch('/api/reports/summary?'+params),apiFetch('/api/reports/series?'+seriesParams),apiFetch('/api/reports/ranking?'+rankingParams),apiFetch('/api/reports/events?'+eventsParams),apiFetch('/api/reports/levels?'+levelParams),comparisonParams?apiFetch('/api/reports/summary?'+comparisonParams):Promise.resolve(null)];const [summary,series,ranking,events,levels,previous]=await Promise.all(requests);if(revision!==reportRequestRevision)return;const types=summary.by_type||{},likes=types.like||{},gifts=types.gift||{},comments=types.comment||{},levelUps=summary.level_up||{};document.getElementById('reportTotal').textContent=reportNumber(summary.events);document.getElementById('reportPeople').textContent=reportNumber(summary.people);document.getElementById('reportLikes').textContent=reportNumber(likes.value_sum??likes.count);document.getElementById('reportGifts').textContent=reportNumber(gifts.value_sum);document.getElementById('reportComments').textContent=reportNumber(comments.count);document.getElementById('reportLevelUps').textContent=reportNumber(levelUps.total);document.getElementById('reportLevelUpsByAxis').textContent=`Presenteador ${reportNumber(levelUps.gifter)} · Comunidade ${reportNumber(levelUps.fanclub)}`;renderReportComparison(summary,previous);reportSeriesPoints=series.points||[];renderReportSeries(reportSeriesPoints);document.getElementById('reportRankingCaption').textContent=document.getElementById('reportType').value?`Por ${REPORT_TYPE_LABELS[document.getElementById('reportType').value]||'interação'}.`:'Destaques por interação.';reportKnownProfiles=new Map((levels.levels||[]).filter(item=>item.user_id).map(item=>[String(item.user_id),{nickname:item.nickname||'',avatar:item.avatar||''}]));reportEventsCache=Array.isArray(events.events)?events.events:[];for(const item of reportEventsCache){if(!item.user_id)continue;const id=String(item.user_id),profile=reportKnownProfiles.get(id)||{};reportKnownProfiles.set(id,{nickname:profile.nickname||item.nickname||item.username||'',avatar:profile.avatar||item.avatar||''});}renderReportRows('reportRanking',ranking.ranking||[],'ranking');renderReportLevels(levels.levels||[]);reportEventCursor=events.next_cursor||null;renderReportRecentEvents();reportNotice(`${reportNumber(summary.events)} interações · ${summary.room_id?'live selecionada':'período selecionado'}`);}catch(error){if(revision===reportRequestRevision)reportNotice(`Não foi possível carregar os relatórios: ${error.message}`,true);}}
+function reportCsvCell(value){return `"${String(value??'').replace(/"/g,'""')}"`;}
+async function exportReportCsv(){const button=document.getElementById('reportExport');button.disabled=true;button.textContent='Exportando…';const all=[],params=reportQuery(),search=document.getElementById('reportEventsSearch').value.trim().toLocaleLowerCase('pt-BR'),MAX_ROWS=10000;try{let cursor=null,hasMore=true;while(hasMore&&all.length<MAX_ROWS){params.set('limit','200');if(cursor)params.set('cursor',String(cursor));else params.delete('cursor');const data=await apiFetch('/api/reports/events?'+params);const page=Array.isArray(data.events)?data.events:[];all.push(...page.slice(0,MAX_ROWS-all.length));cursor=data.next_cursor;hasMore=Boolean(cursor)&&page.length>0;}const filtered=all.filter(item=>{const matchesQuick=reportEventsFilter==='all'||item.type===reportEventsFilter;if(!matchesQuick)return false;const participant=reportParticipant(item).name,details=reportEventDetails(item);return !search||`${participant} ${details} ${REPORT_TYPE_LABELS[item.type]||item.type}`.toLocaleLowerCase('pt-BR').includes(search);}),header=['Horário','Tipo','Participante','Detalhes','Valor'],lines=[header,...filtered.map(item=>[reportDateLabel(item.ts),REPORT_TYPE_LABELS[item.type]||item.type,reportParticipant(item).name,reportEventDetails(item),reportNumber(item.value)])].map(row=>row.map(reportCsvCell).join(';')),blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`tikplay-relatorios-${document.getElementById('reportFrom').value}-${document.getElementById('reportTo').value}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);reportNotice(hasMore?`CSV exportado com ${reportNumber(filtered.length)} interações. Limite de 10.000 registros; reduza o período para exportar tudo.`:`CSV exportado com ${reportNumber(filtered.length)} interações.`);}catch(error){reportNotice('Não foi possível exportar os relatórios agora. Tente reduzir o período e exportar novamente.',true);}finally{button.disabled=false;button.textContent='Exportar CSV';}}
+document.querySelectorAll('[data-report-preset]').forEach(button=>button.addEventListener('click',()=>setReportPreset(button.dataset.reportPreset)));
+document.getElementById('reportFrom').addEventListener('change',()=>{setReportPreset('custom');scheduleReportReload();});
+document.getElementById('reportTo').addEventListener('change',()=>{setReportPreset('custom');scheduleReportReload();});
+
+document.getElementById('reportBucket').addEventListener('change',scheduleReportReload);
+document.getElementById('reportRoom').addEventListener('change',scheduleReportReload);
+document.querySelectorAll('[data-report-series]').forEach(button=>button.addEventListener('click',()=>{reportSeriesMetric=button.dataset.reportSeries;document.querySelectorAll('[data-report-series]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderReportSeries();}));
+document.querySelectorAll('[data-report-event-filter]').forEach(button=>button.addEventListener('click',()=>{reportEventsFilter=button.dataset.reportEventFilter;document.querySelectorAll('[data-report-event-filter]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderReportRecentEvents();}));
+document.getElementById('reportEventsSearch').addEventListener('input',renderReportRecentEvents);
+document.getElementById('reportType').addEventListener('change',()=>{const isLevelUp=document.getElementById('reportType').value==='level_up';document.getElementById('reportAxisFilter').hidden=!isLevelUp;if(!isLevelUp)document.getElementById('reportAxis').value='';document.getElementById('reportFilters').classList.toggle('has-report-axis',isLevelUp);scheduleReportReload();});
+document.getElementById('reportAxis').addEventListener('change',scheduleReportReload);
+document.getElementById('reportLoadMore').addEventListener('click',()=>{reportEventsExpanded=true;loadReportEvents({append:Boolean(reportEventCursor)});});
+document.getElementById('reportExport').addEventListener('click',exportReportCsv);
+document.getElementById('reportExport').addEventListener('click',()=>{document.querySelector('.tp-report-export-menu').open=false;});
 
 const presenterLevelPreviewFrames=[...document.querySelectorAll('.tp-presenter-level-preview-frame')];
 
@@ -6339,10 +6833,9 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeStreamer
 document.getElementById('streamerGlobalSearch').addEventListener('input', event => {
   const query = event.target.value.trim().toLocaleLowerCase('pt-BR');
   if(query.length < 3) return;
-  const button = [...document.querySelectorAll('.tab-btn')].find(button => button.style.display !== 'none' && button.textContent.toLocaleLowerCase('pt-BR').includes(query));
+  const button = [...document.querySelectorAll('.tab-btn')].find(button => button.style.display !== 'none' && !button.hidden && !button.closest('[hidden]') && button.textContent.toLocaleLowerCase('pt-BR').includes(query));
   if(button) switchTab(button.dataset.tab);
 });
-async function copyStreamerRoom() { try { if(roomCode) await navigator.clipboard.writeText(roomCode); } catch { addLog('[Painel] Não foi possível copiar a sala.'); } }
 async function openStreamerPublic(path) {
   const opened = window.open('about:blank','_blank');
   if(opened) opened.opener = null;
@@ -6408,6 +6901,7 @@ syncGameState();
 loadPanelConfig();
 loadSoundAlerts();
 loadCacaState();
+loadCacaConfig();
 document.getElementById("username").addEventListener("blur", saveCredentials);
 document.getElementById("apiKey").addEventListener("blur", saveCredentials);
 
@@ -6415,7 +6909,7 @@ for (const type of ["input", "change"]) document.addEventListener(type, event =>
   const el = event.target;
   if (!el.matches("input, select, textarea") || el.type === "file" || el.type === "button") return;
   if (el.id === "username" || el.id === "apiKey") credentialsSaver.schedule(type === "change" ? 0 : 600);
-  if (el.id === "cacaCmdMode" || el.id === "cacaPrefix") cacaSaver.schedule(type === "change" ? 0 : 500);
+  if (el.id === "cacaAnswerMode" || el.id === "cacaCmdMode" || el.id === "cacaPrefix" || el.id === "cacaShowRanking" || el.id === "cacaDisplayPreset" || el.id.startsWith("cacaSafe")) cacaSaver.schedule(type === "change" ? 0 : 500);
   if (/^tres(Time|Pts)[123]$/.test(el.id) && tresHydrated) tresSaver.schedule(type === "change" ? 0 : 500);
   if (el.closest("#tab-duelo") && !/test/i.test(el.id) && dueloHydrated) {
     if (el.dataset.f && el.dataset.i !== undefined) { const idx = Number(el.dataset.i); if (dueloGifts[idx]) dueloGifts[idx][el.dataset.f] = el.dataset.f === "active" ? el.checked : el.value; }
@@ -6432,6 +6926,7 @@ try {
     try { localStorage.setItem("tikplay.logCategories", JSON.stringify(migrated)); } catch (e) {}
   }
 } catch (e) {}
+try { document.querySelector("[data-log-only-caca]").checked = localStorage.getItem("tikplay.logOnlyCaca") === "true"; } catch (e) {}
 setLogCategories();
 for (const scope of ["settings","gifts","tres","duelo"]) preferenceHydration(scope, false);
 

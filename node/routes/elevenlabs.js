@@ -1,7 +1,10 @@
 const crypto = require("crypto");
 const providerConfig = require("../lib/elevenlabs-config");
+const integrationSecrets = require("../lib/integration-secrets");
+const maskSecret = require("../lib/mask-secret");
 const voiceModels = require("../lib/additional-voice-models.json");
 const creditWallet = require("../lib/tts-credit-wallet");
+const apiCosts = require("../lib/api-costs");
 
 module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log }) {
   db.db.exec(`CREATE TABLE IF NOT EXISTS tenant_elevenlabs (
@@ -16,14 +19,25 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   );
   CREATE TABLE IF NOT EXISTS additional_voice_models (
     model_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0,
-    credits_per_100_chars INTEGER NOT NULL DEFAULT 0 CHECK(credits_per_100_chars>=0)
+    credits_per_150_chars INTEGER NOT NULL DEFAULT 0 CHECK(credits_per_150_chars>=0)
   );
   CREATE TABLE IF NOT EXISTS additional_voice_options (
     model_id TEXT NOT NULL, voice_id TEXT NOT NULL, label TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY(model_id,voice_id)
   );`);
   const modelColumns = new Set(db.db.prepare("PRAGMA table_info(additional_voice_models)").all().map(row => row.name));
-  if (!modelColumns.has("credits_per_100_chars")) db.db.exec("ALTER TABLE additional_voice_models ADD COLUMN credits_per_100_chars INTEGER NOT NULL DEFAULT 0");
+  if (!modelColumns.has("credits_per_150_chars")) {
+    const migrateTariffs = db.db.transaction(() => {
+      db.db.exec("ALTER TABLE additional_voice_models ADD COLUMN credits_per_150_chars INTEGER NOT NULL DEFAULT 0");
+      if (modelColumns.has("credits_per_100_chars")) {
+        const updateTariff = db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=? WHERE model_id=?");
+        for (const row of db.db.prepare("SELECT model_id,credits_per_100_chars FROM additional_voice_models").all()) {
+          updateTariff.run(Math.max(0, Math.ceil(Number(row.credits_per_100_chars || 0) * 1.5)), row.model_id);
+        }
+      }
+    });
+    migrateTariffs.immediate();
+  }
   creditWallet.ensureSchema(db);
   const tenantColumns = new Set(db.db.prepare("PRAGMA table_info(tenant_elevenlabs)").all().map(row => row.name));
   if (!tenantColumns.has("model_id")) db.db.exec("ALTER TABLE tenant_elevenlabs ADD COLUMN model_id TEXT NOT NULL DEFAULT 'elevenlabs/eleven-v4-turbo'");
@@ -35,28 +49,29 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   let catalog = [], catalogUntil = 0, catalogKey = "", pendingCatalog = null;
   const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map();
   let openRouterCatalog = [], openRouterCatalogUntil = 0, pendingOpenRouterCatalog = null;
-  function openRouterConfigured() { return Boolean(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY); }
+  function openRouterKey() { return integrationSecrets.read("openrouter").secret; }
+  function openRouterConfigured() { return Boolean(openRouterKey()); }
   function getModelStates() {
-    const states = new Map(db.db.prepare("SELECT model_id,enabled,credits_per_100_chars FROM additional_voice_models").all()
-      .map(row => [row.model_id, { enabled: row.enabled === 1, credits_per_100_chars: row.credits_per_100_chars }]));
+    const states = new Map(db.db.prepare("SELECT model_id,enabled,credits_per_150_chars FROM additional_voice_models").all()
+      .map(row => [row.model_id, { enabled: row.enabled === 1, credits_per_150_chars: row.credits_per_150_chars }]));
     return voiceModels.map(model => ({ ...model, enabled: states.get(model.id)?.enabled === true,
-      credits_per_100_chars: Number(states.get(model.id)?.credits_per_100_chars || 0) }));
+      credits_per_150_chars: Number(states.get(model.id)?.credits_per_150_chars || 0) }));
   }
   function selectedVoiceOptions() {
     return db.db.prepare(`SELECT o.model_id,o.voice_id,o.label FROM additional_voice_options o
       JOIN additional_voice_models m ON m.model_id=o.model_id
-      WHERE o.enabled=1 AND m.enabled=1 AND m.credits_per_100_chars>0`).all();
+      WHERE o.enabled=1 AND m.enabled=1 AND m.credits_per_150_chars>0`).all();
   }
   function voiceIsEnabled(modelId, voiceId) {
     return Boolean(db.db.prepare(`SELECT 1 FROM additional_voice_options o
       JOIN additional_voice_models m ON m.model_id=o.model_id
-      WHERE o.model_id=? AND o.voice_id=? AND o.enabled=1 AND m.enabled=1 AND m.credits_per_100_chars>0`)
+      WHERE o.model_id=? AND o.voice_id=? AND o.enabled=1 AND m.enabled=1 AND m.credits_per_150_chars>0`)
       .get(modelId, voiceId));
   }
   function unpricedVoiceCount() {
     return Number(db.db.prepare(`SELECT count(*) AS count FROM additional_voice_options o
       JOIN additional_voice_models m ON m.model_id=o.model_id
-      WHERE o.enabled=1 AND m.enabled=1 AND m.credits_per_100_chars<=0`).get()?.count || 0);
+      WHERE o.enabled=1 AND m.enabled=1 AND m.credits_per_150_chars<=0`).get()?.count || 0);
   }
   async function openRouterVoices() {
     if (Date.now() < openRouterCatalogUntil) return openRouterCatalog;
@@ -234,6 +249,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
     }
     lastAdminPreview.set(req.user.id, now);
     const traceId = crypto.randomUUID();
+    const providerStartedAt = Date.now();
+    let providerUsageRecorded = false;
     try {
       if (!(await voicesForModel(model.id)).some(voice => voice.key === voiceId)) {
         audit(req.user.id, "tts.admin_voice_preview.rejected", "notice", "warning", { code: "VOICE_NOT_IN_CATALOG", model_id: model.id });
@@ -245,13 +262,18 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
         : "https://openrouter.ai/api/v1/audio/speech";
       const headers = model.provider === "elevenlabs"
         ? { "xi-api-key": providerConfig.read().apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" }
-        : { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ""}`,
+        : { Authorization: `Bearer ${openRouterKey()}`,
             "Content-Type": "application/json", Accept: "audio/mpeg, audio/wav, audio/pcm" };
       const body = model.provider === "elevenlabs"
         ? { text: previewText, model_id: model.model_id, language_code: "pt" }
         : { model: model.model_id, input: previewText, voice: voiceId,
             response_format: model.response_format || (model.id === "heygen/heygen-voice-1-turbo" ? "pcm" : "mp3") };
       const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+      apiCosts.record(db.db, { provider: model.provider, model: model.model_id, resource: "admin_voice_preview",
+        unit: "character", quantity: previewText.length, status: response.ok ? "success" : "failed",
+        duration_ms: Date.now() - providerStartedAt, request_id: traceId,
+        provider_request_id: response.headers.get("x-request-id") || response.headers.get("request-id") });
+      providerUsageRecorded = true;
       if (!response.ok) throw new Error("VOICE_PREVIEW_PROVIDER_FAILED");
       const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
       if (!["audio/mpeg", "audio/mp3", "audio/wav", "audio/wave", "audio/x-wav", "audio/pcm"].includes(contentType))
@@ -283,6 +305,10 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       audit(req.user.id, "tts.admin_voice_preview.completed", "diagnostic", "info", { model_id: model.id, provider: model.provider, trace_id: traceId });
       res.set({ "Cache-Control": "no-store", "Content-Type": audioType, "X-Content-Type-Options": "nosniff" }).send(audio);
     } catch (error) {
+      if (!providerUsageRecorded) apiCosts.record(db.db, { provider: model.provider, model: model.model_id,
+        resource: "admin_voice_preview", unit: "character", quantity: previewText.length,
+        status: error?.name === "TimeoutError" || error?.name === "AbortError" ? "timeout" : "failed",
+        duration_ms: Date.now() - providerStartedAt, request_id: traceId });
       const code = ["VOICE_PREVIEW_INVALID_AUDIO", "VOICE_PREVIEW_AUDIO_TOO_LARGE"].includes(error?.message)
         ? error.message : "VOICE_PREVIEW_PROVIDER_FAILED";
       audit(req.user.id, "tts.admin_voice_preview.failed", "error", "error", { model_id: model.id, provider: model.provider, code, trace_id: traceId });
@@ -303,7 +329,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
         || new Set(submitted.map(item => `${item.model_id}:${item.voice_id}`)).size !== submitted.length
         || (submittedCosts !== undefined && (!Array.isArray(submittedCosts) || submittedCosts.length > voiceModels.length
           || submittedCosts.some(item => !voiceModels.some(model => model.id === item?.model_id)
-            || !Number.isSafeInteger(item.credits_per_100_chars) || item.credits_per_100_chars < 0 || item.credits_per_100_chars > 100000)
+            || !Number.isSafeInteger(item.credits_per_150_chars) || item.credits_per_150_chars < 0 || item.credits_per_150_chars > 100000)
           || new Set(submittedCosts.map(item => item.model_id)).size !== submittedCosts.length))) {
       audit(req.user.id, "tts.models.config_rejected", "notice", "warning", { code: "INVALID_VOICE_CONFIG" });
       return res.status(400).json({ success: false, error: "Seleção de vozes inválida." });
@@ -328,9 +354,9 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       ON CONFLICT(model_id,voice_id) DO UPDATE SET label=excluded.label,enabled=excluded.enabled`);
     const disableModel = db.db.prepare("UPDATE additional_voice_options SET enabled=0 WHERE model_id=?");
     const saveModel = db.db.prepare("UPDATE additional_voice_models SET enabled=? WHERE model_id=?");
-    const saveCost = db.db.prepare("UPDATE additional_voice_models SET credits_per_100_chars=? WHERE model_id=?");
-    const previousCosts = new Map(db.db.prepare("SELECT model_id,credits_per_100_chars FROM additional_voice_models").all()
-      .map(row => [row.model_id, row.credits_per_100_chars]));
+    const saveCost = db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=? WHERE model_id=?");
+    const previousCosts = new Map(db.db.prepare("SELECT model_id,credits_per_150_chars FROM additional_voice_models").all()
+      .map(row => [row.model_id, row.credits_per_150_chars]));
     const transaction = db.db.transaction(({ items, costs }) => {
       for (const modelId of submittedModels) disableModel.run(modelId);
       for (const item of items.filter(value => submittedModels.includes(value.model_id))) {
@@ -343,15 +369,15 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
         const hasEnabled = db.db.prepare("SELECT 1 FROM additional_voice_options WHERE model_id=? AND enabled=1 LIMIT 1").get(model.id);
         saveModel.run(hasEnabled ? 1 : 0, model.id);
       }
-      for (const item of costs || []) saveCost.run(item.credits_per_100_chars, item.model_id);
+      for (const item of costs || []) saveCost.run(item.credits_per_150_chars, item.model_id);
     });
     transaction({ items: submitted, costs: submittedCosts });
     for (const item of submittedCosts || []) {
       const previous = previousCosts.get(item.model_id) || 0;
-      if (previous !== item.credits_per_100_chars) {
+      if (previous !== item.credits_per_150_chars) {
         audit(req.user.id, "tts.credits.model_cost_saved", "billing", "info", {
-          model_id: item.model_id, previous_credits_per_100_chars: previous,
-          credits_per_100_chars: item.credits_per_100_chars, actor_id: req.user.id,
+          model_id: item.model_id, previous_credits_per_150_chars: previous,
+          credits_per_150_chars: item.credits_per_150_chars, actor_id: req.user.id,
         });
       }
     }
@@ -364,7 +390,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   });
   function globalStatus() {
     const config = providerConfig.read();
-    return { success: true, configured: Boolean(config.apiKey), source: config.source };
+    return { success: true, configured: Boolean(config.apiKey), source: config.source,
+      api_key_masked: maskSecret(config.apiKey) };
   }
   app.get("/api/admin/integrations/elevenlabs", auth.requireAdmin, (req, res) => {
     res.set("Cache-Control", "no-store").json(globalStatus());
@@ -432,7 +459,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       // Recheck after the asynchronous catalog request in case the admin revoked access.
       if (!active(req.user.id) || get(req.user.id).enabled !== 1) return res.status(403).json({ success: false });
       if (voice && !voiceIsEnabled(selectedModel, voice))
-        return res.status(400).json({ success: false, error: "Voz sem tarifa em créditos ou não liberada pelo administrador." });
+        return res.status(400).json({ success: false, error: "Voz sem tarifa em TikCoins ou não liberada pelo administrador." });
       db.db.prepare("UPDATE tenant_elevenlabs SET model_id=?,voice_id=? WHERE tenant_id=?").run(selectedModel, voice, req.user.id);
       audit(req.user.id, "tts.provider.preference_saved", "diagnostic", "debug", { model_id: selectedModel, voice_type: model.voice_type });
       res.json({ success: true, ...view(req.user.id) });

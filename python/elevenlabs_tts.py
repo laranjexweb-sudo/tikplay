@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import time
 import uuid
 import urllib.request
 from contextlib import contextmanager
@@ -11,6 +12,7 @@ from datetime import datetime, timezone
 
 import tts
 import tts_emotions
+import api_costs
 
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
 MAX_CHAT_CHARACTERS = 150
@@ -102,17 +104,27 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None, credit_charger=
             f"https://api.elevenlabs.io/v1/text-to-speech/{voice}?output_format=mp3_44100_128",
             data=body, headers={"xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"},
             method="POST")
+        started = time.monotonic()
+        provider_request_id = None
+        provider_status = "failed"
         try:
             with urllib.request.urlopen(request, timeout=8) as response:
                 if response.status != 200 or "audio/" not in response.headers.get("Content-Type", ""):
                     raise ProviderError("INVALID_AUDIO")
+                provider_request_id = response.headers.get("request-id") or response.headers.get("x-request-id")
                 audio = response.read(MAX_AUDIO_BYTES + 1)
                 if not audio or len(audio) > MAX_AUDIO_BYTES:
                     raise ProviderError("INVALID_AUDIO")
+                provider_status = "success"
         except ProviderError:
             raise
-        except Exception:
+        except Exception as exc:
+            is_timeout = isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError)
+            provider_status = "timeout" if is_timeout else "failed"
             raise ProviderError("SYNTHESIS_FAILED") from None
+        finally:
+            api_costs.record("elevenlabs", model, "chat_voice", "character", len(text), provider_status,
+                (time.monotonic() - started) * 1000, tenant_id, provider_request_id=provider_request_id)
         if _api_key() != key:
             return None, "ACCESS_CHANGED"
         with _connect() as conn:

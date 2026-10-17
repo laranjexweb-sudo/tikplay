@@ -56,7 +56,7 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one" })).status, 403);
     assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true, monthly_limit: -1 })).status, 400);
     assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true })).status, 200);
-    db.db.prepare("UPDATE additional_voice_models SET credits_per_100_chars=2 WHERE model_id=?")
+    db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=3 WHERE model_id=?")
       .run("elevenlabs/eleven-v4-turbo");
     db.db.prepare("INSERT INTO additional_voice_options(model_id,voice_id,label,enabled) VALUES(?,?,?,1)")
       .run("elevenlabs/eleven-v4-turbo", "voice_one", "Voz BR");
@@ -89,7 +89,7 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     assert.equal((await request(admin, configRoute, "PUT", { api_key: "bad\nsecret" })).status, 400);
     expectedKey = "another-secret";
     const saved = await request(admin, configRoute, "PUT", { api_key: expectedKey });
-    assert.deepEqual(saved.data, { success: true, configured: true, source: "admin" });
+    assert.deepEqual(saved.data, { success: true, configured: true, source: "admin", api_key_masked: "ano•••••••cret" });
     assert.equal(require("../lib/elevenlabs-config").read().apiKey, expectedKey);
     assert.equal((await request(first, "/api/tts/elevenlabs")).data.configured, true);
     assert.equal(upstreamCalls, 2, "catalog reloads after changing the key");

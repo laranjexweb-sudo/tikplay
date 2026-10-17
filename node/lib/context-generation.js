@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const openRouterConfig = require('./integration-secrets');
 const MODEL = 'anthropic/claude-haiku-5.5';
 const METHOD = 'openrouter-top50-v1';
 
@@ -55,7 +56,7 @@ function createContextGenerator({ db, pythonBin, log = () => {}, spawnProcess = 
     const runs = db.prepare('SELECT * FROM context_generation_runs ORDER BY rowid DESC LIMIT 20').all();
     const current = runs[0];
     return { success: true, model: MODEL, generator_version: 4,
-      configured: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY),
+      configured: Boolean(openRouterConfig.read('openrouter').secret),
       running: !!active, finished: !!current && !active,
       done: current?.done || 0, total: current?.total || 0, current: current?.current || '',
       errors: current?.errors || 0, last_error: current?.last_error || null,
@@ -67,7 +68,8 @@ function createContextGenerator({ db, pythonBin, log = () => {}, spawnProcess = 
   }
   function start(actorId, config) {
     if (active) return { started: false, reason: 'Já existe uma geração em execução.' };
-    if (!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY)) {
+    const openRouterKey = openRouterConfig.read('openrouter').secret;
+    if (!openRouterKey) {
       return { started: false, reason: 'Chave OpenRouter não configurada no servidor.' };
     }
     const runId = crypto.randomUUID();
@@ -78,7 +80,7 @@ function createContextGenerator({ db, pythonBin, log = () => {}, spawnProcess = 
     let proc;
     try {
       proc = spawnProcess(pythonBin, ['-u', script], { windowsHide: true, cwd: path.dirname(script),
-        env: { ...process.env, DB_PATH: file, CONTEXT_RUN_ID: runId,
+        env: { ...process.env, OPENROUTER_API_KEY: openRouterKey, DB_PATH: file, CONTEXT_RUN_ID: runId,
           PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' } });
     } catch (_) {
       db.prepare("UPDATE context_generation_runs SET status='failed',last_error='WORKER_START_FAILED',ended_at=? WHERE id=?")

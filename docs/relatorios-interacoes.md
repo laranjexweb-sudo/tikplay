@@ -138,7 +138,36 @@ o **Node** (`lib/levels.js`) compara com o baseline (ou usa a promoção explíc
 
 **Limites:** só ao vivo; nível ausente/`0` ignorado (não sobrescreve); TikTools é best-effort.
 
-## 8. Geração de sessão daemon e eventos atrasados
+## 8. Refinos do dashboard do streamer (17/10/2026)
+
+- Filtros por live, período e interação incluem presets Hoje/Ontem/7/30 dias e
+  atualizam os relatórios automaticamente ao mudar. O período usa dois campos
+  de data dentro de um único controle visual. Exportação CSV fica no cabeçalho
+  em um menu de formatos; Excel/PDF aparecem desativados como opções futuras.
+  Os filtros usam as mesmas rotas autenticadas existentes.
+- Indicadores priorizam pessoas únicas, diamantes recebidos, comentários,
+  curtidas e interações totais. A comparação mostra variação absoluta e
+  percentual contra o intervalo anterior de mesma duração; é somente do total,
+  sem inferir comparação por categoria.
+- Gráfico permite alternar interação, comentários, curtidas e presentes. Cada
+  barra mantém data, total e categorias no tooltip acessível por hover/foco.
+  O gráfico preenche a altura disponível no card; no intervalo por minuto, a
+  rolagem horizontal usa a scrollbar fina e escura do tema streamer.
+- Participantes mostram avatar quando presente no evento/perfil de níveis e
+  iniciais como fallback. O ID permanece apenas no tooltip da célula.
+- A lista recente começa com 12 eventos e carrega páginas de 50 ao expandir;
+  busca e filtros rápidos continuam locais sobre os eventos carregados. A
+  exportação CSV pagina até 10.000 registros e respeita live, intervalo, tipo,
+  busca e filtro rápido ativos.
+- O front-end só consulta as APIs existentes, todas autenticadas e escopadas
+  por `req.user.id`; exportar cria um arquivo local. Não são adicionados eventos
+  de log nem alterações de banco/servidor nesta etapa.
+
+Validação: `node tests/interactions-reports.test.js` cobre os contratos e as
+rotas existentes; a tela também deve passar pela validação sintática dos scripts
+inline e pelo `git diff --check`.
+
+## 9. Geração de sessão daemon e eventos atrasados
 
 Cada `/start-game` cria `session_id` único por tenant. O daemon o anexa às mensagens
 emitidas durante a sessão (ContextVar herdado pelas tasks). O Node mantém
