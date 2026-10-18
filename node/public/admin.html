@@ -1082,6 +1082,8 @@ const FEATURE_LIST = [
   { key: "bichinho", label: "Bichinho" },
   { key: "tres", label: "3 Dicas" },
   { key: "duelo", label: "Duelo 1x1" },
+  { key: "corda", label: "CORDA" },
+  { key: "quiz", label: "Quiz Live" },
 ];
 
 function renderFeaturesBox(features) {
@@ -1090,7 +1092,8 @@ function renderFeaturesBox(features) {
   const f = (features && typeof features === "object") ? features : {};
   const allChecked = !Object.keys(f).length; // {} = tudo liberado
   box.innerHTML = FEATURE_LIST.map((ft) => {
-    const checked = ft.key === "connect" ? true : (allChecked ? true : f[ft.key] !== false);
+    const featureKey = ft.key === "corda" && !Object.hasOwn(f, "corda") ? "duelo" : ft.key;
+    const checked = ft.key === "connect" ? true : (allChecked ? true : f[featureKey] !== false);
     return `<label class="form-check form-check-inline mb-0" style="font-size:0.8rem">
       <input class="form-check-input feat-check" type="checkbox" value="${ft.key}" data-feat="${ft.key}" ${checked ? "checked" : ""} ${ft.key === "connect" ? "disabled" : ""}>
       ${ft.label}

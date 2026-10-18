@@ -4,6 +4,7 @@ const http = require("http");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { tenants, emptyGameState, getTenant, broadcastToClients, broadcastLog, registerLogPersister } = require("./lib/ws");
+const { featureAllowed } = require("./lib/feature-access");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -214,17 +215,6 @@ const GIFT_IMAGE_MAP_PATH = path.join(__dirname, "public", "gift-image-map.json"
 // Trava de seguranca: jogos so iniciam com a live ONLINE (status "connected")
 function liveOnline(tenant) {
   return !!(tenant && tenant.sessionStarted && tenant.currentStatus && tenant.currentStatus.state === "connected");
-}
-
-// Funcionalidades liberáveis por cliente (abas do painel)
-const FEATURE_TABS = ["connect", "chat", "alerts", "games", "batalha", "caca", "bichinho", "tres", "duelo", "quiz"];
-
-// features: {} ou chaves ausentes = tudo liberado; false = bloqueada
-function featureAllowed(user, feat) {
-  if (!user || user.role === "admin") return true;
-  const f = (user.features && typeof user.features === "object") ? user.features : {};
-  if (!Object.keys(f).length) return true;
-  return f[feat] !== false;
 }
 
 function requireFeature(feat) {

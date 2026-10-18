@@ -15,7 +15,7 @@ const calls = [];
 let available = true;
 const app = express();app.use(express.json());
 corda.register(app,{db,auth,getTenant,liveOnline:t=>!!t.online,
-  requireFeature:name=>(req,res,next)=>{assert.equal(name,'duelo');if(req.user.id===3)return res.status(403).json({success:false});next();},
+  requireFeature:name=>(req,res,next)=>{assert.equal(name,'corda');if(req.user.id===3)return res.status(403).json({success:false});next();},
   daemonSend:cmd=>{calls.push(cmd);return available;}});
 async function run() {
   assert.equal(corda.normalize({coin_force:'bad'}).coin_force,.5);

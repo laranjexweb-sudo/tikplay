@@ -1,4 +1,5 @@
-// Configuração e rotas isoladas. CORDA compartilha a permissão de Duelo.
+// Configuração e rotas isoladas. CORDA possui permissão própria; o controle
+// de acesso preserva o fallback para contas legadas sem a chave "corda".
 const DEFAULTS = Object.freeze({ best_of: 3, round_time_s: 180, result_delay_s: 6,
   start_delay_s:10,round_countdown_s:3,comment_force:1,comment_cooldown_s:2,comments_enabled:true,share_enabled:false,share_force:3,share_boost_s:30,
   coin_force: 0.5, tap_target: 500, tap_force: 5, pull_speed: 60,
@@ -39,7 +40,7 @@ function initial(config) {
 }
 function register(app, deps) {
   const { db, auth, requireFeature, getTenant, daemonSend, liveOnline, broadcastToClients } = deps;
-  const guard = [auth.requireAuth, requireFeature('duelo')];
+  const guard = [auth.requireAuth, requireFeature('corda')];
   app.get('/api/corda/config', ...guard, (req,res) => res.json({success:true,config:normalize(db.getCordaConfig(req.user.id))}));
   app.get('/api/corda/state', ...guard, (req,res) => res.json({success:true,state:getTenant(req.user.id).cordaState || initial(db.getCordaConfig(req.user.id))}));
   app.post('/api/corda/config', ...guard, (req,res) => {
