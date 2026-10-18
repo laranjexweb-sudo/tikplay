@@ -84,15 +84,21 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       const body = await response.json();
       if (!Array.isArray(body.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const ids = new Set(voiceModels.filter(model => model.provider === "openrouter").map(model => model.model_id));
-      openRouterCatalog = body.data.filter(model => ids.has(model.id) && Array.isArray(model.supported_voices))
+      openRouterCatalog = body.data.filter(model => ids.has(model.id))
         .map(model => {
           const voiceModel = voiceModels.find(item => item.model_id === model.id);
-          return { model_id: model.id, voices: model.supported_voices
-          .filter(value => typeof value === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(value))
-          .filter(value => !Array.isArray(voiceModel?.pt_br_voice_ids)
-            || voiceModel.pt_br_voice_ids.includes(value))
-          .map(value => ({ key: value, label: value,
-            language: voiceModel?.pt_br_voice_ids?.includes(value) ? "Português (Brasil)" : "Multilíngue · teste PT-BR" })) };
+          const supportedVoices = Array.isArray(model.supported_voices) ? model.supported_voices
+            .filter(value => typeof value === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(value))
+            .filter(value => !Array.isArray(voiceModel?.pt_br_voice_ids)
+              || voiceModel.pt_br_voice_ids.includes(value))
+            .map(value => ({ key: value, label: value,
+              language: voiceModel?.pt_br_voice_ids?.includes(value) ? "Português (Brasil)" : "Multilíngue · teste PT-BR" }))
+            : [];
+          const voices = supportedVoices.length ? supportedVoices
+            : voiceModel?.catalog_voice_id ? [{ key: voiceModel.catalog_voice_id,
+              label: voiceModel.catalog_voice_label || voiceModel.catalog_voice_id,
+              language: "Multilíngue · teste PT-BR" }] : [];
+          return { model_id: model.id, voices };
         });
       openRouterCatalogUntil = Date.now() + 300000;
       return openRouterCatalog;
@@ -266,7 +272,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
             "Content-Type": "application/json", Accept: "audio/mpeg, audio/wav, audio/pcm" };
       const body = model.provider === "elevenlabs"
         ? { text: previewText, model_id: model.model_id, language_code: "pt" }
-        : { model: model.model_id, input: previewText, voice: voiceId,
+        : { model: model.model_id, input: previewText, ...(model.omit_voice_parameter ? {} : { voice: voiceId }),
             response_format: model.response_format || (model.id === "heygen/heygen-voice-1-turbo" ? "pcm" : "mp3") };
       const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
       apiCosts.record(db.db, { provider: model.provider, model: model.model_id, resource: "admin_voice_preview",

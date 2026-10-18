@@ -1,3 +1,5 @@
+> 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
+
 > 2026-10-17: Super Admin → Pacotes e TikCoins ganhou relatório de recargas com período e paginação, separando compras aprovadas e reembolsos de adições/remoções manuais com identificação do admin; totais calculados a partir do ledger existente. Sem mudança em saldo, checkout ou eventos financeiros.
 
 > 2026-10-17: Caça Palavras → ações “Iniciar rodada” e “Encerrar rodada” integradas à faixa do contador de palavras; em telas estreitas, ações se reorganizam para manter os botões utilizáveis. IDs, handlers e bloqueios de estado preservados.
@@ -929,5 +931,9 @@ node/public/
 > 2026-10-17: Quiz Live público → legibilidade priorizada: card claro uniforme, enunciado escuro sem sombra, alternativas com texto escuro e relógio menos dominante. Tamanho mínimo de fonte ajustado para leitura vertical; lógica e contratos preservados.
 
 > 2026-10-17: Quiz Live público → corrigido contraste em todos os estados: cartões claros só na pergunta/alternativas; resultado, espera, selo da rodada e rodapé usam superfícies escuras com texto claro. Sem alteração de lógica ou API.
+> 2026-10-17: Quiz Live público → margens seguras agora acompanham a configuração salva também durante partida ativa e no estado de espera; atualização distribuída ao vivo sem alterar regras da rodada.
 
 > 2026-10-17: Quiz Live → Banco global no Super Admin e biblioteca do streamer separada por catálogo oficial e perguntas particulares, com origem configurável da partida, importação revisável, filtros, métricas de uso e layout responsivo alinhado aos sistemas existentes.
+
+> 2026-10-17: Sons → alertas por presente agora resolvem por nome e ID; nova aba de alertas por ação configura follow, share e entrada de presenteador por nível mínimo. Likes passam a acumular por room_id no Node e só reiniciam em sala nova. Fluxo/limitações: docs/action-sound-alerts.md.
+> 2026-10-17: Compra de TikCoins usa checkout transparente no painel: modal responsivo com cartão em campos seguros do Mercado Pago e Pix com QR/copia e cola; status e saldo atualizam após confirmação. Credenciais da Public Key são configuradas em Integrações.

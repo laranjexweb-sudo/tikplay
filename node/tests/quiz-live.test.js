@@ -96,6 +96,17 @@ test("não expõe o gabarito público; aceita uma resposta por pessoa e contabil
   } finally { ctx.close(); }
 });
 
+test("margens seguras atualizadas são aplicadas à tela pública sem reiniciar a partida",()=>{
+  const ctx=setup();
+  try {
+    ctx.service._test.saveConfig(1,{themes:["historia"],question_count:1,safe_margins:{top:12,bottom:18,left:5,right:5}});
+    ctx.service._test.startMatch(1,"room-one","live-one","trace-safe-area");
+    assert.deepEqual(ctx.service.publicState("room-one").config.safe_margins,{top:12,bottom:18,left:5,right:5});
+    ctx.service._test.saveConfig(1,{safe_margins:{top:20,bottom:24,left:8,right:8}});
+    assert.deepEqual(ctx.service.publicState("room-one").config.safe_margins,{top:20,bottom:24,left:8,right:8});
+  } finally {ctx.close();}
+});
+
 test("a janela de respostas respeita o relógio e uma sala só consulta sua própria conta", () => {
   const ctx = setup();
   try {
@@ -205,6 +216,25 @@ test("importação tem prévia, valida campos, detecta duplicadas e nunca altera
     const after=ctx.service._test.parseImportQuestions(line,1);
     assert.equal(after[0].status,"duplicate");
     assert.equal(ctx.service._test.listQuestions(1,{search:"Quem proclamou"}).total,1);
+  } finally {ctx.close();}
+});
+
+test("importação aceita cabeçalho opcional e dificuldades em português com acentos",()=>{
+  const ctx=setup();
+  try {
+    const text=[
+      "tema|dificuldade|pergunta|A|B|C|D|resposta|explicação",
+      "Conhecimentos gerais|fácil|Quantos dias tem um ano comum?|365|366|360|364|A|Um ano comum tem 365 dias.",
+      "Matemática|MÉDIO|Qual é a metade de 18?|6|8|9|12|C|Dezoito dividido por dois é nove.",
+      "Ciências|difícil|Qual partícula possui carga elétrica negativa?|Próton|Elétron|Nêutron|Fóton|B|O elétron tem carga negativa.",
+    ].join("\n");
+    const preview=ctx.service._test.importQuestions(1,text);
+    assert.equal(preview.valid_count,3);
+    assert.equal(preview.invalid_count,0);
+    assert.deepEqual(preview.preview.map(row=>row.line),[2,3,4]);
+    assert.deepEqual(preview.preview.map(row=>row.question.difficulty),["facil","medio","dificil"]);
+    const imported=ctx.service._test.importQuestions(1,text,[2,3,4]);
+    assert.equal(imported.created,3);
   } finally {ctx.close();}
 });
 

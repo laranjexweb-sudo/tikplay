@@ -103,6 +103,21 @@ class AdditionalVoiceTests(unittest.TestCase):
         self.assertEqual(self.credits_spent(), 1)
         self.assertEqual(self.balance(), 999)
 
+    @patch("additional_voice_tts.urllib.request.urlopen", return_value=AudioResponse())
+    def test_drama3_uses_default_multilingual_voice_without_voice_parameter(self, network):
+        with closing(sqlite3.connect(self.database)) as conn, conn:
+            conn.execute("UPDATE tenant_elevenlabs SET model_id='fish-audio/drama-3',voice_id='drama3_multilingual_default' WHERE tenant_id=1")
+            conn.execute("INSERT INTO additional_voice_models VALUES('fish-audio/drama-3',1,6)")
+            conn.execute("INSERT INTO additional_voice_options VALUES('fish-audio/drama-3','drama3_multilingual_default','Voz multilíngue padrão',1)")
+        path, code = provider.synthesize(1, "Olá, esta mensagem está em português brasileiro", self.audio)
+        self.assertEqual(code, "SYNTHESIZED")
+        self.assertTrue(Path(path).is_file())
+        payload = json.loads(network.call_args.args[0].data)
+        self.assertEqual(payload, {"model": "fish-audio/drama-3",
+            "input": "Olá, esta mensagem está em português brasileiro", "response_format": "mp3"})
+        self.assertEqual(self.credits_spent(), 2)
+        self.assertEqual(self.balance(), 998)
+
     @patch("additional_voice_tts.urllib.request.urlopen", return_value=AudioResponse(b"pcm-audio", "audio/pcm"))
     def test_gemini_receives_safe_emotion_instruction_separately_from_spoken_text(self, network):
         with closing(sqlite3.connect(self.database)) as conn, conn:

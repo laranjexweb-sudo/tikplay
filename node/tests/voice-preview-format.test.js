@@ -16,12 +16,13 @@ test("PT-BR catalog keeps verified Brazilian voices, account clones, and drops u
   delete process.env.OPENAI_API_KEY;
 
   const db = require("../db");
+  require("../lib/api-costs").ensureSchema(db.db);
   const auth = require("../auth");
   const app = express();
   app.use(express.json());
   const logs = [];
   require("../routes/elevenlabs")(app, { db, auth, daemonSend: () => true, log: (_id, entry) => logs.push(entry) });
-  const adminIds = ["catalog", "heygen", "kokoro", "eleven"].map(name => db.createUser({
+  const adminIds = ["catalog", "heygen", "kokoro", "eleven", "drama"].map(name => db.createUser({
     email: `${name}@voice-catalog.test`, name, password_hash: "unused", role: "admin",
   }));
   const server = app.listen(0, "127.0.0.1");
@@ -36,6 +37,7 @@ test("PT-BR catalog keeps verified Brazilian voices, account clones, and drops u
         { id: "heygen/heygen-voice-1-turbo", supported_voices: ["nadine", "tabitha"] },
         { id: "hexgrad/kokoro-82m", supported_voices: ["pf_dora", "pm_santa", "bf_alice"] },
         { id: "google/gemini-3.8-flash-lite-tts", supported_voices: ["Zephyr", "Puck", "Kore"] },
+        { id: "fish-audio/drama-3", supported_voices: null },
       ] }), { headers: { "Content-Type": "application/json" } });
     }
     if (String(url).startsWith("https://api.elevenlabs.io/v2/voices?")) {
@@ -99,6 +101,12 @@ test("PT-BR catalog keeps verified Brazilian voices, account clones, and drops u
   assert.equal(gemini.voices[0].language, "Multilíngue · teste PT-BR",
     "Gemini voice IDs do not identify a Brazilian accent and require manual preview");
   assert.match(gemini.admin_note, /teste cada prévia em português brasileiro/i);
+  const drama3 = catalog.data.models.find(model => model.id === "fish-audio/drama-3");
+  assert.deepEqual(drama3.voices.map(voice => voice.key), ["drama3_multilingual_default"]);
+  assert.equal(drama3.enabled, false, "Drama 3 starts disabled for client selection");
+  assert.equal(drama3.credits_per_150_chars, 0, "the admin must configure its tariff before release");
+  assert.equal(drama3.voices[0].language, "Multilíngue · teste PT-BR");
+  assert.match(drama3.admin_note, /prévia usa a voz padrão/i);
 
   const rejectedHeygen = await request(adminIds[1], "/api/admin/tts/voice-preview", "POST", {
     model_id: "heygen/heygen-voice-1-turbo", voice_id: "nadine",
@@ -130,6 +138,16 @@ test("PT-BR catalog keeps verified Brazilian voices, account clones, and drops u
   });
   assert.equal(geminiPreview.response.headers.get("content-type"), "audio/wav");
   assert.equal(geminiPreview.audio.subarray(0, 4).toString(), "RIFF");
+  const dramaPreview = await request(adminIds[4], "/api/admin/tts/voice-preview", "POST", {
+    model_id: "fish-audio/drama-3", voice_id: "drama3_multilingual_default",
+  });
+  assert.equal(dramaPreview.response.status, 200);
+  assert.deepEqual(speechRequests[3].request, {
+    model: "fish-audio/drama-3",
+    input: "Olá! Aqui no Brasil, o número do TikPlay é vinte e três. Esta é uma prévia em português brasileiro.",
+    response_format: "mp3",
+  }, "Drama 3 uses the provider's default multilingual voice because OpenRouter has no selectable voice catalog");
+  assert.equal(dramaPreview.response.headers.get("content-type"), "audio/mpeg");
   assert.ok(logs.some(entry => entry.event === "tts.admin_voice_preview.completed"));
   assert.ok(logs.every(entry => !JSON.stringify(entry).includes("test-key")));
 });

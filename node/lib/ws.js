@@ -50,6 +50,8 @@ function getTenant(id) {
       activeLiveEngine: null,
       currentRoomId: null,
       currentSessionId: null,
+      likesByUser: new Map(),
+      likeEventIds: new Set(),
       liveSessionStartedAt: null,
       cacaState: { active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false },
       vpetState: null,

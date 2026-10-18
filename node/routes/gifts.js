@@ -16,6 +16,27 @@ module.exports = function registerGiftRoutes(app, ctx = {}) {
     readTenantGiftConfig,
   } = ctx;
 
+  const ACTION_ALERTS = Object.freeze({
+    follow: "__action_follow__",
+    share: "__action_share__",
+    gifter_join: "__action_gifter_join__",
+  });
+  const removeAlertFile = (url) => {
+    if (!url || !String(url).startsWith("/alert-audio/")) return;
+    try {
+      const rel = String(url).slice("/alert-audio/".length);
+      const root = path.resolve(__dirname, "..", "public", "alert-audio");
+      const file = path.resolve(root, rel);
+      if (file.startsWith(root + path.sep) && fs.existsSync(file)) fs.unlinkSync(file);
+    } catch {}
+  };
+  const notifySoundAlertsUpdated = (tenantId) => {
+    const tenant = getTenant(tenantId);
+    const message = { type: "sound_alerts_updated" };
+    broadcastToClients(tenant.browserClients, message);
+    broadcastToClients(tenant.logClients, message);
+  };
+
   app.get("/api/gift-tags", (req, res) => {
     res.json({ success: true, gifts: readGiftTags() });
   });
@@ -158,7 +179,7 @@ app.post("/api/gifts/sync", auth.requireAdmin, (req, res) => {
         cb(null, dir);
       },
       filename: (req, file, cb) => {
-        const safe = slugifyGift(req.body && req.body.gift);
+        const safe = slugifyGift((req.body && (req.body.gift || req.body.action)) || "gift");
         const ext = (path.extname(file.originalname) || ".mp3").toLowerCase();
         cb(null, `${safe}-${Date.now()}${ext}`);
       },
@@ -179,7 +200,7 @@ app.post("/api/gifts/sync", auth.requireAdmin, (req, res) => {
     try {
       const url = `/alert-audio/${req.user.id}/${req.file.filename}`;
       db.saveSoundAlert(req.user.id, gift, slot, url);
-      broadcastToClients(getTenant(req.user.id).browserClients, { type: "sound_alerts_updated" });
+      notifySoundAlertsUpdated(req.user.id);
       res.json({ success: true, gift, slot, url });
     } catch (e) {
       res.json({ success: false, error: e.message });
@@ -214,7 +235,52 @@ app.post("/api/gifts/sync", auth.requireAdmin, (req, res) => {
       db.saveSoundAlert(req.user.id, gift, "normal", "");
       db.saveSoundAlert(req.user.id, gift, "combo", "");
     }
-    broadcastToClients(getTenant(req.user.id).browserClients, { type: "sound_alerts_updated" });
+    notifySoundAlertsUpdated(req.user.id);
+    res.json({ success: true });
+  });
+
+  // ---------------- Alertas sonoros por ação ----------------
+  app.get("/api/action-sound-alerts", auth.requireAuth, (req, res) => {
+    const saved = db.getSoundAlerts(req.user.id);
+    const alerts = Object.fromEntries(Object.entries(ACTION_ALERTS).map(([action, key]) => [action, saved[key]?.normal || ""]));
+    res.json({ success: true, alerts, gifter_min_level: db.getActionGifterMinLevel(req.user.id) });
+  });
+
+  app.put("/api/action-sound-alerts/config", auth.requireAuth, (req, res) => {
+    const level = db.saveActionGifterMinLevel(req.user.id, req.body?.gifter_min_level);
+    notifySoundAlertsUpdated(req.user.id);
+    res.json({ success: true, gifter_min_level: level });
+  });
+
+  app.post("/api/action-sound-alerts", auth.requireAuth, soundUpload.single("file"), (req, res) => {
+    const action = String(req.body?.action || "");
+    const key = ACTION_ALERTS[action];
+    if (!key) {
+      if (req.file) removeAlertFile(`/alert-audio/${req.user.id}/${req.file.filename}`);
+      return res.status(400).json({ success: false, error: "Ação de alerta inválida." });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: "Arquivo de áudio obrigatório." });
+    try {
+      const previous = db.getSoundAlerts(req.user.id)[key]?.normal;
+      const url = `/alert-audio/${req.user.id}/${req.file.filename}`;
+      db.saveSoundAlert(req.user.id, key, "normal", url);
+      if (previous && previous !== url) removeAlertFile(previous);
+      notifySoundAlertsUpdated(req.user.id);
+      res.json({ success: true, action, url });
+    } catch (e) {
+      removeAlertFile(`/alert-audio/${req.user.id}/${req.file.filename}`);
+      res.status(500).json({ success: false, error: "Não foi possível salvar o áudio." });
+    }
+  });
+
+  app.delete("/api/action-sound-alerts", auth.requireAuth, (req, res) => {
+    const action = String(req.query.action || "");
+    const key = ACTION_ALERTS[action];
+    if (!key) return res.status(400).json({ success: false, error: "Ação de alerta inválida." });
+    const previous = db.getSoundAlerts(req.user.id)[key]?.normal;
+    db.saveSoundAlert(req.user.id, key, "normal", "");
+    removeAlertFile(previous);
+    notifySoundAlertsUpdated(req.user.id);
     res.json({ success: true });
   });
 };

@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const wallet = require("../lib/tts-credit-wallet");
 
-module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigured, getPublicBaseUrl, log }) {
+module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigured, getPublicBaseUrl, getPublicKey, log }) {
   wallet.ensureSchema(db);
   const trace = () => crypto.randomUUID();
   const report = (category, level, event, message, details = {}, code) =>
@@ -11,7 +11,10 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
 
   app.get("/api/tts/credits", auth.requireAuth, (req, res) => {
     const tenantId = req.user.id;
+    const account = db.getUserById(tenantId);
     res.set("Cache-Control", "no-store").json({ success: true, balance: wallet.getBalance(db, tenantId),
+      account_email: account?.email || "",
+      checkout: { public_key: typeof getPublicKey === "function" ? getPublicKey() : "" },
       packages: packages(true).map(item => ({ ...item, price: (item.price_cents / 100).toFixed(2) })),
       ledger: wallet.ledger(db, tenantId, 15),
       model_costs: db.db.prepare(`SELECT model_id,credits_per_150_chars FROM additional_voice_models
@@ -28,6 +31,19 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       return res.status(400).json({ success: false, error: "Pacote de TikCoins indisponível para esta conta." });
     if (!(typeof mpConfigured === "function" ? mpConfigured() : mpConfigured))
       return res.status(503).json({ success: false, error: "Compra de TikCoins indisponível no momento." });
+    const paymentMethod = req.body?.payment_method === "pix" ? "pix" : "card";
+    const publicKey = typeof getPublicKey === "function" ? getPublicKey() : "";
+    if (paymentMethod === "card" && !publicKey)
+      return res.status(503).json({ success: false, error: "Pagamento com cartão indisponível. Escolha Pix ou tente mais tarde." });
+    const card = req.body?.card && typeof req.body.card === "object" ? req.body.card : {};
+    const identificationType = typeof req.body?.identification_type === "string" ? req.body.identification_type.trim().toUpperCase() : "";
+    const identificationNumber = typeof req.body?.identification_number === "string" ? req.body.identification_number.replace(/\D/g, "") : "";
+    if (paymentMethod === "card" && (typeof card.token !== "string" || !/^[\x21-\x7e]{8,512}$/.test(card.token)
+        || typeof card.payment_method_id !== "string" || !/^[a-z0-9_-]{2,50}$/i.test(card.payment_method_id)
+        || !Number.isSafeInteger(Number(card.installments)) || Number(card.installments) < 1 || Number(card.installments) > 24))
+      return res.status(400).json({ success: false, error: "Confira os dados do cartão e tente novamente." });
+    if (!/^[A-Z0-9]{2,10}$/.test(identificationType) || identificationNumber.length < 5 || identificationNumber.length > 20)
+      return res.status(400).json({ success: false, error: "Informe um documento válido para o pagamento." });
     const purchaseId = crypto.randomUUID();
     const externalReference = `tts-credit:${purchaseId}`;
     try {
@@ -41,33 +57,77 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         origin = publicUrl.origin;
       } catch {
         db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
-        report("error", "error", "tts.credits.checkout_failed", "Checkout de créditos requer uma URL pública HTTPS.",
+        report("error", "error", "tts.credits.payment_failed", "Pagamento de créditos requer uma URL pública HTTPS para notificações.",
           { tenant_id: tenantId, package_id: item.id, code: "CHECKOUT_BASE_URL_NOT_HTTPS" }, "CHECKOUT_BASE_URL_NOT_HTTPS");
         return res.status(503).json({ success: false, error: "Compra indisponível até configurar o endereço HTTPS do painel." });
       }
-      const result = await mpFetch("/checkout/preferences", { method: "POST", body: JSON.stringify({
-        items: [{ id: item.id, title: `TikPlay · ${item.name} — TikCoins para vozes`, quantity: 1,
-          currency_id: "BRL", unit_price: item.price_cents / 100 }],
+      const paymentPayload = {
+        transaction_amount: item.price_cents / 100,
+        description: `TikPlay · ${item.name} — ${item.credits} TikCoins`,
+        payment_method_id: paymentMethod,
         external_reference: externalReference,
-        payer: { email: user.email },
-        back_urls: { success: `${origin}/painel?tts-credit=success`, pending: `${origin}/painel?tts-credit=pending`,
-          failure: `${origin}/painel?tts-credit=failure` },
-        auto_return: "approved", notification_url: `${origin}/api/webhooks/mercadopago`,
-      }) });
-      if (![200, 201].includes(result.status) || !result.data?.init_point) {
+        notification_url: `${origin}/api/webhooks/mercadopago`,
+        payer: { email: user.email, identification: { type: identificationType, number: identificationNumber } },
+      };
+      if (paymentMethod === "card") Object.assign(paymentPayload, {
+        token: card.token,
+        installments: Number(card.installments),
+        issuer_id: card.issuer_id ? String(card.issuer_id).slice(0, 32) : undefined,
+      });
+      const result = await mpFetch("/v1/payments", { method: "POST",
+        headers: { "X-Idempotency-Key": purchaseId }, body: JSON.stringify(paymentPayload) });
+      if (![200, 201].includes(result.status) || !result.data?.id || !result.data?.status
+          || String(result.data.external_reference || "") !== externalReference) {
         db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
-        report("error", "error", "tts.credits.checkout_failed", "Não foi possível abrir o checkout de créditos.",
-          { tenant_id: tenantId, package_id: item.id, code: "CHECKOUT_CREATE_FAILED" }, "CHECKOUT_CREATE_FAILED");
-        return res.status(502).json({ success: false, error: "Não foi possível iniciar a compra de TikCoins. Tente novamente." });
+        report("error", "error", "tts.credits.payment_failed", "Não foi possível iniciar o pagamento de créditos.",
+          { tenant_id: tenantId, package_id: item.id, payment_method: paymentMethod, http_status: result.status,
+            code: "PAYMENT_CREATE_FAILED" }, "PAYMENT_CREATE_FAILED");
+        return res.status(502).json({ success: false, error: "O Mercado Pago não conseguiu iniciar o pagamento. Confira os dados e tente novamente." });
       }
-      report("billing", "info", "tts.credits.checkout_created", "Checkout de créditos criado.",
-        { tenant_id: tenantId, package_id: item.id, credits: item.credits, price_cents: item.price_cents });
-      res.set("Cache-Control", "no-store").json({ success: true, checkout_url: result.data.init_point });
+      const settled = wallet.settleApprovedPayment(db, result.data, log);
+      if (!settled.handled || !settled.success) {
+        report("notice", "warning", "tts.credits.purchase_rejected", "Pagamento criado, mas a validação da compra não foi concluída.",
+          { tenant_id: tenantId, package_id: item.id, payment_id: String(result.data.id), code: settled.code || "PAYMENT_REFERENCE_MISMATCH" },
+          settled.code || "PAYMENT_REFERENCE_MISMATCH");
+        return res.status(409).json({ success: false, error: "Não foi possível validar este pagamento. Entre em contato com o suporte antes de tentar novamente." });
+      }
+      report("billing", "info", "tts.credits.payment_created", "Pagamento transparente de créditos iniciado.",
+        { tenant_id: tenantId, package_id: item.id, credits: item.credits, price_cents: item.price_cents,
+          payment_method: paymentMethod, payment_status: String(result.data.status).slice(0, 32) });
+      res.set("Cache-Control", "no-store").json({ success: true, payment: {
+        id: String(result.data.id), status: String(result.data.status), status_detail: String(result.data.status_detail || "").slice(0, 64),
+      }, pix: paymentMethod === "pix" ? {
+        qr_code: String(result.data.point_of_interaction?.transaction_data?.qr_code || "").slice(0, 4096),
+        qr_code_base64: String(result.data.point_of_interaction?.transaction_data?.qr_code_base64 || "").slice(0, 200000),
+      } : undefined, settled: Boolean(settled.success && (settled.approved || settled.duplicate)) });
     } catch {
       db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
-      report("error", "error", "tts.credits.checkout_failed", "Não foi possível abrir o checkout de créditos.",
-        { tenant_id: tenantId, package_id: item.id, code: "CHECKOUT_CREATE_FAILED" }, "CHECKOUT_CREATE_FAILED");
-      res.status(502).json({ success: false, error: "Não foi possível iniciar a compra de TikCoins. Tente novamente." });
+      report("error", "error", "tts.credits.payment_failed", "Não foi possível iniciar o pagamento de créditos.",
+        { tenant_id: tenantId, package_id: item.id, payment_method: paymentMethod, code: "PAYMENT_CREATE_FAILED" }, "PAYMENT_CREATE_FAILED");
+      res.status(502).json({ success: false, error: "Não foi possível iniciar o pagamento. Tente novamente." });
+    }
+  });
+
+  app.get("/api/tts/credits/payments/:paymentId", auth.requireAuth, async (req, res) => {
+    const paymentId = String(req.params.paymentId || "");
+    if (!/^\d{1,32}$/.test(paymentId)) return res.status(400).json({ success: false, error: "Pagamento inválido." });
+    const purchase = db.db.prepare("SELECT id FROM tts_credit_purchases WHERE tenant_id=? AND payment_id=?")
+      .get(req.user.id, paymentId);
+    if (!purchase) return res.status(404).json({ success: false, error: "Pagamento não encontrado." });
+    try {
+      const result = await mpFetch(`/v1/payments/${encodeURIComponent(paymentId)}`);
+      if (result.status !== 200 || !result.data?.id) throw new Error("PAYMENT_LOOKUP_FAILED");
+      if (String(result.data.external_reference || "") !== `tts-credit:${purchase.id}`)
+        return res.status(409).json({ success: false, error: "Não foi possível validar este pagamento." });
+      const settled = wallet.settleApprovedPayment(db, result.data, log);
+      if (settled.handled && !settled.success) return res.status(409).json({ success: false, error: "Não foi possível validar o pagamento." });
+      res.set("Cache-Control", "no-store").json({ success: true,
+        status: String(result.data.status || "pending").slice(0, 32),
+        balance: settled.approved ? settled.balance : wallet.getBalance(db, req.user.id) });
+    } catch {
+      report("error", "error", "tts.credits.payment_status_failed", "Não foi possível consultar o status do pagamento.",
+        { tenant_id: req.user.id, code: "PAYMENT_LOOKUP_FAILED" }, "PAYMENT_LOOKUP_FAILED");
+      res.status(502).json({ success: false, error: "Não foi possível consultar o pagamento agora." });
     }
   });
 

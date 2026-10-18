@@ -5,6 +5,7 @@ const path = require("path");
 const DEFINITIONS = Object.freeze({
   openrouter: { env: "OPENROUTER_API_KEY", fallbackEnv: "OPENAI_API_KEY", file: "openrouter.json" },
   mercadopago: { env: "MP_ACCESS_TOKEN", file: "mercadopago.json" },
+  mercadopago_public_key: { env: "MP_PUBLIC_KEY", file: "mercadopago-public-key.json" },
   mercadopago_webhook: { env: "MP_WEBHOOK_SECRET", file: "mercadopago-webhook.json" },
 });
 

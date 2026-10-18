@@ -117,8 +117,8 @@ function settleApprovedPayment(db, payment, log) {
     if (current.status === "approved" || current.status === "refunded")
       return { duplicate: true, balance: getBalance(db, purchase.tenant_id) };
     if (!approved) {
-      db.db.prepare("UPDATE tts_credit_purchases SET status=? WHERE id=? AND status='pending'")
-        .run(String(payment.status || "pending").slice(0, 32), purchaseId);
+      db.db.prepare("UPDATE tts_credit_purchases SET status=?,payment_id=? WHERE id=? AND status='pending'")
+        .run(String(payment.status || "pending").slice(0, 32), paymentId, purchaseId);
       return { pending: true };
     }
     ensureWallet(db, current.tenant_id);

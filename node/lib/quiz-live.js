@@ -330,8 +330,14 @@ function createQuizService({ database, getTenant, getUserByRoomCode, getNarratio
     const match = isPublic
       ? database.prepare("SELECT * FROM quiz_matches WHERE room_code=? ORDER BY started_at DESC LIMIT 1").get(roomCode)
       : currentMatch(tenantId) || database.prepare("SELECT * FROM quiz_matches WHERE tenant_id=? ORDER BY started_at DESC LIMIT 1").get(tenantId);
-    if (!match) return { type: "quiz_state", state: "waiting", match_id: null, ...(isPublic ? {} : { config: configFor(tenantId), live_connected: getTenant(tenantId)?.currentStatus?.state === "connected", all_ranking: [], weekly_ranking: weeklyRanking(tenantId) }) };
+    if (!match) {
+      const currentConfig = configFor(tenantId);
+      return { type: "quiz_state", state: "waiting", match_id: null,
+        ...(isPublic ? { config: { safe_margins: currentConfig.safe_margins } }
+          : { config: currentConfig, live_connected: getTenant(tenantId)?.currentStatus?.state === "connected", all_ranking: [], weekly_ranking: weeklyRanking(tenantId) }) };
+    }
     const config = parseJson(match.config, DEFAULTS);
+    const safeMargins = configFor(tenantId).safe_margins;
     const round = currentRound(match);
     let question = null;
     if (round) {
@@ -355,7 +361,7 @@ function createQuizService({ database, getTenant, getUserByRoomCode, getNarratio
       type: "quiz_state", state: match.state, match_id: match.id, started_at: match.started_at, ended_at: match.ended_at,
       question_count: match.question_count, current_question_no: match.current_question_no,
       question, participant_count: ranking.length, ranking: topRanking,
-      ...(isPublic ? { config: { show_ranking: !!config.show_ranking, safe_margins: config.safe_margins, narrate: !!config.narrate, narrate_options: !!config.narrate_options, question_time: config.question_time } }
+      ...(isPublic ? { config: { show_ranking: !!config.show_ranking, safe_margins: safeMargins, narrate: !!config.narrate, narrate_options: !!config.narrate_options, question_time: config.question_time } }
         : { config, all_ranking: ranking, weekly_ranking: weeklyRanking(tenantId), live_connected: getTenant(tenantId)?.currentStatus?.state === "connected" }),
     };
   }
@@ -815,24 +821,31 @@ function createQuizService({ database, getTenant, getUserByRoomCode, getNarratio
     return result.lastInsertRowid;
   }
   function parseImportQuestions(text, target) {
-    const lines = String(text || "").split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+    const lines = String(text || "").split(/\r?\n/).map((line,index)=>({text:line.replace(/^\uFEFF/,"").trim(),line:index+1})).filter(item=>item.text);
     if (!lines.length || lines.length > 2000) throw new Error("Cole entre 1 e 2.000 perguntas.");
+    const header = ["tema","dificuldade","pergunta","a","b","c","d","resposta","explicacao"];
+    const isHeader = item => item.text.split("|").map(normalizeLabel).join("|") === header.join("|");
+    if (isHeader(lines[0])) lines.shift();
+    if (!lines.length) throw new Error("Cole ao menos uma pergunta abaixo do cabeçalho.");
     const global = target === "global";
     const existing = new Set(database.prepare("SELECT prompt FROM quiz_questions WHERE scope=? AND (scope='global' OR owner_user_id=?)").all(global?"global":"streamer",global?0:target).map(row=>normalizePrompt(row.prompt)));
     const seen = new Set();
-    return lines.map((line,index)=>{
-      const cells=line.split("|").map(value=>value.trim());
-      if(cells.length!==9)return {line:index+1,status:"invalid",message:`Esperados 9 campos; recebidos ${cells.length}.`};
+    return lines.map(item=>{
+      const cells=item.text.split("|").map(value=>value.trim());
+      if(cells.length!==9)return {line:item.line,status:"invalid",message:`Esperados 9 campos; recebidos ${cells.length}.`};
       try{
-        const [theme,difficulty,prompt,a,b,c,d,answer,explanation]=cells;
+        const [theme,rawDifficulty,prompt,a,b,c,d,answer,explanation]=cells;
+        const difficultyAliases={facil:"facil",easy:"facil",medio:"medio",media:"medio",medium:"medio",dificil:"dificil",hard:"dificil"};
+        const difficulty=difficultyAliases[normalizeLabel(rawDifficulty)];
+        if(!difficulty)throw new Error("Dificuldade inválida. Use fácil, médio ou difícil.");
         const resolvedTheme=themeByInput(theme);
-        if(!resolvedTheme)throw new Error("Tema global não encontrado ou inativo.");
+        if(!resolvedTheme)throw new Error("Tema não encontrado ou inativo.");
         const question=validateQuestion({theme:resolvedTheme.id,difficulty,prompt,options:{A:a,B:b,C:c,D:d},answer,explanation});
         const normalized=normalizePrompt(question.prompt);
-        if(existing.has(normalized)||seen.has(normalized))return {line:index+1,status:"duplicate",message:seen.has(normalized)?"Pergunta repetida nesta importação.":"Pergunta já existe neste banco."};
+        if(existing.has(normalized)||seen.has(normalized))return {line:item.line,status:"duplicate",message:seen.has(normalized)?"Pergunta repetida nesta importação.":"Pergunta já existe neste banco."};
         seen.add(normalized);
-        return {line:index+1,status:"valid",message:"Pronta para adicionar.",question};
-      }catch(error){return {line:index+1,status:"invalid",message:error.message||"Linha inválida."};}
+        return {line:item.line,status:"valid",message:"Pronta para adicionar.",question};
+      }catch(error){return {line:item.line,status:"invalid",message:error.message||"Linha inválida."};}
     });
   }
   function importQuestions(target, text, acceptedLines = []) {
@@ -962,7 +975,7 @@ function createQuizService({ database, getTenant, getUserByRoomCode, getNarratio
     expressApp.get("/api/quiz-live/config", ...guard, (req,res)=>res.json({success:true,config:configFor(req.user.id),themes:listThemes(true),math_contents:math.CONTENTS}));
     expressApp.put("/api/quiz-live/config", ...guard, (req,res)=>{
       const traceId=crypto.randomUUID();
-      try { const config=saveConfig(req.user.id,req.body||{}); log(req.user.id,"quiz.config.saved",{trace_id:traceId,message:"Configurações do Quiz salvas.",details:{themes:config.themes.length,difficulty:config.difficulty,question_source:config.question_source,question_count:config.question_count}}); res.json({success:true,config,trace_id:traceId}); }
+      try { const config=saveConfig(req.user.id,req.body||{}); log(req.user.id,"quiz.config.saved",{trace_id:traceId,message:"Configurações do Quiz salvas.",details:{themes:config.themes.length,difficulty:config.difficulty,question_source:config.question_source,question_count:config.question_count}}); emitState(req.user.id); res.json({success:true,config,trace_id:traceId}); }
       catch { log(req.user.id,"quiz.config.failed",{level:"error",trace_id:traceId,code:"CONFIG_SAVE_FAILED",message:"Não foi possível salvar as configurações do Quiz."}); res.status(500).json({success:false,error:"Não foi possível salvar as configurações."}); }
     });
     expressApp.post("/api/quiz-live/availability", ...guard, (req,res)=>{

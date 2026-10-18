@@ -19,6 +19,7 @@ const logstore = require("./lib/logstore");
 const interactions = require("./lib/interactions");
 const levels = require("./lib/levels");
 const sessionGuard = require("./lib/session-guard");
+const liveLikesState = require("./lib/live-likes-state");
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
@@ -690,13 +691,15 @@ function handleDaemonMessage(msg) {
       interactions.ingest(tenant, interaction);
       quizLiveEngine.handleInteraction(tenant, interaction);
     } else if (msg.type === "live_session") {
-      // Nova live (sala) detectada pelo daemon: abre/reaproveita a sessão e zera
-      // o ranking de curtidas (dados são por live). NÃO encerra jogos.
+      // Reutiliza a sessão e o ranking se o daemon reconectar na mesma sala.
+      // Só um room_id diferente representa uma live nova para esse ranking.
       const p = msg.live_session || {};
       if (p.state === "start") {
         interactions.openSession(tenant, p);
-        tenant.gameState.likes_ranking = [];
-        tenant.gameState.likes_ranking_all = [];
+        if (liveLikesState.ensureRoomState(tenant, p.room_id)) {
+          tenant.gameState.likes_ranking = [];
+          tenant.gameState.likes_ranking_all = [];
+        }
       }
     } else if (msg.type === "viewer_level") {
       // Sincroniza nível do usuário e, se subiu DURANTE a live, difunde level_up.
@@ -714,7 +717,14 @@ function handleDaemonMessage(msg) {
         });
       }
     } else if (msg.type === "game") {
-      const gameMsg = msg.msg || {};
+      let gameMsg = msg.msg || {};
+      if (gameMsg.type === "likes_ranking_delta") {
+        if (liveLikesState.applyLikeDelta(tenant, gameMsg)) {
+          tenant.gameState.likes_ranking = liveLikesState.ranking(tenant, 5);
+          tenant.gameState.likes_ranking_all = liveLikesState.ranking(tenant, 10);
+        }
+        return;
+      }
       if (gameMsg.type === "likes_activity") {
         // Atividade da fonte de likes é efêmera: entrega apenas aos overlays
         // autenticados do tenant, sem alterar estado/ranking ou inundar os logs.
@@ -726,6 +736,12 @@ function handleDaemonMessage(msg) {
         broadcastToClients(tenant.logClients, gameMsg);
         return;
       }
+      if (gameMsg.type === "action_alert_event") {
+        // Alertas de follow/share/entrada são consumidos pelo painel autenticado;
+        // não precisam atualizar estado de jogo nem ser enviados às fontes públicas.
+        broadcastToClients(tenant.logClients, gameMsg);
+        return;
+      }
       if (gameMsg.type === "corda_state") {
         if(!tenant.cordaLayout) tenant.cordaLayout=corda.layout(db.getCordaConfig(tenantId));
         gameMsg.config={...gameMsg.config,...tenant.cordaLayout};
@@ -733,6 +749,13 @@ function handleDaemonMessage(msg) {
       }
       if (gameMsg.type === "duelo_state") {
         tenant.dueloState = gameMsg;
+      }
+      if (gameMsg.type === "likes_ranking" && tenant.currentRoomId) {
+        // Snapshots do daemon atualizam os demais metadados, mas não substituem
+        // o acumulado da sala após uma reinicialização do processo Python.
+        gameMsg = { ...gameMsg,
+          ranking: liveLikesState.ranking(tenant, 5),
+          ranking_all: liveLikesState.ranking(tenant, 10) };
       }
       updateGameState(tenant, gameMsg);
       broadcastToClients(tenant.browserClients, gameMsg);
@@ -946,7 +969,8 @@ async function mpFetch(path, opts = {}) {
 }
 
 const ttsCreditRoutes = require("./routes/tts-credits")(app, { db, auth, mpFetch,
-  mpConfigured: () => Boolean(mpAccessToken()), getPublicBaseUrl: () => checkoutConfig.read().publicBaseUrl, log: processLog });
+  mpConfigured: () => Boolean(mpAccessToken()), getPublicBaseUrl: () => checkoutConfig.read().publicBaseUrl,
+  getPublicKey: () => integrationSecrets.read("mercadopago_public_key").secret, log: processLog });
 
 require("./routes/admin-integrations")(app, { auth, integrationSecrets, providerConfig: require("./lib/elevenlabs-config"), checkoutConfig,
   getDaemonOpenRouterKey: () => DAEMON_ENV.OPENROUTER_API_KEY, log: processLog });

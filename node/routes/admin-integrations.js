@@ -16,6 +16,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
   const status = () => {
     const openrouter = integrationSecrets.read("openrouter");
     const mercadopago = integrationSecrets.read("mercadopago");
+    const publicKey = integrationSecrets.read("mercadopago_public_key");
     const webhook = integrationSecrets.read("mercadopago_webhook");
     const checkout = checkoutConfig.read();
     const elevenlabs = providerConfig.read();
@@ -29,6 +30,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
           daemon_restart_required: openrouter.secret !== getDaemonOpenRouterKey() },
         mercadopago: { configured: Boolean(mercadopago.secret), source: mercadopago.source,
           access_token_masked: maskSecret(mercadopago.secret),
+          public_key_configured: Boolean(publicKey.secret), public_key_masked: maskSecret(publicKey.secret), public_key_source: publicKey.source,
           webhook_secret_configured: Boolean(webhook.secret), webhook_secret_masked: maskSecret(webhook.secret), webhook_source: webhook.source,
           public_base_url: checkout.publicBaseUrl, public_base_url_source: checkout.source },
       },
@@ -59,27 +61,33 @@ module.exports = function registerAdminIntegrationRoutes(app, {
   app.put("/api/admin/integrations/mercadopago", auth.requireAdmin, (req, res) => {
     const body = req.body || {};
     const accessToken = typeof body.access_token === "string" ? body.access_token.trim() : "";
+    const publicKey = typeof body.public_key === "string" ? body.public_key.trim() : "";
     const webhookSecret = typeof body.webhook_secret === "string" ? body.webhook_secret.trim() : "";
     const publicBaseUrl = typeof body.public_base_url === "string" ? body.public_base_url.trim() : "";
     const clearAccess = body.clear_access_token === true;
+    const clearPublicKey = body.clear_public_key === true;
     const clearWebhook = body.clear_webhook_secret === true;
     const clearBaseUrl = body.clear_public_base_url === true;
     if ((body.clear_access_token !== undefined && typeof body.clear_access_token !== "boolean")
+        || (body.clear_public_key !== undefined && typeof body.clear_public_key !== "boolean")
         || (body.clear_webhook_secret !== undefined && typeof body.clear_webhook_secret !== "boolean")
         || (body.clear_public_base_url !== undefined && typeof body.clear_public_base_url !== "boolean")
-        || (clearAccess && accessToken) || (clearWebhook && webhookSecret) || (clearBaseUrl && publicBaseUrl)
+        || (clearAccess && accessToken) || (clearPublicKey && publicKey) || (clearWebhook && webhookSecret) || (clearBaseUrl && publicBaseUrl)
         || (accessToken && !/^[\x21-\x7e]{10,4096}$/.test(accessToken))
+        || (publicKey && !/^[\x21-\x7e]{10,4096}$/.test(publicKey))
         || (webhookSecret && !/^[\x21-\x7e]{10,1024}$/.test(webhookSecret))
         || (publicBaseUrl && !checkoutConfig.normalizePublicBaseUrl(publicBaseUrl))
-        || (!accessToken && !webhookSecret && !publicBaseUrl && !clearAccess && !clearWebhook && !clearBaseUrl))
+        || (!accessToken && !publicKey && !webhookSecret && !publicBaseUrl && !clearAccess && !clearPublicKey && !clearWebhook && !clearBaseUrl))
       return res.status(400).json({ success: false, error: "Informe uma credencial válida ou marque qual deseja remover." });
     try {
       if (accessToken || clearAccess) integrationSecrets.save("mercadopago", clearAccess ? "" : accessToken);
+      if (publicKey || clearPublicKey) integrationSecrets.save("mercadopago_public_key", clearPublicKey ? "" : publicKey);
       if (webhookSecret || clearWebhook) integrationSecrets.save("mercadopago_webhook", clearWebhook ? "" : webhookSecret);
       if (clearBaseUrl) checkoutConfig.clear();
       else if (publicBaseUrl) checkoutConfig.save(publicBaseUrl);
       report(req.user.id, "integrations.mercadopago.saved", "info", "Configuração do Mercado Pago atualizada.",
         { access_token_changed: Boolean(accessToken || clearAccess), webhook_secret_changed: Boolean(webhookSecret || clearWebhook),
+          public_key_changed: Boolean(publicKey || clearPublicKey),
           public_base_url_changed: Boolean(publicBaseUrl || clearBaseUrl) });
       res.set("Cache-Control", "no-store").json(status());
     } catch {

@@ -418,6 +418,7 @@
       <nav class="local-tabs" aria-label="Seções de áudio">
         <button class="local-tab active" type="button" data-local-tab="voice">Narração</button>
         <button class="local-tab" type="button" data-local-tab="alerts">Alertas por presente</button>
+        <button class="local-tab" type="button" data-local-tab="action-alerts">Alertas por ação</button>
       </nav>
       <div class="save-state"><i></i><span id="settingsSaveStatus" role="status" aria-live="polite">Preferências salvas automaticamente</span></div>
     </div>
@@ -494,6 +495,14 @@
             <div class="divider"></div>
             <div class="section-subtitle"><h3>Presentes configurados</h3><span>Áudio normal e combo</span></div>
             <div class="alert-list" id="soundAlertsList"></div>
+          </div>
+        </section>
+        <section class="card page-section hidden tp-sound-section tp-action-alerts" data-feature-section="alerts" data-section="action-alerts" id="tab-action-alerts" aria-labelledby="actionAlertsHeading">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2 id="actionAlertsHeading">Alertas por ação</h2><p>Escolha um áudio para eventos importantes da live.</p></div></div></div>
+          <div class="card-body">
+            <div class="action-alert-level field"><label for="actionGifterMinLevel">Presenteador especial · nível mínimo</label><div><span>Nível</span><input class="control" id="actionGifterMinLevel" type="number" min="1" max="50" step="1" value="30" onchange="saveActionGifterMinLevel(this.value)"></div><small>O alerta toca quando alguém desse nível ou superior entra na live. O TikTok precisa fornecer o nível no evento de entrada.</small></div>
+            <div id="actionSoundAlertsList" class="action-alert-list"></div>
+            <p id="actionSoundAlertMsg" class="action-alert-status" role="status" aria-live="polite"></p>
           </div>
         </section>
         <section class="card hidden tts-alert-help" data-section="alerts"><div class="card-head"><div class="title-wrap"><div class="title-icon">⚡</div><div><h2>Como funciona</h2><p>Fluxo recomendado para sua live.</p></div></div></div><div class="card-body"><div class="info-card"><strong>1.</strong> Selecione o presente no catálogo.<br><br><strong>2.</strong> Envie o áudio normal e, se quiser, um áudio específico para combos.<br><br><strong>3.</strong> Quando o presente chegar na live, o TikPlay dispara o efeito configurado.</div></div></section>
@@ -1214,7 +1223,7 @@
             </form>
           </div>
           <div data-quiz-section="bank" class="tp-quiz-section" hidden>
-            <section class="tp-quiz-panel tp-quiz-bank"><header class="tp-quiz-bank-header"><div><span class="tp-quiz-eyebrow">BIBLIOTECA</span><h2>Banco de perguntas</h2><p>Consulte o catálogo TikPlay e gerencie perguntas exclusivas da sua conta.</p></div><div class="tp-quiz-bank-actions"><button type="button" class="tp-quiz-btn tp-quiz-btn-primary" id="quizNewQuestionButton" onclick="openQuizQuestionEditor()">+ Nova pergunta</button><details class="tp-quiz-import" id="quizImportDetails"><summary class="tp-quiz-btn tp-quiz-btn-secondary">Importar perguntas</summary><div class="tp-quiz-import-panel"><p>Uma pergunta por linha: <code>tema|dificuldade|pergunta|A|B|C|D|resposta|explicação</code></p><textarea id="quizImportText" rows="5" placeholder="historia|facil|Em que ano foi proclamada a Independência do Brasil?|1808|1822|1888|1889|B|A Independência foi proclamada em 1822."></textarea><button type="button" class="tp-quiz-btn tp-quiz-btn-secondary" onclick="previewQuizQuestions()">Pré-visualizar importação</button><span id="quizImportStatus" role="status"></span><div id="quizImportPreview"></div></div></details></div></header>
+            <section class="tp-quiz-panel tp-quiz-bank"><header class="tp-quiz-bank-header"><div><span class="tp-quiz-eyebrow">BIBLIOTECA</span><h2>Banco de perguntas</h2><p>Consulte o catálogo TikPlay e gerencie perguntas exclusivas da sua conta.</p></div><div class="tp-quiz-bank-actions"><button type="button" class="tp-quiz-btn tp-quiz-btn-primary" id="quizNewQuestionButton" onclick="openQuizQuestionEditor()">+ Nova pergunta</button><details class="tp-quiz-import" id="quizImportDetails"><summary class="tp-quiz-btn tp-quiz-btn-secondary">Importar perguntas</summary><div class="tp-quiz-import-panel"><p>Uma pergunta por linha: <code>tema|dificuldade|pergunta|A|B|C|D|resposta|explicação</code>. Cabeçalho opcional; dificuldade pode ser fácil, médio ou difícil.</p><textarea id="quizImportText" rows="5" placeholder="Conhecimentos gerais|fácil|Quantos dias tem um ano comum?|365|366|360|364|A|Um ano comum tem 365 dias."></textarea><button type="button" class="tp-quiz-btn tp-quiz-btn-secondary" onclick="previewQuizQuestions()">Pré-visualizar importação</button><span id="quizImportStatus" role="status"></span><div id="quizImportPreview"></div></div></details></div></header>
               <div class="tp-quiz-bank-scopes" role="tablist" aria-label="Origem das perguntas"><button type="button" class="is-active" data-bank-scope="global" onclick="setQuizBankScope('global')">Catálogo TikPlay</button><button type="button" data-bank-scope="streamer" onclick="setQuizBankScope('streamer')">Minhas perguntas</button><span id="quizBankScopeHelp">Perguntas oficiais, disponíveis para todos os streamers.</span></div><div class="tp-quiz-bank-stats"><article><small>Total de perguntas</small><strong id="quizBankCount">—</strong></article><article><small>Disponíveis</small><strong id="quizBankAvailable">—</strong></article><article><small>Desativadas</small><strong id="quizBankInactive">—</strong></article><article class="tp-quiz-bank-theme-stat"><small>Por tema</small><div id="quizBankThemes">Carregando…</div></article></div>
               <div class="tp-quiz-bank-toolbar"><label>Buscar enunciado<input type="search" id="quizQuestionSearch" placeholder="Digite parte da pergunta"></label><label>Tema<select id="quizQuestionThemeFilter"><option value="">Todos os temas</option></select></label><label>Dificuldade<select id="quizQuestionDifficultyFilter"><option value="">Todas</option><option value="facil">Fácil</option><option value="medio">Média</option><option value="dificil">Difícil</option></select></label><label>Tipo<select id="quizQuestionModeFilter"><option value="">Todos</option><option value="alternativas">Alternativas</option><option value="calculo">Cálculo direto</option></select></label><label>Status<select id="quizQuestionFilter"><option value="">Todos</option><option value="active">Ativas</option><option value="inactive">Desativadas</option></select></label><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="clearQuizQuestionFilters()">Limpar filtros</button></div>
               <div class="tp-quiz-question-table-wrap"><div class="tp-quiz-question-table-head" aria-hidden="true"><span>Pergunta</span><span>Tema</span><span>Dificuldade</span><span>Tipo</span><span>Origem · usos</span><span>Ações</span></div><div id="quizQuestionList" class="tp-quiz-question-list" aria-live="polite"><p>Carregando perguntas…</p></div></div><div id="quizQuestionUsage" class="tp-quiz-usage" aria-live="polite"></div><div class="tp-quiz-pagination"><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizQuestionPage(-1)">Anterior</button><span id="quizQuestionPage">Página 1</span><button class="tp-quiz-btn tp-quiz-btn-secondary" type="button" onclick="changeQuizQuestionPage(1)">Próxima</button></div>
@@ -1533,6 +1542,29 @@
   </div>
 </div>
 
+<dialog class="tts-credit-dialog" id="ttsCreditCheckoutDialog" aria-labelledby="ttsCreditCheckoutTitle">
+  <form method="dialog" class="tts-credit-dialog-head"><div><span class="tts-card-kicker">COMPRA SEGURA</span><h2 id="ttsCreditCheckoutTitle">Comprar TikCoins</h2><p id="ttsCreditPackageSummary"></p></div><button class="tts-credit-dialog-close" aria-label="Fechar checkout">×</button></form>
+  <div class="tts-credit-methods" role="tablist" aria-label="Forma de pagamento">
+    <button type="button" class="is-active" id="ttsCreditCardTab" role="tab" aria-selected="true" onclick="selectTtsCreditMethod('card')">Cartão</button>
+    <button type="button" id="ttsCreditPixTab" role="tab" aria-selected="false" onclick="selectTtsCreditMethod('pix')">Pix</button>
+  </div>
+  <form id="ttsCreditCardForm" class="tts-credit-payment-form">
+    <label class="tts-mp-field"><span>Número do cartão</span><div id="ttsMpCardNumber"></div></label>
+    <div class="tts-mp-row"><label class="tts-mp-field"><span>Validade</span><div id="ttsMpExpiration"></div></label><label class="tts-mp-field"><span>CVV</span><div id="ttsMpSecurity"></div></label></div>
+    <label class="tts-mp-field"><span>Nome impresso no cartão</span><input class="control" id="ttsMpCardholder" autocomplete="cc-name"></label>
+    <div class="tts-mp-row"><label class="tts-mp-field"><span>Banco emissor</span><select class="control" id="ttsMpIssuer"></select></label><label class="tts-mp-field"><span>Parcelas</span><select class="control" id="ttsMpInstallments"></select></label></div>
+    <div class="tts-mp-row"><label class="tts-mp-field"><span>Documento</span><select class="control" id="ttsMpIdentificationType"></select></label><label class="tts-mp-field"><span>Número do documento</span><input class="control" id="ttsMpIdentificationNumber" inputmode="numeric" autocomplete="off"></label></div>
+    <label class="tts-mp-field"><span>E-mail do titular</span><input class="control" id="ttsMpEmail" type="email" autocomplete="email"></label>
+    <button class="btn btn-primary" id="ttsMpSubmit" type="submit">Pagar agora</button>
+  </form>
+  <div id="ttsCreditPixPanel" class="tts-credit-payment-form" hidden>
+    <label class="tts-mp-field"><span>CPF do pagador</span><input class="control" id="ttsPixCpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"></label>
+    <button class="btn btn-primary" id="ttsPixCreate" type="button" onclick="createTtsPixPayment()">Gerar Pix</button>
+    <div id="ttsPixResult" class="tts-pix-result" hidden><img id="ttsPixQr" alt="QR Code Pix para pagamento"><label class="tts-mp-field"><span>Pix copia e cola</span><textarea class="control" id="ttsPixCode" readonly rows="3"></textarea></label><button class="btn btn-dark" id="ttsPixCopy" type="button" onclick="copyTtsPixCode()">Copiar código Pix</button></div>
+  </div>
+  <div id="ttsCreditPaymentStatus" class="tts-credit-payment-status" role="status" aria-live="polite"></div>
+</dialog>
+
 <script>
 const token = localStorage.getItem("token");
 window.addEventListener('message', event => {
@@ -1828,7 +1860,9 @@ function connectLogs() {
     } else if (msg.type === "gift_event") {
       streamerGiftCount += Math.max(1, Number(msg.repeat_count) || 1);
       document.getElementById('streamerDashGifts').textContent = streamerGiftCount.toLocaleString('pt-BR');
-      playGiftSound(msg.gift, msg.repeat_count);
+      playGiftSound(msg.gift, msg.repeat_count, msg.gift_id);
+    } else if (msg.type === "action_alert_event") {
+      playActionSound(msg.action, msg);
     } else if (msg.type === "sound_alerts_updated") {
       loadSoundAlerts();
     } else if (["battle_tick", "battle_state", "battle_action", "battle_round_end", "battle_ranking"].includes(msg.type)) {
@@ -1916,10 +1950,28 @@ function processSoundEffectQueue() {
   soundEffectPlaying = true;
   const a = new Audio(url);
   a.preload = "auto";
-  a.onended = nextSoundEffect;
-  a.onerror = nextSoundEffect;
-  a.play().catch(nextSoundEffect);
+  let completed = false;
+  const done = (failed = false) => {
+    if (completed) return;
+    completed = true;
+    if (failed) reportSoundPlaybackFailure(url);
+    nextSoundEffect();
+  };
+  a.onended = () => done();
+  a.onerror = () => done(true);
+  a.play().catch(() => done(true));
   soundAudio = a;
+}
+
+const reportedSoundPlaybackFailures = new Set();
+function reportSoundPlaybackFailure(url) {
+  if (reportedSoundPlaybackFailures.has(url)) return;
+  reportedSoundPlaybackFailures.add(url);
+  const status = document.getElementById("soundAlertMsg");
+  if (status) status.textContent = "Um alerta não pôde tocar. Confirme se o áudio ainda está disponível e interaja com a página para liberar o som.";
+  const actionStatus = document.getElementById("actionSoundAlertMsg");
+  if (actionStatus && Object.values(actionSoundAlerts).includes(url)) actionStatus.textContent = "Um alerta por ação não pôde tocar. Confirme se o áudio ainda está disponível e interaja com a página para liberar o som.";
+  addLog("[Alerta] A reprodução de um áudio falhou; confira o arquivo e o desbloqueio de áudio do navegador.");
 }
 
 function nextSoundEffect() {
@@ -1947,7 +1999,7 @@ function cacheAllSoundDurations() {
 }
 
 function getSoundAlertGiftKeys() {
-  return Object.keys(soundAlerts).filter((gift) => gift !== CONNECT_SOUND_KEY);
+  return Object.keys(soundAlerts).filter((gift) => gift !== CONNECT_SOUND_KEY && !gift.startsWith("__action_"));
 }
 
 function resolveSoundEntry(gift) {
@@ -1966,6 +2018,20 @@ function resolveSoundEntry(gift) {
   return null;
 }
 
+function resolveSoundEntryByGiftId(giftId) {
+  const id = String(giftId || "").trim().toLowerCase();
+  if (!id) return null;
+  if (soundAlerts[id]) return soundAlerts[id];
+  const catalogGift = giftByName(id);
+  if (catalogGift) {
+    const direct = soundAlerts[catalogGift.name] || soundAlerts[getGiftPtName(catalogGift.name)];
+    if (direct) return direct;
+  }
+  const matchedKey = Object.keys(soundAlerts).find(key => key !== CONNECT_SOUND_KEY && !key.startsWith("__action_") &&
+    String((giftByName(key) || {}).id || "").trim().toLowerCase() === id);
+  return matchedKey ? soundAlerts[matchedKey] : null;
+}
+
 function computeNormalPlays(repeatCount, duration) {
   const secs = duration > 0 ? duration : 0;
   let maxPlays;
@@ -1977,8 +2043,8 @@ function computeNormalPlays(repeatCount, duration) {
   return Math.min(repeatCount, maxPlays);
 }
 
-function playGiftSound(gift, repeat_count) {
-  const entry = resolveSoundEntry(gift);
+function playGiftSound(gift, repeat_count, giftId) {
+  const entry = resolveSoundEntry(gift) || resolveSoundEntryByGiftId(giftId);
   if (!entry) return;
   const repeatCount = Math.max(1, repeat_count || 1);
   if (repeatCount > 1 && entry.combo) {
@@ -2006,6 +2072,118 @@ async function loadSoundAlerts() {
       renderSoundAlerts();
     }
   } catch (e) {}
+  loadActionSoundAlerts();
+}
+
+const ACTION_SOUND_LABELS = Object.freeze({
+  follow: { title: "Novo seguidor", detail: "Quando alguém começar a seguir durante a live." },
+  share: { title: "Compartilhamento", detail: "Quando alguém compartilhar a live." },
+  gifter_join: { title: "Entrada de presenteador especial", detail: "Quando entrar alguém que atinja o nível mínimo escolhido acima." },
+});
+let actionSoundAlerts = {};
+let actionGifterMinLevel = 30;
+let actionSoundPreview = null;
+let actionSoundPreviewButton = null;
+
+function renderActionSoundAlerts() {
+  const root = document.getElementById("actionSoundAlertsList");
+  if (!root) return;
+  root.innerHTML = Object.entries(ACTION_SOUND_LABELS).map(([action, info]) => {
+    const url = actionSoundAlerts[action] || "";
+    const id = "actionSoundFile_" + action;
+    return '<article class="action-alert-row" data-action="' + action + '"><div class="action-alert-copy"><strong>' + info.title + '</strong><span>' + info.detail + '</span></div><div class="action-alert-controls"><button class="btn btn-dark btn-small" type="button" data-action-preview="' + action + '" ' + (url ? '' : 'disabled') + ' onclick="toggleActionSoundPreview(\'' + action + '\',this)">▶ Testar</button><input type="file" hidden id="' + id + '" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" onchange="uploadActionSound(\'' + action + '\')"><button class="btn btn-primary btn-small" type="button" onclick="chooseSoundFile(\'' + id + '\')">' + (url ? 'Trocar áudio' : 'Enviar áudio') + '</button><button class="btn btn-danger btn-small" type="button" onclick="removeActionSound(\'' + action + '\')" ' + (url ? '' : 'disabled') + '>Remover</button></div><small class="action-alert-file" role="status">' + (url ? 'Áudio configurado' : 'Nenhum áudio configurado') + '</small></article>';
+  }).join("");
+}
+
+async function loadActionSoundAlerts() {
+  try {
+    const data = await apiFetch("/api/action-sound-alerts");
+    if (!data.success) return;
+    actionSoundAlerts = data.alerts || {};
+    actionGifterMinLevel = Math.max(1, Math.min(50, Number(data.gifter_min_level) || 30));
+    const levelInput = document.getElementById("actionGifterMinLevel");
+    if (levelInput && document.activeElement !== levelInput) levelInput.value = String(actionGifterMinLevel);
+    renderActionSoundAlerts();
+  } catch {}
+}
+
+function playActionSound(action, event) {
+  const url = actionSoundAlerts[action];
+  if (!url) return;
+  if (action === "gifter_join" && Number(event?.gifter_level || 0) < actionGifterMinLevel) return;
+  enqueueSoundEffects([url]);
+}
+
+function stopActionSoundPreview() {
+  if (actionSoundPreview) { actionSoundPreview.pause(); actionSoundPreview.currentTime = 0; }
+  if (actionSoundPreviewButton) { actionSoundPreviewButton.textContent = "▶ Testar"; actionSoundPreviewButton.setAttribute("aria-pressed", "false"); }
+  actionSoundPreview = null;
+  actionSoundPreviewButton = null;
+}
+
+function toggleActionSoundPreview(action, button) {
+  if (actionSoundPreviewButton === button) { stopActionSoundPreview(); return; }
+  stopActionSoundPreview();
+  const url = actionSoundAlerts[action];
+  if (!url) return;
+  const audio = new Audio(url);
+  actionSoundPreview = audio;
+  actionSoundPreviewButton = button;
+  const fail = () => {
+    if (actionSoundPreview !== audio) return;
+    stopActionSoundPreview();
+    const status = document.getElementById("actionSoundAlertMsg");
+    if (status) status.textContent = "Não foi possível reproduzir o áudio. Verifique o arquivo e tente novamente.";
+  };
+  audio.addEventListener("ended", () => { if (actionSoundPreview === audio) stopActionSoundPreview(); }, { once: true });
+  audio.addEventListener("error", fail, { once: true });
+  audio.play().then(() => { if (actionSoundPreview === audio) { button.textContent = "■ Parar"; button.setAttribute("aria-pressed", "true"); } }).catch(fail);
+}
+
+async function uploadActionSound(action) {
+  const input = document.getElementById("actionSoundFile_" + action);
+  const file = input?.files?.[0];
+  if (!file) return;
+  const status = document.getElementById("actionSoundAlertMsg");
+  if (status) status.textContent = "Enviando áudio…";
+  const form = new FormData();
+  form.append("action", action);
+  form.append("file", file);
+  try {
+    const data = await apiFetch("/api/action-sound-alerts", { method: "POST", body: form });
+    if (!data.success) throw new Error(data.error || "Falha no envio.");
+    actionSoundAlerts[action] = data.url;
+    renderActionSoundAlerts();
+    if (status) status.textContent = "Áudio salvo. Ele será reproduzido quando a ação acontecer na live.";
+  } catch (error) { if (status) status.textContent = error.message || "Não foi possível enviar o áudio."; }
+}
+
+async function removeActionSound(action) {
+  try {
+    const data = await apiFetch("/api/action-sound-alerts?action=" + encodeURIComponent(action), { method: "DELETE" });
+    if (!data.success) throw new Error(data.error || "Falha ao remover o áudio.");
+    delete actionSoundAlerts[action];
+    renderActionSoundAlerts();
+    const status = document.getElementById("actionSoundAlertMsg");
+    if (status) status.textContent = "Áudio removido.";
+  } catch (error) { const status = document.getElementById("actionSoundAlertMsg"); if (status) status.textContent = error.message || "Não foi possível remover o áudio."; }
+}
+
+let actionGifterLevelSaveTimer = null;
+function saveActionGifterMinLevel(value) {
+  const level = Math.max(1, Math.min(50, Math.round(Number(value) || 30)));
+  const input = document.getElementById("actionGifterMinLevel");
+  if (input) input.value = String(level);
+  clearTimeout(actionGifterLevelSaveTimer);
+  actionGifterLevelSaveTimer = setTimeout(async () => {
+    try {
+      const data = await apiFetch("/api/action-sound-alerts/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gifter_min_level: level }) });
+      if (!data.success) throw new Error(data.error || "Falha ao salvar.");
+      actionGifterMinLevel = data.gifter_min_level;
+      const status = document.getElementById("actionSoundAlertMsg");
+      if (status) status.textContent = "Nível mínimo salvo automaticamente.";
+    } catch (error) { const status = document.getElementById("actionSoundAlertMsg"); if (status) status.textContent = error.message || "Não foi possível salvar o nível."; }
+  }, 250);
 }
 
 
@@ -4457,6 +4635,13 @@ async function loadSettings() {
 
 let elevenChatVoices = [];
 let elevenCreditCosts = new Map();
+let ttsCreditPublicKey = "";
+let ttsCreditAccountEmail = "";
+let ttsCreditCheckoutPackage = null;
+let ttsCreditMp = null;
+let ttsCreditCardForm = null;
+const ttsCreditPaymentPolls = new Map();
+let ttsMpSdkPromise = null;
 async function loadElevenChatVoices() {
   const box = document.getElementById("elevenChatBox");
   const select = document.getElementById("elevenChatVoice");
@@ -4506,6 +4691,8 @@ async function loadVoiceCredits() {
     const data = await apiFetch("/api/tts/credits");
     if (!data?.success) throw new Error("Falha ao carregar TikCoins");
     balance.textContent = Number(data.balance || 0).toLocaleString("pt-BR");
+    ttsCreditPublicKey = typeof data.checkout?.public_key === "string" ? data.checkout.public_key : "";
+    ttsCreditAccountEmail = typeof data.account_email === "string" ? data.account_email : "";
     elevenCreditCosts = new Map((data.model_costs || []).map(item => [item.model_id, Number(item.credits_per_150_chars)]));
     packages.replaceChildren();
     const availablePackages = data.packages || [];
@@ -4515,7 +4702,7 @@ async function loadVoiceCredits() {
       button.type = "button";
       button.className = "btn btn-dark btn-small voice-credit-package";
       button.textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
-      button.addEventListener("click", () => buyTtsCreditPackage(item.id, button));
+      button.addEventListener("click", () => openTtsCreditCheckout(item));
       packages.append(button);
     });
     history.replaceChildren();
@@ -4524,9 +4711,8 @@ async function loadVoiceCredits() {
     recentLedger.forEach(item => {
       const row = document.createElement("div"); row.className = "voice-credit-history-row";
       const label = document.createElement("span");
-      const units = Number(item.unit_count || 0);
       label.textContent = item.kind === "purchase" ? "Compra de TikCoins"
-        : item.kind === "usage" ? `Narração${units > 0 ? ` · ${units} caractere${units === 1 ? "" : "s"}` : ""}`
+        : item.kind === "usage" ? "Mensagem"
         : "Ajuste de saldo";
       const amount = document.createElement("strong");
       const value = Number(item.amount || 0);
@@ -4583,20 +4769,175 @@ function renderVoiceCreditEstimate() {
   }
 }
 
-async function buyTtsCreditPackage(packageId, button) {
-  const status = document.getElementById("voiceCreditStatus");
-  button.disabled = true;
-  status.textContent = "Abrindo o checkout seguro do Mercado Pago…";
+function loadTtsMercadoPagoSdk() {
+  if (window.MercadoPago) return Promise.resolve();
+  if (ttsMpSdkPromise) return ttsMpSdkPromise;
+  ttsMpSdkPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.mercadopago.com/js/v2";
+    script.async = true;
+    script.onload = () => window.MercadoPago ? resolve() : reject(new Error("SDK indisponível"));
+    script.onerror = () => reject(new Error("Não foi possível carregar o checkout seguro do Mercado Pago."));
+    document.head.append(script);
+  }).catch(error => { ttsMpSdkPromise = null; throw error; });
+  return ttsMpSdkPromise;
+}
+
+async function openTtsCreditCheckout(item) {
+  ttsCreditCheckoutPackage = item;
+  const dialog = document.getElementById("ttsCreditCheckoutDialog");
+  const cardTab = document.getElementById("ttsCreditCardTab");
+  const pixTab = document.getElementById("ttsCreditPixTab");
+  document.getElementById("ttsCreditPackageSummary").textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+  document.getElementById("ttsCreditPaymentStatus").textContent = ttsCreditPublicKey
+    ? "Os dados do cartão são tokenizados pelo Mercado Pago e não passam pelo TikPlay."
+    : "Cartão indisponível no momento. Gere um Pix para pagar dentro do painel.";
+  document.getElementById("ttsPixResult").hidden = true;
+  document.getElementById("ttsPixCpf").value = "";
+  cardTab.hidden = !ttsCreditPublicKey;
+  pixTab.hidden = false;
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else { document.getElementById("voiceCreditStatus").textContent = "Seu navegador não oferece suporte ao checkout seguro."; return; }
+  selectTtsCreditMethod(ttsCreditPublicKey ? "card" : "pix");
+}
+
+function selectTtsCreditMethod(method) {
+  if (method === "card" && !ttsCreditPublicKey) method = "pix";
+  const cardSelected = method === "card";
+  document.getElementById("ttsCreditCardTab").classList.toggle("is-active", cardSelected);
+  document.getElementById("ttsCreditCardTab").setAttribute("aria-selected", String(cardSelected));
+  document.getElementById("ttsCreditPixTab").classList.toggle("is-active", !cardSelected);
+  document.getElementById("ttsCreditPixTab").setAttribute("aria-selected", String(!cardSelected));
+  document.getElementById("ttsCreditCardForm").hidden = !cardSelected;
+  document.getElementById("ttsCreditPixPanel").hidden = cardSelected;
+  if (cardSelected && !ttsCreditCardForm) mountTtsCreditCardForm().catch(error => {
+    document.getElementById("ttsCreditPaymentStatus").textContent = error.message || "Não foi possível abrir o formulário de cartão.";
+  });
+}
+
+async function mountTtsCreditCardForm() {
+  const item = ttsCreditCheckoutPackage;
+  if (!item || !ttsCreditPublicKey) return;
+  const status = document.getElementById("ttsCreditPaymentStatus");
+  status.textContent = "Carregando formulário seguro…";
+  await loadTtsMercadoPagoSdk();
+  if (!document.getElementById("ttsCreditCheckoutDialog").open || item !== ttsCreditCheckoutPackage) return;
+  try { ttsCreditCardForm?.unmount?.(); } catch {}
+  ttsCreditMp = new window.MercadoPago(ttsCreditPublicKey, { locale: "pt-BR" });
+  document.getElementById("ttsMpEmail").value = ttsCreditAccountEmail;
+  ttsCreditCardForm = ttsCreditMp.cardForm({
+    amount: (Number(item.price_cents || Math.round(Number(item.price) * 100)) / 100).toFixed(2),
+    iframe: true,
+    form: {
+      id: "ttsCreditCardForm",
+      cardNumber: { id: "ttsMpCardNumber", placeholder: "Número do cartão" },
+      expirationDate: { id: "ttsMpExpiration", placeholder: "MM/AA" },
+      securityCode: { id: "ttsMpSecurity", placeholder: "CVV" },
+      cardholderName: { id: "ttsMpCardholder", placeholder: "Nome impresso no cartão" },
+      issuer: { id: "ttsMpIssuer", placeholder: "Banco emissor" },
+      installments: { id: "ttsMpInstallments", placeholder: "Parcelas" },
+      identificationType: { id: "ttsMpIdentificationType", placeholder: "Tipo de documento" },
+      identificationNumber: { id: "ttsMpIdentificationNumber", placeholder: "Número do documento" },
+      cardholderEmail: { id: "ttsMpEmail", placeholder: "E-mail do titular" },
+    },
+    callbacks: {
+      onFormMounted: error => {
+        status.textContent = error ? "Não foi possível montar o formulário. Tente novamente." : "Os dados do cartão são capturados diretamente pelo Mercado Pago.";
+      },
+      onSubmit: async event => {
+        event.preventDefault();
+        const formData = ttsCreditCardForm.getCardFormData();
+        await submitTtsCreditPayment({ payment_method: "card", identification_type: formData.identificationType,
+          identification_number: formData.identificationNumber, card: {
+            token: formData.token, payment_method_id: formData.paymentMethodId, issuer_id: formData.issuerId,
+            installments: Number(formData.installments),
+          } });
+      },
+    },
+  });
+}
+
+async function submitTtsCreditPayment(payload) {
+  const status = document.getElementById("ttsCreditPaymentStatus");
+  const submit = document.getElementById("ttsMpSubmit");
+  const pixButton = document.getElementById("ttsPixCreate");
+  submit.disabled = true;
+  pixButton.disabled = true;
+  status.textContent = "Enviando pagamento com segurança…";
   try {
     const result = await apiFetch("/api/tts/credits/checkout", { method: "POST",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ package_id: packageId }) });
-    if (!result?.success || !result.checkout_url) throw new Error("Checkout indisponível");
-    location.assign(result.checkout_url);
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ package_id: ttsCreditCheckoutPackage.id, ...payload }) });
+    if (!result?.success || !result.payment?.id) throw new Error(result?.error || "Não foi possível iniciar o pagamento.");
+    if (result.pix?.qr_code) {
+      const qr = String(result.pix.qr_code);
+      const image = String(result.pix.qr_code_base64 || "");
+      document.getElementById("ttsPixCode").value = qr;
+      document.getElementById("ttsPixQr").src = /^[A-Za-z0-9+/=]{100,200000}$/.test(image) ? `data:image/png;base64,${image}` : "";
+      document.getElementById("ttsPixResult").hidden = false;
+    }
+    await handleTtsCreditPaymentStatus(result.payment.id, result.payment.status, result.settled);
   } catch (error) {
-    status.textContent = error?.message || "Não foi possível iniciar a compra. Tente novamente.";
-    button.disabled = false;
+    status.textContent = error?.message || "Não foi possível iniciar o pagamento. Tente novamente.";
+  } finally {
+    submit.disabled = false;
+    pixButton.disabled = false;
   }
 }
+
+async function createTtsPixPayment() {
+  const cpf = document.getElementById("ttsPixCpf").value.replace(/\D/g, "");
+  if (cpf.length !== 11) { document.getElementById("ttsCreditPaymentStatus").textContent = "Informe um CPF válido para gerar o Pix."; return; }
+  await submitTtsCreditPayment({ payment_method: "pix", identification_type: "CPF", identification_number: cpf });
+}
+
+async function handleTtsCreditPaymentStatus(paymentId, paymentStatus, settled = false) {
+  const status = document.getElementById("ttsCreditPaymentStatus");
+  const normalized = String(paymentStatus || "pending");
+  if (normalized === "approved" || settled) {
+    status.textContent = "Pagamento aprovado. Seus TikCoins já foram adicionados ao saldo.";
+    await loadVoiceCredits();
+    return;
+  }
+  if (normalized === "rejected" || normalized === "cancelled") {
+    status.textContent = "Pagamento recusado. Confira os dados ou tente outro meio de pagamento.";
+    return;
+  }
+  status.textContent = normalized === "pending" && document.getElementById("ttsPixResult").hidden
+    ? "Pagamento em análise. A confirmação pode levar alguns instantes."
+    : "Aguardando confirmação do pagamento. Esta tela será atualizada automaticamente.";
+  if (ttsCreditPaymentPolls.has(String(paymentId))) return;
+  let attempts = 0;
+  const poll = setInterval(async () => {
+    attempts++;
+    try {
+      const current = await apiFetch(`/api/tts/credits/payments/${encodeURIComponent(paymentId)}`);
+      if (current.status === "approved") {
+        clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
+        status.textContent = "Pagamento aprovado. Seus TikCoins já foram adicionados ao saldo.";
+        await loadVoiceCredits();
+      } else if (["rejected", "cancelled", "refunded"].includes(current.status)) {
+        clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
+        status.textContent = "Pagamento não aprovado. Confira os dados ou tente novamente.";
+      } else if (attempts >= 120) {
+        clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
+        status.textContent = "A confirmação ainda está pendente. Você pode fechar esta janela; o saldo atualiza quando o Mercado Pago confirmar.";
+      }
+    } catch { if (attempts >= 120) { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); } }
+  }, 5000);
+  ttsCreditPaymentPolls.set(String(paymentId), poll);
+}
+
+async function copyTtsPixCode() {
+  try {
+    await navigator.clipboard.writeText(document.getElementById("ttsPixCode").value);
+    document.getElementById("ttsCreditPaymentStatus").textContent = "Código Pix copiado.";
+  } catch { document.getElementById("ttsCreditPaymentStatus").textContent = "Não foi possível copiar. Selecione e copie o código Pix."; }
+}
+
+document.getElementById("ttsCreditCheckoutDialog")?.addEventListener("close", () => {
+  try { ttsCreditCardForm?.unmount?.(); } catch {}
+  ttsCreditCardForm = null; ttsCreditMp = null; ttsCreditCheckoutPackage = null;
+});
 
 async function saveElevenChatVoice() {
   const select = document.getElementById("elevenChatVoice");

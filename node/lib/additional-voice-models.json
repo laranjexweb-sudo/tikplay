@@ -41,5 +41,19 @@
     "pt_br_note": "Nenhuma voz Gemini foi identificada no catálogo OpenRouter.",
     "response_format": "pcm",
     "pcm_sample_rate": 24000
+  },
+  {
+    "id": "fish-audio/drama-3",
+    "provider": "openrouter",
+    "model_id": "fish-audio/drama-3",
+    "label": "Fish Audio Drama 3 · Multilíngue",
+    "voice_type": "padrao",
+    "description": "Voz multilíngue expressiva do Fish Audio, compatível com português brasileiro.",
+    "admin_note": "O OpenRouter não publica vozes selecionáveis para este modelo; a prévia usa a voz padrão. Teste em português brasileiro antes de liberar.",
+    "pt_br_note": "Multilíngue (80+ idiomas), incluindo português. Confirme a pronúncia e o sotaque PT-BR pela prévia.",
+    "catalog_voice_id": "drama3_multilingual_default",
+    "catalog_voice_label": "Multilíngue",
+    "omit_voice_parameter": true,
+    "response_format": "mp3"
   }
 ]

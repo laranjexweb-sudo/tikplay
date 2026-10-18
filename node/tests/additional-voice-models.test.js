@@ -9,9 +9,12 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tikplay-voice-models-"));
   const previous = { DB_PATH: process.env.DB_PATH, ELEVENLABS_CONFIG_PATH: process.env.ELEVENLABS_CONFIG_PATH,
     ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY, OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY, PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL };
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY, PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
+    INTEGRATIONS_CONFIG_DIR: process.env.INTEGRATIONS_CONFIG_DIR, CHECKOUT_CONFIG_PATH: process.env.CHECKOUT_CONFIG_PATH };
   process.env.DB_PATH = path.join(dir, "test.db");
   process.env.ELEVENLABS_CONFIG_PATH = path.join(dir, "integrations", "elevenlabs.json");
+  process.env.INTEGRATIONS_CONFIG_DIR = path.join(dir, "integrations");
+  process.env.CHECKOUT_CONFIG_PATH = path.join(dir, "integrations", "checkout.json");
   delete process.env.ELEVENLABS_API_KEY;
   process.env.OPENROUTER_API_KEY = "router-test-secret";
   process.env.PUBLIC_BASE_URL = "https://tikplay.test";
@@ -31,17 +34,29 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
   require("../routes/elevenlabs")(app, { db, auth, daemonSend: cmd => { commands.push(cmd); return true; },
     log: (_id, entry) => logs.push(entry) });
   let checkoutPayload = null;
+  let paymentRequestHeaders = null;
   let payment = null;
   const mpFetch = async (route, options = {}) => {
-    if (route === "/checkout/preferences") {
+    if (route === "/v1/payments") {
       checkoutPayload = JSON.parse(options.body);
-      return { status: 201, data: { init_point: "https://mercadopago.test/checkout/123" } };
+      paymentRequestHeaders = options.headers;
+      payment = { id: checkoutPayload.payment_method_id === "pix" ? 987655 : 987654,
+        status: "pending", status_detail: "pending_waiting_transfer", currency_id: "BRL",
+        transaction_amount: checkoutPayload.transaction_amount, external_reference: checkoutPayload.external_reference,
+        point_of_interaction: { transaction_data: { qr_code: "pix-copy-code", qr_code_base64: "a".repeat(120) } } };
+      return { status: 201, data: payment };
     }
     if (route.startsWith("/v1/payments/")) return { status: 200, data: payment };
     throw new Error(`Unexpected Mercado Pago request: ${route}`);
   };
   const creditRoutes = require("../routes/tts-credits")(app, { db, auth, mpFetch, mpConfigured: true,
+    getPublicKey: () => "TEST-public-key-123456",
     log: entry => logs.push(entry) });
+  const integrationSecrets = require("../lib/integration-secrets");
+  const checkoutConfig = require("../lib/checkout-config");
+  const providerConfig = require("../lib/elevenlabs-config");
+  require("../routes/admin-integrations")(app, { auth, integrationSecrets, providerConfig, checkoutConfig,
+    getDaemonOpenRouterKey: () => process.env.OPENROUTER_API_KEY, log: entry => logs.push(entry) });
   const admin = db.createUser({ email: "voice-admin@test.local", name: "Admin", password_hash: "x", role: "admin" });
   const streamer = db.createUser({ email: "voice-streamer@test.local", name: "Streamer", password_hash: "x" });
   const server = app.listen(0, "127.0.0.1"); await new Promise(resolve => server.once("listening", resolve));
@@ -68,6 +83,12 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     return { status: response.status, data: await response.json() };
   };
   try {
+    const initialIntegrations = await request(admin, "/api/admin/integrations");
+    assert.equal(initialIntegrations.data.integrations.mercadopago.public_key_configured, false);
+    const publicKeySave = await request(admin, "/api/admin/integrations/mercadopago", "PUT", { public_key: "TEST-public-key-123456" });
+    assert.equal(publicKeySave.status, 200);
+    assert.equal(publicKeySave.data.integrations.mercadopago.public_key_configured, true);
+    assert.equal(JSON.stringify(publicKeySave.data).includes("TEST-public-key-123456"), false, "admin integration status masks the public key");
     const adminRoute = "/api/admin/tts/additional-models";
     assert.equal((await request(streamer, adminRoute)).status, 403);
     let catalog = await request(admin, adminRoute);
@@ -101,6 +122,7 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.ok(logs.some(entry => entry.event === "tts.credits.model_cost_saved"));
     let credits = await request(streamer, "/api/tts/credits");
     assert.equal(credits.data.balance, 0);
+    assert.equal(credits.data.checkout.public_key, "TEST-public-key-123456");
     assert.equal(credits.data.model_costs.find(item => item.model_id.includes("gemini")).credits_per_150_chars, 2);
 
     const savedPackages = await request(admin, "/api/admin/tts/credit-packages", "PUT", { packages: [
@@ -126,11 +148,24 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.equal(overRemoval.status, 409, "manual removals cannot make a wallet negative");
     creditBalances = await request(admin, "/api/admin/tts/credit-balances");
     assert.equal(creditBalances.data.accounts[0].balance, 25);
-    const checkout = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId });
-    assert.equal(checkout.data.checkout_url, "https://mercadopago.test/checkout/123");
+    const checkout = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId,
+      payment_method: "card", identification_type: "CPF", identification_number: "12345678901",
+      card: { token: "card-token-test", payment_method_id: "visa", issuer_id: "123", installments: 1 } });
+    assert.equal(checkout.data.success, true);
+    assert.equal(checkout.data.payment.status, "pending");
     assert.match(checkoutPayload.external_reference, /^tts-credit:/);
+    assert.equal(checkoutPayload.transaction_amount, 12.5, "amount is calculated from the saved package, never the client");
+    assert.equal(checkoutPayload.token, "card-token-test");
+    assert.equal(checkoutPayload.payer.email, "voice-streamer@test.local");
+    assert.equal(paymentRequestHeaders["X-Idempotency-Key"].length, 36);
+    assert.equal((await request(streamer, "/api/tts/credits/payments/987654")).data.status, "pending");
+    const pixCheckout = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId,
+      payment_method: "pix", identification_type: "CPF", identification_number: "12345678901" });
+    assert.equal(pixCheckout.data.pix.qr_code, "pix-copy-code");
+    assert.equal(checkoutPayload.payment_method_id, "pix");
+    assert.equal(checkoutPayload.token, undefined, "Pix never receives card data");
     payment = { id: 987654, status: "approved", currency_id: "BRL", transaction_amount: 12.49,
-      external_reference: checkoutPayload.external_reference };
+      external_reference: `tts-credit:${db.db.prepare("SELECT id FROM tts_credit_purchases WHERE payment_id=987654").get().id}` };
     const mismatchedPayment = await creditRoutes.handlePaymentWebhook(payment.id);
     assert.equal(mismatchedPayment.success, false, "payment amount must match the package snapshot");
     assert.equal((await request(streamer, "/api/tts/credits")).data.balance, 25);

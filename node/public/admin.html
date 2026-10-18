@@ -120,14 +120,15 @@
       </article>
       <article class="tp-admin-operation-block tp-integration-card" id="mercadoPagoIntegrationCard" aria-labelledby="mercadoPagoGlobalTitle">
         <div class="tp-integration-card-head"><div><h4 id="mercadoPagoGlobalTitle">Mercado Pago</h4><p>Checkout de assinaturas e compra de TikCoins.</p></div><span class="tp-integration-state" id="mercadoPagoConnectionState" data-state="loading">Verificando…</span></div>
-        <div class="tp-integration-meta tp-integration-meta-mp"><span><b>Credencial</b><span id="mercadoPagoCredentialSummary">Verificando…</span></span><span><b>Webhook</b><span id="mercadoPagoWebhookSummary">Verificando…</span></span><span><b>Origem</b><span id="mercadoPagoSourceSummary">Verificando…</span></span><span id="mercadoPagoLastCheck">Ainda não testada nesta tela</span></div>
+        <div class="tp-integration-meta tp-integration-meta-mp"><span><b>Access Token</b><span id="mercadoPagoCredentialSummary">Verificando…</span></span><span><b>Public Key</b><span id="mercadoPagoPublicKeySummary">Verificando…</span></span><span><b>Webhook</b><span id="mercadoPagoWebhookSummary">Verificando…</span></span><span><b>Origem</b><span id="mercadoPagoSourceSummary">Verificando…</span></span><span id="mercadoPagoLastCheck">Ainda não testada nesta tela</span></div>
         <div class="tp-admin-feedback tp-integration-test-feedback" id="mercadoPagoCardTestFeedback" role="status" aria-live="polite"></div>
         <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="mercadoPagoTest" type="button" onclick="testIntegration('mercadopago')">Testar conexão</button></div>
         <details class="tp-integration-editor"><summary>Editar credenciais, webhook e URL</summary><div class="tp-integration-editor-body">
           <label class="tp-admin-field" for="mercadoPagoAccessToken">Access Token<input class="form-control" id="mercadoPagoAccessToken" type="password" autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="APP_USR-… ou TEST-…"></label>
+          <label class="tp-admin-field" for="mercadoPagoPublicKey">Public Key (checkout transparente)<input class="form-control" id="mercadoPagoPublicKey" type="text" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="APP_USR-… ou TEST-…"></label>
           <label class="tp-admin-field" for="mercadoPagoWebhookSecret">Segredo de assinatura do webhook<input class="form-control" id="mercadoPagoWebhookSecret" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" placeholder="Segredo configurado no Mercado Pago"></label>
           <label class="tp-admin-field" for="mercadoPagoPublicUrl">URL pública HTTPS do painel<input class="form-control" id="mercadoPagoPublicUrl" type="url" autocomplete="url" spellcheck="false" maxlength="2048" placeholder="https://painel.seudominio.com.br"></label>
-          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="mercadoPagoSave" type="button" onclick="saveMercadoPago()">Salvar credenciais</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearAccess" type="button" onclick="saveMercadoPago({clearAccess:true})" disabled>Remover Access Token</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearWebhook" type="button" onclick="saveMercadoPago({clearWebhook:true})" disabled>Remover segredo</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearUrl" type="button" onclick="saveMercadoPago({clearBaseUrl:true})" disabled>Usar URL padrão</button></div>
+          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="mercadoPagoSave" type="button" onclick="saveMercadoPago()">Salvar credenciais</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearAccess" type="button" onclick="saveMercadoPago({clearAccess:true})" disabled>Remover Access Token</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearPublicKey" type="button" onclick="saveMercadoPago({clearPublicKey:true})" disabled>Remover Public Key</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearWebhook" type="button" onclick="saveMercadoPago({clearWebhook:true})" disabled>Remover segredo</button><button class="btn btn-nb btn-danger" id="mercadoPagoClearUrl" type="button" onclick="saveMercadoPago({clearBaseUrl:true})" disabled>Usar URL padrão</button></div>
           <div class="tp-admin-feedback" id="mercadoPagoGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div><div class="tp-admin-feedback" id="mercadoPagoTestStatus" role="status" aria-live="polite"></div>
         </div></details>
       </article>
@@ -1202,11 +1203,16 @@ function showAdminIntegrationState(data) {
   document.getElementById("mercadoPagoPublicUrl").placeholder = mercado.public_base_url
     ? `${mercado.public_base_url} · endereço atual` : "https://painel.seudominio.com.br";
   document.getElementById("mercadoPagoCredentialSummary").textContent = mercado.configured ? "Configurada" : "Ausente";
+  document.getElementById("mercadoPagoPublicKeySummary").textContent = mercado.public_key_configured ? "Configurada" : "Ausente · cartão desativado";
+  const publicKeySummary = mercado.public_key_configured ? `Configurada · ${mercado.public_key_masked || "mascarada"}` : "Ausente · cartão indisponível";
+  document.getElementById("mercadoPagoPublicKey").placeholder = mercado.public_key_configured
+    ? `${publicKeySummary} · ${integrationSourceLabel(mercado.public_key_source)}` : "Public Key da aplicação Mercado Pago";
   document.getElementById("mercadoPagoWebhookSummary").textContent = mercado.webhook_secret_configured ? "Configurado" : "Não configurado";
   document.getElementById("mercadoPagoGlobalStatus").textContent = mercado.configured
-    ? `Access Token ${mercado.access_token_masked || "mascarado"} · ${integrationSourceLabel(mercado.source)} · webhook ${mercado.webhook_secret_configured ? `configurado (${mercado.webhook_secret_masked || "mascarado"})` : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`
-    : `Access Token não configurado · webhook ${mercado.webhook_secret_configured ? "com assinatura configurada" : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`;
+    ? `Access Token ${mercado.access_token_masked || "mascarado"} · ${integrationSourceLabel(mercado.source)} · Public Key ${mercado.public_key_configured ? `${mercado.public_key_masked || "mascarada"} (${integrationSourceLabel(mercado.public_key_source)})` : "ausente; cartão desativado"} · webhook ${mercado.webhook_secret_configured ? `configurado (${mercado.webhook_secret_masked || "mascarado"})` : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`
+    : `Access Token não configurado · Public Key ${mercado.public_key_configured ? "configurada" : "ausente; cartão desativado"} · webhook ${mercado.webhook_secret_configured ? "com assinatura configurada" : "sem segredo de assinatura"} · checkout em ${mercado.public_base_url} (${integrationSourceLabel(mercado.public_base_url_source)}).`;
   document.getElementById("mercadoPagoClearAccess").disabled = !mercado.configured;
+  document.getElementById("mercadoPagoClearPublicKey").disabled = !mercado.public_key_configured;
   document.getElementById("mercadoPagoClearWebhook").disabled = !mercado.webhook_secret_configured;
   document.getElementById("mercadoPagoClearUrl").disabled = mercado.public_base_url_source === "default";
   setIntegrationCardState("mercadopago", mercado.configured, mercado.source,
@@ -1246,18 +1252,20 @@ async function saveOpenRouterGlobal(clear = false) {
 
 async function saveMercadoPago(options = {}) {
   const accessInput = document.getElementById("mercadoPagoAccessToken");
+  const publicKeyInput = document.getElementById("mercadoPagoPublicKey");
   const webhookInput = document.getElementById("mercadoPagoWebhookSecret");
   const urlInput = document.getElementById("mercadoPagoPublicUrl");
-  const clearAccess = options.clearAccess === true, clearWebhook = options.clearWebhook === true, clearBaseUrl = options.clearBaseUrl === true;
-  if (!clearAccess && !clearWebhook && !clearBaseUrl && !accessInput.value.trim() && !webhookInput.value.trim() && !urlInput.value.trim()) {
+  const clearAccess = options.clearAccess === true, clearPublicKey = options.clearPublicKey === true, clearWebhook = options.clearWebhook === true, clearBaseUrl = options.clearBaseUrl === true;
+  if (!clearAccess && !clearPublicKey && !clearWebhook && !clearBaseUrl && !accessInput.value.trim() && !publicKeyInput.value.trim() && !webhookInput.value.trim() && !urlInput.value.trim()) {
     document.getElementById("mercadoPagoGlobalStatus").textContent = "Informe pelo menos uma credencial para salvar."; return;
   }
-  const buttons = ["mercadoPagoSave", "mercadoPagoTest", "mercadoPagoClearAccess", "mercadoPagoClearWebhook", "mercadoPagoClearUrl"].map(id => document.getElementById(id));
+  const buttons = ["mercadoPagoSave", "mercadoPagoTest", "mercadoPagoClearAccess", "mercadoPagoClearPublicKey", "mercadoPagoClearWebhook", "mercadoPagoClearUrl"].map(id => document.getElementById(id));
   buttons.forEach(button => { button.disabled = true; });
   const status = document.getElementById("mercadoPagoGlobalStatus"); status.textContent = "Salvando configuração…";
   let resultMessage = "";
-  const body = clearAccess || clearWebhook || clearBaseUrl ? { clear_access_token: clearAccess, clear_webhook_secret: clearWebhook, clear_public_base_url: clearBaseUrl } : {
+  const body = clearAccess || clearPublicKey || clearWebhook || clearBaseUrl ? { clear_access_token: clearAccess, clear_public_key: clearPublicKey, clear_webhook_secret: clearWebhook, clear_public_base_url: clearBaseUrl } : {
     ...(accessInput.value.trim() ? { access_token: accessInput.value.trim() } : {}),
+    ...(publicKeyInput.value.trim() ? { public_key: publicKeyInput.value.trim() } : {}),
     ...(webhookInput.value.trim() ? { webhook_secret: webhookInput.value.trim() } : {}),
     ...(urlInput.value.trim() ? { public_base_url: urlInput.value.trim() } : {}),
   };
@@ -1265,10 +1273,11 @@ async function saveMercadoPago(options = {}) {
     const data = await apiFetch("/api/admin/integrations/mercadopago", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!data.success) throw new Error(data.error || "Falha ao salvar credenciais.");
     if (!clearAccess) accessInput.value = "";
+    if (!clearPublicKey) publicKeyInput.value = "";
     if (!clearWebhook) webhookInput.value = "";
     if (!clearBaseUrl) urlInput.value = "";
     showAdminIntegrationState(data);
-    resultMessage = clearAccess ? "Access Token removido." : clearWebhook ? "Segredo do webhook removido." : clearBaseUrl ? "URL padrão restaurada." : "Configurações salvas. Teste o Access Token para validar.";
+    resultMessage = clearAccess ? "Access Token removido." : clearPublicKey ? "Public Key removida." : clearWebhook ? "Segredo do webhook removido." : clearBaseUrl ? "URL padrão restaurada." : "Configurações salvas. Teste o Access Token para validar.";
   } catch (error) { resultMessage = error.message || "Não foi possível salvar as credenciais."; }
   finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
 }

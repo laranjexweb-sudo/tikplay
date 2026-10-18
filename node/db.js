@@ -40,6 +40,9 @@ try {
   db.exec("ALTER TABLE tenant_gift_config ADD COLUMN tres_gifts TEXT DEFAULT '{}'");
 } catch {}
 try {
+  db.exec("ALTER TABLE tenant_gift_config ADD COLUMN action_gifter_min_level INTEGER DEFAULT 30");
+} catch {}
+try {
   db.exec("ALTER TABLE games ADD COLUMN room_id TEXT DEFAULT ''");
 } catch {}
 for (const col of [
@@ -329,7 +332,8 @@ CREATE TABLE IF NOT EXISTS tenant_gift_config (
   riddle_gifts TEXT DEFAULT '[]',
   sound_alerts TEXT DEFAULT '{}',
   size_gift TEXT DEFAULT '',
-  letter_gift TEXT DEFAULT ''
+  letter_gift TEXT DEFAULT '',
+  action_gifter_min_level INTEGER DEFAULT 30
 );
 CREATE TABLE IF NOT EXISTS tenant_history (
   tenant_id INTEGER PRIMARY KEY,
@@ -1180,6 +1184,22 @@ function saveSoundAlert(tenantId, gift, slot, url) {
     VALUES (?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET sound_alerts=excluded.sound_alerts
   `).run(tenantId, "[]", "[]", JSON.stringify(cur));
+}
+
+function getActionGifterMinLevel(tenantId) {
+  const row = db.prepare("SELECT action_gifter_min_level FROM tenant_gift_config WHERE tenant_id = ?").get(tenantId);
+  const level = Number(row && row.action_gifter_min_level);
+  return Number.isInteger(level) ? Math.max(1, Math.min(50, level)) : 30;
+}
+
+function saveActionGifterMinLevel(tenantId, value) {
+  const level = Math.max(1, Math.min(50, Math.round(Number(value) || 30)));
+  db.prepare(`
+    INSERT INTO tenant_gift_config (tenant_id, action_gifter_min_level)
+    VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET action_gifter_min_level=excluded.action_gifter_min_level
+  `).run(tenantId, level);
+  return level;
 }
 
 // ---------------- Histórico / ranking (SQL) ----------------
@@ -2921,6 +2941,8 @@ module.exports = {
   saveCacaConfig,
   getSoundAlerts,
   saveSoundAlert,
+  getActionGifterMinLevel,
+  saveActionGifterMinLevel,
   getTenantHistory,
   saveTenantHistory,
   appendLogEntry,

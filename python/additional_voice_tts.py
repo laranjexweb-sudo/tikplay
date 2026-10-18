@@ -92,7 +92,9 @@ def _wav_from_pcm(audio, sample_rate):
 
 def _synthesize_openrouter(model, voice, text, key, tenant_id=None, emotion=None):
     payload = {"model": model["model_id"], "input": text,
-               "voice": voice, "response_format": model.get("response_format", "mp3")}
+               "response_format": model.get("response_format", "mp3")}
+    if not model.get("omit_voice_parameter"):
+        payload["voice"] = voice
     if model.get("model_id", "").startswith("google/gemini-"):
         instruction = tts_emotions.instruction_for("gemini", emotion)
         if instruction:

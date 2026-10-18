@@ -908,6 +908,8 @@ class GameSession:
     async def on_share(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
+        emit(self.tenant_id, "game", {"type": "action_alert_event", "action": "share",
+             "user": str(user or ""), "nickname": str(nickname or user or ""), "avatar": str(avatar or "")})
         self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         allowed, _ = self._check_access(user_meta)
@@ -917,6 +919,8 @@ class GameSession:
     async def on_follow(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
+        emit(self.tenant_id, "game", {"type": "action_alert_event", "action": "follow",
+             "user": str(user or ""), "nickname": str(nickname or user or ""), "avatar": str(avatar or "")})
         self._emit_interaction("follow", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
         emit(self.tenant_id, "log", f"[Follow] @{user} começou a seguir")
@@ -958,6 +962,17 @@ class GameSession:
             entry["nickname"] = nickname
         if avatar:
             entry["avatar"] = avatar
+        # Delta permitido para o acumulador do Node. O evento é emitido só após
+        # os filtros de acesso, para manter a mesma elegibilidade do ranking.
+        emit(self.tenant_id, "game", {
+            "type": "likes_ranking_delta",
+            "room_id": str(room_id or self.current_room_id or ""),
+            "event_id": str(event_id or ""),
+            "user": str(user or ""),
+            "nickname": str(entry.get("nickname") or user or ""),
+            "avatar": str(entry.get("avatar") or ""),
+            "like_count": int(like_count or 0),
+        })
         self._likes_dirty = True
         self.battle.add_taps(user, nickname, avatar, like_count)
         self.corda.like(self._stable_uid(user, user_meta), like_count, avatar, user, nickname)
@@ -1579,6 +1594,12 @@ class GameSession:
         """Um espectador entrou na live (JoinEvent — apenas motor TikTokLive)."""
         self._ensure_room(room_id)
         self._track_levels(user, nickname, "", user_meta, room_id, event_id=event_id)
+        try:
+            gifter_level = max(0, int((user_meta or {}).get("gifter_level") or 0))
+        except (TypeError, ValueError):
+            gifter_level = 0
+        emit(self.tenant_id, "game", {"type": "action_alert_event", "action": "gifter_join",
+             "user": str(user or ""), "nickname": str(nickname or user or ""), "gifter_level": gifter_level})
         self._emit_interaction("join", user, nickname, "", event_id=event_id, room_id=room_id)
         if self.vpet.active and self.vpet.state.get("assistant_mode"):
             self.vpet.greet_member(nickname or user)

@@ -12,6 +12,7 @@ Catálogo inicial:
 
 - Personalizada: ElevenLabs v4 Turbo, vozes da conta ElevenLabs global existente.
 - Padrão: HeyGen Voice Turbo, Kokoro 82M e Gemini 3.8 Flash Lite TTS via OpenRouter.
+- Padrão: Fish Audio Drama 3 via OpenRouter, multilíngue (inclui português) e com voz padrão do provedor.
 
 O catálogo destinado a clientes só expõe vozes que o administrador aprovou. No Kokoro,
 o único ID atualmente confirmado por audição como português brasileiro é `pm_santa`;
@@ -60,6 +61,22 @@ instrução livre ao provedor. A emoção não altera a contagem de caracteres f
 O Gemini 3.8 Flash Lite aceita somente PCM no endpoint de fala (MP3 retorna HTTP 400).
 Prévia administrativa e síntese do chat solicitam PCM e o convertem para WAV mono de
 24 kHz antes de reproduzir/servir o áudio.
+
+## Fish Audio Drama 3 no catálogo — 2026-10-18
+
+Adicionado `fish-audio/drama-3` ao catálogo fixo de modelos do Super Admin. O OpenRouter
+lista o modelo como `text->speech` e multilíngue para mais de 80 idiomas, incluindo
+português, mas retorna `supported_voices: null`; portanto, a interface mostra uma única
+opção interna, **Voz multilíngue padrão**, e omite o parâmetro `voice` nas chamadas. A
+prévia usa a amostra fixa em português brasileiro e MP3. A capacidade multilíngue não
+garante sotaque brasileiro: o administrador deve ouvir a prévia antes de habilitar e
+definir a tarifa por 150 caracteres. O modelo começa desabilitado e sem tarifa, seguindo
+a proteção atual contra publicação sem custo configurado.
+
+Observabilidade: reutiliza os eventos existentes `tts.admin_voice_preview.completed`,
+`failed` e `rejected`, `tts.models.config_saved`/`tts.models.config_rejected` e os registros
+existentes de custo do provedor. Não registra conteúdo da mensagem, áudio, credencial ou
+resposta bruta; não cria eventos novos.
 
 ## Mapa de observabilidade
 
