@@ -1,3 +1,5 @@
+> 2026-10-17: Super Admin → Pacotes e TikCoins ganhou relatório de recargas com período e paginação, separando compras aprovadas e reembolsos de adições/remoções manuais com identificação do admin; totais calculados a partir do ledger existente. Sem mudança em saldo, checkout ou eventos financeiros.
+
 > 2026-10-17: Caça Palavras → ações “Iniciar rodada” e “Encerrar rodada” integradas à faixa do contador de palavras; em telas estreitas, ações se reorganizam para manter os botões utilizáveis. IDs, handlers e bloqueios de estado preservados.
 
 > 2026-10-17: Caça Palavras público → acertos recentes e aviso de acerto identificam o participante com foto ou iniciais como fallback; ranking segue a mesma apresentação. Eventos e ordem dos acertos preservados. Mapa de observabilidade: somente apresentação de dados já existentes; nenhum log, evento, dado persistido ou contrato alterado.

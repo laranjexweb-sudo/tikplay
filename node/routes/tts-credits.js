@@ -82,6 +82,58 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
     res.set("Cache-Control", "no-store").json({ success: true, accounts });
   });
 
+  app.get("/api/admin/tts/credit-report", auth.requireAdmin, (req, res) => {
+    const range = String(req.query?.range || "30d");
+    const daysByRange = { "7d": 7, "30d": 30, "90d": 90 };
+    if (range !== "all" && !daysByRange[range])
+      return res.status(400).json({ success: false, error: "Período inválido." });
+    const since = range === "all" ? null : `-${daysByRange[range]} days`;
+    const pageSize = 100;
+    const rawOffset = Number(req.query?.offset || 0);
+    const offset = Number.isSafeInteger(rawOffset) ? Math.max(0, Math.min(100000, rawOffset)) : 0;
+    const periodSql = since ? "AND datetime(l.created_at)>=datetime('now', ?)" : "";
+    const periodParams = since ? [since] : [];
+    const totals = db.db.prepare(`SELECT
+      SUM(CASE WHEN l.kind='purchase' THEN 1 ELSE 0 END) AS paid_purchase_count,
+      SUM(CASE WHEN l.kind='purchase' THEN l.amount ELSE 0 END) AS paid_credits,
+      SUM(CASE WHEN l.kind='purchase' THEN COALESCE(p.price_cents,0) ELSE 0 END) AS gross_paid_cents,
+      SUM(CASE WHEN l.kind='purchase_reversal' THEN 1 ELSE 0 END) AS refund_count,
+      SUM(CASE WHEN l.kind='purchase_reversal' THEN ABS(l.amount) ELSE 0 END) AS refunded_credits,
+      SUM(CASE WHEN l.kind='purchase_reversal' THEN COALESCE(p.price_cents,0) ELSE 0 END) AS refunded_cents,
+      SUM(CASE WHEN l.kind='admin_adjustment' AND l.amount>0 THEN 1 ELSE 0 END) AS manual_add_count,
+      SUM(CASE WHEN l.kind='admin_adjustment' AND l.amount>0 THEN l.amount ELSE 0 END) AS manual_added_credits,
+      SUM(CASE WHEN l.kind='admin_adjustment' AND l.amount<0 THEN 1 ELSE 0 END) AS manual_remove_count,
+      SUM(CASE WHEN l.kind='admin_adjustment' AND l.amount<0 THEN ABS(l.amount) ELSE 0 END) AS manual_removed_credits
+      FROM tts_credit_ledger l
+      LEFT JOIN tts_credit_purchases p ON p.payment_id=l.reference_id
+      WHERE l.kind IN ('purchase','purchase_reversal','admin_adjustment') ${periodSql}`).get(...periodParams);
+    const rows = db.db.prepare(`SELECT l.id,l.tenant_id,l.amount,l.kind,l.reference_id,l.created_at,
+      u.name AS streamer_name,u.email AS streamer_email,
+      actor.name AS actor_name,actor.email AS actor_email,
+      p.package_name,p.payment_id,p.price_cents
+      FROM tts_credit_ledger l
+      JOIN users u ON u.id=l.tenant_id
+      LEFT JOIN users actor ON actor.id=l.actor_id
+      LEFT JOIN tts_credit_purchases p ON p.payment_id=l.reference_id
+      WHERE l.kind IN ('purchase','purchase_reversal','admin_adjustment') ${periodSql}
+      ORDER BY l.id DESC LIMIT ? OFFSET ?`).all(...periodParams, pageSize, offset).map(row => ({
+        ...row,
+        source: row.kind === "admin_adjustment" ? "manual" : row.kind === "purchase_reversal" ? "refund" : "paid",
+      }));
+    const totalRows = db.db.prepare(`SELECT COUNT(*) AS count FROM tts_credit_ledger l
+      WHERE l.kind IN ('purchase','purchase_reversal','admin_adjustment') ${periodSql}`).get(...periodParams).count;
+    res.set("Cache-Control", "no-store").json({ success: true, range, offset, page_size: pageSize,
+      total_rows: Number(totalRows || 0), has_more: offset + rows.length < Number(totalRows || 0),
+      totals: {
+        paid_purchase_count: Number(totals.paid_purchase_count || 0), paid_credits: Number(totals.paid_credits || 0),
+        gross_paid_cents: Number(totals.gross_paid_cents || 0), refund_count: Number(totals.refund_count || 0),
+        refunded_credits: Number(totals.refunded_credits || 0), refunded_cents: Number(totals.refunded_cents || 0),
+        net_paid_cents: Number(totals.gross_paid_cents || 0) - Number(totals.refunded_cents || 0),
+        manual_add_count: Number(totals.manual_add_count || 0), manual_added_credits: Number(totals.manual_added_credits || 0),
+        manual_remove_count: Number(totals.manual_remove_count || 0), manual_removed_credits: Number(totals.manual_removed_credits || 0),
+      }, rows });
+  });
+
   app.put("/api/admin/tts/credit-packages", auth.requireAdmin, (req, res) => {
     const list = req.body?.packages;
     if (!Array.isArray(list) || list.length > 20 || list.some(item =>

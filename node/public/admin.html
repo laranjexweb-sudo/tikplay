@@ -181,6 +181,21 @@
     <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Conta</th><th>Saldo</th><th>Quantidade</th><th>Ações</th></tr></thead><tbody id="adminCreditRows"><tr><td colspan="5">Carregando saldos…</td></tr></tbody></table></div>
     <div class="tp-admin-feedback" id="adminCreditStatus" role="status" aria-live="polite"></div>
   </div>
+  <div class="tp-admin-operation-block" aria-labelledby="adminCreditReportTitle">
+    <div class="tp-dashboard-panel-heading tp-dashboard-cost-heading mb-0">
+      <div class="tp-admin-operation-heading"><div><h3 id="adminCreditReportTitle">Relatório de recargas</h3><p>Compras só entram como pagas após confirmação do Mercado Pago. Créditos inseridos pelo admin ficam separados.</p></div></div>
+      <label>Período<select class="form-select" id="adminCreditReportRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label>
+    </div>
+    <div class="tp-dashboard-cost-kpis" id="adminCreditReportSummary">
+      <article class="tp-card"><span>Compras confirmadas</span><strong>—</strong><small>Carregando relatório</small></article>
+      <article class="tp-card"><span>Receita líquida</span><strong>—</strong><small>Compras aprovadas menos reembolsos</small></article>
+      <article class="tp-card"><span>TikCoins adicionados manualmente</span><strong>—</strong><small>Carregando relatório</small></article>
+      <article class="tp-card"><span>TikCoins removidos manualmente</span><strong>—</strong><small>Carregando relatório</small></article>
+    </div>
+    <div class="tp-admin-toolbar"><span id="adminCreditReportStatus" class="text-secondary">Carregando movimentações…</span><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportRefresh">Atualizar relatório</button></div>
+    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Data</th><th>Streamer</th><th>Origem</th><th>Pacote / admin</th><th>TikCoins</th><th>Valor</th></tr></thead><tbody id="adminCreditReportRows"><tr><td colspan="6">Carregando movimentações…</td></tr></tbody></table></div>
+    <div class="d-flex align-items-center justify-content-between gap-2 mt-3"><span id="adminCreditReportPageStatus" class="text-secondary small"></span><div class="d-flex gap-2"><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportNext" disabled>Próxima</button></div></div>
+  </div>
 </section>
 
 <section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
@@ -1630,6 +1645,61 @@ async function loadTtsCreditPackages() {
 }
 
 let adminCreditAccounts = [];
+let adminCreditReportOffset = 0;
+let adminCreditReportPageSize = 100;
+
+function formatAdminCreditMoney(cents) {
+  return (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function renderAdminCreditReport(data) {
+  const t = data.totals || {};
+  document.getElementById("adminCreditReportSummary").innerHTML = [
+    ["Compras confirmadas", Number(t.paid_purchase_count || 0).toLocaleString("pt-BR"), `${Number(t.paid_credits || 0).toLocaleString("pt-BR")} TikCoins vendidos`],
+    ["Receita líquida", formatAdminCreditMoney(t.net_paid_cents), `Bruto ${formatAdminCreditMoney(t.gross_paid_cents)} · Reembolsos ${formatAdminCreditMoney(t.refunded_cents)} (${Number(t.refund_count || 0)} compras)`],
+    ["TikCoins adicionados manualmente", Number(t.manual_added_credits || 0).toLocaleString("pt-BR"), `${Number(t.manual_add_count || 0).toLocaleString("pt-BR")} ajustes do admin`],
+    ["TikCoins removidos manualmente", Number(t.manual_removed_credits || 0).toLocaleString("pt-BR"), `${Number(t.manual_remove_count || 0).toLocaleString("pt-BR")} ajustes do admin`],
+  ].map(([label, value, note]) => `<article class="tp-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+
+  const body = document.getElementById("adminCreditReportRows");
+  body.replaceChildren();
+  for (const item of data.rows || []) {
+    const tr = document.createElement("tr");
+    const date = new Date(`${String(item.created_at || "").replace(" ", "T")}Z`);
+    const dateLabel = Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("pt-BR");
+    const sourceLabel = item.source === "manual" ? (Number(item.amount) > 0 ? "Crédito manual adicionado" : "Crédito manual removido")
+      : item.source === "refund" ? "Compra reembolsada" : "Compra paga";
+    const referenceLabel = item.source === "manual" ? (item.actor_name || item.actor_email || "Admin")
+      : (item.package_name || "Pacote") + (item.payment_id ? ` · Pagamento ${item.payment_id}` : "");
+    const signedAmount = Number(item.amount || 0);
+    const value = item.source === "manual" ? "—" : `${item.source === "refund" ? "−" : ""}${formatAdminCreditMoney(item.price_cents)}`;
+    tr.innerHTML = `<td>${esc(dateLabel)}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(sourceLabel)}</td><td>${esc(referenceLabel)}</td><td>${signedAmount > 0 ? "+" : ""}${signedAmount.toLocaleString("pt-BR")} TikCoins</td><td>${esc(value)}</td>`;
+    body.appendChild(tr);
+  }
+  if (!body.children.length) body.innerHTML = '<tr><td colspan="6">Nenhuma compra, recarga ou remoção no período.</td></tr>';
+  document.getElementById("adminCreditReportStatus").textContent = `${Number(data.total_rows || 0).toLocaleString("pt-BR")} movimentações financeiras no período.`;
+  const start = Number(data.total_rows || 0) ? Number(data.offset || 0) + 1 : 0;
+  const end = Math.min(Number(data.offset || 0) + (data.rows || []).length, Number(data.total_rows || 0));
+  document.getElementById("adminCreditReportPageStatus").textContent = `${start}–${end} de ${Number(data.total_rows || 0).toLocaleString("pt-BR")}`;
+  document.getElementById("adminCreditReportPrev").disabled = Number(data.offset || 0) <= 0;
+  document.getElementById("adminCreditReportNext").disabled = !data.has_more;
+}
+
+async function loadAdminCreditReport(offset = adminCreditReportOffset) {
+  const status = document.getElementById("adminCreditReportStatus");
+  status.textContent = "Carregando movimentações…";
+  const range = document.getElementById("adminCreditReportRange").value;
+  try {
+    const data = await apiFetch(`/api/admin/tts/credit-report?range=${encodeURIComponent(range)}&offset=${Math.max(0, offset)}`);
+    if (!data.success) throw new Error(data.error || "Não foi possível carregar o relatório.");
+    adminCreditReportOffset = Number(data.offset || 0);
+    adminCreditReportPageSize = Number(data.page_size || 100);
+    renderAdminCreditReport(data);
+  } catch (error) {
+    status.textContent = error.message || "Não foi possível carregar o relatório de recargas.";
+    document.getElementById("adminCreditReportRows").innerHTML = '<tr><td colspan="6">Falha ao carregar o relatório.</td></tr>';
+  }
+}
 
 function renderAdminCreditAccounts() {
   const body = document.getElementById("adminCreditRows");
@@ -1672,6 +1742,7 @@ function renderAdminCreditAccounts() {
         balance.textContent = `${Number(item.balance).toLocaleString("pt-BR")} TikCoins`;
         input.value = "";
         feedback.textContent = sign > 0 ? "TikCoins adicionados." : "TikCoins removidos.";
+        loadAdminCreditReport();
       } catch (error) { feedback.textContent = error.message || "Não foi possível ajustar o saldo."; }
       finally { buttons.forEach(button => { button.disabled = false; }); }
     };
@@ -1931,6 +2002,7 @@ apiFetch("/api/auth/me").then((data) => {
   loadAdditionalVoiceModels();
   loadTtsCreditPackages();
   loadAdminCreditAccounts();
+  loadAdminCreditReport(0);
   refreshGiftSyncState();
 });
 
@@ -2077,6 +2149,10 @@ document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => {
 document.getElementById("ttsCreditPackageSave").addEventListener("click", saveTtsCreditPackages);
 document.getElementById("adminCreditSearch").addEventListener("input", renderAdminCreditAccounts);
 document.getElementById("adminCreditRefresh").addEventListener("click", loadAdminCreditAccounts);
+document.getElementById("adminCreditReportRange").addEventListener("change", () => loadAdminCreditReport(0));
+document.getElementById("adminCreditReportRefresh").addEventListener("click", () => loadAdminCreditReport());
+document.getElementById("adminCreditReportPrev").addEventListener("click", () => loadAdminCreditReport(Math.max(0, adminCreditReportOffset - adminCreditReportPageSize)));
+document.getElementById("adminCreditReportNext").addEventListener("click", () => loadAdminCreditReport(adminCreditReportOffset + adminCreditReportPageSize));
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
 document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });

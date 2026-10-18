@@ -114,6 +114,14 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.deepEqual(creditBalances.data.accounts.map(account => [account.id, account.balance]), [[streamer, 0]]);
     const adjusted = await request(admin, `/api/admin/users/${streamer}/tts-credits`, "POST", { amount: 25 });
     assert.equal(adjusted.data.balance, 25);
+    let creditReport = await request(admin, "/api/admin/tts/credit-report?range=all");
+    assert.equal(creditReport.status, 200);
+    assert.equal(creditReport.data.totals.manual_added_credits, 25);
+    assert.equal(creditReport.data.totals.paid_purchase_count, 0, "pending payments are not reported as paid sales");
+    assert.equal(creditReport.data.rows[0].source, "manual");
+    assert.equal(creditReport.data.rows[0].actor_name, "Admin");
+    assert.equal((await request(streamer, "/api/admin/tts/credit-report")).status, 403);
+    assert.equal((await request(admin, "/api/admin/tts/credit-report?range=invalid")).status, 400);
     const overRemoval = await request(admin, `/api/admin/users/${streamer}/tts-credits`, "POST", { amount: -26 });
     assert.equal(overRemoval.status, 409, "manual removals cannot make a wallet negative");
     creditBalances = await request(admin, "/api/admin/tts/credit-balances");
@@ -130,12 +138,23 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     const purchase = await creditRoutes.handlePaymentWebhook(payment.id);
     assert.equal(purchase.success, true);
     assert.equal((await request(streamer, "/api/tts/credits")).data.balance, 775);
+    creditReport = await request(admin, "/api/admin/tts/credit-report?range=all");
+    assert.equal(creditReport.data.totals.paid_purchase_count, 1);
+    assert.equal(creditReport.data.totals.paid_credits, 750);
+    assert.equal(creditReport.data.totals.gross_paid_cents, 1250);
+    assert.equal(creditReport.data.totals.manual_added_credits, 25);
+    assert.ok(creditReport.data.rows.some(row => row.source === "paid" && row.package_name === "Pacote de teste"));
     await creditRoutes.handlePaymentWebhook(payment.id);
     assert.equal((await request(streamer, "/api/tts/credits")).data.balance, 775, "repeated payment webhooks are idempotent");
     assert.equal((await request(admin, `/api/admin/users/${streamer}/tts-credits`, "POST", { amount: -775 })).data.balance, 0);
     payment.status = "refunded";
     const refund = await creditRoutes.handlePaymentWebhook(payment.id);
     assert.equal(refund.refunded, true);
+    creditReport = await request(admin, "/api/admin/tts/credit-report?range=all");
+    assert.equal(creditReport.data.totals.refund_count, 1);
+    assert.equal(creditReport.data.totals.refunded_cents, 1250);
+    assert.equal(creditReport.data.totals.net_paid_cents, 0);
+    assert.equal(creditReport.data.totals.manual_removed_credits, 775);
     assert.equal((await request(streamer, "/api/tts/credits")).data.balance, -750,
       "refund is recorded as a debt when the purchased credits were already spent");
     await creditRoutes.handlePaymentWebhook(payment.id);
