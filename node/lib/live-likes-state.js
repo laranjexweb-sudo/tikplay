@@ -1,9 +1,9 @@
 // Estado do ranking de likes por room_id, mantido no Node para sobreviver a
 // reinicializações do daemon Python durante a mesma live.
-function ensureRoomState(tenant, roomId) {
+function ensureRoomState(tenant, roomId, forceReset = false) {
   const room = String(roomId || "").trim();
   if (!room) return false;
-  if (tenant.currentRoomId === room) return false;
+  if (tenant.currentRoomId === room && !forceReset) return false;
   tenant.currentRoomId = room;
   tenant.likesByUser = new Map();
   tenant.likeEventIds = new Set();

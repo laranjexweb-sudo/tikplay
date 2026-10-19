@@ -77,7 +77,7 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Sessão nova hidrata `boss_mode` do banco (`tenant_settings`); mudança em runtime é propagada via comando `update_settings` (reavalia zona/x2).
 
 ### 2.5 Interações por live, isolamento por `room_id` e relatórios
-- Cada `room_id` é uma **live** (`live_sessions`). Trocar de sala **zera o ranking/acumulador de curtidas** e abre nova sessão; reconectar na mesma sala **preserva**. **Não encerra partidas** ao desconectar/trocar de sala.
+- O `room_id` identifica a sala conectada, mas não é suficiente sozinho para detectar o reinício de uma transmissão. Trocar de sala **zera o ranking/acumulador de curtidas**; uma queda e reconexão à mesma sala **preserva** os dados. No conector TikTokLive, somente `LiveEndEvent` confirma encerramento: a conexão seguinte à mesma sala inicia um ranking novo. **Não encerra partidas** ao desconectar/trocar de sala. A separação histórica dos relatórios continua usando as chaves já existentes no banco.
 - O daemon Python **só emite** eventos normalizados (`interaction`) — via `emit`; o **Node grava em lote** (`lib/interactions.js`), dono do DDL. Nunca guardar payload bruto.
 - Idempotência por `event_id` (dedupe) — exato no **TikTokLive** (`common.msg_id`/`room_id`); **best-effort** no **TikTools** (sem `event_id`/`room_id` por evento).
 - Retenção (configurável por env): detalhe **90d**, texto de comentário **7d** (truncado 300 chars; linha/contagem permanecem até 90d), agregados **24m**. Poda no boot e a cada 6h.

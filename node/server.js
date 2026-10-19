@@ -681,12 +681,12 @@ function handleDaemonMessage(msg) {
       interactions.ingest(tenant, interaction);
       quizLiveEngine.handleInteraction(tenant, interaction);
     } else if (msg.type === "live_session") {
-      // Reutiliza a sessão e o ranking se o daemon reconectar na mesma sala.
-      // Só um room_id diferente representa uma live nova para esse ranking.
+      // Reutiliza o ranking em reconexões transitórias; o conector sinaliza
+      // explicitamente quando a mesma sala iniciou uma nova transmissão.
       const p = msg.live_session || {};
       if (p.state === "start") {
         interactions.openSession(tenant, p);
-        if (liveLikesState.ensureRoomState(tenant, p.room_id)) {
+        if (liveLikesState.ensureRoomState(tenant, p.room_id, p.new_live === true)) {
           tenant.gameState.likes_ranking = [];
           tenant.gameState.likes_ranking_all = [];
         }

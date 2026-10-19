@@ -60,6 +60,44 @@ class ChatConnectionBacklogTests(unittest.IsolatedAsyncioTestCase):
         await handler._on_comment(event)
         callback.assert_not_awaited()
 
+    async def test_live_end_resets_only_after_confirmed_new_connection(self):
+        handler = TikTokLiveHandler('streamer')
+        starts = []
+        ends = []
+
+        async def on_start(room_id, force_new=False):
+            starts.append((room_id, force_new))
+
+        async def on_end(room_id):
+            ends.append(room_id)
+
+        handler.on_live_start_cb = on_start
+        handler.on_live_end_cb = on_end
+
+        await handler._on_connect(SimpleNamespace(room_id=123))
+        handler._last_like_total['viewer'] = 25
+        await handler._on_disconnect(None)
+        await handler._on_connect(SimpleNamespace(room_id=123))
+        self.assertEqual(starts, [('123', False)])
+        self.assertEqual(handler._last_like_total['viewer'], 25)
+
+        await handler._on_live_end(None)
+        self.assertEqual(ends, ['123'])
+        await handler._on_disconnect(None)
+        await handler._on_connect(SimpleNamespace(room_id=123))
+        self.assertEqual(starts, [('123', False), ('123', True)])
+        self.assertEqual(handler._last_like_total, {})
+
+    async def test_new_room_resets_session_without_live_end(self):
+        handler = TikTokLiveHandler('streamer')
+        starts = []
+        handler.on_live_start_cb = AsyncMock(side_effect=lambda room_id, force_new=False:
+                                             starts.append((room_id, force_new)))
+        await handler._on_connect(SimpleNamespace(room_id=123))
+        await handler._on_disconnect(None)
+        await handler._on_connect(SimpleNamespace(room_id=456))
+        self.assertEqual(starts, [('123', False), ('456', False)])
+
 
 if __name__ == '__main__':
     unittest.main()

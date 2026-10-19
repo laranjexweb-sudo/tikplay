@@ -11,6 +11,9 @@ assert.equal(ranking(tenant, 5)[1].likes, 4);
 
 assert.equal(ensureRoomState(tenant, "room-1"), false, "reconectar na mesma room preserva o ranking");
 assert.equal(ranking(tenant, 5).length, 2);
+assert.equal(ensureRoomState(tenant, "room-1", true), true, "nova transmissão confirmada limpa a mesma room");
+assert.deepEqual(ranking(tenant, 5), []);
+
 assert.equal(ensureRoomState(tenant, "room-2"), true, "uma room nova começa um ranking novo");
 assert.deepEqual(ranking(tenant, 5), []);
 assert.equal(applyLikeDelta(tenant, { room_id: "room-2", user: "ana", like_count: 2 }), true);

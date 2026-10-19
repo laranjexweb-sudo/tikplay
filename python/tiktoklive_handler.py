@@ -14,6 +14,7 @@ from TikTokLive.events import (
     ShareEvent,
     FollowEvent,
     BarrageEvent,
+    LiveEndEvent,
 )
 from TikTokLiveProto.v3.webcast.im import BarrageMessageBarrageType
 
@@ -43,6 +44,10 @@ class TikTokLiveHandler:
         self._last_like_total = {}
         self._connected_at = None
         self._diag_last = {}
+        self._live_session_initialized = False
+        self._live_ended = False
+        self.on_live_start_cb = None
+        self.on_live_end_cb = None
 
     def log(self, text: str):
         if self.log_cb:
@@ -210,15 +215,25 @@ class TikTokLiveHandler:
     async def _on_connect(self, event: ConnectEvent):
         self._connected = True
         self._connected_at = time.time()
+        previous_room_id = self._room_id
+        ended_before_connect = self._live_ended
         rid = getattr(event, "room_id", None)
         if not rid:
             conn = getattr(event, "conn", None)
             rid = getattr(conn, "room_id", None) if conn else None
         new_rid = str(rid or "").strip() or None
-        # Sala diferente => baseline de totais de curtida por usuário recomeça.
-        if new_rid and new_rid != self._room_id:
+        room_changed = bool(new_rid and new_rid != previous_room_id)
+        # Só LiveEndEvent encerra a sessão. DisconnectEvent pode ser uma queda
+        # transitória, então a reconexão à mesma sala mantém o baseline de likes.
+        if new_rid and (room_changed or ended_before_connect):
             self._last_like_total = {}
         self._room_id = new_rid
+        if new_rid and (not self._live_session_initialized or room_changed or ended_before_connect):
+            force_new = bool(ended_before_connect and new_rid == previous_room_id)
+            if self.on_live_start_cb:
+                await self.on_live_start_cb(new_rid, force_new=force_new)
+            self._live_session_initialized = True
+        self._live_ended = False
         self._emit_status("connected")
         self.log(f"[TikTokLive] Conectado a @{self.username}" + (f" (room {self._room_id})" if self._room_id else ""))
 
@@ -226,6 +241,16 @@ class TikTokLiveHandler:
         self._connected = False
         self._emit_status("disconnected")
         self.log(f"[TikTokLive] Desconectado de @{self.username}")
+
+    async def _on_live_end(self, event: LiveEndEvent):
+        if self._live_ended:
+            return
+        self._live_ended = True
+        self._connected = False
+        if self.on_live_end_cb:
+            await self.on_live_end_cb(self._room_id)
+        self._emit_status("waiting")
+        self.log(f"[TikTokLive] Live de @{self.username} encerrada")
 
     async def _on_comment(self, event: CommentEvent):
         if not self.on_comment_cb:
@@ -406,6 +431,7 @@ class TikTokLiveHandler:
                 pass
             client.add_listener(ConnectEvent, self._on_connect)
             client.add_listener(DisconnectEvent, self._on_disconnect)
+            client.add_listener(LiveEndEvent, self._on_live_end)
             client.add_listener(CommentEvent, self._on_comment)
             client.add_listener(ShareEvent, self._on_share)
             client.add_listener(FollowEvent, self._on_follow)

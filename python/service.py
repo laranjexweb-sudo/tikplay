@@ -338,6 +338,8 @@ class GameSession:
             on_level_up=self.on_level_up,
         )
         self.handler._emit_status = self.emit_status
+        self.handler.on_live_start_cb = self._on_live_start
+        self.handler.on_live_end_cb = self._on_live_end
         self.handler.log_cb = lambda text: emit(self.tenant_id, "log", text)
         self.queue = asyncio.create_task if False else asyncio.Queue()
         self._chat_narration_queue = asyncio.Queue(maxsize=CHAT_NARRATION_QUEUE_SIZE)
@@ -482,22 +484,48 @@ class GameSession:
             "details": details if details else None,
         })
 
-    def _ensure_room(self, room_id):
+    async def _on_live_start(self, room_id, force_new=False):
+        self._ensure_room(room_id, force_new=force_new)
+
+    async def _on_live_end(self, room_id):
+        self._log_event(
+            "connection", "info", "live.session.ended",
+            "A transmissão do TikTok terminou.",
+            code="LIVE_SESSION_ENDED",
+            details={"room_id": str(room_id or ""), "engine": self.engine},
+        )
+
+    def _ensure_room(self, room_id, force_new=False):
         """Detecta troca de sala. Nova sala => abre nova sessao de live e zera o
-        ranking/acumulador de curtidas (dados sao por live). NAO encerra partidas."""
+        ranking/acumulador de curtidas (dados sao por live). A mesma sala só é
+        reiniciada quando o conector confirmou LiveEndEvent. NAO encerra partidas."""
         rid = str(room_id or "").strip()
-        if not rid or rid == self.current_room_id:
+        if not rid or (rid == self.current_room_id and not force_new):
             return
+        same_room_restart = rid == self.current_room_id and force_new
+        previous_room_id = self.current_room_id
         self.current_room_id = rid
         self.likes = {}
         self._viewer_levels = {}
         self._likes_dirty = True
+        self._log_event(
+            "connection", "info", "live.session.started",
+            "O ranking da transmissão foi iniciado.",
+            code="LIVE_SESSION_STARTED",
+            details={
+                "room_id": rid,
+                "previous_room_id": str(previous_room_id or ""),
+                "same_room_restart": bool(same_room_restart),
+                "engine": self.engine,
+            },
+        )
         emit(self.tenant_id, "live_session", {
             "state": "start",
             "room_id": rid,
             "engine": self.engine,
             "username": self.username,
             "ts": int(time.time() * 1000),
+            "new_live": bool(same_room_restart),
         })
         # Publica ranking vazio imediatamente (a live anterior nao vaza).
         pub = self._tap_meta_public()
@@ -509,7 +537,8 @@ class GameSession:
             "tap_meta_ready": pub["tap_meta_ready"],
             "tap_meta_multiplier": pub["tap_meta_multiplier"],
         })
-        emit(self.tenant_id, "log", f"[Live] Nova sala detectada ({rid}) — ranking de curtidas reiniciado")
+        reason = "nova transmissão confirmada" if same_room_restart else "nova sala detectada"
+        emit(self.tenant_id, "log", f"[Live] {reason} ({rid}) — ranking de curtidas reiniciado")
 
     def _track_levels(self, user, nickname, avatar, user_meta, room_id=None, level_up_axis=None, event_id=None):
         """Observa os níveis do usuário (presenteador/fã-clube) e emite ao Node só
