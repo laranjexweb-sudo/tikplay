@@ -945,3 +945,4 @@ node/public/
 
 > 2026-10-17: Sons → alertas por presente agora resolvem por nome e ID; nova aba de alertas por ação configura follow, share e entrada de presenteador por nível mínimo. Likes passam a acumular por room_id no Node e só reiniciam em sala nova. Fluxo/limitações: docs/action-sound-alerts.md.
 > 2026-10-17: Compra de TikCoins usa checkout transparente no painel: modal responsivo com cartão em campos seguros do Mercado Pago e Pix com QR/copia e cola; status e saldo atualizam após confirmação. Credenciais da Public Key são configuradas em Integrações.
+> 2026-11-02: PWA Sons mobile agora declara ícones PNG de 192×192 e 512×512 e usa a URL inicial dentro do escopo registrado.

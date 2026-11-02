@@ -11,7 +11,7 @@ Página instalável em Android (`/sons-mobile`) para o streamer conectar/descone
 - Conectar: salvar username via `POST /api/panel-config`, ativar áudio em gesto explícito e chamar `POST /start-game`.
 - Desconectar: `POST /stop-game`.
 - Estado/eventos: mensagens existentes `status`, `chat_narrate`, `gift_event`, `action_alert_event`, `riddle_ready`, `riddle_audio`, `tts_test_ready`, `sound_alerts_updated` no WebSocket autenticado `/logs`.
-- Manifesto, URL inicial e service worker usam o prefixo `/sons-mobile/`; armazenam somente o shell da PWA. Respostas da API, WebSocket, `/tts-audio/` e `/alert-audio/` ficam explicitamente fora do cache.
+- `/sons-mobile` redireciona para `/sons-mobile/`, URL inicial dentro do escopo do manifesto e do service worker. Os ícones PNG de 192×192 e 512×512 ficam em `/assets/pwa/`; o service worker armazena somente o shell da PWA. Respostas da API, WebSocket, `/tts-audio/` e `/alert-audio/` ficam explicitamente fora do cache.
 
 ## Mapa de observabilidade
 

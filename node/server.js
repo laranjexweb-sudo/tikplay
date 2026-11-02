@@ -112,6 +112,7 @@ app.get("/", (req, res) => {
 const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/sons-mobile", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
+    if (route === "/sons-mobile" && req.path === route) return res.redirect(301, `${route}/`);
     if (NO_CACHE_ROUTES.has(route)) {
       res.set("Cache-Control", "no-cache, no-store, must-revalidate");
     }
