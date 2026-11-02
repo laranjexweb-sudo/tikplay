@@ -1,3 +1,7 @@
+> 2026-11-02: Painel ganhou acesso “Áudio mobile”; quando o login parte da PWA, autenticação e sessão expirada retornam à tela de sons por destino interno permitido.
+
+> 2026-11-02: PWA móvel usa tokens `--tp-*`, cartões, tipografia e botões compartilhados do TikPlay; controles de conexão e sons preservam as rotas e eventos existentes.
+
 > 2026-11-02: PWA móvel `/sons-mobile` para conectar/desconectar a live, ativar/pausar reprodução, ajustar volume e testar alertas existentes. Usa login, rotas e eventos atuais; Service Worker não armazena respostas autenticadas nem áudios. Mapa de observabilidade e limitações em `docs/pwa-sons-mobile.md`.
 
 > 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
@@ -939,4 +943,3 @@ node/public/
 
 > 2026-10-17: Sons → alertas por presente agora resolvem por nome e ID; nova aba de alertas por ação configura follow, share e entrada de presenteador por nível mínimo. Likes passam a acumular por room_id no Node e só reiniciam em sala nova. Fluxo/limitações: docs/action-sound-alerts.md.
 > 2026-10-17: Compra de TikCoins usa checkout transparente no painel: modal responsivo com cartão em campos seguros do Mercado Pago e Pix com QR/copia e cola; status e saldo atualizam após confirmação. Credenciais da Public Key são configuradas em Integrações.
-

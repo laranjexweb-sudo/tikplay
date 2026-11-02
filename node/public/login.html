@@ -165,7 +165,7 @@ async function doLogin(e) {
   if (data.success) {
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
-    location.href = "/painel";
+    location.href = consumePostLoginDestination();
   } else {
     showAlert(data.error || "Falha no login", false);
   }
@@ -188,13 +188,23 @@ async function doRegister(e) {
     showAlert("Conta criada! Entrando...", true);
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
-    setTimeout(() => { location.href = "/painel"; }, 600);
+    setTimeout(() => { location.href = consumePostLoginDestination(); }, 600);
   } else {
     showAlert(data.error || "Falha no cadastro", false);
   }
 }
 
-if (localStorage.getItem("token")) location.href = "/painel";
+function consumePostLoginDestination() {
+  let destination = "/painel";
+  try {
+    const requested = sessionStorage.getItem("tikplayPostLoginDestination");
+    sessionStorage.removeItem("tikplayPostLoginDestination");
+    if (requested === "/sons-mobile") destination = requested;
+  } catch {}
+  return destination;
+}
+
+if (localStorage.getItem("token")) location.href = consumePostLoginDestination();
 
 (async () => {
   await checkRegisterMode();
