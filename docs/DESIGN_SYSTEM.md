@@ -1,3 +1,5 @@
+> 2026-11-02: PWA Sons mobile declara `apple-touch-icon` 180×180 e metadados de Web Clip para o atalho de tela inicial no iOS.
+
 > 2026-11-02: Painel ganhou acesso “Áudio mobile”; quando o login parte da PWA, autenticação e sessão expirada retornam à tela de sons por destino interno permitido.
 
 > 2026-11-02: PWA móvel usa tokens `--tp-*`, cartões, tipografia e botões compartilhados do TikPlay; controles de conexão e sons preservam as rotas e eventos existentes.
