@@ -1,0 +1,13 @@
+{
+  "id": "/sons-mobile",
+  "name": "TikPlay · Live e sons",
+  "short_name": "TikPlay Sons",
+  "description": "Conecte sua live e controle narração e alertas sonoros pelo celular.",
+  "start_url": "/sons-mobile",
+  "scope": "/sons-mobile/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101113",
+  "theme_color": "#101113",
+  "categories": ["music", "utilities"]
+}
