@@ -1,5 +1,3 @@
-> 2026-11-02: PWA móvel `/sons-mobile` para conectar/desconectar a live, ativar/pausar reprodução, ajustar volume e testar alertas existentes. Usa login, rotas e eventos atuais; Service Worker não armazena respostas autenticadas nem áudios. Mapa de observabilidade e limitações em `docs/pwa-sons-mobile.md`.
-
 > 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
 
 > 2026-10-17: Super Admin → Pacotes e TikCoins ganhou relatório de recargas com período e paginação, separando compras aprovadas e reembolsos de adições/remoções manuais com identificação do admin; totais calculados a partir do ledger existente. Sem mudança em saldo, checkout ou eventos financeiros.
@@ -939,14 +937,3 @@ node/public/
 
 > 2026-10-17: Sons → alertas por presente agora resolvem por nome e ID; nova aba de alertas por ação configura follow, share e entrada de presenteador por nível mínimo. Likes passam a acumular por room_id no Node e só reiniciam em sala nova. Fluxo/limitações: docs/action-sound-alerts.md.
 > 2026-10-17: Compra de TikCoins usa checkout transparente no painel: modal responsivo com cartão em campos seguros do Mercado Pago e Pix com QR/copia e cola; status e saldo atualizam após confirmação. Credenciais da Public Key são configuradas em Integrações.
-
-> 2026-10-18: Arena dos Anéis criada como jogo multiplayer isolado: arena circular 2D em Canvas 9:16, física autoritativa no Node, controles e prévia no painel, entrada por chat/presente/comando, energia e anéis desbloqueados por diamantes de presentes TikTok. A permissão exige habilitação explícita no Super Admin para contas com recursos restritos. Ver `docs/arena-dos-aneis.md`.
-> 2026-10-18: Arena dos Anéis → o seletor de presentes de recuperação agora segue o catálogo visual dos seletores de Sons e Palavra Secreta, com busca, imagens, diamantes, teclado e controle de energia por presente; os campos salvos mantêm o contrato existente.
-> 2026-10-18: Arena dos Anéis → raio jogável ajustado para 500 e centro visual posicionado em 45,28% da altura (equivalente a `top: 45.28%` com centralização). O background permanece fixo; somente o círculo e os elementos da partida acompanham o ajuste. A revisão do iframe foi atualizada.
-> 2026-10-18: Arena dos Anéis → anel Galaxy agora usa a arte `ring-galaxy.png` como moldura animada dos participantes que o equiparem; os demais anéis mantêm seus efeitos visuais existentes.
-> 2026-10-18: Arena dos Anéis → painel de teste permite equipar qualquer anel no espectador fictício da partida demo. A mudança atualiza o estado público para conferir a arte também na página da arena; espectadores reais seguem a regra de desbloqueio normal.
-
-> 2026-10-18: Arena dos Anéis → rotação da moldura Galaxy acelerada para ficar claramente visível durante a partida e no teste local.
-
-> 2026-10-18: Arena dos Anéis → rotação da moldura Galaxy acelerada novamente para aproximadamente uma volta a cada 3,8 segundos.
-> 2026-10-18: Arena dos Anéis → colisões agora informam instante de impacto no estado e recebem uma onda de choque animada com brilho e faíscas; sem eventos de telemetria novos.

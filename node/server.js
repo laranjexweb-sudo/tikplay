@@ -15,13 +15,11 @@ const auth = require("./auth");
 const corda = require("./lib/corda");
 const contextoPublic = require("./routes/contexto");
 const { createQuizService } = require("./lib/quiz-live");
-const { createRingArenaService } = require("./lib/ring-arena");
 
 const logstore = require("./lib/logstore");
 const interactions = require("./lib/interactions");
 const levels = require("./lib/levels");
 const sessionGuard = require("./lib/session-guard");
-const { finalizeActiveGameOnDisconnect } = require("./lib/session-game-state");
 const liveLikesState = require("./lib/live-likes-state");
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
@@ -74,7 +72,6 @@ const app = express();
 const PUBLIC_DIR = path.join(__dirname, "public");
 const FRIENDLY_PAGES = {
   "/painel": "control-panel.html",
-  "/sons-mobile": "mobile-sounds.html",
   "/admin": "admin.html",
   "/login": "login.html",
   "/register": "login.html",
@@ -90,7 +87,6 @@ const FRIENDLY_PAGES = {
   "/corda": "corda.html",
   "/contexto": "contexto.html",
   "/quiz-live": "quiz-live.html",
-  "/arena-aneis": "ring-arena.html",
   "/docs": "docs.html",
   "/suporte": "support.html",
   "/ajuda": "help.html",
@@ -112,7 +108,7 @@ app.get("/", (req, res) => {
   }
   return res.redirect("/login");
 });
-const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/sons-mobile", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live", "/arena-aneis"]);
+const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -128,11 +124,6 @@ for (const [legacy, target] of Object.entries(LEGACY_PAGES)) {
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 express.static.mime.define({ "image/webp": ["webp"] });
-app.get("/sons-mobile/manifest.json", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "mobile-sounds-manifest.json")));
-app.get("/sons-mobile/sw.js", (req, res) => {
-  res.set("Service-Worker-Allowed", "/sons-mobile/");
-  res.type("application/javascript").sendFile(path.join(PUBLIC_DIR, "mobile-sounds-sw.js"));
-});
 app.use("/gift-images", express.static(path.join(__dirname, "public", "gift-images"), { maxAge: "1d" }));
 app.use("/duelo-audio", express.static(path.join(__dirname, "public", "duelo-audio")));
 fs.mkdirSync(path.join(__dirname, "public", "duelo-audio"), { recursive: true });
@@ -243,13 +234,6 @@ const quizLiveEngine = createQuizService({ database: db.db, getTenant, getUserBy
   broadcastToClients, broadcastLog, auditLog: processLog });
 quizLiveEngine.registerRoutes(app, { auth, requireFeature });
 quizLiveEngine.recoverTimers();
-
-const ringArenaEngine = createRingArenaService({ database: db.db, getTenant, getUserByRoomCode: db.getUserByRoomCode,
-  getRoomCode: tenantId => db.getUserById(tenantId)?.room_code || "",
-  isFeatureEnabled: tenantId => featureAllowed(db.getUserById(tenantId), "ring_arena"),
-  broadcastToClients, broadcastLog });
-ringArenaEngine.registerRoutes(app, { auth, requireFeature, liveOnline });
-process.once("exit", ringArenaEngine.shutdown);
 
 function updateGameState(tenant, msg) {
   const gs = tenant.gameState;
@@ -539,18 +523,6 @@ function broadcastStatus(tenant, status) {
     broadcastToClients(tenant.browserClients, { type: "python_connected" });
   } else if (status.state === "offline" || status.state === "disconnected") {
     // Não limpa currentWord: mantém a palavra da rodada em andamento mesmo com queda
-    const endedGame = finalizeActiveGameOnDisconnect(tenant);
-    if (endedGame) {
-      broadcastToClients(tenant.browserClients, endedGame);
-      broadcastToClients(tenant.logClients, endedGame);
-      logStructuredEvent(tenant, {
-        category: "game", level: "warning", event: "game.session.finalized_on_disconnect",
-        game: "palavra", game_id: endedGame.game_id,
-        code: "GAME_SESSION_DISCONNECTED",
-        message: "Partida encerrada porque a sessão da live foi desconectada.",
-        details: { guess_count: endedGame.guesses.length },
-      });
-    }
     broadcastToClients(tenant.browserClients, { type: "python_disconnected" });
     if (tenant.cordaState?.active) {
       daemonSend({ cmd: "corda_stop", tenant_id: tenant.id });
@@ -600,8 +572,8 @@ function resetAllTenantSessions() {
 }
 
 function onDaemonDown() {
-  for (const tenant of tenants.values()) broadcastStatus(tenant, { state: "offline" });
   resetAllTenantSessions();
+  broadcastStatusAll({ state: "offline" });
 }
 
 function routeDaemonStderr(line) {
@@ -696,19 +668,18 @@ function handleDaemonMessage(msg) {
     }
     if (msg.type === "status") {
       const status = msg.status || {};
-      broadcastStatus(tenant, status);
       if (status.state === "offline" && msg.session_id === tenant.activeDaemonSessionId) {
         tenant.sessionStarted = false;
         tenant.activeDaemonSessionId = null;
         tenant.activeLiveUsername = null;
         tenant.activeLiveEngine = null;
       }
+      broadcastStatus(tenant, status);
     } else if (msg.type === "interaction") {
       // Ingestão em lote (relatórios). Não é difundido aos clientes.
       const interaction = msg.interaction || {};
       interactions.ingest(tenant, interaction);
       quizLiveEngine.handleInteraction(tenant, interaction);
-      ringArenaEngine.handleInteraction(tenant, interaction);
     } else if (msg.type === "live_session") {
       // Reutiliza o ranking em reconexões transitórias; o conector sinaliza
       // explicitamente quando a mesma sala iniciou uma nova transmissão.
@@ -2601,13 +2572,12 @@ app.post("/stop-game", auth.requireAuth, (req, res) => {
       trace_id, session_id, code: "DAEMON_UNAVAILABLE", message: "Serviço Python indisponível para desconectar." });
     return res.json({ success: false, error: "Servico Python indisponivel", trace_id });
   }
-  // Encerrar e publicar o estado final antes de invalidar a geração. Mensagens
-  // posteriores continuam rejeitadas pelo guard de session_id.
-  broadcastStatus(tenant, { state: "offline", user: tenant.currentStatus?.user || "" });
+  // Invalidar já a geração para rejeitar eventos tardios após desconexão manual.
   tenant.sessionStarted = false;
   tenant.activeDaemonSessionId = null;
   tenant.activeLiveUsername = null;
   tenant.activeLiveEngine = null;
+  broadcastStatus(tenant, { state: "offline", user: tenant.currentStatus?.user || "" });
   logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.stop.queued",
     trace_id, session_id, message: "Comando de desconexão enviado ao daemon." });
   dueloForceStop(req.user.id); // desconectar live também desativa a Área do Duelo
@@ -2704,7 +2674,6 @@ wss.on("connection", (ws, req) => {
       ws.send(JSON.stringify({ type: "vpet_state", ...tenant.vpetState }));
     }
     ws.send(JSON.stringify(tenant.cordaState || corda.initial(db.getCordaConfig(user.id))));
-    ws.send(JSON.stringify(ringArenaEngine.stateFor(user.id)));
     const dueloCfg = db.getDueloConfig(user.id);
     if (dueloCfg) {
       ws.send(JSON.stringify({ type: "duelo_state", ...(tenant.dueloState || dueloInitialState(dueloCfg)) }));
@@ -2728,18 +2697,6 @@ wss.on("connection", (ws, req) => {
         if(message.type==="quiz_narration_finished") quizLiveEngine.narrationFinished(room,message.match_id,Number(message.question_no));
       } catch { /* A fonte pública aceita somente confirmação de fim da narração. */ }
     });
-    return;
-  }
-
-  if (pathname === "/ring-arena-browser") {
-    const room = String(parsed.searchParams.get("room") || "").trim();
-    if (!ringArenaEngine.roomForPublicCode(room)) {
-      ws.close(1008, "sala invalida");
-      return;
-    }
-    ws.isAlive = true;
-    ws.on("pong", () => { ws.isAlive = true; });
-    if (!ringArenaEngine.attachPublic(room, ws)) ws.close(1008, "sala indisponivel");
     return;
   }
 
