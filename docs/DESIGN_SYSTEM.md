@@ -4,6 +4,8 @@
 
 > 2026-11-02: PWA móvel `/sons-mobile` para conectar/desconectar a live, ativar/pausar reprodução, ajustar volume e testar alertas existentes. Usa login, rotas e eventos atuais; Service Worker não armazena respostas autenticadas nem áudios. Mapa de observabilidade e limitações em `docs/pwa-sons-mobile.md`.
 
+> 2026-11-02: Narração do chat passou a incluir comentários enviados pela própria conta streamer; limpeza, filtros e fluxo TTS existentes foram preservados.
+
 > 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
 
 > 2026-10-17: Super Admin → Pacotes e TikCoins ganhou relatório de recargas com período e paginação, separando compras aprovadas e reembolsos de adições/remoções manuais com identificação do admin; totais calculados a partir do ledger existente. Sem mudança em saldo, checkout ou eventos financeiros.

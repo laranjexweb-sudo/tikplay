@@ -636,10 +636,6 @@ class GameSession:
         if not self.settings.get("chat_narr_enabled"):
             return
         self._record_chat_narration("received")
-        if str(user or "").lstrip("@").casefold() == str(self.username or "").lstrip("@").casefold():
-            self._record_chat_narration("filtered")
-            return
-
         speech_text, emotion = tts_emotions.extract_trailing_emotion(text)
         cleaned = tts.prepare_chat_text(
             speech_text,

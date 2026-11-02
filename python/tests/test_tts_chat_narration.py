@@ -139,10 +139,12 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue((await session._chat_tts_url(item)).endswith("/voice.mp3"))
         self.assertEqual(synthesize.call_args.kwargs["emotion"], "grito")
 
-    async def test_streamer_comment_is_not_queued(self):
+    async def test_streamer_comment_is_queued_for_narration(self):
         session = self._session()
         session._enqueue_chat_narration("@TikPlay", "Mensagem do próprio canal")
-        self.assertEqual(session._chat_narration_queue.qsize(), 0)
+        self.assertEqual(session._chat_narration_queue.qsize(), 1)
+        item = session._chat_narration_queue.get_nowait()
+        self.assertEqual(item["text"], "Mensagem do próprio canal")
 
     async def test_queue_is_bounded_and_counts_dropped_comments(self):
         session = self._session(queue_size=1)

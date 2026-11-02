@@ -36,8 +36,9 @@ As filas do daemon e do painel aceitam no máximo 10 itens; itens expiram 10 s
 após a chegada do comentário. Alterar ativação, filtro, voz ou velocidade limpa
 itens pendentes; desconexão/reconexão do painel também limpa sua fila.
 
-Comentários vazios depois da limpeza, comentários rejeitados pelos filtros e
-comentários do próprio streamer não geram áudio. Partidas e tratamento de
+Comentários vazios depois da limpeza e comentários rejeitados pelos filtros não
+geram áudio. Comentários enviados pelo próprio streamer também entram na fila
+normal de narração. Partidas e tratamento de
 palpites continuam independentes da fila de voz. O cache mantém no máximo 500
 MP3s recentes por conta; áudios mais antigos são removidos para limitar disco.
 
@@ -73,7 +74,7 @@ Preservar o payload e nomes dos eventos `narrate`, `chat_narrate` e
 - Limpeza de emojis preserva letras acentuadas; emoji-only resulta em texto
   vazio; menções/URLs e textos longos seguem o helper compartilhado.
 - Testar modos `all`, `exclude`, `only`, caractere configurado, narrador
-  desativado e filtro do streamer.
+  desativado e comentários enviados pelo streamer.
 - Fila é limitada, mantém ordem, não bloqueia o handler de comentários, expira
   mensagens antigas, limpa pendências ao alterar a configuração/desconectar e
   descarta excesso conforme a política definida.
@@ -102,7 +103,7 @@ online do Edge TTS; os MP3s são gerados e servidos pelo TikPlay.
 
 ## Validação executada
 
-- Testes automatizados de filtros, fila limitada, exclusão do streamer, evento
+- Testes automatizados de filtros, fila limitada, inclusão do streamer, evento
   de entrega, snapshot de charada, privacidade do resumo e taxas Edge.
 - Síntese real com `edge-tts 7.3.1` do mesmo texto de teste: 0,5x = 7,944 s;
   1x = 4,008 s; 1,5x = 2,688 s; 2x = 2,040 s (duração medida com `ffprobe`).
