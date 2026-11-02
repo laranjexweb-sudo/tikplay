@@ -72,6 +72,7 @@ const app = express();
 const PUBLIC_DIR = path.join(__dirname, "public");
 const FRIENDLY_PAGES = {
   "/painel": "control-panel.html",
+  "/sons-mobile": "mobile-sounds.html",
   "/admin": "admin.html",
   "/login": "login.html",
   "/register": "login.html",
@@ -108,7 +109,7 @@ app.get("/", (req, res) => {
   }
   return res.redirect("/login");
 });
-const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live"]);
+const NO_CACHE_ROUTES = new Set(["/admin", "/corda", "/duelo", "/painel", "/sons-mobile", "/caca-palavra", "/batalha", "/tres-pontinhos", "/bichinho", "/bichinho-overlay", "/jogo", "/ranking", "/contexto", "/quiz-live"]);
 for (const [route, file] of Object.entries(FRIENDLY_PAGES)) {
   app.get(route, (req, res) => {
     if (NO_CACHE_ROUTES.has(route)) {
@@ -124,6 +125,11 @@ for (const [legacy, target] of Object.entries(LEGACY_PAGES)) {
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 express.static.mime.define({ "image/webp": ["webp"] });
+app.get("/sons-mobile/manifest.json", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "mobile-sounds-manifest.json")));
+app.get("/sons-mobile/sw.js", (req, res) => {
+  res.set("Service-Worker-Allowed", "/sons-mobile/");
+  res.type("application/javascript").sendFile(path.join(PUBLIC_DIR, "mobile-sounds-sw.js"));
+});
 app.use("/gift-images", express.static(path.join(__dirname, "public", "gift-images"), { maxAge: "1d" }));
 app.use("/duelo-audio", express.static(path.join(__dirname, "public", "duelo-audio")));
 fs.mkdirSync(path.join(__dirname, "public", "duelo-audio"), { recursive: true });
@@ -2702,3 +2708,4 @@ wss.on("connection", (ws, req) => {
 
   ws.close(1008, "rota invalida");
 });
+
