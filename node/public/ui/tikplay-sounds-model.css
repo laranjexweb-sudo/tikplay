@@ -198,6 +198,11 @@ body.tp-panel-streamer .live-pill:not([data-state="connected"]) i { background:v
 #tab-sons .tts-credit-cost { display:grid; gap:var(--tp-space-1); margin-top:var(--tp-space-2); }
 #tab-sons .tts-credit-cost strong { color:var(--tp-text); font-size:12px; }
 #tab-sons .tts-credit-cost span { color:var(--tp-text-soft,var(--muted)); font-size:12px; }
+#tab-sons .tts-credit-cost span { line-height:1.55; }
+#tab-sons .tts-credit-cost #voiceCreditRate { display:grid; gap:var(--tp-space-1); }
+#tab-sons .tts-credit-rate-heading { display:flex; align-items:center; flex-wrap:wrap; gap:var(--tp-space-2); color:var(--tp-text); }
+#tab-sons .tts-credit-rate-heading strong { color:var(--tp-text); font-size:12px; }
+#tab-sons .tts-credit-cost #voiceCreditRate small { color:var(--tp-text-soft,var(--muted)); font-size:11px; line-height:1.45; }
 #tab-sons .tts-message-limit { margin-top:var(--tp-space-3); }
 #tab-sons .tts-credit-explainer { display:block; margin-top:var(--tp-space-2); color:var(--tp-text-soft,var(--muted)); font-size:11px; line-height:1.5; }
 #tab-sons .tts-emotion-howto { display:grid; gap:var(--tp-space-1); margin-top:var(--tp-space-4); padding-top:var(--tp-space-3); border-top:1px solid var(--tp-border); }

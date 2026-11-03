@@ -290,12 +290,13 @@
       <button type="button" class="tab-btn" data-tab="quiz" onclick="switchTab('quiz')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9.5 9a2.7 2.7 0 1 1 4.8 1.7c-.9.8-1.8 1.1-1.8 2.3M12.5 17.2h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Quiz Live</button>
       <button type="button" class="tab-btn" data-tab="tres" onclick="switchTab('tres')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M8.5 14.5A7 7 0 1 1 15.5 14.5c-.9.7-1.3 1.4-1.5 2.5h-4c-.2-1.1-.6-1.8-1.5-2.5Z"></path><path d="M12 2v2M4.9 5l1.4 1.4M19.1 5l-1.4 1.4"></path></svg>3 Dicas</button>
       <button type="button" class="tab-btn" data-tab="corda" onclick="switchTab('corda')"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12c3-6 6 6 9 0s6 6 9 0M3 9v6M21 9v6"></path></svg>CORDA</button>
-      <details class="tp-extra-games" id="extraGamesNav" data-nav-hidden="true" hidden>
+      <details class="tp-extra-games" id="extraGamesNav">
         <summary class="tp-extra-games-trigger" aria-expanded="false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>Mais jogos</summary>
         <div class="tp-extra-games-menu">
           <button type="button" class="tab-btn" data-tab="batalha" onclick="switchTab('batalha');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Batalha</button>
           <button type="button" class="tab-btn" data-tab="bichinho" onclick="switchTab('bichinho');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 13c-2.7 0-6 1.3-6 4a3 3 0 0 0 3 3c1.3 0 2-.7 3-.7s1.7.7 3 .7a3 3 0 0 0 3-3c0-2.7-3.3-4-6-4Z"></path><circle cx="5.5" cy="9" r="1.7"></circle><circle cx="9.5" cy="6.5" r="1.7"></circle><circle cx="14.5" cy="6.5" r="1.7"></circle><circle cx="18.5" cy="9" r="1.7"></circle></svg>Bichinho</button>
-          <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l4 6"></path></svg>Duelo 1x1</button>
+          <button type="button" class="tab-btn" data-tab="duelo" onclick="switchTab('duelo');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 4 5 5M4 5l4-1 4 4-1 4-3-1-1-3-3-3ZM19 4l-5 5M20 5l-4-1-4 4 1 4 3-1 1-3 3-3ZM8 14l-4 6M16 14l-4 6"></path></svg>Duelo 1x1</button>
+          <button type="button" class="tab-btn" data-tab="ring_arena" onclick="switchTab('ring_arena');this.closest('details').open=false"><svg class="tp-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5"></circle><path d="M12 1v3M23 12h-3M12 23v-3M1 12h3"></path></svg>Arena dos Anéis</button>
         </div>
       </details>
     </div>
@@ -326,6 +327,7 @@
           <article class="game-card tips-card" data-streamer-feature="tres"><div class="game-card-top"><div class="game-symbol">3</div></div><h3>3 Dicas</h3><p>Três pistas progressivas com pontuação por velocidade.</p><div class="tags"><span>Rodadas</span><span>Dicas</span><span>Pontos</span></div><button class="btn btn-dark btn-full" onclick="switchTab('tres')">Abrir controle</button></article>
           <article class="game-card quiz-card" data-streamer-feature="quiz"><div class="game-card-top"><div class="game-symbol">?</div></div><h3>Quiz Live</h3><p>Perguntas no chat, respostas em tempo real e ranking da partida.</p><div class="tags"><span>Chat</span><span>Quiz</span><span>Ranking</span></div><button class="btn btn-dark btn-full" onclick="switchTab('quiz')">Abrir controle</button></article>
           <article class="game-card caca-card" data-streamer-feature="caca"><div class="game-card-top"><div class="game-symbol">⌕</div></div><h3>Caça Palavras</h3><p>Encontre palavras no tabuleiro e participe pelo chat.</p><div class="tags"><span>Chat</span><span>Tabuleiro</span><span>Ranking</span></div><button class="btn btn-dark btn-full" onclick="switchTab('caca')">Abrir controle</button></article>
+          <article class="game-card" data-streamer-feature="ring_arena"><div class="game-card-top"><div class="game-symbol">◎</div></div><h3>Arena dos Anéis</h3><p>Sobreviva às colisões, recupere energia com presentes e equipe anéis.</p><div class="tags"><span>Multiplayer</span><span>Presentes</span><span>Top 5</span></div><button class="btn btn-dark btn-full" onclick="switchTab('ring_arena')">Abrir controle</button></article>
         </div>
         <div class="dashboard-grid">
           <article class="panel links-panel"><div class="panel-head"><div><span class="panel-icon">◫</span><h3>Tela pública e links</h3></div></div><div class="link-list"><div><span>Jogo</span><code>/jogo</code><button class="copy-btn" onclick="copyRoomLink('/jogo','streamerLinkMsg')">Copiar</button></div><div><span>Ranking</span><code>/ranking</code><button class="copy-btn" onclick="copyRoomLink('/ranking','streamerLinkMsg')">Copiar</button></div><div><span>Sobreposições</span><code>OBS / Live Studio</code><button class="copy-btn" onclick="switchTab('overlays')">Gerenciar</button></div></div><span id="streamerLinkMsg" role="status" aria-live="polite"></span></article>
@@ -396,10 +398,10 @@
         </article>
         <article class="panel">
           <div class="panel-head"><div><span class="panel-icon">✓</span><h3>Filtros de chat</h3></div></div>
-          <p class="panel-copy">Defina quem pode pontuar nos jogos.</p>
-          <label class="switch-row" for="chkFollowers"><input type="checkbox" id="chkFollowers" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Apenas seguidores</b><small>Somente quem segue o perfil poderá pontuar.</small></div></label>
+          <p class="panel-copy">Defina quem pode participar das ações dos jogos.</p>
+          <label class="switch-row" for="chkFollowers"><input type="checkbox" id="chkFollowers" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Apenas seguidores</b><small>Somente quem segue o perfil poderá pontuar nas ações dos jogos.</small></div></label>
           <label class="switch-row" for="chkHeartMe"><input type="checkbox" id="chkHeartMe" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Heart-me ativo</b><small>Exigir membro do fã-clube com selo ativo.</small></div></label>
-          <p class="panel-copy">Com os dois filtros ativos, o participante precisa atender aos dois requisitos.</p>
+          <p class="panel-copy">Com os dois filtros ativos, o participante precisa atender aos dois requisitos. Curtidas continuam contando no ranking geral e na meta TAP.</p>
         </article>
         </div>
       </div>
@@ -1237,6 +1239,9 @@
         <div class="tab-page" id="tab-corda" style="display:none">
           <iframe id="cordaPanel" title="Controles do CORDA" style="width:100%;height:var(--tp-corda-panel-height);border:0" loading="lazy"></iframe>
         </div>
+        <div class="tab-page" id="tab-ring_arena" style="display:none">
+          <iframe id="ringArenaPanel" title="Controles da Arena dos Anéis" style="width:100%;height:min(1050px,calc(100vh - 150px));min-height:760px;border:0;border-radius:var(--tp-radius-lg)" loading="lazy"></iframe>
+        </div>
         <!-- ===================== DUELO 1x1 ===================== -->
         <div class="tab-page" id="tab-duelo" style="display:none" data-game-mode="hp">
 
@@ -1610,6 +1615,7 @@ function switchTab(tab) {
   if (menuTab === "quiz") quizInit();
   if (menuTab === "duelo") { loadDueloState(); }
   if (menuTab === "corda") { const frame = document.getElementById("cordaPanel"); if (!frame.getAttribute("src")) frame.src = "/corda?control=1"; }
+  if (menuTab === "ring_arena") { const frame = document.getElementById("ringArenaPanel"); if (!frame.getAttribute("src")) frame.src = "/arena-aneis?control=1&rev=galaxy-ring-test-picker-20261018"; }
   if (menuTab === "support") nativeSupportInit();
   try { localStorage.setItem("panel_tab", menuTab); } catch (e) {}
   try { if (location.hash !== "#" + menuTab) history.replaceState(null, "", location.pathname + location.search + "#" + menuTab); } catch (e) {}
@@ -4636,6 +4642,26 @@ async function loadSettings() {
 
 let elevenChatVoices = [];
 let elevenCreditCosts = new Map();
+const friendlyTtsVoiceStyles = {
+  Zephyr: "Clara e brilhante", Puck: "Animada", Charon: "Informativa", Kore: "Firme",
+  Fenrir: "Empolgada", Leda: "Jovem", Orus: "Firme", Aoede: "Leve",
+  Callirrhoe: "Descontraída", Autonoe: "Clara e brilhante", Enceladus: "Sopro leve",
+  Iapetus: "Clara", Umbriel: "Descontraída", Algieba: "Suave", Despina: "Suave",
+  Erinome: "Clara", Algenib: "Rouca", Rasalgethi: "Informativa", Laomedeia: "Animada",
+  Achernar: "Suave", Alnilam: "Firme", Schedar: "Equilibrada", Gacrux: "Madura",
+  Pulcherrima: "Direta", Achird: "Amigável", Zubenelgenubi: "Casual", Vindemiatrix: "Gentil",
+  Sadachbia: "Viva", Sadaltager: "Bem informada", Sulafat: "Acolhedora",
+  pf_dora: "Dora · feminina", pm_alex: "Alex · masculina", pm_santa: "Santa · masculina",
+};
+function friendlyTtsVoiceName(voice) {
+  const key = String(voice.key || "");
+  if (key.startsWith("p") && key.includes("_") && friendlyTtsVoiceStyles[key])
+    return friendlyTtsVoiceStyles[key].split(" · ")[0];
+  if (friendlyTtsVoiceStyles[key]) return `${friendlyTtsVoiceStyles[key]} · ${key}`;
+  const raw = String(voice.label || key).replace(/\s*[—–]\s*.+$/u, "").replace(/\s+-\s+.+$/u, "").replace(/\s+/gu, " ").trim();
+  const chars = [...raw];
+  return chars.length > 30 ? `${chars.slice(0, 29).join("")}…` : raw;
+}
 let ttsCreditPublicKey = "";
 let ttsCreditAccountEmail = "";
 let ttsCreditCheckoutPackage = null;
@@ -4654,15 +4680,39 @@ async function loadElevenChatVoices() {
     box.hidden = !data.enabled;
     document.getElementById("elevenUsageCard").hidden = !data.enabled;
     if (!data.enabled) return;
+    await loadVoiceCredits();
     elevenChatVoices = (data.models || []).flatMap(model => (model.voices || []).map(voice => ({
       ...voice, model_id: model.id,
-    })));
+      credits_per_150_chars: Number(elevenCreditCosts.get(model.id) ?? model.credits_per_150_chars ?? voice.credits_per_150_chars ?? 0),
+    }))).sort((a, b) => a.credits_per_150_chars - b.credits_per_150_chars
+      || friendlyTtsVoiceName(a).localeCompare(friendlyTtsVoiceName(b), "pt-BR"));
     select.replaceChildren(new Option("Usar a voz padrão do painel", ""));
-    elevenChatVoices.forEach((voice, index) => {
-      const option = new Option(voice.label, String(index));
+    const groups = [
+      { label: "Menor consumo · até ×0,1", test: rate => rate > 0 && rate <= 15 },
+      { label: "Consumo reduzido · acima de ×0,1 até ×0,5", test: rate => rate > 15 && rate <= 75 },
+      { label: "Consumo padrão · acima de ×0,5 até ×1", test: rate => rate > 75 && rate <= 150 },
+      { label: "Maior consumo · acima de ×1", test: rate => rate > 150 },
+      { label: "Tarifa não definida", test: rate => rate <= 0 },
+    ];
+    groups.forEach(group => {
+      const entries = elevenChatVoices.map((voice, index) => ({ voice, index }))
+        .filter(({ voice }) => group.test(voice.credits_per_150_chars));
+      if (!entries.length) return;
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      entries.forEach(({ voice, index }) => {
+      const rate = Number(voice.credits_per_150_chars || 0);
+      const multiplier = rate / 150;
+      const multiplierLabel = multiplier.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+      const option = new Option(friendlyTtsVoiceName(voice), String(index));
       option.dataset.modelId = voice.model_id;
       option.dataset.voiceId = voice.key;
-      select.add(option);
+      option.dataset.costMultiplier = multiplierLabel;
+      option.dataset.costRate = String(rate);
+      option.dataset.costTier = rate > 0 ? (multiplier <= 0.1 ? "low" : multiplier <= 1 ? "standard" : "high") : "unavailable";
+        optgroup.append(option);
+      });
+      select.append(optgroup);
     });
     const selectedIndex = elevenChatVoices.findIndex(voice => voice.model_id === data.model_id && voice.key === data.voice_id);
     select.value = selectedIndex >= 0 ? String(selectedIndex) : "";
@@ -4670,7 +4720,6 @@ async function loadElevenChatVoices() {
     select.disabled = elevenChatVoices.length === 0;
     select.closest(".field").hidden = elevenChatVoices.length <= 1;
     test.disabled = selectedIndex < 0;
-    await loadVoiceCredits();
     renderSelectedVoiceCreditRate();
     status.textContent = data.catalog_error ? "Não foi possível carregar parte do catálogo de vozes. Recarregue o painel para tentar novamente."
       : !elevenChatVoices.length && Number(data.unpriced_voice_count) > 0 ? "Vozes aprovadas aguardam a definição de uma tarifa em TikCoins pelo administrador."
@@ -4702,7 +4751,7 @@ async function loadVoiceCredits() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "btn btn-dark btn-small voice-credit-package";
-      button.textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      button.textContent = `${item.name} · ${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
       button.addEventListener("click", () => openTtsCreditCheckout(item));
       packages.append(button);
     });
@@ -4735,9 +4784,34 @@ function renderSelectedVoiceCreditRate() {
   const option = document.getElementById("elevenChatVoice")?.selectedOptions[0];
   const modelId = option?.dataset.modelId;
   const rate = modelId ? elevenCreditCosts.get(modelId) : null;
-  document.getElementById("voiceCreditRate").textContent = modelId
-    ? rate > 0 ? `${rate} TikCoins a cada 150 caracteres · consumo arredondado por mensagem` : "Esta voz ainda não está disponível para uso com TikCoins."
-    : "A voz padrão não consome TikCoins.";
+  const multiplier = Number(rate || 0) / 150;
+  const multiplierLabel = multiplier.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const details = document.getElementById("voiceCreditRate");
+  details.replaceChildren();
+  if (!modelId) {
+    details.textContent = "A voz padrão não consome TikCoins.";
+    renderVoiceCreditEstimate();
+    return;
+  }
+  if (!(rate > 0)) {
+    details.textContent = "Esta voz ainda não está disponível para uso com TikCoins.";
+    renderVoiceCreditEstimate();
+    return;
+  }
+  const heading = document.createElement("span");
+  heading.className = "tts-credit-rate-heading";
+  const voiceName = document.createElement("strong");
+  voiceName.textContent = option.textContent;
+  const multiplierBadge = document.createElement("span");
+  multiplierBadge.className = "tp-voice-cost-badge";
+  multiplierBadge.dataset.costTier = option.dataset.costTier || "standard";
+  multiplierBadge.textContent = `×${multiplierLabel}`;
+  heading.append(voiceName, multiplierBadge);
+  const amount = document.createElement("span");
+  amount.textContent = `Custo: ${rate} TikCoins por 150 caracteres.`;
+  const perCharacter = document.createElement("small");
+  perCharacter.textContent = `Média de ${multiplierLabel} TikCoin por caractere.`;
+  details.append(heading, amount, perCharacter);
   renderVoiceCreditEstimate();
 }
 
@@ -5338,7 +5412,7 @@ async function loadQuizHistory(page=1){quizHistoryPage=Math.max(1,page);try{cons
 function changeQuizHistoryPage(delta){const next=quizHistoryPage+delta;if(next>0&&next<=quizHistoryPages)loadQuizHistory(next);}
 async function openQuizHistory(id){const host=document.getElementById('quizHistoryDetail');host.textContent='Carregando detalhes…';try{const data=await quizApi('/api/quiz-live/history/'+encodeURIComponent(id));host.innerHTML=`<h3>Ranking completo</h3>${data.ranking.map((item,index)=>`<div class="tp-quiz-rank-row"><span>${index+1}º · <b>${esc(item.nickname)}</b></span><span>${Number(item.score)} pts · ${Number(item.correct_count)} acertos</span></div>`).join('')}<h3 class="mt-3">Perguntas da partida</h3>${data.rounds.map(round=>`<details class="tp-quiz-answer-history"><summary>${round.question_no}. ${esc(round.prompt)} · resposta ${esc(round.mode==='alternativas'?`${round.answer} — ${(round.options||{})[round.answer]||''}`:round.answer_value||round.answer)}</summary><p>${esc(round.explanation||'')}</p><p>${round.responses.length} respostas · ${round.responses.filter(item=>item.is_correct).length} acertos</p></details>`).join('')}`;}catch(error){host.textContent=error.message;}}
 
-const FEATURE_TABS = ["connect", "sons", "overlays", "games", "batalha", "caca", "bichinho", "tres", "duelo", "corda", "quiz"];
+const FEATURE_TABS = ["connect", "sons", "overlays", "games", "batalha", "caca", "bichinho", "tres", "duelo", "corda", "quiz", "ring_arena"];
 
 function syncExtraGamesNav() {
   const menu = document.getElementById("extraGamesNav");
@@ -5382,7 +5456,7 @@ function applyFeatureGating(user) {
   }
   const f = (user.features && typeof user.features === "object") ? user.features : {};
   const allAllowed = !Object.keys(f).length; // {} = tudo liberado
-  const featureAllowed = (tab) => ["connect", "reports"].includes(tab) ? true : (allAllowed ? true : f[tab === "corda" && !Object.hasOwn(f, "corda") ? "duelo" : tab] !== false);
+  const featureAllowed = (tab) => ["connect", "reports"].includes(tab) ? true : (allAllowed ? true : (tab === "ring_arena" && !Object.hasOwn(f, tab) ? false : f[tab === "corda" && !Object.hasOwn(f, "corda") ? "duelo" : tab] !== false));
   let visibleTabs = [];
   document.querySelectorAll(".tab-btn").forEach((b) => {
     const tab = b.dataset.tab;
@@ -7366,13 +7440,28 @@ function setupThemedSelects() {
         const item = document.createElement("button");
         item.type = "button";
         item.className = "tp-select-option";
+        if (option.dataset.costMultiplier) {
+          item.classList.add("tp-select-option--voice-cost");
+          item.dataset.costTier = option.dataset.costTier || "standard";
+        }
         item.tabIndex = -1;
         item.id = `${menu.id}Option${index}`;
         item.dataset.tpOptionIndex = String(index);
         item.setAttribute("role", "option");
         item.setAttribute("aria-selected", String(index === select.selectedIndex));
         item.disabled = optionIsDisabled(option);
-        item.textContent = option.label || option.textContent.trim();
+        if (option.dataset.costMultiplier) {
+          const label = document.createElement("span");
+          label.className = "tp-select-option-label";
+          label.textContent = option.label || option.textContent.trim();
+          const badge = document.createElement("span");
+          badge.className = "tp-voice-cost-badge";
+          badge.dataset.costTier = option.dataset.costTier || "standard";
+          badge.textContent = Number(option.dataset.costRate) > 0 ? `×${option.dataset.costMultiplier}` : "Sem tarifa";
+          item.append(label, badge);
+        } else {
+          item.textContent = option.label || option.textContent.trim();
+        }
         item.addEventListener("pointermove", () => { if (!item.disabled) updateActive(index); });
         item.addEventListener("mousedown", event => event.preventDefault());
         item.addEventListener("click", () => choose(index));
@@ -7389,7 +7478,19 @@ function setupThemedSelects() {
     }
     function sync() {
       const selected = select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-      value.textContent = selected ? (selected.label || selected.textContent.trim()) : "Selecione uma opção";
+      value.replaceChildren();
+      if (selected?.dataset.costMultiplier) {
+        const label = document.createElement("span");
+        label.className = "tp-select-value-label";
+        label.textContent = selected.label || selected.textContent.trim();
+        const badge = document.createElement("span");
+        badge.className = "tp-voice-cost-badge";
+        badge.dataset.costTier = selected.dataset.costTier || "standard";
+        badge.textContent = Number(selected.dataset.costRate) > 0 ? `×${selected.dataset.costMultiplier}` : "Sem tarifa";
+        value.append(label, badge);
+      } else {
+        value.textContent = selected ? (selected.label || selected.textContent.trim()) : "Selecione uma opção";
+      }
       button.disabled = select.matches(":disabled");
       button.setAttribute("aria-required", String(select.required));
       if (select.validity.valid && select.getAttribute("aria-invalid") === "true") {

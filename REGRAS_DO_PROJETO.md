@@ -260,3 +260,11 @@ no **mesmo daemon `service.py`** (comandos `public_*`, sem `tenant_id`; resposta
 ---
 
 *Documento exportado automaticamente para referência e governança do projeto.*
+
+## Arena dos Anéis
+
+- Jogo isolado em `node/lib/ring-arena.js`; movimento, colisões, energia, eliminações e vencedores são calculados no servidor Node. A página pública recebe estado projetado sem IDs estáveis dos espectadores.
+- Cada partida usa snapshot de configuração e resultados em tabelas próprias. Catálogo de anéis e progresso de desbloqueio são escopados por streamer e ID de espectador; nunca usar a carteira TikCoins do streamer para espectadores.
+- O espectador seleciona um anel pelo comentário `!anel <id>` e o desbloqueia enviando presentes TikTok cujo total de diamantes atinja o preço configurado. Presentes configurados pelo streamer também recuperam energia, com limite ou overcharge conforme a configuração.
+- O recurso requer habilitação explícita pelo Super Admin em contas com permissões individuais. Rotas autenticadas e eventos recebidos verificam a permissão no servidor.
+- Plano de eventos, limites de logs e arquivos ficam em `docs/arena-dos-aneis.md`.

@@ -98,7 +98,7 @@ module.exports = function registerAuthRoutes(app, ctx = {}) {
           name: String(name).trim(),
           password_hash: auth.hashPassword(password),
           role,
-          features: { bichinho: false, duelo: false },
+          features: { bichinho: false, duelo: false, ring_arena: false },
         });
       }
     } catch (e) {

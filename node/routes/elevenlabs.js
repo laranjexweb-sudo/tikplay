@@ -43,6 +43,23 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   if (!tenantColumns.has("model_id")) db.db.exec("ALTER TABLE tenant_elevenlabs ADD COLUMN model_id TEXT NOT NULL DEFAULT 'elevenlabs/eleven-v4-turbo'");
   const seedModel = db.db.prepare("INSERT OR IGNORE INTO additional_voice_models(model_id,enabled) VALUES(?,?)");
   for (const model of voiceModels) seedModel.run(model.id, model.id === "elevenlabs/eleven-v4-turbo" ? 1 : 0);
+  db.db.exec(`CREATE TABLE IF NOT EXISTS tts_credit_policy_migrations (
+    version TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  const pricingPolicyVersion = "weighted-characters-v1";
+  if (!db.db.prepare("SELECT 1 FROM tts_credit_policy_migrations WHERE version=?").get(pricingPolicyVersion)) {
+    const seedRates = db.db.transaction(() => {
+      const saveRate = db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=? WHERE model_id=?");
+      [
+        ["hexgrad/kokoro-82m", 15],
+        ["google/gemini-3.1-flash-tts-preview", 150],
+        ["google/gemini-3.8-flash-lite-tts", 75],
+        ["elevenlabs/eleven-v4-turbo", 300],
+      ].forEach(([modelId, rate]) => saveRate.run(rate, modelId));
+      db.db.prepare("INSERT INTO tts_credit_policy_migrations(version) VALUES(?)").run(pricingPolicyVersion);
+    });
+    seedRates.immediate();
+  }
   const get = id => db.db.prepare("SELECT * FROM tenant_elevenlabs WHERE tenant_id=?").get(id)
     || { tenant_id: id, enabled: 0, voice_id: "", model_id: "elevenlabs/eleven-v4-turbo", monthly_limit: 10000 };
   const configured = () => Boolean(providerConfig.read().apiKey);
@@ -54,8 +71,12 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   function getModelStates() {
     const states = new Map(db.db.prepare("SELECT model_id,enabled,credits_per_150_chars FROM additional_voice_models").all()
       .map(row => [row.model_id, { enabled: row.enabled === 1, credits_per_150_chars: row.credits_per_150_chars }]));
-    return voiceModels.map(model => ({ ...model, enabled: states.get(model.id)?.enabled === true,
-      credits_per_150_chars: Number(states.get(model.id)?.credits_per_150_chars || 0) }));
+    return voiceModels.map(model => {
+      const creditsPer150Chars = Number(states.get(model.id)?.credits_per_150_chars || 0);
+      return { ...model, enabled: states.get(model.id)?.enabled === true,
+        credits_per_150_chars: creditsPer150Chars,
+        credit_multiplier: creditsPer150Chars / 150 };
+    });
   }
   function selectedVoiceOptions() {
     return db.db.prepare(`SELECT o.model_id,o.voice_id,o.label FROM additional_voice_options o
@@ -136,9 +157,12 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
     }
     const models = states.map(model => ({
       id: model.id, label: model.label, type: model.voice_type, provider: model.provider,
+      credits_per_150_chars: model.credits_per_150_chars, credit_multiplier: model.credit_multiplier,
       configured: modelConfigured(model),
       voices: (model.provider === "elevenlabs" ? eleven : (catalog.find(item => item.model_id === model.model_id)?.voices || []))
-        .filter(voice => approved.has(`${model.id}:${voice.key}`)),
+        .filter(voice => approved.has(`${model.id}:${voice.key}`))
+        .map(voice => ({ ...voice, credits_per_150_chars: model.credits_per_150_chars,
+          credit_multiplier: model.credit_multiplier })),
     })).filter(model => model.voices.length > 0);
     return { models, catalog_error: catalogError };
   }

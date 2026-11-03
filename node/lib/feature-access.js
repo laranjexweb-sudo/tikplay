@@ -10,6 +10,7 @@ const FEATURE_CATALOG = Object.freeze([
   { key: "duelo", label: "Duelo 1x1", kind: "game" },
   { key: "corda", label: "CORDA", kind: "game" },
   { key: "quiz", label: "Quiz Live", kind: "game" },
+  { key: "ring_arena", label: "Arena dos Anéis", kind: "game" },
 ]);
 
 function featureAllowed(user, feature) {
@@ -19,6 +20,7 @@ function featureAllowed(user, feature) {
 
   // Contas antigas usavam a permissão Duelo 1x1 para controlar o CORDA.
   const key = feature === "corda" && !Object.hasOwn(features, "corda") ? "duelo" : feature;
+  if (feature === "ring_arena" && !Object.hasOwn(features, key)) return false;
   return features[key] !== false;
 }
 

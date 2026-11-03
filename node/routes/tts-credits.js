@@ -17,7 +17,8 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       checkout: { public_key: typeof getPublicKey === "function" ? getPublicKey() : "" },
       packages: packages(true).map(item => ({ ...item, price: (item.price_cents / 100).toFixed(2) })),
       ledger: wallet.ledger(db, tenantId, 15),
-      model_costs: db.db.prepare(`SELECT model_id,credits_per_150_chars FROM additional_voice_models
+      model_costs: db.db.prepare(`SELECT model_id,credits_per_150_chars,
+        CAST(credits_per_150_chars AS REAL)/150 AS credit_multiplier FROM additional_voice_models
         WHERE enabled=1 ORDER BY model_id`).all() });
   });
 

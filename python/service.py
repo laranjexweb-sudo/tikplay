@@ -636,6 +636,7 @@ class GameSession:
         if not self.settings.get("chat_narr_enabled"):
             return
         self._record_chat_narration("received")
+
         speech_text, emotion = tts_emotions.extract_trailing_emotion(text)
         cleaned = tts.prepare_chat_text(
             speech_text,
@@ -974,10 +975,9 @@ class GameSession:
             self._emit_interaction("like", user, nickname, avatar, value=activity_count,
                                    event_id=event_id, room_id=room_id,
                                    user_id=self._stable_uid(user, user_meta))
-        allowed, reason = self._check_access(user_meta)
-        if not allowed:
-            emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado")
-            return
+        # Curtidas do ranking e da meta representam a atividade geral da live,
+        # então não passam pelo filtro de seguidores/Heart Me. Esses filtros
+        # continuam valendo para as ações de jogo abaixo (batalha, Corda, Duelo).
         entry = self.likes.get(user)
         if entry is None:
             entry = {"user": user, "nickname": nickname, "avatar": avatar, "likes": 0}
@@ -987,8 +987,7 @@ class GameSession:
             entry["nickname"] = nickname
         if avatar:
             entry["avatar"] = avatar
-        # Delta permitido para o acumulador do Node. O evento é emitido só após
-        # os filtros de acesso, para manter a mesma elegibilidade do ranking.
+        # O acumulador do Node usa a mesma regra: todas as curtidas da live.
         emit(self.tenant_id, "game", {
             "type": "likes_ranking_delta",
             "room_id": str(room_id or self.current_room_id or ""),
@@ -999,13 +998,18 @@ class GameSession:
             "like_count": int(like_count or 0),
         })
         self._likes_dirty = True
-        self.battle.add_taps(user, nickname, avatar, like_count)
-        self.corda.like(self._stable_uid(user, user_meta), like_count, avatar, user, nickname)
-        self._duelo_handle_tap(user, like_count, user_meta, avatar)
         # Meta de tap da Palavra Secreta: durante o Final Boss ela fica CONGELADA
         # (não incrementa nem dispara ações da meta enquanto o Boss estiver ativo).
         if not self.game.finished and not getattr(self.game, "is_final_boss", False):
             self.tap_meta_current += int(like_count or 0)
+
+        allowed, reason = self._check_access(user_meta)
+        if not allowed:
+            emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado nos jogos")
+            return
+        self.battle.add_taps(user, nickname, avatar, like_count)
+        self.corda.like(self._stable_uid(user, user_meta), like_count, avatar, user, nickname)
+        self._duelo_handle_tap(user, like_count, user_meta, avatar)
 
     def _tap_meta_public(self) -> dict:
         """Estado da meta enviado à página pública.

@@ -44,6 +44,13 @@ function ensureSchema(db) {
       paid_at TEXT
     );
   `);
+  const seedPackage = db.db.prepare(`INSERT OR IGNORE INTO tts_credit_packages
+    (id,name,credits,price_cents,enabled) VALUES(?,?,?,?,1)`);
+  [
+    ["71000000-0000-4000-8000-000000000001", "Inicial", 30000, 1490],
+    ["71000000-0000-4000-8000-000000000002", "Criador", 100000, 3990],
+    ["71000000-0000-4000-8000-000000000003", "Pro", 300000, 9990],
+  ].forEach(item => seedPackage.run(...item));
 }
 
 function ensureWallet(db, tenantId) {

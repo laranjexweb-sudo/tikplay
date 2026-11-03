@@ -4,7 +4,7 @@ const { FEATURE_CATALOG, featureAllowed } = require('../lib/feature-access');
 
 test('Super Admin catalog includes all available games', () => {
   const gameKeys = FEATURE_CATALOG.filter(item => item.kind === 'game').map(item => item.key);
-  assert.deepEqual(gameKeys, ['games', 'batalha', 'caca', 'bichinho', 'tres', 'duelo', 'corda', 'quiz']);
+  assert.deepEqual(gameKeys, ['games', 'batalha', 'caca', 'bichinho', 'tres', 'duelo', 'corda', 'quiz', 'ring_arena']);
 });
 
 test('CORDA honors its own permission while keeping legacy account behavior', () => {
@@ -17,4 +17,10 @@ test('CORDA honors its own permission while keeping legacy account behavior', ()
 test('admins and accounts without explicit feature restrictions keep access', () => {
   assert.equal(featureAllowed({ role: 'admin', features: { quiz: false } }, 'quiz'), true);
   assert.equal(featureAllowed({ role: 'user', features: {} }, 'quiz'), true);
+});
+
+test('Arena dos Anéis requires explicit Super Admin enablement for restricted accounts', () => {
+  assert.equal(featureAllowed({ role: 'user', features: { quiz: true } }, 'ring_arena'), false);
+  assert.equal(featureAllowed({ role: 'user', features: { ring_arena: false } }, 'ring_arena'), false);
+  assert.equal(featureAllowed({ role: 'user', features: { ring_arena: true } }, 'ring_arena'), true);
 });

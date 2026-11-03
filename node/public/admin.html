@@ -168,7 +168,7 @@
     <div><h2 id="adminCreditsHeading">Pacotes e TikCoins</h2><p>Cadastre os pacotes vendidos e faça ajustes manuais de saldo dos streamers.</p></div>
   </header>
   <div class="tp-admin-operation-block" aria-labelledby="ttsCreditPackagesTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de TikCoins</h3><p>Defina o nome, a quantidade de TikCoins e o preço em reais de cada pacote.</p></div></div>
+    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de TikCoins</h3><p>Inicial: 30 mil por R$ 14,90 · Criador: 100 mil por R$ 39,90 · Pro: 300 mil por R$ 99,90. Edite ou desative os pacotes abaixo.</p></div></div>
     <div id="ttsCreditPackagesList" class="tp-admin-credit-packages"><p class="text-secondary">Carregando pacotes…</p></div>
     <div class="tp-admin-operation-actions">
       <button class="btn btn-nb btn-dark" type="button" id="ttsCreditPackageAdd">Adicionar pacote</button>
@@ -1084,6 +1084,7 @@ const FEATURE_LIST = [
   { key: "duelo", label: "Duelo 1x1" },
   { key: "corda", label: "CORDA" },
   { key: "quiz", label: "Quiz Live" },
+  { key: "ring_arena", label: "Arena dos Anéis" },
 ];
 
 function renderFeaturesBox(features) {
@@ -1093,7 +1094,7 @@ function renderFeaturesBox(features) {
   const allChecked = !Object.keys(f).length; // {} = tudo liberado
   box.innerHTML = FEATURE_LIST.map((ft) => {
     const featureKey = ft.key === "corda" && !Object.hasOwn(f, "corda") ? "duelo" : ft.key;
-    const checked = ft.key === "connect" ? true : (allChecked ? true : f[featureKey] !== false);
+    const checked = ft.key === "connect" ? true : (allChecked ? true : (ft.key === "ring_arena" && !Object.hasOwn(f, featureKey) ? false : f[featureKey] !== false));
     return `<label class="form-check form-check-inline mb-0" style="font-size:0.8rem">
       <input class="form-check-input feat-check" type="checkbox" value="${ft.key}" data-feat="${ft.key}" ${checked ? "checked" : ""} ${ft.key === "connect" ? "disabled" : ""}>
       ${ft.label}
@@ -1398,7 +1399,7 @@ function renderAdditionalVoiceModels() {
       const modelBody = document.createElement("div"); modelBody.className = "tp-voice-model-body";
       const costField = document.createElement("label");
       costField.className = "tp-admin-field tp-admin-field-compact tp-admin-credit-rate";
-      costField.append(document.createTextNode("Tarifa · TikCoins por 150 caracteres"));
+      costField.append(document.createTextNode("TikCoins por 150 caracteres (base: Gemini 3.1 = 1×)"));
       const costInput = document.createElement("input");
       costInput.type = "number"; costInput.min = "0"; costInput.max = "100000"; costInput.step = "1";
       costInput.className = "form-control form-control-sm"; costInput.value = String(model.credits_per_150_chars || 0);
@@ -1528,7 +1529,8 @@ function updateAdditionalVoiceCounts() {
 }
 
 function formatAdditionalVoiceModelSummary(total, enabled, credits) {
-  return `${total} ${total === 1 ? "voz" : "vozes"} · ${enabled} ${enabled === 1 ? "liberada" : "liberadas"} · ${credits} TikCoins / 150 caracteres`;
+  const multiplier = (credits / 150).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  return `${total} ${total === 1 ? "voz" : "vozes"} · ${enabled} ${enabled === 1 ? "liberada" : "liberadas"} · ${multiplier}× · ${credits} TikCoins / 150 caracteres`;
 }
 
 async function bulkSetAdditionalVoices(enabled) {

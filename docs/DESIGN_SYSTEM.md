@@ -6,6 +6,24 @@
 
 > 2026-11-02: PWA móvel `/sons-mobile` para conectar/desconectar a live, ativar/pausar reprodução, ajustar volume e testar alertas existentes. Usa login, rotas e eventos atuais; Service Worker não armazena respostas autenticadas nem áudios. Mapa de observabilidade e limitações em `docs/pwa-sons-mobile.md`.
 
+> 2026-11-02: PWA Sons mobile ajustada para iOS: fundo escuro contínuo na rolagem, espaçamento inferior compacto e controles de áudio sem emojis. Ajustes de voz, velocidade e volume da narração agora podem ser salvos pelo celular; cadastro de arquivos de som segue no painel de computador. Cache do shell atualizado.
+
+> 2026-11-02: PWA Sons mobile recebeu ícones quadrados de 192×192 e 512×512 no manifesto, necessários para a opção de instalação Android.
+
+> 2026-11-02: Sons → Voz expressiva separa nome da voz e multiplicador visual no seletor (verde para baixo consumo, azul para padrão e laranja para alto); “Seus TikCoins” detalha custo por 150 caracteres e média por caractere da voz ativa. Tarifas, cálculo e cobrança preservados.
+
+> 2026-11-02: Sons → seletor de voz agrupa as opções pelo custo crescente e apresenta nomes compreensíveis com estilo e modelo; IDs internos e tarifas continuam iguais. Características Gemini traduzidas da lista oficial do Google.
+
+> 2026-11-02: Sons → selos de custo alinhados imediatamente após o nome, nomes de exibição encurtados e referências aos modelos removidas da lista; IDs técnicos permanecem internos.
+
+> 2026-11-02: Painel móvel ganhou atalho “Áudio mobile”; login iniciado pela PWA e sessão expirada retornam a `/sons-mobile` por destino interno permitido. Fluxos e autenticação existentes preservados.
+
+> 2026-11-02: PWA móvel `/sons-mobile` conectada aos componentes compartilhados do TikPlay: tokens `--tp-*`, cartões, tipografia e botões. Mantém apenas os controles móveis de live e sons; rotas e eventos existentes preservados. Mapa de observabilidade e limitações em `docs/pwa-sons-mobile.md`.
+
+> 2026-11-02: PWA Sons mobile recebeu espaçamento uniforme entre descrição, estado da live, usuário, ações e instrução; conexão e eventos preservados.
+
+> 2026-11-02: PWA Sons mobile explica ativação local e pausa, adiciona controle persistente da narração do chat, seletor/teste de voz expressiva e amplificação até 300%; configurações e endpoints compartilhados com o painel. Cache atualizado; regras de acesso e cobrança preservadas.
+
 > 2026-11-02: Narração do chat passou a incluir comentários enviados pela própria conta streamer; limpeza, filtros e fluxo TTS existentes foram preservados.
 
 > 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
@@ -948,3 +966,17 @@ node/public/
 > 2026-10-17: Sons → alertas por presente agora resolvem por nome e ID; nova aba de alertas por ação configura follow, share e entrada de presenteador por nível mínimo. Likes passam a acumular por room_id no Node e só reiniciam em sala nova. Fluxo/limitações: docs/action-sound-alerts.md.
 > 2026-10-17: Compra de TikCoins usa checkout transparente no painel: modal responsivo com cartão em campos seguros do Mercado Pago e Pix com QR/copia e cola; status e saldo atualizam após confirmação. Credenciais da Public Key são configuradas em Integrações.
 > 2026-11-02: PWA Sons mobile agora declara ícones PNG de 192×192 e 512×512 e usa a URL inicial dentro do escopo registrado.
+
+> 2026-10-18: Arena dos Anéis criada como jogo multiplayer isolado: arena circular 2D em Canvas 9:16, física autoritativa no Node, controles e prévia no painel, entrada por chat/presente/comando, energia e anéis desbloqueados por diamantes de presentes TikTok. A permissão exige habilitação explícita no Super Admin para contas com recursos restritos. Ver `docs/arena-dos-aneis.md`.
+> 2026-10-18: Arena dos Anéis → o seletor de presentes de recuperação agora segue o catálogo visual dos seletores de Sons e Palavra Secreta, com busca, imagens, diamantes, teclado e controle de energia por presente; os campos salvos mantêm o contrato existente.
+> 2026-10-18: Arena dos Anéis → raio jogável ajustado para 500 e centro visual posicionado em 45,28% da altura (equivalente a `top: 45.28%` com centralização). O background permanece fixo; somente o círculo e os elementos da partida acompanham o ajuste. A revisão do iframe foi atualizada.
+> 2026-10-18: Arena dos Anéis → anel Galaxy agora usa a arte `ring-galaxy.png` como moldura animada dos participantes que o equiparem; os demais anéis mantêm seus efeitos visuais existentes.
+> 2026-10-18: Arena dos Anéis → painel de teste permite equipar qualquer anel no espectador fictício da partida demo. A mudança atualiza o estado público para conferir a arte também na página da arena; espectadores reais seguem a regra de desbloqueio normal.
+
+> 2026-10-18: Arena dos Anéis → rotação da moldura Galaxy acelerada para ficar claramente visível durante a partida e no teste local.
+
+> 2026-10-18: Arena dos Anéis → rotação da moldura Galaxy acelerada novamente para aproximadamente uma volta a cada 3,8 segundos.
+> 2026-10-18: Arena dos Anéis → colisões agora informam instante de impacto no estado e recebem uma onda de choque animada com brilho e faíscas; sem eventos de telemetria novos.
+> 2026-11-02: Narração do chat passou a incluir comentários enviados pela própria conta streamer; limpeza, filtros e fluxo TTS existentes foram preservados.
+> 2026-11-02: PWA Sons mobile declara `apple-touch-icon` de 180×180 e metadados de Web Clip para o atalho da tela inicial no iOS.
+> 2026-11-02: Carteira de TTS usa tarifas proporcionais por voz (Kokoro 0,1×, Gemini 3.1 1×, Gemini 3.8 Flash-Lite 0,5×, Eleven v4 Turbo 2×) e pacotes Inicial/Criador/Pro preconfigurados no Admin. O seletor do streamer mostra multiplicador e TikCoins por 150 caracteres; a recarga Mercado Pago existente é preservada. Ver `docs/tts-credit-pricing.md`.

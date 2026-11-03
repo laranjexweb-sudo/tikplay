@@ -16,7 +16,8 @@ methods = {"on_comment", "on_gift", "on_like", "_stable_uid", "_log_event", "_em
 isolated = ast.Module(body=[ast.ClassDef(name="SessionCallbacks", bases=[], keywords=[],
     body=[node for node in session.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
           and node.name in methods], decorator_list=[])], type_ignores=[])
-scope = {"asyncio": asyncio, "emit": lambda *args, **kwargs: None}
+emitted_events = []
+scope = {"asyncio": asyncio, "emit": lambda *args, **kwargs: emitted_events.append(args)}
 exec(compile(ast.fix_missing_locations(isolated), str(ROOT / "service.py"), "exec"), scope)
 
 
@@ -35,6 +36,7 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         # Stubs para dependências adicionadas ao fluxo de interação (não cobertas
         # por este teste de fiação da Corda): isolam o comportamento testado.
         self.s._ensure_room = lambda *args, **kwargs: None
+        self.s.current_room_id = None
         self.s._track_levels = lambda *args, **kwargs: None
         self.s._emit_interaction = lambda *args, **kwargs: None
         self.s._enqueue_chat_narration = lambda *args, **kwargs: None
@@ -93,6 +95,25 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.s.tap_meta_current = 20
         await self.s.on_like("u", "U", "", 30)
         self.assertEqual(self.s.tap_meta_current, 50)
+
+    async def test_likes_ranking_and_word_meta_include_non_followers(self):
+        self.s.corda.stop()
+        self.s.game = SimpleNamespace(secret_word="teste", finished=False, is_final_boss=False)
+        self.s.tap_meta_current = 10
+        self.s._check_access = lambda meta: (False, "nao_seguidor")
+        self.s._likes_dirty = False
+        emitted_events.clear()
+
+        await self.s.on_like("viewer", "Viewer", "", 25, {"is_follower": False},
+                             room_id="room-1", event_id="like-25")
+
+        self.assertEqual(self.s.likes["viewer"]["likes"], 25)
+        self.assertEqual(self.s.tap_meta_current, 35)
+        self.assertTrue(self.s._likes_dirty)
+        game_events = [args[2] for args in emitted_events if len(args) > 2 and args[1] == "game"]
+        self.assertTrue(any(event.get("type") == "likes_ranking_delta" for event in game_events))
+        self.assertTrue(any(event.get("type") == "likes_activity" for event in game_events))
+        self.assertEqual(self.s.corda.pending, 0, "o filtro continua bloqueando ações de jogo")
 
     async def test_word_game_final_boss_still_freezes_tap_meta(self):
         self.s.corda.stop()

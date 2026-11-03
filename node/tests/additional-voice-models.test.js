@@ -93,10 +93,10 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.equal((await request(streamer, adminRoute)).status, 403);
     let catalog = await request(admin, adminRoute);
     assert.equal(catalog.data.models.find(model => model.id === "elevenlabs/eleven-v4-turbo").enabled, true);
-    assert.equal(catalog.data.models.find(model => model.id === "elevenlabs/eleven-v4-turbo").credits_per_150_chars, 5,
-      "legacy tariff 3/100 is migrated to 5/150");
-    assert.equal(catalog.data.models.find(model => model.id === "google/gemini-3.8-flash-lite-tts").credits_per_150_chars, 2,
-      "legacy tariff 1/100 is migrated to 2/150");
+    assert.equal(catalog.data.models.find(model => model.id === "elevenlabs/eleven-v4-turbo").credits_per_150_chars, 300,
+      "the business policy charges the approved 2x multiplier");
+    assert.equal(catalog.data.models.find(model => model.id === "google/gemini-3.8-flash-lite-tts").credits_per_150_chars, 75,
+      "the business policy charges the approved 0.5x multiplier");
     assert.equal((await request(admin, adminRoute, "PUT", { models: [{ id: "not-allowed", enabled: true }] })).status, 400);
     const openRouterModelIds = catalog.data.models.filter(model => model.provider === "openrouter" && model.catalog_available)
       .map(model => model.id);
