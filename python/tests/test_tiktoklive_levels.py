@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tiktoklive_handler import TikTokLiveHandler
+import service
 
 
 class TikTokLiveLevelMetadataTests(unittest.TestCase):
@@ -22,6 +23,23 @@ class TikTokLiveLevelMetadataTests(unittest.TestCase):
 
         self.assertEqual(meta["gifter_level"], 18)
         self.assertEqual(meta["fan_club_level"], 27)
+
+    def test_follow_info_relationship_overrides_default_top_level_status(self):
+        user = SimpleNamespace(
+            id=48,
+            unique_id="follower",
+            nickname="Follower",
+            follow_status=0,
+            follow_info=SimpleNamespace(follow_status=1),
+        )
+
+        meta = TikTokLiveHandler._user_meta(user)
+
+        self.assertEqual(meta["follow_status"], 1)
+        self.assertIs(meta["is_follower"], True)
+        session = service.GameSession.__new__(service.GameSession)
+        session.settings = {"apenas_seguidores": True, "apenas_heart_me": False}
+        self.assertEqual(session._check_access(meta), (True, "seguidor"))
 
     def test_keeps_legacy_nested_level_fields(self):
         user = SimpleNamespace(

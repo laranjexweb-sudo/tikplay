@@ -73,6 +73,14 @@ para narração e não libera participação nos jogos. Partidas e tratamento de
 palpites continuam independentes da fila de voz. O cache mantém no máximo 500
 MP3s recentes por conta; áudios mais antigos são removidos para limitar disco.
 
+Para TikTokLive, a extração de seguidor prioriza `user.follow_info.follow_status`
+sobre o possível `user.follow_status` padrão do protobuf. Assim, um zero default
+no campo superior não sobrescreve o status positivo informado no relacionamento
+aninhado. A elegibilidade continua fail-closed quando ambos estão ausentes; o
+evento agregado `chat.tts.batch` distingue `access_filtered`, `queued`,
+`standard_routed`/`expressive_routed`, `synthesized` e `failed`, sem registrar
+texto ou identidade do comentarista.
+
 ### Charada
 
 OpenRouter gera somente o texto → snapshot da configuração TTS no início da

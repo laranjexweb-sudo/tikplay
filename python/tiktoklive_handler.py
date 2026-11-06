@@ -172,8 +172,11 @@ class TikTokLiveHandler:
                 heart_me_active = not bool(getattr(legacy_fan_info, "is_sleeping", False))
 
         follow_status = first_int(
-            getattr(user, "follow_status", None),
             deep(user, "follow_info", "follow_status"),
+            # O FollowInfo aninhado é o campo canônico do protobuf. Em algumas
+            # versões, `user.follow_status` pode existir como valor padrão (0)
+            # mesmo quando `follow_info.follow_status` traz a relação atual.
+            getattr(user, "follow_status", None),
         )
         direct_is_follower = getattr(user, "is_follower", None)
         is_follower = (

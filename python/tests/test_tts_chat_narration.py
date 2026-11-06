@@ -237,7 +237,7 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
     async def test_batch_log_aggregates_counts_without_comment_content(self):
         session = self._session()
         session._chat_narration_stats_at = time.monotonic() - 31
-        session._chat_narration_configs.add(("edge_francisca", 1.4))
+        session._chat_narration_configs.add(("edge_francisca", 1.4, "all", "expressive"))
         session._record_chat_narration("queued")
 
         session._log_event.assert_called_once()
@@ -245,7 +245,10 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args[:3], ("chat", "info", "chat.tts.batch"))
         details = session._log_event.call_args.kwargs["details"]
         self.assertEqual(details["queued"], 1)
-        self.assertEqual(details["configurations"], [{"voice": "edge_francisca", "rate": 1.4}])
+        self.assertEqual(details["configurations"], [{
+            "voice": "edge_francisca", "rate": 1.4,
+            "expressive_mode": "all", "voice_strategy": "expressive",
+        }])
         self.assertNotIn("text", details)
 
     async def test_riddle_uses_voice_and_rate_snapshot(self):
