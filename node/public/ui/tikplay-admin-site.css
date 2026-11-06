@@ -62,6 +62,26 @@
 .tp-admin-main { margin-left: var(--tp-admin-side); padding: 0; min-width: 0; }
 .tp-admin-content { padding: 2.125rem 2.125rem 3.75rem; max-width: 105rem; margin: auto; }
 .tp-admin-topbar { position: sticky; top: 0; z-index: var(--z-sticky); min-height: var(--tp-admin-topbar-height); border-bottom: var(--tp-admin-border) solid var(--tp-border); background: var(--tp-admin-topbar-bg); backdrop-filter: blur(18px); display: flex; align-items: center; justify-content: space-between; gap: var(--tp-space-4); padding: var(--tp-space-3) 1.75rem; font-size: var(--tp-admin-small); color: var(--tp-text-muted); }
+.tp-admin-topbar { min-height: 4rem; }
+.tp-admin-topbar-context { display: grid; gap: var(--tp-space-1); }
+.tp-admin-topbar-context strong { color: var(--tp-text); font: 700 .875rem var(--tp-font-display); }
+.tp-admin-topbar-context span { font-size: .6875rem; }
+.tp-admin-topbar-actions { display: flex; align-items: center; gap: var(--tp-space-2); }
+.tp-admin-streamer-link { white-space: nowrap; }
+.tp-admin-account-menu { position: relative; }
+.tp-admin-account-trigger { display: inline-flex; align-items: center; gap: var(--tp-space-2); min-height: 2.5rem; padding: var(--tp-space-1) var(--tp-space-2); border: 1px solid var(--tp-border); border-radius: var(--tp-admin-button-radius); background: var(--tp-surface); color: var(--tp-text); cursor: pointer; list-style: none; }
+.tp-admin-account-trigger { font-size: .75rem; font-weight: 700; }
+.tp-admin-account-trigger::-webkit-details-marker { display: none; }
+.tp-admin-account-label { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-admin-account-trigger > svg { width: .875rem; height: .875rem; fill: none; stroke: var(--tp-text-muted); stroke-width: 1.7; transition: transform .18s ease; }
+.tp-admin-account-menu[open] .tp-admin-account-trigger > svg { transform: rotate(180deg); }
+.tp-admin-account-popover { position: absolute; z-index: calc(var(--z-sticky) + 1); top: calc(100% + var(--tp-space-2)); right: 0; display: grid; width: min(19rem,calc(100vw - var(--tp-space-8))); padding: var(--tp-space-2); border: 1px solid var(--tp-border); border-radius: var(--tp-admin-button-radius); background: var(--tp-surface); box-shadow: 0 1rem 2.5rem rgba(0,0,0,.48); }
+.tp-admin-account-identity { display: grid; gap: var(--tp-space-1); padding: var(--tp-space-3); border-bottom: 1px solid var(--tp-border); margin-bottom: var(--tp-space-1); }
+.tp-admin-account-identity span { color: var(--tp-blue); font-size: .6875rem; font-weight: 700; }
+.tp-admin-account-identity strong { overflow: hidden; text-overflow: ellipsis; color: var(--tp-text); font-size: .75rem; }
+.tp-admin-account-popover > :is(button,a) { display: flex; align-items: center; width: 100%; min-height: 2.5rem; padding: var(--tp-space-2) var(--tp-space-3); border: 0; border-radius: .5rem; background: none; color: var(--tp-text-soft); text-align: left; text-decoration: none; font: 600 .75rem var(--tp-font-ui); }
+.tp-admin-account-popover > :is(button,a):hover { background: color-mix(in srgb,var(--tp-blue) 10%,transparent); color: var(--tp-text); }
+.tp-admin-account-popover .tp-admin-account-logout { margin-top: var(--tp-space-1); border-top: 1px solid var(--tp-border); border-radius: 0 0 .5rem .5rem; color: var(--tp-red); }
 .tp-admin-logo { display: flex; align-items: center; gap: .625rem; padding: var(--tp-space-2); }
 .tp-admin-logo .tp-admin-brand-name { color: var(--tp-text); }
 .tp-admin-brand-mark { width: 2.1875rem; height: 2.1875rem; border: var(--tp-admin-border) solid rgba(38,216,255,.38); border-radius: .6875rem; display: grid; place-items: center; background: linear-gradient(145deg,rgba(38,216,255,.13),rgba(22,119,255,.04)); }
@@ -433,7 +453,8 @@
   .tp-super-admin .tp-admin-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .tp-admin-main { margin: 0; padding: 0; }
   .tp-admin-content { padding: var(--tp-space-4); }
-  .tp-admin-topbar { position: static; flex-wrap: wrap; padding: var(--tp-space-4); }
+  .tp-admin-topbar { position: static; flex-wrap: nowrap; padding: var(--tp-space-3) var(--tp-space-4); }
+  .tp-admin-account-label { display: none; }
   .tp-admin-workspace { display: none; }
   .tp-super-admin .tp-admin-header { flex-wrap: wrap; }
   .tp-super-admin .tp-admin-section > .d-flex { flex-wrap: wrap; gap: var(--tp-space-3); }

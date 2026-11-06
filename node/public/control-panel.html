@@ -265,15 +265,26 @@
       <div>
         <div class="d-flex align-items-center gap-2"><button type="button" class="icon-button mobile-menu" id="streamerMenuOpen" aria-label="Abrir menu" aria-expanded="false">&#9776;</button><div class="live-pill"><i></i><span id="streamerLivePill">Aguardando conexão</span></div></div>
       </div>
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <label class="search-box tp-streamer-search"><span aria-hidden="true">⌕</span><input id="streamerGlobalSearch" type="search" placeholder="Buscar no painel..." aria-label="Buscar seção no painel"><kbd>Ctrl K</kbd></label>
+      <div class="tp-streamer-header-actions">
+        <div class="tp-streamer-search-wrap">
+          <button type="button" class="tp-header-icon-button" id="streamerSearchToggle" aria-label="Buscar no painel" aria-expanded="false" aria-controls="streamerGlobalSearch" title="Buscar no painel (Ctrl+K)">⌕</button>
+          <label class="search-box tp-streamer-search" id="streamerSearchBox" hidden><span aria-hidden="true">⌕</span><input id="streamerGlobalSearch" type="search" placeholder="Buscar no painel..." aria-label="Buscar seção no painel"><kbd>Ctrl K</kbd></label>
+        </div>
         <button type="button" class="tp-credit-header-balance" onclick="switchTab('credits')" aria-label="Abrir saldo e recargas de TikCoins"><span aria-hidden="true">◈</span><strong id="ttsCreditHeaderBalance">— TikCoins</strong></button>
-        <span class="badge text-bg-light border border-dark border-2" id="userBadge"></span>
-        <span class="badge text-bg-warning border border-dark border-2" id="roleBadge"></span>
-        <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
-        <button type="button" class="btn btn-nb btn-primary btn-sm" id="btnMobileAudio" onclick="location.href='/sons-mobile'">Áudio mobile</button>
-        <button type="button" class="btn btn-nb btn-dark btn-sm" id="streamerLogsOpen">Logs</button>
-        <button class="btn btn-nb btn-danger btn-sm" onclick="logout()">Sair</button>
+        <button type="button" class="btn btn-nb btn-primary btn-sm tp-mobile-audio-button" id="btnMobileAudio" onclick="location.href='/sons-mobile'" aria-label="Abrir controles de áudio mobile" title="Controles de áudio mobile"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4Zm12-1a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"></path></svg><span>Áudio</span></button>
+        <details class="tp-header-account-menu" id="streamerAccountMenu">
+          <summary class="tp-header-account-trigger" aria-label="Abrir menu da conta">
+            <span class="tp-header-account-avatar" id="streamerAccountAvatar" aria-hidden="true">U</span><span class="tp-header-account-name" id="userBadge">Conta</span><svg aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"></path></svg>
+          </summary>
+          <div class="tp-header-account-popover">
+            <div class="tp-header-account-identity"><span>Conta TikPlay</span><strong id="streamerAccountIdentity">Carregando conta…</strong></div>
+            <button type="button" onclick="switchTab('connect');document.getElementById('streamerAccountMenu').open=false">Minha conta</button>
+            <button type="button" onclick="switchTab('credits');document.getElementById('streamerAccountMenu').open=false">TikCoins e Recargas</button>
+            <button type="button" id="streamerLogsOpen">Logs do sistema</button>
+            <a id="btnAdmin" href="/admin" hidden>Super Admin</a>
+            <button type="button" class="tp-header-account-logout" onclick="logout()">Sair</button>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -5305,10 +5316,11 @@ async function loadMe() {
     const data = await apiFetch("/api/auth/me");
     if (!data.success) return;
     const user = data.user;
-    document.getElementById("userBadge").textContent = user.name || user.email;
-    document.getElementById("roleBadge").textContent = user.role === "admin" ? "ADMIN" : "";
-    document.getElementById("roleBadge").style.display = user.role === "admin" ? "" : "none";
-    if (user.role === "admin") document.getElementById("btnAdmin").style.display = "";
+    const accountName = String(user.name || user.email || "Minha conta");
+    document.getElementById("userBadge").textContent = accountName;
+    document.getElementById("streamerAccountIdentity").textContent = user.email || accountName;
+    document.getElementById("streamerAccountAvatar").textContent = (accountName.trim().charAt(0) || "U").toLocaleUpperCase("pt-BR");
+    document.getElementById("btnAdmin").hidden = user.role !== "admin";
     roomCode = user.room_code || "";
     document.getElementById('streamerProfile').textContent = user.tiktok_username ? '@' + user.tiktok_username.replace(/^@/,'') : 'Não configurado';
     document.getElementById('streamerDashUser').textContent = user.tiktok_username ? '@' + user.tiktok_username.replace(/^@/,'') : 'Nenhuma conta configurada';
@@ -7325,9 +7337,22 @@ function toggleStreamerLogs(open) {
   document.querySelector('.tp-panel-log').classList.toggle('tp-console-open', open);
   document.getElementById('streamerBackdrop').hidden = !open;
   if (open) document.querySelector('.tp-panel-log button[aria-label="Fechar console"]').focus();
-  else document.getElementById('streamerLogsOpen').focus();
+  else document.querySelector('#streamerAccountMenu > summary').focus();
 }
-document.getElementById('streamerLogsOpen').addEventListener('click', () => toggleStreamerLogs(true));
+document.getElementById('streamerLogsOpen').addEventListener('click', () => { document.getElementById('streamerAccountMenu').open = false; toggleStreamerLogs(true); });
+const streamerSearchBox = document.getElementById('streamerSearchBox');
+const streamerSearchToggle = document.getElementById('streamerSearchToggle');
+function setStreamerSearchOpen(open) {
+  streamerSearchBox.hidden = !open;
+  streamerSearchToggle.setAttribute('aria-expanded', String(open));
+  if (open) document.getElementById('streamerGlobalSearch').focus();
+  else { document.getElementById('streamerGlobalSearch').value = ''; }
+}
+streamerSearchToggle.addEventListener('click', () => setStreamerSearchOpen(streamerSearchBox.hidden));
+document.addEventListener('click', event => {
+  if (!event.target.closest('.tp-streamer-search-wrap') && !streamerSearchBox.hidden) setStreamerSearchOpen(false);
+  if (!event.target.closest('#streamerAccountMenu')) document.getElementById('streamerAccountMenu').open = false;
+});
 document.getElementById('streamerMenuOpen').addEventListener('click', () => { document.getElementById('streamerSidebar').classList.add('open'); document.getElementById('streamerBackdrop').hidden = false; document.getElementById('streamerMenuOpen').setAttribute('aria-expanded','true'); });
 function closeStreamerPanels() {
   const menuOpen = document.getElementById('streamerSidebar').classList.contains('open');
@@ -7337,12 +7362,19 @@ function closeStreamerPanels() {
 }
 document.getElementById('streamerMenuClose').addEventListener('click', closeStreamerPanels);
 document.getElementById('streamerBackdrop').addEventListener('click', closeStreamerPanels);
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeStreamerPanels(); if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.getElementById('streamerGlobalSearch').focus(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (!streamerSearchBox.hidden) { setStreamerSearchOpen(false); streamerSearchToggle.focus(); }
+    document.getElementById('streamerAccountMenu').open = false;
+    closeStreamerPanels();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setStreamerSearchOpen(true); }
+});
 document.getElementById('streamerGlobalSearch').addEventListener('input', event => {
   const query = event.target.value.trim().toLocaleLowerCase('pt-BR');
   if(query.length < 3) return;
   const button = [...document.querySelectorAll('.tab-btn')].find(button => button.style.display !== 'none' && !button.hidden && !button.closest('[hidden]') && button.textContent.toLocaleLowerCase('pt-BR').includes(query));
-  if(button) switchTab(button.dataset.tab);
+  if(button) { switchTab(button.dataset.tab); setStreamerSearchOpen(false); }
 });
 async function openStreamerPublic(path) {
   const opened = window.open('about:blank','_blank');

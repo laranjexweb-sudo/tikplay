@@ -58,7 +58,15 @@
   <a class="tp-admin-back" href="/painel">Painel do streamer &#8599;</a>
 </aside>
 <main class="tp-admin-main">
-<header class="tp-admin-topbar"><span>Administração TikPlay</span><div class="d-flex gap-2"><button class="btn btn-nb btn-dark" onclick="location.href='/painel'">Painel do streamer</button><button class="btn btn-nb btn-danger" onclick="logout()">Sair</button></div></header>
+<header class="tp-admin-topbar">
+  <div class="tp-admin-topbar-context"><strong>Super Admin</strong><span>Administração TikPlay</span></div>
+  <div class="tp-admin-topbar-actions">
+    <details class="tp-admin-account-menu" id="adminAccountMenu">
+      <summary class="tp-admin-account-trigger" aria-label="Abrir menu da conta administrativa"><span class="tp-admin-account-avatar" id="adminAccountAvatar" aria-hidden="true">A</span><span class="tp-admin-account-label">Conta administrativa</span><svg aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"></path></svg></summary>
+      <div class="tp-admin-account-popover"><div class="tp-admin-account-identity"><span>Super Admin</span><strong id="adminAccountIdentity">Carregando conta…</strong></div><a href="/painel">Painel do streamer</a><a href="#adminMonitor" onclick="document.getElementById('adminAccountMenu').open=false">Monitor de servidor</a><button type="button" class="tp-admin-account-logout" onclick="logout()">Sair</button></div>
+    </details>
+  </div>
+</header>
 <div class="tp-admin-content">
 <div class="nb-card tp-card mb-3 d-flex justify-content-between align-items-center tp-admin-header">
   <div>
@@ -490,6 +498,13 @@ function selectAdminSection() {
   window.TikPlayMonitor?.setActive(sectionId === 'adminMonitor');
   if (sectionId === 'adminMonitor' && location.hash.endsWith('/incidents')) document.getElementById('monitor-incidents')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+document.addEventListener("click", (event) => {
+  const menu = document.getElementById("adminAccountMenu");
+  if (menu && !event.target.closest("#adminAccountMenu")) menu.open = false;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") document.getElementById("adminAccountMenu").open = false;
+});
 window.addEventListener('hashchange', selectAdminSection);
 selectAdminSection();
 const token = localStorage.getItem("token");
@@ -2009,6 +2024,9 @@ apiFetch("/api/auth/me").then((data) => {
     location.href = "/painel";
     return;
   }
+  const adminName = String(data.user.name || data.user.email || "Super Admin");
+  document.getElementById("adminAccountIdentity").textContent = data.user.email || adminName;
+  document.getElementById("adminAccountAvatar").textContent = (adminName.trim().charAt(0) || "A").toLocaleUpperCase("pt-BR");
   document.getElementById("giftCatalogAdminCard").hidden = false;
   initializeIntegrationChecks();
   loadElevenGlobal();

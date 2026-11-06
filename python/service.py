@@ -369,6 +369,9 @@ class GameSession:
         self._likes_loop_task = None
         # Sala (live) atual — dados de curtidas/ranking são escopados por room_id.
         self.current_room_id = None
+        # Evidências positivas do filtro são compartilhadas entre tipos de evento
+        # da mesma live, pois o TikTok pode omitir follow/fã-clube no GiftEvent.
+        self._live_access_evidence = {}
         # Últimos níveis vistos por (room_id, user) — dedupe de observações.
         self._viewer_levels = {}
         # Meta de tap (likes) da Palavra Secreta: enche barra e libera dica/charada
@@ -424,22 +427,55 @@ class GameSession:
             return status == "active"
         return False
 
-    def _check_access(self, meta) -> tuple:
+    def _access_identity(self, user, meta):
+        identity = str(self._stable_uid(user, meta) or "").strip()
+        return identity.casefold() if identity else ""
+
+    def _access_identity_aliases(self, user, meta):
+        aliases = {identity for identity in (self._access_identity(user, meta),) if identity}
+        username = str(user or "").strip().lstrip("@").casefold()
+        if username:
+            aliases.add("username:" + username)
+        return aliases
+
+    def _remember_access_evidence(self, user, meta):
+        if not isinstance(meta, dict):
+            return
+        if not isinstance(getattr(self, "_live_access_evidence", None), dict):
+            self._live_access_evidence = {}
+        identities = self._access_identity_aliases(user, meta)
+        if not identities:
+            return
+        evidence = set()
+        if self._is_follower(meta):
+            evidence.add("apenas_seguidores")
+        if self._is_heartme(meta):
+            evidence.add("apenas_heart_me")
+        for identity in identities:
+            self._live_access_evidence.setdefault(identity, set()).update(evidence)
+
+    def _check_access(self, meta, user=None) -> tuple:
         """Aplica os filtros de engajamento configurados.
 
         Retorna (permitido: bool, motivo: str).
         Sem filtros ativos => sempre permite.
         Com filtro ativo e dado ausente/indeterminado => bloqueia (fail-closed).
         """
+        if not isinstance(getattr(self, "_live_access_evidence", None), dict):
+            self._live_access_evidence = {}
+        self._remember_access_evidence(user, meta)
+        identities = self._access_identity_aliases(user, meta)
+        remembered = set().union(*(self._live_access_evidence.get(identity, set()) for identity in identities)) if identities else set()
         active = [f for f in ("apenas_seguidores", "apenas_heart_me") if self.settings.get(f)]
         if not active:
             return (True, "")
-        if not meta:
+        if not meta and not remembered:
             return (False, "sem_dados")
         checks = []
         for flag in active:
             label = "seguidor" if flag == "apenas_seguidores" else "heart-me"
-            ok = self._is_follower(meta) if flag == "apenas_seguidores" else self._is_heartme(meta)
+            current = self._is_follower(meta) if flag == "apenas_seguidores" else self._is_heartme(meta)
+            ok = current or flag in remembered
             if not ok:
                 return (False, f"nao_{label}")
             checks.append(label)
@@ -525,6 +561,7 @@ class GameSession:
         self.likes = {}
         self.battle.reset_live_window(rid)
         self._viewer_levels = {}
+        self._live_access_evidence = {}
         self._likes_dirty = True
         self._log_event(
             "connection", "info", "live.session.started",
@@ -977,13 +1014,16 @@ class GameSession:
              "user": str(user or ""), "nickname": str(nickname or user or ""), "avatar": str(avatar or "")})
         self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
-        allowed, _ = self._check_access(user_meta)
+        allowed, _ = self._check_access(user_meta, user)
         if allowed:
             self.corda.share(self._stable_uid(user, user_meta), user, nickname, avatar)
 
     async def on_follow(self, user, nickname, avatar, user_meta=None, room_id=None, event_id=None):
         self._ensure_room(room_id)
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
+        follow_evidence = dict(user_meta or {})
+        follow_evidence.update({"follow_status": 1, "is_following": True, "is_follower": True})
+        self._remember_access_evidence(user, follow_evidence)
         emit(self.tenant_id, "game", {"type": "action_alert_event", "action": "follow",
              "user": str(user or ""), "nickname": str(nickname or user or ""), "avatar": str(avatar or "")})
         self._emit_interaction("follow", user, nickname, avatar, event_id=event_id, room_id=room_id,
@@ -1042,7 +1082,7 @@ class GameSession:
         if not self.game.finished and not getattr(self.game, "is_final_boss", False):
             self.tap_meta_current += int(like_count or 0)
 
-        allowed, reason = self._check_access(user_meta)
+        allowed, reason = self._check_access(user_meta, user)
         if not allowed:
             emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado nos jogos")
             return
@@ -1631,7 +1671,7 @@ class GameSession:
 
     async def _process_caca_command(self, matched, user, nickname, avatar, user_meta, access_override=False):
         start, end = matched
-        allowed, reason = self._check_access(user_meta)
+        allowed, reason = self._check_access(user_meta, user)
         if not allowed and not access_override:
             emit(self.tenant_id, "log", f"[CacaPalavras] @{user} bloqueado ({reason}): coordenadas ignoradas")
             return
@@ -1650,7 +1690,7 @@ class GameSession:
             })
 
     async def _process_caca_word(self, word, user, nickname, avatar, user_meta, access_override=False):
-        allowed, _ = self._check_access(user_meta)
+        allowed, _ = self._check_access(user_meta, user)
         if not allowed and not access_override:
             return
         w = self.caca.find_word_text(word, finder=user, nickname=nickname or user, avatar=avatar or "")
@@ -1677,7 +1717,7 @@ class GameSession:
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         raw = text.strip()
         prefix = self._command_prefix()
-        allowed, _ = self._check_access(user_meta)
+        allowed, _ = self._check_access(user_meta, user)
         is_streamer_comment = self._is_streamer_comment(user)
         game_allowed = allowed or is_streamer_comment
         if game_allowed:
@@ -1817,7 +1857,7 @@ class GameSession:
                 final_avatar = ""
 
         # Filtros de engajamento (seguiu o canal e/ou heart-me ativo)
-        allowed, reason = self._check_access(user_meta)
+        allowed, reason = self._check_access(user_meta, user)
         if not allowed and not is_streamer_comment:
             self._palavra_debug("guess.rejected", reason=reason, game_id=self.game.game_id,
                                 user=final_user, guess_count=len(self.game.guesses or []), trace_id=event_id)
@@ -1962,7 +2002,7 @@ class GameSession:
         if self.vpet.active:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
 
-        allowed, _ = self._check_access(user_meta)
+        allowed, _ = self._check_access(user_meta, user)
         if allowed:
             self.corda.gift(gift_id, gift_name, diamond_count, repeat_count,
                             self._stable_uid(user, user_meta), user, nickname, avatar)
@@ -1994,7 +2034,7 @@ class GameSession:
                 elif not duelo_would_match:
                     emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' NÃO cadastrado como golpe/escudo/apoio")
 
-        allowed, reason = self._check_access(user_meta)
+        allowed, reason = self._check_access(user_meta, user)
         if not allowed:
             if self.game.secret_word and not self.game.finished:
                 self._palavra_debug("gift.ignored", game_id=self.game.game_id,
