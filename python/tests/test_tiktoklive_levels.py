@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tiktoklive_handler import TikTokLiveHandler
+from tiktools_handler import TikToolsHandler
 import service
 
 
@@ -68,6 +69,27 @@ class TikTokLiveLevelMetadataTests(unittest.TestCase):
 
         self.assertEqual(meta["fan_club_level"], 31)
         self.assertEqual(meta["fan_club_name"], "Comunidade")
+
+    def test_active_legacy_fan_club_overrides_protobuf_not_joined_default(self):
+        user = SimpleNamespace(
+            fans_club=SimpleNamespace(data=SimpleNamespace(user_fans_club_status=0)),
+            fans_club_info=SimpleNamespace(fans_level=31, is_sleeping=False),
+        )
+
+        meta = TikTokLiveHandler._user_meta(user)
+        session = service.GameSession.__new__(service.GameSession)
+        session.settings = {"apenas_seguidores": False, "apenas_heart_me": True}
+
+        self.assertIs(meta["is_heart_me_active"], True)
+        self.assertEqual(session._check_access(meta), (True, "heart-me"))
+
+    def test_tiktools_legacy_fan_club_status_overrides_not_joined_default(self):
+        meta = TikToolsHandler._user_meta({
+            "fansClub": {"userFansClubStatus": 0},
+            "fansClubInfo": {"fansLevel": 31, "isSleeping": False},
+        })
+
+        self.assertIs(meta["is_heart_me_active"], True)
 
     def test_emits_explicit_fan_level_upgrade_barrage(self):
         calls = []

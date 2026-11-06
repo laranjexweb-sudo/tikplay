@@ -36,9 +36,9 @@ no painel:
 - A ausência de uma voz expressiva habilitada não altera o roteamento solicitado;
   a interface informa que a opção não está disponível, e o serviço de voz mantém
   o fallback de provedor já existente.
-- O prefixo expressivo aceita um caractere não branco, exceto `#` (reservado para
-  tags de emoção no fim). Tags de emoção continuam sendo removidas e interpretadas
-  antes da fala tanto pela rota expressiva quanto pela padrão.
+- O prefixo expressivo aceita qualquer caractere não branco, inclusive `#`.
+  Prefixo no início e tag de emoção reconhecida no fim são tratados em posições
+  distintas; as tags de emoção continuam sendo removidas antes da fala.
 - Se a voz expressiva falhar ou ficar indisponível, mantém-se o fallback Edge
   existente. A cobrança segue o modelo escolhido e os caracteres efetivamente
   falados; mensagens encaminhadas diretamente ao Edge não passam pela carteira.
@@ -80,6 +80,12 @@ aninhado. A elegibilidade continua fail-closed quando ambos estão ausentes; o
 evento agregado `chat.tts.batch` distingue `access_filtered`, `queued`,
 `standard_routed`/`expressive_routed`, `synthesized` e `failed`, sem registrar
 texto ou identidade do comentarista.
+
+No filtro Heart Me, `FansClubData.user_fans_club_status` usa `0=NOTJOINED`,
+`1=ACTIVE` e `2=INACTIVE`. Se o status `NOTJOINED` for apenas o valor default,
+mas o mesmo evento trouxer `FansClubInfo.fans_level > 0` e `is_sleeping=false`,
+o sinal legado de membro ativo é aceito. O estado `INACTIVE` explícito continua
+bloqueando. O adaptador TikTools aplica a mesma precedência.
 
 ### Charada
 

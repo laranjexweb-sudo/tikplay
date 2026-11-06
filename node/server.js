@@ -904,7 +904,7 @@ function normalizeSettings(raw) {
     if (["standard", "expressive", "both"].includes(raw.chat_narr_voice_strategy)) out.chat_narr_voice_strategy = raw.chat_narr_voice_strategy;
     if (typeof raw.chat_narr_expressive_prefix === "string") {
       const prefix = raw.chat_narr_expressive_prefix.trim().slice(0, 1);
-      out.chat_narr_expressive_prefix = prefix && !/\s/u.test(prefix) && prefix !== "#" ? prefix : "!";
+      out.chat_narr_expressive_prefix = prefix && !/\s/u.test(prefix) ? prefix : "!";
     }
     if (["#", "!", ""].includes(raw.command_prefix)) out.command_prefix = raw.command_prefix;
     if (typeof raw.auto_round === "boolean") out.auto_round = raw.auto_round;

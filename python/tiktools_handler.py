@@ -103,9 +103,10 @@ class TikToolsHandler:
                 return value.strip().lower() in ("1", "true", "yes", "sim", "active", "ativo")
             return bool(value)
 
-        fans = next((value for value in (
+        fan_sources = [value for value in (
             u.get("fansClub"), u.get("fansClubInfo"), u.get("fans_club_info")
-        ) if isinstance(value, dict)), {})
+        ) if isinstance(value, dict)]
+        fans = fan_sources[0] if fan_sources else {}
         follow_status = u.get("followStatus", u.get("follow_status"))
         try:
             follow_status = int(follow_status) if follow_status is not None else None
@@ -118,14 +119,29 @@ class TikToolsHandler:
         raw_fan_status = next((fans.get(key) for key in (
             "userFansClubStatus", "user_fans_club_status", "fanClubStatus", "status"
         ) if fans.get(key) is not None), None)
-        status_name = str(getattr(raw_fan_status, "name", "") or raw_fan_status or "").strip().lower()
+        status_value = getattr(raw_fan_status, "name", None)
+        if status_value is None:
+            status_value = raw_fan_status
+        status_name = "" if status_value is None else str(status_value).strip().lower()
         sleeping = fans.get("isSleeping", fans.get("is_sleeping"))
         if status_name in ("active", "1"):
             heart_me_active = True
             fan_status = "active"
-        elif status_name in ("inactive", "not_joined", "not joined", "2", "0"):
+        elif status_name in ("inactive", "2"):
             heart_me_active = False
             fan_status = "inactive"
+        elif status_name in ("not_joined", "not joined", "notjoined", "0"):
+            legacy_member_active = False
+            for source in fan_sources:
+                try:
+                    level = int(source.get("fansLevel") or source.get("fans_level") or source.get("level") or 0)
+                except (TypeError, ValueError):
+                    level = 0
+                if level > 0 and not as_bool(source.get("isSleeping", source.get("is_sleeping", False))):
+                    legacy_member_active = True
+                    break
+            heart_me_active = legacy_member_active
+            fan_status = "active" if legacy_member_active else "not_joined"
         elif sleeping is not None:
             try:
                 fan_level_value = int(fans.get("fansLevel") or fans.get("fans_level") or fans.get("level") or u.get("fanClubLevel") or 0)

@@ -13,9 +13,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import service
 import tts
 import tts_emotions
+from service_common import normalize_settings
 
 
 class ChatNarrationTextTests(unittest.TestCase):
+    def test_hash_is_a_valid_expressive_selection_prefix(self):
+        self.assertEqual(
+            normalize_settings({"chat_narr_expressive_prefix": "#"})["chat_narr_expressive_prefix"],
+            "#",
+        )
+
     def test_trailing_emotion_hashtag_is_removed_and_mapped_safely(self):
         text, emotion = tts_emotions.extract_trailing_emotion("Eu tô doida pra ir embora #grito")
         self.assertEqual(text, "Eu tô doida pra ir embora")

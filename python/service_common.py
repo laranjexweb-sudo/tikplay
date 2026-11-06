@@ -121,7 +121,7 @@ def normalize_settings(raw) -> dict:
         settings["chat_narr_voice_strategy"] = strategy if strategy in ("standard", "expressive", "both") else "expressive"
     if "chat_narr_expressive_prefix" in raw:
         prefix = str(raw["chat_narr_expressive_prefix"] or "!").strip()[:1]
-        settings["chat_narr_expressive_prefix"] = prefix if prefix and not prefix.isspace() and prefix != "#" else "!"
+        settings["chat_narr_expressive_prefix"] = prefix if prefix and not prefix.isspace() else "!"
     if "command_prefix" in raw:
         prefix = str(raw["command_prefix"] or "").strip()
         settings["command_prefix"] = prefix if prefix in ("#", "!") else ("" if prefix == "" else settings["command_prefix"])

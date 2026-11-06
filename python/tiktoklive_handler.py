@@ -120,8 +120,10 @@ class TikTokLiveHandler:
             name = str(getattr(value, "name", "") or value).strip().lower()
             if name in ("active", "1"):
                 return "active"
-            if name in ("inactive", "not_joined", "not joined", "2", "0"):
+            if name in ("inactive", "2"):
                 return "inactive"
+            if name in ("not_joined", "not joined", "notjoined", "0"):
+                return "not_joined"
             return None
 
         # v3: fans_club.prefer_data é dict[int, FansClubData] — pega o maior nível.
@@ -165,11 +167,22 @@ class TikTokLiveHandler:
             if len(known_statuses) == 1:
                 fan_status_value = known_statuses.pop()
         legacy_fan_info = getattr(user, "fans_club_info", None)
-        heart_me_active = (fan_status_value == "active") if fan_status_value is not None else None
-        if heart_me_active is None and legacy_fan_info is not None:
+        legacy_heart_me_active = None
+        if legacy_fan_info is not None:
             legacy_level = first_level(getattr(legacy_fan_info, "fans_level", None))
             if legacy_level > 0:
-                heart_me_active = not bool(getattr(legacy_fan_info, "is_sleeping", False))
+                legacy_heart_me_active = not bool(getattr(legacy_fan_info, "is_sleeping", False))
+        if fan_status_value == "active":
+            heart_me_active = True
+        elif fan_status_value == "inactive":
+            heart_me_active = False
+        elif fan_status_value == "not_joined":
+            # Enum zero pode ser o default do protobuf; se o objeto também
+            # traz o status legado de membro, ele é evidência mais útil que
+            # esse zero não informado.
+            heart_me_active = legacy_heart_me_active if legacy_heart_me_active is not None else False
+        else:
+            heart_me_active = legacy_heart_me_active
 
         follow_status = first_int(
             deep(user, "follow_info", "follow_status"),
