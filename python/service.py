@@ -395,15 +395,20 @@ class GameSession:
         status = meta.get("follow_status")
         if status is not None:
             try:
-                return int(status) in (1, 2)  # segue o streamer; 2 = follow mútuo
+                if int(status) in (1, 2):  # segue o streamer; 2 = follow mútuo
+                    return True
             except (TypeError, ValueError):
                 pass
+        try:
+            if int(meta.get("follow_role") or 0) >= 1:
+                return True
+        except (TypeError, ValueError):
+            pass
         if meta.get("is_follower") is not None:
             return meta.get("is_follower") is True
-        try:
-            return int(meta.get("follow_role") or 0) >= 1
-        except (TypeError, ValueError):
+        if status is not None:
             return False
+        return False
 
     @staticmethod
     def _is_heartme(meta) -> bool:
@@ -1993,9 +1998,9 @@ class GameSession:
                 self._palavra_debug("gift.ignored", game_id=self.game.game_id,
                                     reason="access_denied", access_reason=reason, user=user,
                                     trace_id=event_id)
-            self._log_event("game", "warning", "batalha.gift.rejected",
-                            f"[Batalha] Presente bloqueado pelo filtro de acesso ({reason}).", game="batalha",
-                            trace_id=event_id, code="BATALHA_GIFT_ACCESS_REJECTED",
+            self._log_event("game", "warning", "live.gift.rejected_by_access",
+                            f"[Acesso] Presente ignorado nos jogos pelo filtro de participação ({reason}).",
+                            trace_id=event_id, code="GAME_GIFT_ACCESS_REJECTED",
                             details={"user": user, "reason": reason})
             return
         self.battle.add_coins(user, nickname, avatar, int(diamond_count or 0) * max(1, repeat_count))
