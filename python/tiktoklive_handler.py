@@ -192,13 +192,16 @@ class TikTokLiveHandler:
             getattr(user, "follow_status", None),
         )
         direct_is_follower = getattr(user, "is_follower", None)
+        direct_is_following = getattr(user, "is_following", None)
         follow_role = first_int(getattr(user, "follow_role", None))
         # O follow_status 0 aparece como valor padrão em alguns payloads, mesmo
-        # quando os campos `is_follower` ou `follow_role` já descrevem o vínculo.
+        # quando os campos `is_following`, `is_follower` ou `follow_role` já
+        # descrevem o vínculo.
         # Evidências positivas são conclusivas; só depois consideramos o enum
         # default e os valores negativos.
         is_follower = (
             True if follow_status in (1, 2)
+            else True if direct_is_following is True
             else True if direct_is_follower is True
             else True if follow_role is not None and follow_role >= 1
             else bool(direct_is_follower) if direct_is_follower is not None
@@ -211,6 +214,7 @@ class TikTokLiveHandler:
         return {
             "follow_role": follow_role,
             "follow_status": follow_status,
+            "is_following": direct_is_following,
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
             "is_follower": is_follower,
             # Níveis: presenteador (pay_grade) e membro/fã-clube (fans_club no v3).

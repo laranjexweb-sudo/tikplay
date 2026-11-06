@@ -399,6 +399,8 @@ class GameSession:
                     return True
             except (TypeError, ValueError):
                 pass
+        if meta.get("is_following") is True:
+            return True
         try:
             if int(meta.get("follow_role") or 0) >= 1:
                 return True
@@ -1998,10 +2000,19 @@ class GameSession:
                 self._palavra_debug("gift.ignored", game_id=self.game.game_id,
                                     reason="access_denied", access_reason=reason, user=user,
                                     trace_id=event_id)
+            evidence = ", ".join(
+                f"{key}={user_meta.get(key, '?')}"
+                for key in ("follow_status", "is_following", "is_follower", "follow_role", "is_heart_me_active")
+            ) if isinstance(user_meta, dict) else "metadados ausentes"
             self._log_event("game", "warning", "live.gift.rejected_by_access",
-                            f"[Acesso] Presente ignorado nos jogos pelo filtro de participação ({reason}).",
+                            f"[Acesso] Presente ignorado nos jogos pelo filtro de participação ({reason}; {evidence}).",
                             trace_id=event_id, code="GAME_GIFT_ACCESS_REJECTED",
-                            details={"user": user, "reason": reason})
+                            details={"user": user, "reason": reason,
+                                     "follow_status": user_meta.get("follow_status") if isinstance(user_meta, dict) else None,
+                                     "is_following": user_meta.get("is_following") if isinstance(user_meta, dict) else None,
+                                     "is_follower": user_meta.get("is_follower") if isinstance(user_meta, dict) else None,
+                                     "follow_role": user_meta.get("follow_role") if isinstance(user_meta, dict) else None,
+                                     "is_heart_me_active": user_meta.get("is_heart_me_active") if isinstance(user_meta, dict) else None})
             return
         self.battle.add_coins(user, nickname, avatar, int(diamond_count or 0) * max(1, repeat_count))
         if not self.game.secret_word or self.game.finished:

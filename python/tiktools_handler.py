@@ -113,8 +113,14 @@ class TikToolsHandler:
         except (TypeError, ValueError):
             follow_status = None
         direct_follower = u.get("isFollower", u.get("is_follower"))
-        is_follower = (follow_status in (1, 2) if follow_status is not None
-                       else as_bool(direct_follower) if direct_follower is not None else None)
+        direct_following = u.get("isFollowing", u.get("is_following"))
+        is_follower = (
+            True if follow_status in (1, 2)
+            else True if as_bool(direct_following)
+            else True if as_bool(direct_follower)
+            else False if follow_status is not None or direct_follower is not None or direct_following is not None
+            else None
+        )
 
         raw_fan_status = next((fans.get(key) for key in (
             "userFansClubStatus", "user_fans_club_status", "fanClubStatus", "status"
@@ -159,6 +165,7 @@ class TikToolsHandler:
         return {
             "follow_role": u.get("followRole", follow_status),
             "follow_status": follow_status,
+            "is_following": as_bool(direct_following) if direct_following is not None else None,
             "is_subscriber": u.get("isSubscriber"),
             "is_follower": is_follower,
             # Níveis — best-effort: TikTools pode não trazer estes campos.
