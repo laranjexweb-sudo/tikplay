@@ -67,10 +67,11 @@ sua fila.
 
 Comentários vazios depois da limpeza e comentários de espectadores rejeitados
 pelos filtros de seguidor/Heart Me não geram áudio. Comentários enviados pela
-própria conta streamer podem ser narrados mesmo quando os metadados de seguidor
-ou fã-clube não vêm no evento, permitindo testar a fala; esse bypass vale somente
-para narração e não libera participação nos jogos. Partidas e tratamento de
-palpites continuam independentes da fila de voz. O cache mantém no máximo 500
+própria conta streamer podem ser narrados e participar dos jogos de chat mesmo
+quando os metadados de seguidor ou fã-clube não vêm no evento; a identificação
+exige correspondência exata do `unique_id` configurado. Curtidas e presentes
+continuam sujeitos aos seus filtros normais. Partidas e tratamento de palpites
+continuam independentes da fila de voz. O cache mantém no máximo 500
 MP3s recentes por conta; áudios mais antigos são removidos para limitar disco.
 
 Para TikTokLive, a extração de seguidor prioriza `user.follow_info.follow_status`

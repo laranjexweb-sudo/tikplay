@@ -438,6 +438,11 @@ class GameSession:
             checks.append(label)
         return (True, ",".join(checks))
 
+    def _is_streamer_comment(self, user) -> bool:
+        comment_username = str(user or "").strip().lstrip("@").casefold()
+        streamer_username = str(self.username or "").strip().lstrip("@").casefold()
+        return bool(comment_username and streamer_username and comment_username == streamer_username)
+
     def _emit_interaction(self, type_, user, nickname, avatar, value=0, meta=None,
                           event_id=None, room_id=None, user_id=""):
         """Envia um evento normalizado de interacao para o Node persistir (em lote)."""
@@ -1617,10 +1622,10 @@ class GameSession:
                 return ("coordinates", coordinates)
         return None
 
-    async def _process_caca_command(self, matched, user, nickname, avatar, user_meta):
+    async def _process_caca_command(self, matched, user, nickname, avatar, user_meta, access_override=False):
         start, end = matched
         allowed, reason = self._check_access(user_meta)
-        if not allowed:
+        if not allowed and not access_override:
             emit(self.tenant_id, "log", f"[CacaPalavras] @{user} bloqueado ({reason}): coordenadas ignoradas")
             return
         w = self.caca.find_word(start, end, finder=user, nickname=nickname or user, avatar=avatar or "")
@@ -1637,9 +1642,9 @@ class GameSession:
                 "nickname": nickname or user,
             })
 
-    async def _process_caca_word(self, word, user, nickname, avatar, user_meta):
+    async def _process_caca_word(self, word, user, nickname, avatar, user_meta, access_override=False):
         allowed, _ = self._check_access(user_meta)
-        if not allowed:
+        if not allowed and not access_override:
             return
         w = self.caca.find_word_text(word, finder=user, nickname=nickname or user, avatar=avatar or "")
         if w:
@@ -1666,10 +1671,9 @@ class GameSession:
         raw = text.strip()
         prefix = self._command_prefix()
         allowed, _ = self._check_access(user_meta)
-        comment_username = str(user or "").strip().lstrip("@").casefold()
-        streamer_username = str(self.username or "").strip().lstrip("@").casefold()
-        is_streamer_comment = bool(comment_username and streamer_username and comment_username == streamer_username)
-        if allowed or is_streamer_comment:
+        is_streamer_comment = self._is_streamer_comment(user)
+        game_allowed = allowed or is_streamer_comment
+        if game_allowed:
             self._enqueue_chat_narration(user, raw)
         elif self.settings.get("chat_narr_enabled"):
             self._record_chat_narration("access_filtered")
@@ -1688,11 +1692,9 @@ class GameSession:
             self.corda.comment(self._stable_uid(user, user_meta), raw)
             self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
 
-        # O filtro comum vale para todos os jogos que capturam comentários
-        # (3 Pontinhos, Bichinho, Caça-Palavras e Palavra Secreta). O chat segue
-        # visível/registrado acima, mas usuário inelegível não participa. A conta
-        # do streamer pode testar a narração do próprio comentário sem metadados de fã.
-        if not allowed:
+        # Filtros de acesso valem para espectadores. A conta configurada do
+        # streamer pode enviar palpites nos jogos de chat da própria live.
+        if not game_allowed:
             return
 
         # ---------------------------------------------------------
@@ -1752,9 +1754,11 @@ class GameSession:
             if matched:
                 kind, value = matched
                 if kind == "word":
-                    await self._process_caca_word(value, user, nickname, avatar, user_meta)
+                    await self._process_caca_word(value, user, nickname, avatar, user_meta,
+                                                  access_override=is_streamer_comment)
                 else:
-                    await self._process_caca_command(value, user, nickname, avatar, user_meta)
+                    await self._process_caca_command(value, user, nickname, avatar, user_meta,
+                                                     access_override=is_streamer_comment)
                 return
 
         if not self.game.secret_word or self.game.finished:
@@ -1807,7 +1811,7 @@ class GameSession:
 
         # Filtros de engajamento (seguiu o canal e/ou heart-me ativo)
         allowed, reason = self._check_access(user_meta)
-        if not allowed:
+        if not allowed and not is_streamer_comment:
             self._palavra_debug("guess.rejected", reason=reason, game_id=self.game.game_id,
                                 user=final_user, guess_count=len(self.game.guesses or []), trace_id=event_id)
             emit(self.tenant_id, "game", {

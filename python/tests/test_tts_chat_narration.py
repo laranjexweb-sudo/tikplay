@@ -153,6 +153,39 @@ class ChatNarrationRuntimeTests(unittest.IsolatedAsyncioTestCase):
         item = session._chat_narration_queue.get_nowait()
         self.assertEqual(item["text"], "Mensagem do próprio canal")
 
+    async def test_streamer_guess_passes_access_filters_for_secret_word(self):
+        session = self._session()
+        session.username = "TikPlay"
+        session.settings.update({"apenas_seguidores": True, "apenas_heart_me": True})
+        session._ensure_room = Mock()
+        session._track_levels = Mock()
+        session._command_prefix = Mock(return_value="#")
+        session._enqueue_chat_narration = Mock()
+        session._emit_interaction = Mock()
+        session._palavra_debug = Mock()
+        session._duelo_comment_team = Mock()
+        session._preparing = False
+        session.corda = SimpleNamespace(join=Mock(), comment=Mock())
+        session.tres = SimpleNamespace(active=False)
+        session.vpet = SimpleNamespace(active=False)
+        session.caca = SimpleNamespace(active=False)
+        session.game = SimpleNamespace(
+            secret_word="segredo", finished=False, game_id="round-1", guesses=[],
+            process_guess=Mock(return_value={"duplicate": True, "word": "teste", "rank": 2}),
+        )
+
+        with patch.object(service, "emit") as emitted, patch.object(service.db, "record_guess"):
+            await session.on_comment(
+                "@TikPlay", "TikPlay", "", "#teste",
+                user_meta={"follow_status": 0, "is_heart_me_active": False},
+            )
+
+        session.game.process_guess.assert_called_once()
+        self.assertFalse(any(
+            call.args[2].get("type") == "guess_rejected"
+            for call in emitted.call_args_list if len(call.args) > 2 and isinstance(call.args[2], dict)
+        ))
+
     async def test_queue_is_bounded_and_counts_dropped_comments(self):
         session = self._session(queue_size=1)
         session._chat_narration_overflow_at = time.monotonic() - 31
