@@ -900,6 +900,12 @@ function normalizeSettings(raw) {
     if (typeof raw.chat_narr_char === "string") {
       out.chat_narr_char = raw.chat_narr_char.slice(0, 1) || "#";
     }
+    if (["all", "prefix"].includes(raw.chat_narr_expressive_mode)) out.chat_narr_expressive_mode = raw.chat_narr_expressive_mode;
+    if (["standard", "expressive", "both"].includes(raw.chat_narr_voice_strategy)) out.chat_narr_voice_strategy = raw.chat_narr_voice_strategy;
+    if (typeof raw.chat_narr_expressive_prefix === "string") {
+      const prefix = raw.chat_narr_expressive_prefix.trim().slice(0, 1);
+      out.chat_narr_expressive_prefix = prefix && !/\s/u.test(prefix) && prefix !== "#" ? prefix : "!";
+    }
     if (["#", "!", ""].includes(raw.command_prefix)) out.command_prefix = raw.command_prefix;
     if (typeof raw.auto_round === "boolean") out.auto_round = raw.auto_round;
     let pause = parseInt(raw.auto_round_pause, 10);

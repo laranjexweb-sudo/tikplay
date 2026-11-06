@@ -4,6 +4,8 @@
 
 > 2026-11-02: App mobile agora diferencia liberar reprodução local de pausar a fila; inclui ativação da narração do chat, seleção/teste de vozes expressivas autorizadas e amplificação da narração até 300%. Preferências são compartilhadas com o painel web pelos endpoints existentes; nenhum evento novo foi adicionado. Cache do shell atualizado.
 
+> 2026-11-06: Configuração da narração do chat ganhou estratégia compartilhada entre painel e PWA: voz padrão, expressiva ou ambas; com ambas, o prefixo direciona à expressiva e mensagens sem prefixo usam a padrão. Nas estratégias de voz única, é possível narrar todas ou somente mensagens com prefixo. Cache do shell atualizado.
+
 ## Escopo
 
 Página instalável em Android (`/sons-mobile`) para o streamer conectar/desconectar a TikTok Live, liberar e pausar reprodução no celular, ajustar volume, voz, velocidade da narração e testar sons de presentes/ações. O cadastro e a troca de arquivos de sons permanecem no painel para computador. Credenciais, configuração, ingestão do chat e TTS continuam sob responsabilidade dos endpoints e eventos já existentes; o cliente PWA não persiste username nem conteúdo de chat localmente.
@@ -14,9 +16,9 @@ Página instalável em Android (`/sons-mobile`) para o streamer conectar/descone
 - Estado inicial: `GET /api/panel-config`, `/api/settings`, `/api/game-state`, `/api/sound-alerts`, `/api/action-sound-alerts`.
 - Conectar: salvar username via `POST /api/panel-config`, ativar áudio em gesto explícito e chamar `POST /start-game`.
 - Desconectar: `POST /stop-game`.
-- Preferências de voz: `GET /api/settings` e `POST /api/settings` atualizam somente `tts_voice`, `tts_rate` e, quando alterado, `tts_volume`; o servidor mescla os demais campos já salvos.
+- Preferências de voz: `GET /api/settings` e `POST /api/settings` atualizam voz padrão, taxa, estratégia (`chat_narr_voice_strategy`), escopo (`chat_narr_expressive_mode`), prefixo (`chat_narr_expressive_prefix`) e, quando alterado, volume; o servidor mescla os demais campos já salvos.
 - Narração do chat: `chat_narr_enabled` salvo em `POST /api/settings`, compartilhado com o painel web. `tts_volume` suporta o ganho já existente de 0 a 300% e a saída local usa Web Audio acima de 100% quando disponível.
-- Voz expressiva: catálogo e preferência via `GET`/`PUT /api/tts/elevenlabs`; teste via `POST /api/tts/elevenlabs/test`. O backend continua validando vozes liberadas e tarifas; a PWA não expõe vozes bloqueadas.
+- Voz expressiva: catálogo e preferência via `GET`/`PUT /api/tts/elevenlabs`; teste via `POST /api/tts/elevenlabs/test`. O backend continua validando vozes liberadas e tarifas; a PWA não expõe vozes bloqueadas. O streamer pode usar apenas a voz padrão, apenas a expressiva (em todas as mensagens ou somente com prefixo), ou ambas; no modo ambas, prefixo usa expressiva e sem prefixo usa Edge TTS gratuito.
 - Estado/eventos: mensagens existentes `status`, `chat_narrate`, `gift_event`, `action_alert_event`, `riddle_ready`, `riddle_audio`, `tts_test_ready`, `sound_alerts_updated` no WebSocket autenticado `/logs`.
 - `/sons-mobile` redireciona para a URL canônica `/sons-mobile/`, que está dentro do escopo do manifesto e do service worker. Ícones PNG de 192×192 e 512×512 ficam em `/assets/pwa/`; iOS usa `apple-touch-icon` 180×180 para o atalho da tela inicial. A página mantém o fundo escuro também na raiz do documento e usa rolagem sem fundo fixo; botões de teste usam indicador CSS em vez de emoji. O service worker armazena somente o shell da PWA. Respostas da API, WebSocket, `/tts-audio/` e `/alert-audio/` ficam explicitamente fora do cache.
 
@@ -32,6 +34,7 @@ Página instalável em Android (`/sons-mobile`) para o streamer conectar/descone
 | API retorna 401 | Token local removido e redirecionamento para login | Evento/autenticação existente |
 | Preferências da narração mudam | Configuração mesclada pelo endpoint existente | Nenhum evento novo; mesma configuração usada no painel |
 | Voz expressiva selecionada/testada | Endpoints existentes validam o catálogo liberado e registram auditoria de TTS | Eventos de TTS já existentes |
+| Estratégia/escopo da voz alterado | Estratégia/modo/prefixo persistidos via `/api/settings`; fila do daemon limpa após a mudança | `chat.tts.batch` agrega contagens por rota, sem log por comentário |
 
 Dados proibidos em logs novos: token, username, URL de áudio assinada, conteúdo de comentário e payload bruto do TikTok. Volume: nenhum novo evento de servidor, log por chat, por gift, ou por reprodução. Não há mudança de correlação nem de taxonomia; todos os comandos de live permanecem no fluxo atual.
 

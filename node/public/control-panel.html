@@ -242,7 +242,7 @@
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
 <link rel="stylesheet" href="/ui/tikplay-streamer-reference.css">
 <link rel="stylesheet" href="/ui/tikplay-streamer-model.css?v=20261016-themed-selects">
-<link rel="stylesheet" href="/ui/tikplay-sounds-model.css?v=20261017-tikcoins-v1">
+<link rel="stylesheet" href="/ui/tikplay-sounds-model.css?v=20261106-credit-wallet-header">
 <link rel="stylesheet" href="/ui/tikplay-word-model.css?v=20261013-history">
 <link rel="stylesheet" href="/ui/tikplay-threedicas-model.css?v=20261014">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
@@ -255,7 +255,7 @@
 <aside class="sidebar tp-streamer-sidebar" id="streamerSidebar" aria-label="Navegação do painel">
   <div class="sidebar-top"><a class="brand" href="#dashboard" onclick="switchTab('dashboard');return false"><span class="brand-mark"><span></span></span><span class="brand-name">Tik<span>Play</span></span></a><button type="button" class="icon-button sidebar-close" id="streamerMenuClose" aria-label="Fechar menu">&times;</button></div>
   <div id="streamerNavSlot"></div>
-  <div class="sidebar-section-label">SISTEMA</div><nav class="side-nav compact"><button class="nav-item" onclick="toggleBilling()" hidden><span aria-hidden="true">&#9881;</span><b>Assinatura</b></button><button class="nav-item" type="button" onclick="switchTab('support')"><span aria-hidden="true">?</span><b>Ajuda e Suporte</b></button></nav>
+  <div class="sidebar-section-label">SISTEMA</div><nav class="side-nav compact"><button class="nav-item" type="button" onclick="switchTab('support')"><span aria-hidden="true">?</span><b>Ajuda e Suporte</b></button></nav>
   <div class="sidebar-footer"><div class="connection-chip"><i id="streamerServerDot"></i><span id="streamerServerStatus">Conectando ao servidor</span></div></div>
 </aside>
 <button type="button" id="streamerBackdrop" class="tp-streamer-backdrop" aria-label="Fechar menu ou console" hidden></button>
@@ -267,9 +267,9 @@
       </div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <label class="search-box tp-streamer-search"><span aria-hidden="true">⌕</span><input id="streamerGlobalSearch" type="search" placeholder="Buscar no painel..." aria-label="Buscar seção no painel"><kbd>Ctrl K</kbd></label>
+        <button type="button" class="tp-credit-header-balance" onclick="switchTab('credits')" aria-label="Abrir saldo e recargas de TikCoins"><span aria-hidden="true">◈</span><strong id="ttsCreditHeaderBalance">— TikCoins</strong></button>
         <span class="badge text-bg-light border border-dark border-2" id="userBadge"></span>
         <span class="badge text-bg-warning border border-dark border-2" id="roleBadge"></span>
-        <button class="btn btn-nb btn-dark btn-sm" id="btnPlan" onclick="toggleBilling()" title="Planos e assinatura" style="display:none" hidden>Plano: -</button>
         <button class="btn btn-nb btn-dark btn-sm" id="btnAdmin" style="display:none" onclick="location.href='/admin'">Admin</button>
         <button type="button" class="btn btn-nb btn-primary btn-sm" id="btnMobileAudio" onclick="location.href='/sons-mobile'">Áudio mobile</button>
         <button type="button" class="btn btn-nb btn-dark btn-sm" id="streamerLogsOpen">Logs</button>
@@ -283,6 +283,7 @@
       <button type="button" class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><span aria-hidden="true">&#9707;</span>Visão geral</button>
       <button type="button" class="tab-btn active" data-tab="connect" onclick="switchTab('connect')"><span class="tp-model-nav-icon" aria-hidden="true">&#9673;</span>Conectar Live</button>
       <button type="button" class="tab-btn" data-tab="reports" onclick="switchTab('reports')"><span class="tp-model-nav-icon" aria-hidden="true">▥</span>Relatórios</button>
+      <button type="button" class="tab-btn" data-tab="credits" onclick="switchTab('credits')"><span class="tp-model-nav-icon" aria-hidden="true">◈</span>TikCoins e Recargas</button>
       <button type="button" class="tab-btn" data-tab="sons" onclick="switchTab('sons')"><span class="tp-model-nav-icon" aria-hidden="true">&#9834;</span>Sons</button>
       <button type="button" class="tab-btn" data-tab="overlays" onclick="switchTab('overlays')"><span class="tp-model-nav-icon" aria-hidden="true">&#9635;</span>Sobreposições</button>
       <button type="button" class="tab-btn" data-tab="games" onclick="switchTab('games')"><span class="tp-model-nav-icon" aria-hidden="true">&#8984;</span>Palavra Secreta</button>
@@ -300,13 +301,6 @@
         </div>
       </details>
     </div>
-  </div>
-
-  <div class="nb-card mb-3" id="billingCard" style="display:none">
-    <h2>Assinatura</h2>
-    <div class="text-secondary" style="font-size:0.85rem" id="billingInfo"></div>
-    <div class="d-flex flex-wrap gap-2 mt-3" id="billingPlans"></div>
-    <div class="text-secondary mt-2" style="font-size:0.75rem" id="billingMsg"></div>
   </div>
 
   <div class="duelo-panel-split tp-panel-split">
@@ -399,12 +393,49 @@
         <article class="panel">
           <div class="panel-head"><div><span class="panel-icon">✓</span><h3>Filtros de chat</h3></div></div>
           <p class="panel-copy">Defina quem pode participar das ações dos jogos.</p>
-          <label class="switch-row" for="chkFollowers"><input type="checkbox" id="chkFollowers" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Apenas seguidores</b><small>Somente quem segue o perfil poderá pontuar nas ações dos jogos.</small></div></label>
-          <label class="switch-row" for="chkHeartMe"><input type="checkbox" id="chkHeartMe" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Heart-me ativo</b><small>Exigir membro do fã-clube com selo ativo.</small></div></label>
+          <label class="switch-row" for="chkFollowers"><input type="checkbox" id="chkFollowers" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Apenas seguidores</b><small>Somente seguidores participam dos jogos e têm comentários narrados.</small></div></label>
+          <label class="switch-row" for="chkHeartMe"><input type="checkbox" id="chkHeartMe" onchange="onSettingsChanged()"><span class="switch"></span><div><b>Heart-me ativo</b><small>Exige membro ativo do fã-clube para participar e narrar comentários.</small></div></label>
           <p class="panel-copy">Com os dois filtros ativos, o participante precisa atender aos dois requisitos. Curtidas continuam contando no ranking geral e na meta TAP.</p>
         </article>
         </div>
       </div>
+
+      <section class="tab-page tp-credit-page" id="tab-credits" style="display:none" aria-labelledby="creditPageTitle">
+        <header class="tp-credit-page-head">
+          <div><div class="eyebrow"><i></i> SUA CARTEIRA</div><h1 id="creditPageTitle">TikCoins e <span>Recargas</span></h1><p>Acompanhe seu saldo, escolha uma recarga e consulte suas movimentações.</p></div>
+        </header>
+
+        <section class="tp-credit-overview" aria-label="Saldo e visão geral">
+          <article class="tp-credit-balance-card">
+            <div><span class="tp-credit-kicker">SALDO DISPONÍVEL</span><div class="tp-credit-balance"><strong id="voiceCreditBalance">—</strong><span>TikCoins</span></div></div>
+            <div class="tp-credit-recent-consumption"><span>Consumo nas movimentações exibidas</span><strong id="voiceCreditRecentConsumption">—</strong></div>
+            <div class="tp-credit-overview-actions"><button class="btn btn-primary" type="button" onclick="scrollToCreditSection('creditPackagesSection')">Recarregar</button><button class="btn btn-dark" type="button" onclick="scrollToCreditSection('creditHistorySection')">Ver histórico</button></div>
+            <p id="voiceCreditStatus" class="tp-credit-status" role="status" aria-live="polite"></p>
+          </article>
+        </section>
+
+        <section class="tp-credit-section" id="creditPackagesSection" aria-labelledby="creditPackagesTitle">
+          <header class="tp-credit-section-head"><div><span class="tp-credit-kicker">RECARGAS</span><h2 id="creditPackagesTitle">Recarregar TikCoins</h2><p>Escolha um dos pacotes disponíveis para sua conta.</p></div></header>
+          <div id="voiceCreditPackages" class="tp-credit-package-grid" aria-label="Pacotes de recarga"></div>
+          <p id="voiceCreditPackagesEmpty" class="tp-credit-empty" hidden>Nenhum pacote de recarga está disponível no momento.</p>
+        </section>
+
+        <section class="tp-credit-section" id="creditHistorySection" aria-labelledby="creditHistoryTitle">
+          <header class="tp-credit-section-head"><div><span class="tp-credit-kicker">MOVIMENTAÇÕES</span><h2 id="creditHistoryTitle">Histórico</h2><p>Recargas e consumo registrados na sua carteira.</p></div><span class="tp-credit-history-window">Movimentações recentes</span></header>
+          <div id="voiceCreditHistory" class="tp-credit-history" aria-label="Histórico de movimentações"><p class="tp-credit-empty">Carregando histórico…</p></div>
+        </section>
+
+        <details class="tp-credit-explainer" id="creditRulesDetails">
+          <summary>Como funcionam os TikCoins</summary>
+          <div class="tp-credit-explainer-body">
+            <p>A voz padrão do painel não consome TikCoins. Vozes adicionais cobram pelos caracteres falados, com arredondamento para cima por mensagem; cada mensagem tem mínimo de 1 TikCoin e limite de 150 caracteres. Tags de emoção reconhecidas não são cobradas.</p>
+            <div class="tp-credit-current-cost"><div><h3>Custo da voz selecionada</h3><span id="voiceCreditRate">Carregando tarifas…</span></div>
+              <div class="field voice-credit-estimator"><label for="voiceCreditEstimateText">Simule uma mensagem</label><input class="control" id="voiceCreditEstimateText" type="text" maxlength="150" placeholder="Digite uma mensagem" oninput="renderVoiceCreditEstimate()"><small id="voiceCreditEstimate" role="status" aria-live="polite">Digite uma mensagem para ver a estimativa.</small></div>
+            </div>
+            <div class="tp-credit-model-costs"><h3>Consumo por faixa</h3><div id="voiceCreditModelCosts" class="tp-credit-model-cost-list"><p class="tp-credit-empty">Carregando valores…</p></div></div>
+          </div>
+        </details>
+      </section>
 
       <!-- ===================== Leitura de Chat ===================== -->
       <div class="tab-page tp-sounds-page" id="tab-sons" style="display:none">
@@ -444,46 +475,34 @@
                   <details class="tts-volume-advanced" id="ttsVolumeAdvanced"><summary>Amplificação avançada</summary><small>Até 300%</small><label for="ttsVolumeBoost">Amplificação · <span id="ttsVolumeBoostLabel">100%</span></label><input type="range" id="ttsVolumeBoost" min="100" max="300" step="1" value="100" oninput="onTtsVolumeChanged(this)" onchange="onSettingsChanged()"><div class="range-line"><span>100%</span><span>200%</span><span>300%</span></div></details>
                 </div>
               </div>
-              <div class="row-actions tts-test-action"><button class="btn btn-primary" type="button" onclick="testPanelVoice()"><span aria-hidden="true">▶</span> Testar voz</button></div>
+              <div class="row-actions tts-test-action"><button class="btn btn-primary" type="button" onclick="testPanelVoice()">Testar voz</button></div>
               <div class="tts-riddle-note"><span aria-hidden="true">ⓘ</span><span>Desativar o chat não desativa a narração das charadas.</span></div>
             </section>
           </div>
         </section>
 
-        <section class="card eleven-chat-voice-card tts-emotive-card" id="elevenChatBox" hidden data-section="voice" aria-labelledby="elevenChatVoiceTitle">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">♫</div><div><h2 id="elevenChatVoiceTitle">Voz expressiva</h2><p>Uma voz alternativa com estilos de interpretação.</p></div></div></div>
-          <div class="card-body">
-            <div class="field"><label for="elevenChatVoice">Voz</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
-            <div class="tts-emotion-guide"><strong>Estilos disponíveis</strong><div class="tts-emotion-chips"><code>#grito</code><code>#feliz</code><code>#triste</code><code>#sussurro</code></div></div>
-            <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()"><span aria-hidden="true">▶</span> Testar voz</button></div>
-            <div class="tts-emotion-howto"><strong>Como usar os estilos</strong><span>Adicione uma tag ao final da mensagem.</span><p>Obrigado pelo presente! <code>#feliz</code></p></div>
-            <small id="elevenChatStatus" class="tts-inline-status" role="status" aria-live="polite"></small>
+        <section class="card tts-filter-card tp-sound-section" id="chatNarrationFilters" data-feature-section="chat" data-section="voice" aria-labelledby="chatNarrationFiltersHeading">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">⌕</div><div><h2 id="chatNarrationFiltersHeading">Quais mensagens narrar</h2><p>Defina quais comentários serão lidos na live.</p></div></div></div>
+          <div class="card-body tts-chat-routing-body">
+            <div class="tts-chat-voice-routing">
+              <h3>Voz das mensagens</h3>
+              <div class="form-grid tts-chat-filters">
+                <div class="field"><label for="chatNarrVoiceStrategy">Como narrar</label><select class="control" id="chatNarrVoiceStrategy" onchange="onSettingsChanged()"><option value="standard">Usar somente a voz padrão</option><option value="expressive">Usar somente a voz expressiva</option><option value="both">Usar as duas vozes</option></select></div>
+                <div class="field" id="chatNarrVoiceScopeField"><label for="chatNarrExpressiveMode">Mensagens para narrar</label><select class="control" id="chatNarrExpressiveMode" onchange="onSettingsChanged()"><option value="all">Todas as mensagens</option><option value="prefix">Somente as que começam com o prefixo</option></select></div>
+                <div class="field" id="chatNarrExpressivePrefixField" style="display:none"><label for="chatNarrExpressivePrefix">Prefixo de seleção</label><input class="control" type="text" id="chatNarrExpressivePrefix" maxlength="1" value="!" oninput="onExpressivePrefixInput(this)"><small id="chatNarrVoiceRuleHint">O prefixo não é falado.</small></div>
+              </div>
+              <div class="tts-chat-voice-rule" id="chatNarrVoiceRule" role="status" aria-live="polite"></div>
+            </div>
           </div>
         </section>
 
-        <section class="card tts-filter-card tp-sound-section" id="chatNarrationFilters" data-feature-section="chat" data-section="voice" aria-labelledby="chatNarrationFiltersHeading">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">⌕</div><div><h2 id="chatNarrationFiltersHeading">Quais mensagens narrar</h2><p>Defina quais comentários serão lidos na live.</p></div></div></div>
-          <div class="card-body"><div class="form-grid tts-chat-filters">
-            <div class="field"><label for="chatNarrMode">Comentários</label><select class="control" id="chatNarrMode" onchange="onSettingsChanged()"><option value="all">Todos os comentários</option><option value="exclude">Todos, exceto os que começam com o prefixo</option><option value="only">Somente os que começam com o prefixo</option></select></div>
-            <div class="field"><label for="chatNarrChar">Prefixo das mensagens</label><input class="control" type="text" id="chatNarrChar" maxlength="1" value="#" oninput="onSettingsChanged()"><small>Usado na regra acima; o prefixo não é falado.</small></div>
-          </div></div>
-        </section>
-
-        <section class="card eleven-usage-card tts-credits-card" id="elevenUsageCard" hidden data-section="voice" aria-labelledby="elevenUsageTitle">
-          <div class="card-head"><div class="title-wrap"><div class="title-icon">◴</div><div><h2 id="elevenUsageTitle">Seus TikCoins</h2><p>Saldo e consumo da voz expressiva.</p></div></div></div>
-          <div class="card-body">
-            <div class="eleven-usage-summary"><strong id="voiceCreditBalance">—</strong><span>TikCoins disponíveis</span></div>
-            <div class="tts-credit-cost"><strong>Custo da voz expressiva</strong><span id="voiceCreditRate">Carregando…</span></div>
-            <span class="tts-message-limit">Máx. 150 caracteres por mensagem</span>
-            <small class="tts-credit-explainer">Cada mensagem consome proporcionalmente aos caracteres falados, com arredondamento para cima e mínimo de 1 TikCoin. A tag de emoção não é cobrada.</small>
-            <div class="field voice-credit-estimator">
-              <label for="voiceCreditEstimateText">Simule o custo</label>
-              <input class="control" id="voiceCreditEstimateText" type="text" maxlength="150" placeholder="Digite uma mensagem" oninput="renderVoiceCreditEstimate()">
-              <small id="voiceCreditEstimate" role="status" aria-live="polite">Digite uma mensagem para ver a estimativa.</small>
-            </div>
-            <div id="voiceCreditPackages" class="voice-credit-packages" aria-label="Pacotes para comprar TikCoins"></div>
-            <small id="voiceCreditStatus" class="d-block mt-2" role="status" aria-live="polite"></small>
-            <div id="voiceCreditHistory" class="voice-credit-history" aria-label="Movimentações recentes"></div>
+        <section class="card eleven-chat-voice-card tts-emotive-card" id="elevenChatBox" hidden data-section="voice" aria-labelledby="elevenChatVoiceTitle">
+          <div class="card-head"><div class="title-wrap"><div class="title-icon">♫</div><div><h2 id="elevenChatVoiceTitle">Voz expressiva</h2><p>Uma voz alternativa com estilos de interpretação.</p></div></div></div>
+          <div class="card-body tts-chat-expressive-options">
+            <div class="field"><label for="elevenChatVoice">Voz</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
+            <div class="tts-emotion-guide"><strong>Tags de emoção aceitas</strong><div class="tts-emotion-chips"><code>#grito</code><code>#feliz</code><code>#triste</code><code>#sussurro</code></div><small>Adicione uma tag ao final do comentário. Ex.: “Obrigado pelo presente! #feliz”.</small></div>
+            <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz expressiva</button></div>
+            <small id="elevenChatStatus" class="tts-inline-status" role="status" aria-live="polite"></small>
           </div>
         </section>
 
@@ -1605,6 +1624,7 @@ function switchTab(tab) {
   if (!document.querySelector('.tp-console-open')) document.getElementById('streamerBackdrop').hidden = true;
   if (menuTab === 'dashboard') refreshStreamerDashboard();
   if (menuTab === 'reports') { window.scrollTo({ top: 0, behavior: 'instant' }); loadStreamerReports(); }
+  if (menuTab === 'credits') { window.scrollTo({ top: 0, behavior: 'instant' }); loadVoiceCredits(); }
   const alertsSection = document.querySelector('[data-feature-section="alerts"]');
   if (menuTab === "sons" && alertsSection && !alertsSection.hidden) loadSoundAlerts();
   if (menuTab === 'sons') syncSoundModelTabs(tab === 'alerts' ? 'alerts' : tab === 'chat' ? 'voice' : null);
@@ -2098,7 +2118,7 @@ function renderActionSoundAlerts() {
   root.innerHTML = Object.entries(ACTION_SOUND_LABELS).map(([action, info]) => {
     const url = actionSoundAlerts[action] || "";
     const id = "actionSoundFile_" + action;
-    return '<article class="action-alert-row" data-action="' + action + '"><div class="action-alert-copy"><strong>' + info.title + '</strong><span>' + info.detail + '</span></div><div class="action-alert-controls"><button class="btn btn-dark btn-small" type="button" data-action-preview="' + action + '" ' + (url ? '' : 'disabled') + ' onclick="toggleActionSoundPreview(\'' + action + '\',this)">▶ Testar</button><input type="file" hidden id="' + id + '" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" onchange="uploadActionSound(\'' + action + '\')"><button class="btn btn-primary btn-small" type="button" onclick="chooseSoundFile(\'' + id + '\')">' + (url ? 'Trocar áudio' : 'Enviar áudio') + '</button><button class="btn btn-danger btn-small" type="button" onclick="removeActionSound(\'' + action + '\')" ' + (url ? '' : 'disabled') + '>Remover</button></div><small class="action-alert-file" role="status">' + (url ? 'Áudio configurado' : 'Nenhum áudio configurado') + '</small></article>';
+    return '<article class="action-alert-row" data-action="' + action + '"><div class="action-alert-copy"><strong>' + info.title + '</strong><span>' + info.detail + '</span></div><div class="action-alert-controls"><button class="btn btn-dark btn-small" type="button" data-action-preview="' + action + '" ' + (url ? '' : 'disabled') + ' onclick="toggleActionSoundPreview(\'' + action + '\',this)">Testar</button><input type="file" hidden id="' + id + '" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" onchange="uploadActionSound(\'' + action + '\')"><button class="btn btn-primary btn-small" type="button" onclick="chooseSoundFile(\'' + id + '\')">' + (url ? 'Trocar áudio' : 'Enviar áudio') + '</button><button class="btn btn-danger btn-small" type="button" onclick="removeActionSound(\'' + action + '\')" ' + (url ? '' : 'disabled') + '>Remover</button></div><small class="action-alert-file" role="status">' + (url ? 'Áudio configurado' : 'Nenhum áudio configurado') + '</small></article>';
   }).join("");
 }
 
@@ -2123,7 +2143,7 @@ function playActionSound(action, event) {
 
 function stopActionSoundPreview() {
   if (actionSoundPreview) { actionSoundPreview.pause(); actionSoundPreview.currentTime = 0; }
-  if (actionSoundPreviewButton) { actionSoundPreviewButton.textContent = "▶ Testar"; actionSoundPreviewButton.setAttribute("aria-pressed", "false"); }
+  if (actionSoundPreviewButton) { actionSoundPreviewButton.textContent = "Testar"; actionSoundPreviewButton.setAttribute("aria-pressed", "false"); }
   actionSoundPreview = null;
   actionSoundPreviewButton = null;
 }
@@ -2380,67 +2400,6 @@ async function removeGiftSound(idx) {
       addLog(`[Alerta] Todos os sons removidos do gift: ${gift}`);
     }
   } catch (e) {}
-}
-
-// ---------------- Assinatura / Planos ----------------
-let billingData = null;
-
-function toggleBilling() {
-  const card = document.getElementById("billingCard");
-  card.style.display = card.style.display === "none" ? "block" : "none";
-  if (card.style.display === "block" && billingData) renderBilling();
-}
-
-async function loadBilling() {
-  try {
-    const data = await apiFetch("/api/billing");
-    if (!data.success) return;
-    billingData = data;
-    const btn = document.getElementById("btnPlan");
-    if (btn) {
-      const name = (data.plans.find((p) => p.code === data.plan) || {}).name || data.plan;
-      btn.textContent = "Plano: " + name;
-    }
-  } catch (e) {}
-}
-
-function renderBilling() {
-  const info = document.getElementById("billingInfo");
-  const plansEl = document.getElementById("billingPlans");
-  const msg = document.getElementById("billingMsg");
-  if (!billingData) return;
-  const cur = billingData.plans.find((p) => p.code === billingData.plan) || {};
-  const exp = billingData.plan_expires_at ? ` | Expira: ${billingData.plan_expires_at.replace("T", " ").slice(0, 16)}` : "";
-  info.innerHTML = `Plano atual: <b>${esc(cur.name || billingData.plan)}</b>${billingData.plan !== "free" ? exp : " (trial gratuito)"}`;
-  plansEl.innerHTML = "";
-  for (const p of billingData.plans) {
-    if (p.code === "free") continue;
-    const active = p.code === billingData.plan;
-    plansEl.innerHTML += `
-      <button class="btn btn-nb ${active ? "btn-success" : "btn-primary"}" onclick="upgradePlan('${p.code}')" ${active ? "disabled" : ""}>
-        ${esc(p.name)} - R$ ${p.price}${p.period === "yearly" ? "/ano" : "/mês"}
-      </button>`;
-  }
-  msg.textContent = "";
-}
-
-async function upgradePlan(code) {
-  const msg = document.getElementById("billingMsg");
-  msg.textContent = "Gerando pagamento...";
-  try {
-    const data = await apiFetch("/api/billing/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: code }),
-    });
-    if (data.success && data.checkout_url) {
-      window.location.href = data.checkout_url;
-    } else {
-      msg.textContent = data.error || "Erro ao gerar pagamento";
-    }
-  } catch (e) {
-    msg.textContent = "Erro de rede: " + e.message;
-  }
 }
 
 // ---------------- BATALHA ----------------
@@ -3846,8 +3805,6 @@ const ttsVolumeBoostLabel = document.getElementById("ttsVolumeBoostLabel");
 const ttsVoiceSelect = document.getElementById("ttsVoiceSelect");
 const chatNarrEnabledInput = document.getElementById("chatNarrEnabled");
 const chatNarrStatus = document.getElementById("chatNarrStatus");
-const chatNarrModeInput = document.getElementById("chatNarrMode");
-const chatNarrCharInput = document.getElementById("chatNarrChar");
 let currentTtsVoice = "";
 
 // Gift translation dictionary (EN -> PT-BR)
@@ -4391,7 +4348,7 @@ function createPreferenceSaver({ statusId, ready = () => true, read, send, commi
 const preferencePost = (path, body) => apiFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function preferenceHydration(scope, loaded, error = "") {
-  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVolume,#ttsVoiceSelect,#chatNarrEnabled,#chatNarrMode,#chatNarrChar,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
+  const selectors = { settings: "#chkFollowers,#chkHeartMe,#cmdPrefix,#pctDica,#pctCharada,#ttsRate,#ttsVolume,#ttsVoiceSelect,#chatNarrEnabled,#chatNarrVoiceStrategy,#chatNarrExpressiveMode,#chatNarrExpressivePrefix,#autoRound,#autoRoundPause,#tapMeta,#riddleAutoNarrate,#bossMode", gifts: "#giftTagInput,#riddleTagInput,#sizeGiftInput,#letterGiftInput,#giftTags,#riddleTags,#sizeGiftTags,#letterGiftTags", tres: "#tab-tres input,#tab-tres select,#tab-tres textarea,#tresGiftSizeTags,#tresGiftLetterTags,#tresGiftTicketTags", duelo: "#tab-duelo input,#tab-duelo select,#tab-duelo textarea" };
   document.querySelectorAll(selectors[scope]).forEach(el => { if (el.matches("input,select,textarea")) el.disabled = !loaded; else el.inert = !loaded; });
   const statusId = {settings:"settingsSaveStatus",gifts:"giftSaveStatus",tres:"tresSaveStatus",duelo:"dueloSaveStatus"}[scope];
   const el = document.getElementById(statusId); if(el) el.textContent = loaded ? "Preferências salvas automaticamente após alterações." : (error || "Carregando preferências…");
@@ -4411,8 +4368,11 @@ function readPanelSettings() {
     pct_dica: Math.max(0, Math.min(100, Number(pctDicaInput.value))),
     tts_rate: Number(ttsRateInput.value) || 1, tts_volume: getTtsVolumeGain(), tts_voice: currentTtsVoice,
     chat_narr_enabled: chatNarrEnabledInput.checked,
-    chat_narr_mode: chatNarrModeInput.value,
-    chat_narr_char: (chatNarrCharInput.value || "#").slice(0, 1),
+    chat_narr_mode: "all",
+    chat_narr_char: "#",
+    chat_narr_voice_strategy: document.getElementById("chatNarrVoiceStrategy").value,
+    chat_narr_expressive_mode: document.getElementById("chatNarrExpressiveMode").value,
+    chat_narr_expressive_prefix: (document.getElementById("chatNarrExpressivePrefix").value || "!").slice(0, 1),
     auto_round: document.getElementById("autoRound").checked,
     auto_round_pause: Number(document.getElementById("autoRoundPause").value) || 20,
     tap_meta: Number(document.getElementById("tapMeta").value) || 1000,
@@ -4521,8 +4481,10 @@ function applySettingsUI(settings) {
   currentTtsVoice = s.tts_voice || "";
   chatNarrEnabledInput.checked = !!s.chat_narr_enabled;
   syncChatNarrationStatus();
-  chatNarrModeInput.value = ["all", "exclude", "only"].includes(s.chat_narr_mode) ? s.chat_narr_mode : "all";
-  chatNarrCharInput.value = (s.chat_narr_char || "#").slice(0, 1);
+  document.getElementById("chatNarrVoiceStrategy").value = ["standard", "expressive", "both"].includes(s.chat_narr_voice_strategy) ? s.chat_narr_voice_strategy : "expressive";
+  document.getElementById("chatNarrExpressiveMode").value = s.chat_narr_expressive_mode === "prefix" ? "prefix" : "all";
+  document.getElementById("chatNarrExpressivePrefix").value = (s.chat_narr_expressive_prefix || "!").slice(0, 1);
+  syncChatVoiceStrategy();
   const autoRoundEl = document.getElementById("autoRound");
   if (autoRoundEl) autoRoundEl.checked = !!s.auto_round;
   const autoRoundPauseEl = document.getElementById("autoRoundPause");
@@ -4636,6 +4598,7 @@ async function loadSettings() {
       savedSettings = { ...data.settings };
       applySettingsUI(data.settings);
       settingsHydrated = true; preferenceHydration("settings", true);
+      if (data.settings.chat_narr_mode !== "all" || data.settings.chat_narr_char !== "#") settingsSaver.schedule(0);
     }
   } catch (e) { preferenceHydration("settings", false, "Não foi possível carregar. Recarregue o painel para tentar novamente."); }
 }
@@ -4669,6 +4632,7 @@ let ttsCreditMp = null;
 let ttsCreditCardForm = null;
 const ttsCreditPaymentPolls = new Map();
 let ttsMpSdkPromise = null;
+let creditBalanceRefreshInFlight = false;
 async function loadElevenChatVoices() {
   const box = document.getElementById("elevenChatBox");
   const select = document.getElementById("elevenChatVoice");
@@ -4677,10 +4641,10 @@ async function loadElevenChatVoices() {
   try {
     const data = await apiFetch("/api/tts/elevenlabs");
     if (!data.success) throw new Error("Não foi possível carregar as vozes.");
+    box.dataset.enabled = data.enabled ? "true" : "false";
     box.hidden = !data.enabled;
-    document.getElementById("elevenUsageCard").hidden = !data.enabled;
-    if (!data.enabled) return;
     await loadVoiceCredits();
+    if (!data.enabled) { syncChatVoiceStrategy(); return; }
     elevenChatVoices = (data.models || []).flatMap(model => (model.voices || []).map(voice => ({
       ...voice, model_id: model.id,
       credits_per_150_chars: Number(elevenCreditCosts.get(model.id) ?? model.credits_per_150_chars ?? voice.credits_per_150_chars ?? 0),
@@ -4725,51 +4689,87 @@ async function loadElevenChatVoices() {
       : !elevenChatVoices.length && Number(data.unpriced_voice_count) > 0 ? "Vozes aprovadas aguardam a definição de uma tarifa em TikCoins pelo administrador."
       : !elevenChatVoices.length ? "Nenhuma voz foi liberada pelo administrador no momento."
       : selectedIndex >= 0 || !data.voice_id ? "" : "A voz selecionada não está mais disponível. Escolha outra voz ou volte à voz padrão.";
+    syncChatVoiceStrategy();
   } catch {
+    box.dataset.enabled = "false";
     status.textContent = "Não foi possível carregar as vozes adicionais. Recarregue o painel para tentar novamente.";
     select.disabled = true;
     test.disabled = true;
+    syncChatVoiceStrategy();
   }
 }
 
 async function loadVoiceCredits() {
-  const balance = document.getElementById("voiceCreditBalance");
   const packages = document.getElementById("voiceCreditPackages");
   const history = document.getElementById("voiceCreditHistory");
   const status = document.getElementById("voiceCreditStatus");
   try {
     const data = await apiFetch("/api/tts/credits");
     if (!data?.success) throw new Error("Falha ao carregar TikCoins");
-    balance.textContent = Number(data.balance || 0).toLocaleString("pt-BR");
+    setTtsCreditBalance(data.balance);
     ttsCreditPublicKey = typeof data.checkout?.public_key === "string" ? data.checkout.public_key : "";
     ttsCreditAccountEmail = typeof data.account_email === "string" ? data.account_email : "";
     elevenCreditCosts = new Map((data.model_costs || []).map(item => [item.model_id, Number(item.credits_per_150_chars)]));
     packages.replaceChildren();
     const availablePackages = data.packages || [];
-    packages.hidden = availablePackages.length === 0;
+    document.getElementById("voiceCreditPackagesEmpty").hidden = availablePackages.length > 0;
     availablePackages.forEach(item => {
+      const card = document.createElement("article"); card.className = "tp-credit-package";
+      const title = document.createElement("h3"); title.textContent = item.name;
+      const quantityLabel = document.createElement("span"); quantityLabel.className = "tp-credit-package-label"; quantityLabel.textContent = "Créditos no pacote";
+      const quantity = document.createElement("strong"); quantity.className = "tp-credit-package-quantity"; quantity.textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins`;
+      const price = document.createElement("strong"); price.className = "tp-credit-package-price"; price.textContent = Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "btn btn-dark btn-small voice-credit-package";
-      button.textContent = `${item.name} · ${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      button.className = "btn btn-primary tp-credit-package-buy";
+      button.textContent = "Comprar TikCoins";
+      button.setAttribute("aria-label", `Comprar ${item.name}: ${Number(item.credits).toLocaleString("pt-BR")} TikCoins por ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`);
       button.addEventListener("click", () => openTtsCreditCheckout(item));
-      packages.append(button);
+      card.append(title, quantityLabel, quantity, price, button);
+      packages.append(card);
     });
     history.replaceChildren();
-    const recentLedger = (data.ledger || []).slice(0, 5);
-    history.hidden = recentLedger.length === 0;
+    const recentLedger = data.ledger || [];
+    const recentConsumption = recentLedger.filter(item => item.kind === "usage")
+      .reduce((total, item) => total + Math.abs(Number(item.amount || 0)), 0);
+    document.getElementById("voiceCreditRecentConsumption").textContent = `${recentConsumption.toLocaleString("pt-BR")} TikCoins`;
+    if (!recentLedger.length) {
+      const empty = document.createElement("p"); empty.className = "tp-credit-empty"; empty.textContent = "Ainda não há movimentações nesta carteira.";
+      history.append(empty);
+    }
     recentLedger.forEach(item => {
-      const row = document.createElement("div"); row.className = "voice-credit-history-row";
-      const label = document.createElement("span");
-      label.textContent = item.kind === "purchase" ? "Compra de TikCoins"
-        : item.kind === "usage" ? "Mensagem"
-        : "Ajuste de saldo";
-      const amount = document.createElement("strong");
+      const row = document.createElement("article"); row.className = "tp-credit-history-row";
       const value = Number(item.amount || 0);
+      row.dataset.flow = value > 0 ? "credit" : "debit";
+      const details = document.createElement("div"); details.className = "tp-credit-history-details";
+      const title = document.createElement("strong");
+      const source = document.createElement("span");
+      const time = document.createElement("time"); time.dateTime = String(item.created_at || ""); time.textContent = formatTtsCreditDate(item.created_at);
+      const state = document.createElement("span"); state.className = "tp-credit-history-state";
+      if (item.kind === "usage") {
+        title.textContent = "Consumo de voz";
+        source.textContent = `Voz adicional · ${Number(item.unit_count || 0).toLocaleString("pt-BR")} caracteres`;
+        state.textContent = "Concluído";
+      } else if (item.kind === "purchase") {
+        title.textContent = "Recarga de TikCoins";
+        source.textContent = "Pacote confirmado";
+        state.textContent = "Confirmada";
+      } else if (item.kind === "purchase_reversal") {
+        title.textContent = "Estorno de recarga";
+        source.textContent = "Estorno registrado";
+        state.textContent = "Estornada";
+      } else {
+        title.textContent = "Ajuste de saldo";
+        source.textContent = "Ajuste manual";
+        state.textContent = "Registrado";
+      }
+      details.append(title, source, time);
+      const amount = document.createElement("strong"); amount.className = "tp-credit-history-amount";
       amount.textContent = `${value > 0 ? "+" : ""}${value.toLocaleString("pt-BR")} TikCoins`;
-      amount.dataset.kind = value > 0 ? "credit" : "debit";
-      row.append(label, amount); history.append(row);
+      state.dataset.flow = value > 0 ? "credit" : "debit";
+      row.append(details, state, amount); history.append(row);
     });
+    renderTtsCreditModelCosts(data.model_costs || []);
     const paymentResult = new URLSearchParams(location.search).get("tts-credit");
     if (paymentResult === "success") status.textContent = "Pagamento recebido. O saldo será atualizado após a confirmação do Mercado Pago.";
     else if (paymentResult === "pending") status.textContent = "Pagamento pendente. Os TikCoins entram após a confirmação.";
@@ -4778,6 +4778,73 @@ async function loadVoiceCredits() {
   } catch {
     status.textContent = "Não foi possível carregar o saldo e os pacotes de TikCoins.";
   }
+}
+
+function setTtsCreditBalance(value) {
+  const formatted = `${Number(value || 0).toLocaleString("pt-BR")} TikCoins`;
+  const pageBalance = document.getElementById("voiceCreditBalance");
+  const headerBalance = document.getElementById("ttsCreditHeaderBalance");
+  if (pageBalance) pageBalance.textContent = Number(value || 0).toLocaleString("pt-BR");
+  if (headerBalance) headerBalance.textContent = formatted;
+}
+
+async function refreshTtsCreditBalance() {
+  if (creditBalanceRefreshInFlight || document.visibilityState === "hidden") return;
+  creditBalanceRefreshInFlight = true;
+  try {
+    const data = await apiFetch("/api/tts/credits");
+    if (data?.success) setTtsCreditBalance(data.balance);
+  } catch {} finally { creditBalanceRefreshInFlight = false; }
+}
+
+setInterval(refreshTtsCreditBalance, 15000);
+refreshTtsCreditBalance();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshTtsCreditBalance();
+});
+
+function genericTtsCostTier(multiplier) {
+  if (multiplier <= 0.1) return "Faixa econômica";
+  if (multiplier <= 0.5) return "Faixa reduzida";
+  if (multiplier <= 1) return "Faixa padrão";
+  return "Faixa intensiva";
+}
+
+function formatTtsCreditDate(value) {
+  const raw = String(value || "");
+  if (!raw) return "Data indisponível";
+  const date = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? raw : new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function renderTtsCreditModelCosts(costs) {
+  const root = document.getElementById("voiceCreditModelCosts");
+  root.replaceChildren();
+  const uniqueRates = [...new Set(costs.map(item => Number(item.credits_per_150_chars || 0)))].filter(rate => rate > 0).sort((a, b) => a - b);
+  if (!uniqueRates.length) {
+    const empty = document.createElement("p"); empty.className = "tp-credit-empty"; empty.textContent = "Nenhum valor de consumo está disponível no momento.";
+    root.append(empty); return;
+  }
+  const tierCounts = new Map();
+  uniqueRates.forEach(rate => {
+    const multiplier = rate / 150;
+    const tier = genericTtsCostTier(multiplier);
+    const tierCount = (tierCounts.get(tier) || 0) + 1;
+    tierCounts.set(tier, tierCount);
+    const row = document.createElement("article"); row.className = "tp-credit-model-cost-row";
+    const name = document.createElement("strong"); name.textContent = `${tier}${tierCount > 1 ? ` ${tierCount}` : ""}`;
+    const rateLabel = document.createElement("span"); rateLabel.textContent = rate > 0 ? `${rate.toLocaleString("pt-BR")} TikCoins / 150 caracteres` : "Tarifa não definida";
+    const multiplierLabel = document.createElement("span"); multiplierLabel.className = "tp-voice-cost-badge";
+    multiplierLabel.dataset.costTier = multiplier <= 0.1 ? "low" : multiplier <= 1 ? "standard" : "high";
+    multiplierLabel.textContent = rate > 0 ? `×${multiplier.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}` : "—";
+    const example = document.createElement("small");
+    example.textContent = rate > 0 ? `60 caracteres: cerca de ${Math.max(1, Math.ceil(60 * rate / 150)).toLocaleString("pt-BR")} TikCoins` : "Sem cobrança estimável até a tarifa ser definida.";
+    row.append(name, multiplierLabel, rateLabel, example); root.append(row);
+  });
+}
+
+function scrollToCreditSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderSelectedVoiceCreditRate() {
@@ -4801,7 +4868,7 @@ function renderSelectedVoiceCreditRate() {
   const heading = document.createElement("span");
   heading.className = "tts-credit-rate-heading";
   const voiceName = document.createElement("strong");
-  voiceName.textContent = option.textContent;
+  voiceName.textContent = "Voz selecionada";
   const multiplierBadge = document.createElement("span");
   multiplierBadge.className = "tp-voice-cost-badge";
   multiplierBadge.dataset.costTier = option.dataset.costTier || "standard";
@@ -5057,7 +5124,8 @@ function setElevenChatStatus(message, state = "") {
   else delete status.dataset.state;
 }
 window.addEventListener("focus", () => {
-  if (!document.getElementById("elevenUsageCard")?.hidden) loadVoiceCredits();
+  refreshTtsCreditBalance();
+  if (document.getElementById("tab-credits")?.style.display !== "none") loadVoiceCredits();
 });
 
 function onPctChanged(el) {
@@ -5093,8 +5161,9 @@ function isSettingsDirty() {
     Math.abs(getTtsVolumeGain() - Number(savedSettings.tts_volume ?? 1)) > 0.001 ||
     (currentTtsVoice || "") !== (savedSettings.tts_voice || "") ||
     chatNarrEnabledInput.checked !== !!savedSettings.chat_narr_enabled ||
-    chatNarrModeInput.value !== (savedSettings.chat_narr_mode || "all") ||
-    chatNarrCharInput.value !== ((savedSettings.chat_narr_char || "#").slice(0, 1)) ||
+    document.getElementById("chatNarrVoiceStrategy").value !== (savedSettings.chat_narr_voice_strategy || "expressive") ||
+    document.getElementById("chatNarrExpressiveMode").value !== (savedSettings.chat_narr_expressive_mode || "all") ||
+    document.getElementById("chatNarrExpressivePrefix").value !== ((savedSettings.chat_narr_expressive_prefix || "!").slice(0, 1)) ||
     (document.getElementById("autoRound") ? !!document.getElementById("autoRound").checked : false) !== !!savedSettings.auto_round ||
     Number(document.getElementById("autoRoundPause") ? document.getElementById("autoRoundPause").value : 20) !== Number(savedSettings.auto_round_pause || 20) ||
     Number(document.getElementById("tapMeta") ? document.getElementById("tapMeta").value : 1000) !== Number(savedSettings.tap_meta || 1000) ||
@@ -5105,10 +5174,33 @@ function isSettingsDirty() {
 
 function onSettingsChanged() {
   syncChatNarrationStatus();
+  syncChatVoiceStrategy();
   syncBossGiftConfig();
   settingsDirty = isSettingsDirty();
   updateSettingsSaveState();
   if (settingsHydrated) settingsSaver.schedule(window.event && window.event.type === "change" ? 0 : 500);
+}
+
+function syncChatVoiceStrategy() {
+  const strategy = document.getElementById("chatNarrVoiceStrategy")?.value || "expressive";
+  const mode = document.getElementById("chatNarrExpressiveMode");
+  const scopeField = document.getElementById("chatNarrVoiceScopeField");
+  const prefixField = document.getElementById("chatNarrExpressivePrefixField");
+  const box = document.getElementById("elevenChatBox");
+  const rule = document.getElementById("chatNarrVoiceRule");
+  if (scopeField) scopeField.style.display = strategy === "both" ? "none" : "";
+  if (prefixField) prefixField.style.display = strategy === "both" || mode?.value === "prefix" ? "" : "none";
+  if (box) box.hidden = box.dataset.enabled !== "true" || strategy === "standard";
+  if (rule) {
+    if (strategy === "both") rule.textContent = `Todas as mensagens sem ${document.getElementById("chatNarrExpressivePrefix")?.value || "!"} usam a voz padrão. Com o prefixo, usam a voz expressiva.`;
+    else if (mode?.value === "prefix") rule.textContent = `Somente mensagens que começam com ${document.getElementById("chatNarrExpressivePrefix")?.value || "!"} serão narradas; o prefixo é removido antes da fala.`;
+    else rule.textContent = strategy === "standard" ? "Todas as mensagens narradas usam a voz padrão gratuita." : "Todas as mensagens narradas usam a voz expressiva selecionada.";
+  }
+}
+
+function onExpressivePrefixInput(input) {
+  if (input && (!input.value || input.value === "#" || /\s/u.test(input.value))) input.value = "!";
+  onSettingsChanged();
 }
 
 function updateSettingsSaveState() { /* Estado exibido pela fila de autosave. */ }

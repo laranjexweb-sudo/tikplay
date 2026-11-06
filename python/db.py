@@ -85,6 +85,9 @@ def init_db():
       chat_narr_enabled INTEGER DEFAULT 0,
       chat_narr_mode TEXT DEFAULT 'all',
       chat_narr_char TEXT DEFAULT '#',
+      chat_narr_expressive_mode TEXT DEFAULT 'all',
+      chat_narr_expressive_prefix TEXT DEFAULT '!',
+      chat_narr_voice_strategy TEXT DEFAULT 'expressive',
       command_prefix TEXT DEFAULT '#'
     );
     CREATE TABLE IF NOT EXISTS tenant_gift_config (
@@ -181,6 +184,16 @@ def init_db():
         conn.commit()
     except Exception:
         pass
+    for statement in (
+        "ALTER TABLE tenant_settings ADD COLUMN chat_narr_expressive_mode TEXT DEFAULT 'all'",
+        "ALTER TABLE tenant_settings ADD COLUMN chat_narr_expressive_prefix TEXT DEFAULT '!'",
+        "ALTER TABLE tenant_settings ADD COLUMN chat_narr_voice_strategy TEXT DEFAULT 'expressive'",
+    ):
+        try:
+            conn.execute(statement)
+            conn.commit()
+        except Exception:
+            pass
     conn.close()
 
 
@@ -191,7 +204,8 @@ def get_tenant_settings(tenant_id):
         conn = _conn()
         row = conn.execute(
             "SELECT apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_volume, "
-            "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, boss_mode "
+            "tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, boss_mode, "
+            "chat_narr_expressive_mode, chat_narr_expressive_prefix, chat_narr_voice_strategy "
             "FROM tenant_settings WHERE tenant_id=?",
             (tenant_id,),
         ).fetchone()
@@ -211,6 +225,9 @@ def get_tenant_settings(tenant_id):
             "chat_narr_char": (row[9] or "#"),
             "command_prefix": (row[10] or "#"),
             "boss_mode": bool(row[11] if row[11] is not None else 1),
+            "chat_narr_expressive_mode": row[12] or "all",
+            "chat_narr_expressive_prefix": row[13] or "!",
+            "chat_narr_voice_strategy": row[14] or "expressive",
         }
     except Exception:
         return {}

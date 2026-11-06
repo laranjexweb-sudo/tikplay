@@ -150,6 +150,13 @@ h1 { letter-spacing: 0; font-size: 54px; }
 #tab-sons .tts-message-limit { display:inline-flex; margin-top:var(--tp-space-2); padding:var(--tp-space-1) var(--tp-space-2); border:1px solid var(--line); border-radius:var(--tp-radius-sm); color:var(--muted); font-size:10px; }
 #tab-sons .voice-credit-estimator { margin-top:var(--tp-space-3); }
 #tab-sons #voiceCreditEstimate { color:var(--text); font-size:12px; font-weight:700; }
+#tab-sons .tts-chat-routing-body { display:grid; gap:var(--tp-space-5); }
+#tab-sons .tts-chat-voice-routing { display:grid; gap:var(--tp-space-3); padding-top:var(--tp-space-4); border-top:1px solid var(--line); }
+#tab-sons .tts-chat-voice-routing h3 { margin:0; color:var(--text); font-size:13px; font-weight:800; }
+#tab-sons .tts-chat-voice-rule { padding:var(--tp-space-3); border:1px solid var(--line); border-radius:var(--tp-radius-sm); background:var(--panel2); color:var(--tp-text-soft,var(--muted)); font-size:11px; line-height:1.5; }
+#tab-sons .tts-chat-expressive-options { display:grid; gap:var(--tp-space-3); }
+#tab-sons .tts-chat-expressive-options[hidden] { display:none; }
+#tab-sons .tts-chat-expressive-options .field { margin:0; }
 #tab-sons [data-section="voice"] .field label { color:var(--text); font-size:12px; }
 #tab-sons [data-section="voice"] .field small { color:var(--muted); font-size:11px; }
 @container (max-width:1100px) {
@@ -247,5 +254,89 @@ body.tp-panel-streamer .live-pill:not([data-state="connected"]) i { background:v
 @media(max-width:600px) {
   #tab-sons .action-alert-level { grid-template-columns:minmax(0,1fr) auto; }
   #tab-sons .action-alert-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+/* Carteira TikCoins: página independente da configuração de áudio. */
+.tp-panel-streamer .tp-credit-header-balance { display:inline-flex; align-items:center; justify-content:center; gap:var(--tp-space-2); min-height:2.25rem; padding:0 var(--tp-space-3); border:1px solid var(--tp-border); border-radius:var(--tp-radius-sm); background:var(--tp-surface-soft); color:var(--tp-text); font:700 .75rem/1 var(--tp-font-ui); white-space:nowrap; cursor:pointer; }
+.tp-panel-streamer .tp-credit-header-balance > span { color:var(--tp-blue); font-size:.95rem; }
+.tp-panel-streamer .tp-credit-header-balance:hover { border-color:color-mix(in srgb,var(--tp-blue) 48%,var(--tp-border)); background:color-mix(in srgb,var(--tp-blue) 9%,var(--tp-surface-soft)); }
+#tab-credits { --tp-text-xs:.75rem; --tp-text-sm:.875rem; --tp-text-lg:1.125rem; --tp-text-xl:1.375rem; --tp-radius-pill:999px; container-type:inline-size; min-width:0; color:var(--tp-text); }
+#tab-credits .tp-credit-page-head { margin-bottom:var(--tp-space-5); }
+#tab-credits .tp-credit-page-head h1 { margin:0 0 var(--tp-space-2); color:var(--tp-text); font:700 clamp(2rem,4vw,3.35rem)/1.05 var(--tp-font-display); letter-spacing:0; }
+#tab-credits .tp-credit-page-head h1 span { color:var(--tp-blue); background:none; -webkit-text-fill-color:currentColor; }
+#tab-credits .tp-credit-page-head p,#tab-credits .tp-credit-section-head p { margin:0; color:var(--tp-text-soft); font-size:var(--tp-text-sm); line-height:1.55; }
+#tab-credits .tp-credit-kicker { color:var(--tp-blue); font-size:var(--tp-text-xs); font-weight:800; letter-spacing:.12em; }
+#tab-credits .tp-credit-overview { display:grid; grid-template-columns:minmax(0,1fr); margin-bottom:var(--tp-space-5); }
+#tab-credits .tp-credit-balance-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(12rem,auto) auto; align-items:center; gap:var(--tp-space-4); padding:var(--tp-space-5); border:1px solid var(--tp-border); border-radius:var(--tp-radius-lg); background:linear-gradient(135deg,color-mix(in srgb,var(--tp-surface-soft) 86%,var(--tp-blue)),var(--tp-surface)); box-shadow:var(--tp-shadow-card); }
+#tab-credits .tp-credit-balance { display:flex; align-items:baseline; flex-wrap:wrap; gap:var(--tp-space-2); margin-top:var(--tp-space-1); }
+#tab-credits .tp-credit-balance strong { color:var(--tp-text); font:700 clamp(2rem,4vw,3rem)/1 var(--tp-font-display); font-variant-numeric:tabular-nums; }
+#tab-credits .tp-credit-balance span { color:var(--tp-text-soft); font-size:var(--tp-text-sm); font-weight:700; }
+#tab-credits .tp-credit-recent-consumption { display:grid; gap:var(--tp-space-1); padding-inline:var(--tp-space-4); border-inline:1px solid var(--tp-border); }
+#tab-credits .tp-credit-recent-consumption span { color:var(--tp-text-soft); font-size:var(--tp-text-xs); }
+#tab-credits .tp-credit-recent-consumption strong { color:var(--tp-text); font-size:var(--tp-text-lg); font-variant-numeric:tabular-nums; }
+#tab-credits .tp-credit-overview-actions { display:flex; flex-wrap:wrap; gap:var(--tp-space-2); }
+#tab-credits .tp-credit-overview-actions .btn { min-height:var(--tp-control-height); }
+#tab-credits .tp-credit-status:empty { display:none; }
+#tab-credits .tp-credit-status { grid-column:1/-1; margin:0; color:var(--tp-text-soft); font-size:var(--tp-text-xs); }
+#tab-credits .tp-credit-section { margin-bottom:var(--tp-space-5); scroll-margin-top:var(--tp-space-5); }
+#tab-credits .tp-credit-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--tp-space-3); margin-bottom:var(--tp-space-3); }
+#tab-credits .tp-credit-section-head h2 { margin:var(--tp-space-1) 0; color:var(--tp-text); font:700 var(--tp-text-xl)/1.2 var(--tp-font-display); }
+#tab-credits .tp-credit-history-window { color:var(--tp-text-muted); font-size:var(--tp-text-xs); white-space:nowrap; }
+#tab-credits .tp-credit-package-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:var(--tp-space-3); align-items:stretch; }
+#tab-credits .tp-credit-package { display:flex; flex-direction:column; align-items:flex-start; min-width:0; min-height:14rem; padding:var(--tp-space-4); border:1px solid var(--tp-border); border-radius:var(--tp-radius-md); background:var(--tp-surface); }
+#tab-credits .tp-credit-package h3 { margin:0 0 var(--tp-space-3); color:var(--tp-text); font:700 var(--tp-text-lg)/1.3 var(--tp-font-display); overflow-wrap:anywhere; }
+#tab-credits .tp-credit-package-label { color:var(--tp-text-muted); font-size:var(--tp-text-xs); }
+#tab-credits .tp-credit-package-quantity { margin-top:var(--tp-space-1); color:var(--tp-text); font-size:var(--tp-text-lg); font-variant-numeric:tabular-nums; }
+#tab-credits .tp-credit-package-price { margin:var(--tp-space-3) 0 var(--tp-space-4); color:var(--tp-text); font:700 var(--tp-text-xl)/1.2 var(--tp-font-display); font-variant-numeric:tabular-nums; }
+#tab-credits .tp-credit-package-buy { width:100%; margin-top:auto; }
+#tab-credits .tp-credit-empty { margin:0; padding:var(--tp-space-4); border:1px dashed var(--tp-border); border-radius:var(--tp-radius-md); color:var(--tp-text-soft); font-size:var(--tp-text-sm); }
+#tab-credits .tp-credit-history { overflow:hidden; border:1px solid var(--tp-border); border-radius:var(--tp-radius-md); background:var(--tp-surface); }
+#tab-credits .tp-credit-history-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(8rem,auto) minmax(9rem,auto); align-items:center; gap:var(--tp-space-3); padding:var(--tp-space-3) var(--tp-space-4); }
+#tab-credits .tp-credit-history-row + .tp-credit-history-row { border-top:1px solid var(--tp-border); }
+#tab-credits .tp-credit-history-details { display:grid; grid-template-columns:minmax(10rem,.65fr) minmax(9rem,1fr) auto; align-items:baseline; gap:var(--tp-space-3); min-width:0; }
+#tab-credits .tp-credit-history-details strong { color:var(--tp-text); font-size:var(--tp-text-sm); }
+#tab-credits .tp-credit-history-details span,#tab-credits .tp-credit-history-details time { color:var(--tp-text-soft); font-size:var(--tp-text-xs); }
+#tab-credits .tp-credit-history-details span { overflow-wrap:anywhere; }
+#tab-credits .tp-credit-history-state { justify-self:start; padding:var(--tp-space-1) var(--tp-space-2); border:1px solid var(--tp-border); border-radius:var(--tp-radius-pill); color:var(--tp-text-soft); font-size:var(--tp-text-xs); white-space:nowrap; }
+#tab-credits .tp-credit-history-state[data-flow="credit"] { color:var(--tp-green); border-color:color-mix(in srgb,var(--tp-green) 35%,var(--tp-border)); }
+#tab-credits .tp-credit-history-amount { justify-self:end; color:var(--tp-red); font-size:var(--tp-text-sm); font-variant-numeric:tabular-nums; white-space:nowrap; }
+#tab-credits .tp-credit-history-row[data-flow="credit"] .tp-credit-history-amount { color:var(--tp-green); }
+#tab-credits .tp-credit-explainer { margin-top:var(--tp-space-4); border:1px solid var(--tp-border); border-radius:var(--tp-radius-md); background:color-mix(in srgb,var(--tp-surface) 72%,transparent); }
+#tab-credits .tp-credit-explainer summary { padding:var(--tp-space-4); color:var(--tp-text); font-size:var(--tp-text-sm); font-weight:700; cursor:pointer; }
+#tab-credits .tp-credit-explainer[open] summary { border-bottom:1px solid var(--tp-border); }
+#tab-credits .tp-credit-explainer-body { display:grid; gap:var(--tp-space-4); padding:var(--tp-space-4); }
+#tab-credits .tp-credit-explainer-body > p { margin:0; color:var(--tp-text-soft); font-size:var(--tp-text-sm); line-height:1.65; }
+#tab-credits .tp-credit-current-cost { display:grid; grid-template-columns:minmax(0,1fr) minmax(16rem,.8fr); gap:var(--tp-space-4); align-items:start; padding:var(--tp-space-4); border:1px solid var(--tp-border); border-radius:var(--tp-radius-md); background:var(--tp-surface); }
+#tab-credits .tp-credit-current-cost h3,#tab-credits .tp-credit-model-costs h3 { margin:0 0 var(--tp-space-2); color:var(--tp-text); font-size:var(--tp-text-sm); }
+#tab-credits #voiceCreditRate { display:grid; gap:var(--tp-space-1); color:var(--tp-text-soft); font-size:var(--tp-text-xs); line-height:1.5; }
+#tab-credits .tts-credit-rate-heading { display:flex; align-items:center; flex-wrap:wrap; gap:var(--tp-space-2); color:var(--tp-text); }
+#tab-credits .tts-credit-rate-heading strong { color:var(--tp-text); font-size:var(--tp-text-sm); }
+#tab-credits #voiceCreditRate small { color:var(--tp-text-muted); }
+#tab-credits .voice-credit-estimator { display:grid; gap:var(--tp-space-2); }
+#tab-credits .voice-credit-estimator label { color:var(--tp-text-soft); font-size:var(--tp-text-xs); font-weight:700; }
+#tab-credits .voice-credit-estimator small { color:var(--tp-text-soft); font-size:var(--tp-text-xs); line-height:1.5; }
+#tab-credits .tp-credit-model-cost-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr)); gap:var(--tp-space-2); }
+#tab-credits .tp-credit-model-cost-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--tp-space-1) var(--tp-space-2); padding:var(--tp-space-3); border:1px solid var(--tp-border); border-radius:var(--tp-radius-sm); background:var(--tp-surface); }
+#tab-credits .tp-credit-model-cost-row > strong { min-width:0; color:var(--tp-text); font-size:var(--tp-text-sm); overflow-wrap:anywhere; }
+#tab-credits .tp-credit-model-cost-row > span:not(.tp-voice-cost-badge) { grid-column:1/-1; color:var(--tp-text-soft); font-size:var(--tp-text-xs); }
+#tab-credits .tp-credit-model-cost-row small { grid-column:1/-1; color:var(--tp-text-muted); font-size:var(--tp-text-xs); }
+@container (max-width:720px) {
+  #tab-credits .tp-credit-balance-card { grid-template-columns:minmax(0,1fr) auto; }
+  #tab-credits .tp-credit-recent-consumption { grid-column:1/-1; padding:var(--tp-space-3) 0 0; border:0; border-top:1px solid var(--tp-border); }
+  #tab-credits .tp-credit-overview-actions { grid-column:1/-1; }
+  #tab-credits .tp-credit-history-row { grid-template-columns:minmax(0,1fr) auto; }
+  #tab-credits .tp-credit-history-details { grid-template-columns:minmax(0,1fr) auto; gap:var(--tp-space-1) var(--tp-space-2); }
+  #tab-credits .tp-credit-history-details span { grid-column:1/-1; }
+  #tab-credits .tp-credit-history-details time { grid-column:1/-1; }
+  #tab-credits .tp-credit-history-state { grid-column:1; grid-row:2; }
+  #tab-credits .tp-credit-history-amount { grid-column:2; grid-row:1/3; }
+  #tab-credits .tp-credit-current-cost { grid-template-columns:minmax(0,1fr); }
+}
+@media(max-width:480px) {
+  #tab-credits .tp-credit-balance-card { grid-template-columns:minmax(0,1fr); }
+  #tab-credits .tp-credit-recent-consumption,#tab-credits .tp-credit-overview-actions { grid-column:1; }
+  #tab-credits .tp-credit-overview-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #tab-credits .tp-credit-section-head { align-items:flex-start; flex-direction:column; }
+  #tab-credits .tp-credit-history-row { padding:var(--tp-space-3); }
 }
 

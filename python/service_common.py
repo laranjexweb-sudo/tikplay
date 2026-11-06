@@ -59,6 +59,9 @@ DEFAULT_SETTINGS = {
     "chat_narr_enabled": False,
     "chat_narr_mode": "all",
     "chat_narr_char": "#",
+    "chat_narr_voice_strategy": "expressive",
+    "chat_narr_expressive_mode": "all",
+    "chat_narr_expressive_prefix": "!",
     "command_prefix": "#",
     "auto_round": False,
     "auto_round_pause": 20,
@@ -110,6 +113,15 @@ def normalize_settings(raw) -> dict:
     if "chat_narr_char" in raw:
         char = str(raw["chat_narr_char"] or "")
         settings["chat_narr_char"] = char[:1] or "#"
+    if "chat_narr_expressive_mode" in raw:
+        mode = str(raw["chat_narr_expressive_mode"] or "all").strip()
+        settings["chat_narr_expressive_mode"] = mode if mode in ("all", "prefix") else "all"
+    if "chat_narr_voice_strategy" in raw:
+        strategy = str(raw["chat_narr_voice_strategy"] or "expressive").strip()
+        settings["chat_narr_voice_strategy"] = strategy if strategy in ("standard", "expressive", "both") else "expressive"
+    if "chat_narr_expressive_prefix" in raw:
+        prefix = str(raw["chat_narr_expressive_prefix"] or "!").strip()[:1]
+        settings["chat_narr_expressive_prefix"] = prefix if prefix and not prefix.isspace() and prefix != "#" else "!"
     if "command_prefix" in raw:
         prefix = str(raw["command_prefix"] or "").strip()
         settings["command_prefix"] = prefix if prefix in ("#", "!") else ("" if prefix == "" else settings["command_prefix"])

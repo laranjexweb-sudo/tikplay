@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   chat_narr_enabled: false,
   chat_narr_mode: "all",
   chat_narr_char: "#",
+  chat_narr_voice_strategy: "expressive",
+  chat_narr_expressive_mode: "all",
+  chat_narr_expressive_prefix: "!",
   command_prefix: "#",
   auto_round: false,
   auto_round_pause: 20,
@@ -61,6 +64,9 @@ try {
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN chat_narr_char TEXT DEFAULT '#'");
 } catch {}
+try { db.exec("ALTER TABLE tenant_settings ADD COLUMN chat_narr_expressive_mode TEXT DEFAULT 'all'"); } catch {}
+try { db.exec("ALTER TABLE tenant_settings ADD COLUMN chat_narr_expressive_prefix TEXT DEFAULT '!'"); } catch {}
+try { db.exec("ALTER TABLE tenant_settings ADD COLUMN chat_narr_voice_strategy TEXT DEFAULT 'expressive'"); } catch {}
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN auto_round INTEGER DEFAULT 0");
 } catch {}
@@ -315,6 +321,9 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   chat_narr_enabled INTEGER DEFAULT 0,
   chat_narr_mode TEXT DEFAULT 'all',
   chat_narr_char TEXT DEFAULT '#',
+  chat_narr_expressive_mode TEXT DEFAULT 'all',
+  chat_narr_expressive_prefix TEXT DEFAULT '!',
+  chat_narr_voice_strategy TEXT DEFAULT 'expressive',
   command_prefix TEXT DEFAULT '#',
   auto_round INTEGER DEFAULT 0,
   auto_round_pause INTEGER DEFAULT 20,
@@ -841,6 +850,10 @@ function getTenantSettings(tenantId) {
     chat_narr_enabled: !!row.chat_narr_enabled,
     chat_narr_mode: row.chat_narr_mode,
     chat_narr_char: (row.chat_narr_char === null || row.chat_narr_char === undefined) ? "#" : row.chat_narr_char,
+    chat_narr_expressive_mode: row.chat_narr_expressive_mode === "prefix" ? "prefix" : "all",
+    chat_narr_expressive_prefix: (row.chat_narr_expressive_prefix || "!"),
+    chat_narr_voice_strategy: ["standard", "expressive", "both"].includes(row.chat_narr_voice_strategy)
+      ? row.chat_narr_voice_strategy : "expressive",
     command_prefix: (row.command_prefix === null || row.command_prefix === undefined) ? "#" : row.command_prefix,
     auto_round: !!row.auto_round,
     auto_round_pause: (row.auto_round_pause === null || row.auto_round_pause === undefined) ? 20 : row.auto_round_pause,
@@ -852,8 +865,8 @@ function getTenantSettings(tenantId) {
 
 function saveTenantSettings(tenantId, s) {
   db.prepare(`
-    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_volume, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta, boss_mode)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO tenant_settings (tenant_id, apenas_seguidores, apenas_heart_me, pct_dica, pct_charada, tts_rate, tts_volume, tts_voice, chat_narr_enabled, chat_narr_mode, chat_narr_char, chat_narr_expressive_mode, chat_narr_expressive_prefix, chat_narr_voice_strategy, command_prefix, auto_round, auto_round_pause, riddle_auto_narrate, tap_meta, boss_mode)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(tenant_id) DO UPDATE SET
       apenas_seguidores=excluded.apenas_seguidores,
       apenas_heart_me=excluded.apenas_heart_me,
@@ -865,6 +878,9 @@ function saveTenantSettings(tenantId, s) {
       chat_narr_enabled=excluded.chat_narr_enabled,
       chat_narr_mode=excluded.chat_narr_mode,
       chat_narr_char=excluded.chat_narr_char,
+      chat_narr_expressive_mode=excluded.chat_narr_expressive_mode,
+      chat_narr_expressive_prefix=excluded.chat_narr_expressive_prefix,
+      chat_narr_voice_strategy=excluded.chat_narr_voice_strategy,
       command_prefix=excluded.command_prefix,
       auto_round=excluded.auto_round,
       auto_round_pause=excluded.auto_round_pause,
@@ -883,6 +899,9 @@ function saveTenantSettings(tenantId, s) {
     s.chat_narr_enabled ? 1 : 0,
     s.chat_narr_mode || "all",
     (s.chat_narr_char === null || s.chat_narr_char === undefined) ? "#" : s.chat_narr_char,
+    s.chat_narr_expressive_mode === "prefix" ? "prefix" : "all",
+    (s.chat_narr_expressive_prefix || "!").slice(0, 1),
+    ["standard", "expressive", "both"].includes(s.chat_narr_voice_strategy) ? s.chat_narr_voice_strategy : "expressive",
     (s.command_prefix === null || s.command_prefix === undefined) ? "#" : s.command_prefix,
     s.auto_round ? 1 : 0,
     (s.auto_round_pause === null || s.auto_round_pause === undefined) ? 20 : s.auto_round_pause,

@@ -9,11 +9,39 @@ charada e do chat compartilha `tts_voice`, `tts_rate` e `tts_volume`, persistido
 `tenant_settings` e configurados em **Sons → Narração**.
 
 O campo existente `chat_narr_enabled` habilita apenas a fala de comentários.
-`chat_narr_mode` e `chat_narr_char` filtram comentários assim:
+Os campos legados `chat_narr_mode` e `chat_narr_char` permanecem no contrato por
+compatibilidade, mas o painel não os expõe: a regra única de seleção usa
+`chat_narr_expressive_mode` e `chat_narr_expressive_prefix`. Ao carregar as
+preferências existentes, o painel normaliza os campos legados para `all` e `#`
+para evitar que um filtro antigo se sobreponha à opção de prefixo. Os valores
+legados significam:
 
 - `all`: narrar todos os comentários;
 - `exclude`: narrar comentários que não começam com `chat_narr_char`;
 - `only`: narrar apenas comentários que começam com `chat_narr_char`.
+
+`chat_narr_voice_strategy` escolhe a voz e `chat_narr_expressive_mode` define o
+escopo nas estratégias de uma única voz. Essa é a única regra de seleção exposta
+no painel:
+
+- `standard`: usa somente a voz Edge gratuita. Com `chat_narr_expressive_mode=all`,
+  narra todas as mensagens que passaram pelos filtros; com `prefix`, narra apenas
+  as que começam com `chat_narr_expressive_prefix` (padrão `!`). O prefixo é
+  removido antes da fala.
+- `expressive` (padrão): usa somente a voz expressiva selecionada. Com modo `all`,
+  narra todas as mensagens; com `prefix`, narra apenas as iniciadas pelo prefixo.
+- `both`: narra todas as mensagens; as iniciadas pelo prefixo usam a voz
+  expressiva e têm o prefixo removido, e as demais usam diretamente a voz Edge
+  gratuita, sem consumir TikCoins.
+- A ausência de uma voz expressiva habilitada não altera o roteamento solicitado;
+  a interface informa que a opção não está disponível, e o serviço de voz mantém
+  o fallback de provedor já existente.
+- O prefixo expressivo aceita um caractere não branco, exceto `#` (reservado para
+  tags de emoção no fim). Tags de emoção continuam sendo removidas e interpretadas
+  antes da fala tanto pela rota expressiva quanto pela padrão.
+- Se a voz expressiva falhar ou ficar indisponível, mantém-se o fallback Edge
+  existente. A cobrança segue o modelo escolhido e os caracteres efetivamente
+  falados; mensagens encaminhadas diretamente ao Edge não passam pela carteira.
 
 O controle `riddle_auto_narrate` continua independente: regula a reprodução
 automática da charada, não a geração de voz nem a leitura do chat.
@@ -33,12 +61,15 @@ compartilhado de TTS → limite de tamanho → fila limitada por sessão → sí
 Edge com snapshot de voz/velocidade → evento `narrate` já existente → relay
 Node `chat_narrate` para os clientes de log do painel → fila sequencial de áudio.
 As filas do daemon e do painel aceitam no máximo 10 itens; itens expiram 10 s
-após a chegada do comentário. Alterar ativação, filtro, voz ou velocidade limpa
-itens pendentes; desconexão/reconexão do painel também limpa sua fila.
+após a chegada do comentário. Alterar ativação, filtro, voz, velocidade ou rota
+expressiva limpa itens pendentes; desconexão/reconexão do painel também limpa
+sua fila.
 
-Comentários vazios depois da limpeza e comentários rejeitados pelos filtros não
-geram áudio. Comentários enviados pelo próprio streamer também entram na fila
-normal de narração. Partidas e tratamento de
+Comentários vazios depois da limpeza e comentários de espectadores rejeitados
+pelos filtros de seguidor/Heart Me não geram áudio. Comentários enviados pela
+própria conta streamer podem ser narrados mesmo quando os metadados de seguidor
+ou fã-clube não vêm no evento, permitindo testar a fala; esse bypass vale somente
+para narração e não libera participação nos jogos. Partidas e tratamento de
 palpites continuam independentes da fila de voz. O cache mantém no máximo 500
 MP3s recentes por conta; áudios mais antigos são removidos para limitar disco.
 
@@ -56,7 +87,7 @@ fazer a fala usar outra taxa. A chave do cache de áudio inclui texto, voz e tax
 
 | Transição | Categoria / nível | Evento / código | Campos permitidos |
 |---|---|---|---|
-| Resumo de atividade da fila | `chat` / `info` | `chat.tts.batch` | Contagens sintetizadas, filtradas, expiradas, descartadas e falhas; comprimento agregado; voz/taxa; duração; sessão |
+| Resumo de atividade da fila | `chat` / `info` | `chat.tts.batch` | Contagens sintetizadas, filtradas, expiradas, descartadas e falhas; contagens agregadas roteadas à voz padrão/expressiva; comprimento agregado; voz/taxa/modo; duração; sessão |
 | Fila excedeu o limite | `chat` / `warning` | `chat.tts.queue_full` / `TTS_CHAT_QUEUE_FULL` | Contagem descartada, limite e sessão; throttle de 30 s |
 | Síntese de comentário falhou | `error` / `error` | `chat.tts.failed` / `TTS_CHAT_SYNTHESIS_FAILED` | Tipo da exceção, voz/taxa, duração e sessão; throttle de 5 s |
 | Síntese da charada começou/concluiu | `diagnostic` / `debug` | `palavra.riddle.tts_started` / `palavra.riddle.tts_completed` | `trace_id`, `game_id`, estágio, tamanho do texto, voz/taxa e duração |
@@ -74,7 +105,16 @@ Preservar o payload e nomes dos eventos `narrate`, `chat_narrate` e
 - Limpeza de emojis preserva letras acentuadas; emoji-only resulta em texto
   vazio; menções/URLs e textos longos seguem o helper compartilhado.
 - Testar modos `all`, `exclude`, `only`, caractere configurado, narrador
-  desativado e comentários enviados pelo streamer.
+  desativado, comentários enviados pelo streamer com filtros ligados e bloqueio
+  de espectadores sem os requisitos de seguidor/Heart Me.
+- Testar as estratégias `standard`, `expressive` e `both`, combinadas com os
+  escopos `all` e `prefix` quando aplicáveis. Em `both`, sem prefixo usa Edge e
+  com prefixo usa a voz expressiva; em estratégia única, o escopo selecionado
+  determina quais mensagens são narradas. Confirmar remoção do prefixo antes da
+  fala e que a rota Edge não consulta nem debita a carteira.
+- Testar prefixo inválido/reservado, emoção final, voz não selecionada/desabilitada
+  e fallback do provedor; validar preferência no painel web, PWA e após hidratação
+  de uma sessão do daemon.
 - Fila é limitada, mantém ordem, não bloqueia o handler de comentários, expira
   mensagens antigas, limpa pendências ao alterar a configuração/desconectar e
   descarta excesso conforme a política definida.
@@ -92,6 +132,22 @@ Preservar o payload e nomes dos eventos `narrate`, `chat_narrate` e
 - Testar `/api/settings` → daemon → fila/síntese → evento WebSocket → áudio no
   painel. Após atualizar Node/daemon, validar logs no armazenamento e na
   interface durante sessão de teste.
+
+### Mapa de observabilidade do roteamento de vozes
+
+- A decisão de rota é agregada nos campos `standard_routed` e `expressive_routed`
+  do evento periódico existente `chat.tts.batch` (`chat`/`info`); não há evento
+  por comentário.
+- Falhas de síntese usam `chat.tts.failed` (`error`/`error`) com o código atual;
+  a indisponibilidade recuperável da voz mantém o aviso throttled
+  `tts.provider.fallback` (`notice`/`warning`).
+- Correlação usa a sessão do tenant. Logs não incluem comentário, usuário,
+  prefixo digitado nem URL de áudio; somente o modo agregado pode aparecer em
+  `details.configurations`.
+- Configurações agregadas podem incluir estratégia e escopo, sem armazenar o
+  caractere de prefixo nem texto de comentário. Alterar estratégia, modo ou
+  prefixo limpa itens pendentes via reset existente. Não são
+  criados eventos WebSocket nem tabelas de histórico.
 
 ## Dependência
 

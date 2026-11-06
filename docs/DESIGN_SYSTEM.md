@@ -26,6 +26,8 @@
 
 > 2026-11-02: Narração do chat passou a incluir comentários enviados pela própria conta streamer; limpeza, filtros e fluxo TTS existentes foram preservados.
 
+> 2026-11-06: Narração do chat permite escolher somente voz padrão, somente expressiva ou ambas. Nas estratégias de voz única, pode narrar todas ou somente mensagens com prefixo; usando ambas, mensagens sem prefixo usam a voz padrão e mensagens prefixadas usam a expressiva. Preferências sincronizadas entre painel web e PWA, com cobrança da voz expressiva validada no backend.
+
 > 2026-10-18: Super Admin > Vozes liberadas inclui Fish Audio Drama 3 via OpenRouter com opção padrão multilíngue, prévia fixa em PT-BR e tarifa inicialmente zerada; clientes não recebem acesso até o admin ouvir, configurar tarifa e habilitar.
 
 > 2026-10-17: Super Admin → Pacotes e TikCoins ganhou relatório de recargas com período e paginação, separando compras aprovadas e reembolsos de adições/remoções manuais com identificação do admin; totais calculados a partir do ledger existente. Sem mudança em saldo, checkout ou eventos financeiros.
@@ -61,6 +63,8 @@
 > 2026-10-17: Refinamento de densidade em Sons → Narração: controle mestre mais compacto, cards com altura conforme o conteúdo, créditos em linha única com custo logo abaixo, botões de teste com largura igual, feedback de prévia em estado visual acessível e textos secundários/status de conexão mais discretos. Fluxo e eventos de TTS existentes preservados; nenhum evento novo.
 
 # TikPlay — Design System Oficial (tema reutilizável)
+
+> 2026-11-06: Sons → Narração concentra a regra de voz em “Quais mensagens narrar”, sem controles de filtro redundantes. A opção de seleção da voz expressiva mantém o cartão na posição anterior; controles de teste não usam ícone de play. A regra de estratégia é compartilhada com a PWA. Ver `narracao-chat-edge.md` e `pwa-sons-mobile.md`.
 
 > 2026-10-17: Caça Palavras público adaptado à proporção real da fonte de navegador com áreas seguras configuráveis (presets vertical/horizontal e personalizado), prévia e salvamento automático no painel. Progresso compacto, tabuleiro quadrado responsivo, acertos temporários e ranking final sem scroll; eventos e regras do jogo preservados. Mapa de observabilidade: `caca-transmission-layout.md`.
 
@@ -693,6 +697,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-11-06 — Narração do chat: escolha de voz padrão, expressiva ou ambas, com regra por prefixo nas opções de uma voz e roteamento entre as duas quando ambas estão ativas. Preferências aplicadas no painel web, PWA e daemon; contagens das rotas agregadas em `chat.tts.batch`, sem conteúdo por comentário. Mapa e critérios em `docs/narracao-chat-edge.md`.
+
 - 2026-10-17 — Caça Palavras: ações de iniciar/encerrar movidas para a mesma faixa do stepper de quantidade; em viewport estreita, os botões podem usar uma linha própria. IDs, handlers e estado desabilitado preservados.
 - 2026-10-17 — Caça Palavras: contador de palavras trocado por botões de diminuir/aumentar, com valor central, limites visíveis e estado desabilitado nos extremos; seletores de participação e coordenadas ocupam toda a largura do card. O handler de início continua enviando a mesma contagem numérica (4–16). Nenhum evento ou log alterado/adicionado.
 - 2026-10-17 — Caça Palavras: removido o divisor entre o progresso e as ações; a quantidade da próxima rodada ficou abaixo da barra e os seletores de participação foram expandidos à largura do card. O controle de quantidade foi posteriormente refinado para botões de diminuir/aumentar. IDs, handlers e limites 4–16 mantidos; sem novos eventos ou logs.
@@ -980,3 +986,7 @@ node/public/
 > 2026-11-02: Narração do chat passou a incluir comentários enviados pela própria conta streamer; limpeza, filtros e fluxo TTS existentes foram preservados.
 > 2026-11-02: PWA Sons mobile declara `apple-touch-icon` de 180×180 e metadados de Web Clip para o atalho da tela inicial no iOS.
 > 2026-11-02: Carteira de TTS usa tarifas proporcionais por voz (Kokoro 0,1×, Gemini 3.1 1×, Gemini 3.8 Flash-Lite 0,5×, Eleven v4 Turbo 2×) e pacotes Inicial/Criador/Pro preconfigurados no Admin. O seletor do streamer mostra multiplicador e TikCoins por 150 caracteres; a recarga Mercado Pago existente é preservada. Ver `docs/tts-credit-pricing.md`.
+
+> 2026-11-06: Painel do streamer ganhou a página independente “TikCoins e Recargas”, com saldo, consumo das movimentações recentes, pacotes carregados do catálogo existente, histórico do ledger e regras/tarifas em seção recolhível. A interface não apresenta planos de assinatura; checkout, valores, cálculo de consumo, endpoints, dados e telemetria não foram alterados. Limite do histórico exibido segue a resposta atual da API (15 movimentações); compras pendentes continuam disponíveis somente no fluxo/status do checkout, não no ledger. Mapa de observabilidade e limitações: `docs/tikcoins-wallet-ui.md`.
+
+> 2026-11-06: A carteira exibe somente faixas genéricas de consumo, sem identificar provedores ou modelos. Saldo compacto no cabeçalho atualiza a cada 15 segundos enquanto a página está visível e ao retornar o foco; carteira e cabeçalho usam o mesmo saldo da API. Comentários enviados pela própria conta do streamer podem testar a narração com filtros de elegibilidade ativos; os filtros continuam bloqueando a participação dessa conta nos jogos quando ela não satisfaz os critérios. Mapa de narração atualizado em `docs/narracao-chat-edge.md`.

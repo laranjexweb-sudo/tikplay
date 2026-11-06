@@ -349,6 +349,8 @@ class GameSession:
             "received": 0,
             "filtered": 0,
             "access_filtered": 0,
+            "standard_routed": 0,
+            "expressive_routed": 0,
             "queued": 0,
             "synthesized": 0,
             "synthesized_characters": 0,
@@ -626,8 +628,8 @@ class GameSession:
                     **summary,
                     "window_ms": round((now - self._chat_narration_stats_at) * 1000),
                     "configurations": [
-                        {"voice": voice, "rate": rate}
-                        for voice, rate in sorted(self._chat_narration_configs)
+                        {"voice": voice, "rate": rate, "expressive_mode": mode, "voice_strategy": strategy}
+                        for voice, rate, mode, strategy in sorted(self._chat_narration_configs)
                     ],
                     "queue_limit": CHAT_NARRATION_QUEUE_SIZE,
                 },
@@ -642,6 +644,21 @@ class GameSession:
         self._record_chat_narration("received")
 
         speech_text, emotion = tts_emotions.extract_trailing_emotion(text)
+        voice_strategy = self.settings.get("chat_narr_voice_strategy", "expressive")
+        expressive_mode = self.settings.get("chat_narr_expressive_mode", "all")
+        expressive_prefix = str(self.settings.get("chat_narr_expressive_prefix") or "!")[:1]
+        has_expressive_prefix = speech_text.startswith(expressive_prefix)
+        if voice_strategy == "both":
+            use_expressive = has_expressive_prefix
+        elif expressive_mode == "prefix":
+            if not has_expressive_prefix:
+                self._record_chat_narration("filtered")
+                return
+            use_expressive = voice_strategy == "expressive"
+        else:
+            use_expressive = voice_strategy == "expressive"
+        if has_expressive_prefix and (voice_strategy == "both" or expressive_mode == "prefix"):
+            speech_text = speech_text[len(expressive_prefix):].lstrip()
         cleaned = tts.prepare_chat_text(
             speech_text,
             mode=self.settings.get("chat_narr_mode", "all"),
@@ -654,13 +671,17 @@ class GameSession:
         item = {
             "text": cleaned,
             "emotion": emotion,
+            "use_expressive": use_expressive,
+            "expressive_mode": expressive_mode,
+            "voice_strategy": voice_strategy,
             "queued_at": time.monotonic(),
             "epoch": self._chat_narration_epoch,
             **self._tts_config_snapshot(),
         }
         try:
             self._chat_narration_queue.put_nowait(item)
-            self._chat_narration_configs.add((item["voice_key"], item["rate"]))
+            self._chat_narration_configs.add((item["voice_key"], item["rate"], item["expressive_mode"], item["voice_strategy"]))
+            self._record_chat_narration("expressive_routed" if use_expressive else "standard_routed")
             self._record_chat_narration("queued")
         except asyncio.QueueFull:
             self._record_chat_narration("dropped")
@@ -746,6 +767,8 @@ class GameSession:
         )
 
     async def _chat_tts_url(self, item):
+        if not item.get("use_expressive", True):
+            return await self._tts_url(item["text"], voice_key=item["voice_key"], rate=item["rate"])
         try:
             path, code = await asyncio.to_thread(
                 additional_voice_tts.synthesize, self.tenant_id, item["text"],
@@ -1643,7 +1666,10 @@ class GameSession:
         raw = text.strip()
         prefix = self._command_prefix()
         allowed, _ = self._check_access(user_meta)
-        if allowed:
+        comment_username = str(user or "").strip().lstrip("@").casefold()
+        streamer_username = str(self.username or "").strip().lstrip("@").casefold()
+        is_streamer_comment = bool(comment_username and streamer_username and comment_username == streamer_username)
+        if allowed or is_streamer_comment:
             self._enqueue_chat_narration(user, raw)
         elif self.settings.get("chat_narr_enabled"):
             self._record_chat_narration("access_filtered")
@@ -1664,7 +1690,8 @@ class GameSession:
 
         # O filtro comum vale para todos os jogos que capturam comentários
         # (3 Pontinhos, Bichinho, Caça-Palavras e Palavra Secreta). O chat segue
-        # visível/registrado acima, mas usuário inelegível não participa nem é narrado.
+        # visível/registrado acima, mas usuário inelegível não participa. A conta
+        # do streamer pode testar a narração do próprio comentário sem metadados de fã.
         if not allowed:
             return
 
@@ -3095,6 +3122,9 @@ async def process_commands(queue):
                     s.settings.get("chat_narr_char", "#"),
                     s.settings.get("tts_voice", ""),
                     s.settings.get("tts_rate", 1.0),
+                    s.settings.get("chat_narr_expressive_mode", "all"),
+                    s.settings.get("chat_narr_expressive_prefix", "!"),
+                    s.settings.get("chat_narr_voice_strategy", "expressive"),
                 )
                 s.settings = normalize_settings(cmd.get("settings"))
                 current_tts_settings = (
@@ -3103,6 +3133,9 @@ async def process_commands(queue):
                     s.settings.get("chat_narr_char", "#"),
                     s.settings.get("tts_voice", ""),
                     s.settings.get("tts_rate", 1.0),
+                    s.settings.get("chat_narr_expressive_mode", "all"),
+                    s.settings.get("chat_narr_expressive_prefix", "!"),
+                    s.settings.get("chat_narr_voice_strategy", "expressive"),
                 )
                 if previous_tts_settings != current_tts_settings:
                     s._reset_chat_narration(bool(s.settings.get("chat_narr_enabled")))
