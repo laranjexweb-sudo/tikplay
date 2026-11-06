@@ -61,6 +61,22 @@ class BatalhaEngine:
         self._emit("battle_state", {"active": True, "duration": self.duration, "remaining": self.remaining, "leaders": None, "room_id": self.room_id})
         self.task = asyncio.create_task(self._loop())
 
+    def reset_live_window(self, room_id=""):
+        """Zera os acumuladores da live sem reiniciar o cronometro da rodada."""
+        self.room_id = room_id or ""
+        self.accum = {}
+        self.last_action = None
+        if self.active:
+            self._emit("battle_tick", {
+                "remaining": self.remaining,
+                "duration": self.duration,
+                "leaders": self._leaders(),
+                "ranking": self._top_list(),
+                "room_id": self.room_id,
+            })
+        else:
+            self._emit("battle_ranking", {"taps": [], "coins": [], "room_id": self.room_id})
+
     async def _loop(self):
         while self.active and self.remaining > 0:
             self.remaining -= 1

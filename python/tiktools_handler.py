@@ -98,16 +98,60 @@ class TikToolsHandler:
     @staticmethod
     def _user_meta(user: dict) -> dict:
         u = user or {}
-        fans = u.get("fansClub") if isinstance(u.get("fansClub"), dict) else {}
+        def as_bool(value):
+            if isinstance(value, str):
+                return value.strip().lower() in ("1", "true", "yes", "sim", "active", "ativo")
+            return bool(value)
+
+        fans = next((value for value in (
+            u.get("fansClub"), u.get("fansClubInfo"), u.get("fans_club_info")
+        ) if isinstance(value, dict)), {})
+        follow_status = u.get("followStatus", u.get("follow_status"))
+        try:
+            follow_status = int(follow_status) if follow_status is not None else None
+        except (TypeError, ValueError):
+            follow_status = None
+        direct_follower = u.get("isFollower", u.get("is_follower"))
+        is_follower = (follow_status in (1, 2) if follow_status is not None
+                       else as_bool(direct_follower) if direct_follower is not None else None)
+
+        raw_fan_status = next((fans.get(key) for key in (
+            "userFansClubStatus", "user_fans_club_status", "fanClubStatus", "status"
+        ) if fans.get(key) is not None), None)
+        status_name = str(getattr(raw_fan_status, "name", "") or raw_fan_status or "").strip().lower()
+        sleeping = fans.get("isSleeping", fans.get("is_sleeping"))
+        if status_name in ("active", "1"):
+            heart_me_active = True
+            fan_status = "active"
+        elif status_name in ("inactive", "not_joined", "not joined", "2", "0"):
+            heart_me_active = False
+            fan_status = "inactive"
+        elif sleeping is not None:
+            try:
+                fan_level_value = int(fans.get("fansLevel") or fans.get("fans_level") or fans.get("level") or u.get("fanClubLevel") or 0)
+            except (TypeError, ValueError):
+                fan_level_value = 0
+            heart_me_active = not as_bool(sleeping) and fan_level_value > 0
+            fan_status = "active" if heart_me_active else "inactive"
+        else:
+            fan_level = fans.get("level") or fans.get("fansLevel") or fans.get("fans_level") or u.get("fanClubLevel")
+            try:
+                heart_me_active = int(fan_level or 0) > 0
+            except (TypeError, ValueError):
+                heart_me_active = None
+            fan_status = "active" if heart_me_active else None
         return {
-            "follow_role": u.get("followRole"),
+            "follow_role": u.get("followRole", follow_status),
+            "follow_status": follow_status,
             "is_subscriber": u.get("isSubscriber"),
-            "is_follower": u.get("isFollower"),
+            "is_follower": is_follower,
             # Níveis — best-effort: TikTools pode não trazer estes campos.
             "gifter_level": (u.get("payGrade") or {}).get("level") if isinstance(u.get("payGrade"), dict) else (u.get("payGradeLevel") or u.get("gifterLevel")),
             "gifter_grade": u.get("payGradeName") or u.get("gifterGrade") or "",
             "fan_club_level": fans.get("level") or u.get("fanClubLevel"),
             "fan_club_name": fans.get("clubName") or u.get("fanClubName") or "",
+            "fan_club_status": fan_status,
+            "is_heart_me_active": heart_me_active,
             "badges": u.get("badges") or [],
             "user_id": str(u.get("id") or u.get("userId") or ""),
         }

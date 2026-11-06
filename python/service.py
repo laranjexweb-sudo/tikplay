@@ -348,6 +348,7 @@ class GameSession:
         self._chat_narration_stats = {
             "received": 0,
             "filtered": 0,
+            "access_filtered": 0,
             "queued": 0,
             "synthesized": 0,
             "synthesized_characters": 0,
@@ -389,8 +390,14 @@ class GameSession:
     def _is_follower(meta) -> bool:
         if not meta:
             return False
-        if meta.get("is_follower") is True:
-            return True
+        status = meta.get("follow_status")
+        if status is not None:
+            try:
+                return int(status) in (1, 2)  # segue o streamer; 2 = follow mútuo
+            except (TypeError, ValueError):
+                pass
+        if meta.get("is_follower") is not None:
+            return meta.get("is_follower") is True
         try:
             return int(meta.get("follow_role") or 0) >= 1
         except (TypeError, ValueError):
@@ -400,16 +407,12 @@ class GameSession:
     def _is_heartme(meta) -> bool:
         if not meta:
             return False
-        if meta.get("is_subscriber") is True:
-            return True
-        for badge in meta.get("badges") or []:
-            if isinstance(badge, dict):
-                bname = str(badge.get("name") or "")
-            else:
-                bname = str(getattr(badge, "name", None) or "")
-            name = bname.lower()
-            if any(k in name for k in ("coracao", "coração", "heart", "fan", "sub", "membro")):
-                return True
+        active = meta.get("is_heart_me_active")
+        if active is not None:
+            return active is True
+        status = str(meta.get("fan_club_status") or "").strip().lower()
+        if status:
+            return status == "active"
         return False
 
     def _check_access(self, meta) -> tuple:
@@ -506,6 +509,7 @@ class GameSession:
         previous_room_id = self.current_room_id
         self.current_room_id = rid
         self.likes = {}
+        self.battle.reset_live_window(rid)
         self._viewer_levels = {}
         self._likes_dirty = True
         self._log_event(
@@ -1638,7 +1642,11 @@ class GameSession:
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         raw = text.strip()
         prefix = self._command_prefix()
-        self._enqueue_chat_narration(user, raw)
+        allowed, _ = self._check_access(user_meta)
+        if allowed:
+            self._enqueue_chat_narration(user, raw)
+        elif self.settings.get("chat_narr_enabled"):
+            self._record_chat_narration("access_filtered")
         emit(self.tenant_id, "game", {
             "type": "chat",
             "user": user,
@@ -1649,11 +1657,16 @@ class GameSession:
         if raw:
             self._emit_interaction("comment", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                    user_id=self._stable_uid(user, user_meta), meta={"text": raw})
-        allowed, _ = self._check_access(user_meta)
         if allowed:
             self.corda.join(self._stable_uid(user, user_meta), raw, user, nickname, avatar)
             self.corda.comment(self._stable_uid(user, user_meta), raw)
-        self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
+            self._duelo_comment_team(user, raw, user_meta, avatar, nickname or user)
+
+        # O filtro comum vale para todos os jogos que capturam comentários
+        # (3 Pontinhos, Bichinho, Caça-Palavras e Palavra Secreta). O chat segue
+        # visível/registrado acima, mas usuário inelegível não participa nem é narrado.
+        if not allowed:
+            return
 
         # ---------------------------------------------------------
         # 3 PONTINHOS: palpite de texto livre (captura exclusiva quando ativo)

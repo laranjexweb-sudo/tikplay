@@ -77,16 +77,22 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - Sessão nova hidrata `boss_mode` do banco (`tenant_settings`); mudança em runtime é propagada via comando `update_settings` (reavalia zona/x2).
 
 ### 2.5 Interações por live, isolamento por `room_id` e relatórios
-- O `room_id` identifica a sala conectada, mas não é suficiente sozinho para detectar o reinício de uma transmissão. Trocar de sala **zera o ranking/acumulador de curtidas**; uma queda e reconexão à mesma sala **preserva** os dados. No conector TikTokLive, somente `LiveEndEvent` confirma encerramento: a conexão seguinte à mesma sala inicia um ranking novo. **Não encerra partidas** ao desconectar/trocar de sala. A separação histórica dos relatórios continua usando as chaves já existentes no banco.
+- O `room_id` identifica a janela da transmissão. Uma nova sala (ou um novo início confirmado pelo TikTokLive) **zera os acumuladores ao vivo de curtidas e moedas**, incluindo o ranking ativo da Batalha; se a rodada estiver em andamento, o cronômetro continua. Uma queda e reconexão à mesma sala **preserva** os acumuladores. No conector TikTokLive, somente `LiveEndEvent` confirma encerramento; a conexão seguinte à mesma sala inicia uma janela nova. **Não encerra partidas** ao desconectar/trocar de sala. A separação histórica dos relatórios continua usando as chaves já existentes no banco.
 - O daemon Python **só emite** eventos normalizados (`interaction`) — via `emit`; o **Node grava em lote** (`lib/interactions.js`), dono do DDL. Nunca guardar payload bruto.
 - Idempotência por `event_id` (dedupe) — exato no **TikTokLive** (`common.msg_id`/`room_id`); **best-effort** no **TikTools** (sem `event_id`/`room_id` por evento).
 - Retenção (configurável por env): detalhe **90d**, texto de comentário **7d** (truncado 300 chars; linha/contagem permanecem até 90d), agregados **24m**. Poda no boot e a cada 6h.
+
+### 2.6 Filtros de participação — seguidor e Heart Me
+- `follow_status` do evento é a fonte preferida: `1` = segue e `2` = segue mutuamente; `0` = não segue. Nunca inferir que alguém segue só porque `follow_info` existe. Usar `is_follower`/`follow_role` como fallback quando o status não vier.
+- Heart Me significa membro **ativo do Fan Club**, não assinatura paga. Usar `FansClubData.user_fans_club_status == ACTIVE`; aceitar `FansClubInfo.fans_level > 0` somente quando `is_sleeping` for falso como compatibilidade. TikTools: usar status ativo explícito se presente; caso contrário, o nível do Fan Club no perfil do evento é o melhor sinal disponível. Não usar `is_subscriber` como substituto.
+- Quando ativos ao mesmo tempo, os filtros são cumulativos (seguidor **e** Heart Me ativo). Sem evidência suficiente, bloquear a participação (fail-closed). Aplicar a ações dos jogos que vêm de comentários, curtidas e presentes e à narração do chat. Comentários ainda podem aparecer no painel/histórico, mas não devem acionar jogo nem entrar na fila de voz se o autor não passar nos filtros.
+- O filtro não altera contagem geral de curtidas, ranking/meta da live nem relatórios de atividade; limita apenas a participação nos jogos e a narração dos comentários.
 - APIs `/api/live-sessions` e `/api/reports/{summary,series,ranking,events}` — autenticadas e **sempre escopadas por `req.user.id`**; nunca aceitam `tenant_id` do cliente; datas em UTC. Ver `docs/relatorios-interacoes.md`.
 
-### 2.6 Overlay de curtidas — personalização validada
+### 2.7 Overlay de curtidas — personalização validada
 - Layout v2/v3 ampliado de forma **aditiva** (mantém `x,y,scale,count`). Novos campos validados (sem CSS arbitrário): `photo_position` (left/right/top/bottom), `font_color` (#rrggbb), `shadow` (none/soft/medium/strong), `animation` (float/rise/pop/sway), `heart_colors` (até 5 hex). `GET /api/likes-overlay/layout` expõe `options`/`defaults`; POST inválido → 400.
 
-### 2.7 Níveis do usuário (apresentador / comunidade)
+### 2.8 Níveis do usuário (apresentador / comunidade)
 - **Dois eixos explícitos, nunca misturados:** `axis: "gifter"` (presenteador — `user.pay_grade.level`/
   `ExtendedUser.gifter_level`) e `axis: "fanclub"` (comunidade — `fans_club_info.fans_level`/
   `fans_club.data.level`/`ExtendedUser.member_level`). TikTools best-effort.
@@ -103,7 +109,7 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - `POST /api/presenter-level/test` exige autenticação e difunde apenas um evento visual `level_up` de teste (`test: true`) às fontes `/browser` da própria conta; não grava interação nem altera níveis. Aceita `scenario: "same-tier"` (23 → 24) ou `scenario: "tier-change"` (29 → 30), e `axis: "gifter"` ou `"fanclub"` (padrão gifter); sem corpo mantém o cenário/eixo de troca do presenteador por compatibilidade. A fonte OBS precisa estar aberta para receber o teste.
 - A fonte pública única `/overlays/presenter-level/overlay.html` identifica `axis: "gifter"` (presenteador) e `axis: "fanclub"` (comunidade). A comunidade segue os marcos 1/10/20/30/40/50, usa os escudos `assets/community/capitulo1.png` a `capitulo6.png` e a identidade Jornada de Fã; não cria outro canal de coleta ou persistência.
 
-### 2.8 Fonte de subida de nível (canvas e layout)
+### 2.9 Fonte de subida de nível (canvas e layout)
 - A animação do presenteador fica dentro de um canvas mestre fixo de **1040×820 px**; as mudanças de fase não alteram as dimensões da fonte de navegador no OBS/TikTok Live Studio. A fonte reduz proporcionalmente o canvas apenas quando a resolução configurada é menor.
 - Posição e escala são preferências por conta em `tenant_settings.presenter_level_overlay_layout` (`x/y` 0–100%, `scale` 0,5–2, padrão 50/50/1). Não criar serviço ou persistência paralelos.
 - `GET/POST /api/presenter-level/layout` usa autenticação existente e `req.user.id`; POST rejeita layout inválido com 400. Alterações são propagadas para as fontes da própria conta pelo evento WebSocket `presenter_level_layout`.

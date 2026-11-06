@@ -104,6 +104,26 @@ class TikTokLiveHandler:
                     return level
             return 0
 
+        def first_int(*values):
+            for value in values:
+                if value is None:
+                    continue
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    continue
+            return None
+
+        def fan_status(value):
+            if value is None:
+                return None
+            name = str(getattr(value, "name", "") or value).strip().lower()
+            if name in ("active", "1"):
+                return "active"
+            if name in ("inactive", "not_joined", "not joined", "2", "0"):
+                return "inactive"
+            return None
+
         # v3: fans_club.prefer_data é dict[int, FansClubData] — pega o maior nível.
         prefer = deep(user, "fans_club", "prefer_data")
         prefer_level = 0
@@ -132,15 +152,51 @@ class TikTokLiveHandler:
             or ""
         )
 
+        # TikTokLive v3 expõe o status atual do fã-clube no FansClubData.
+        # `is_sleeping` é o fallback do FansClubInfo legado (membro pausado).
+        fan_data = deep(user, "fans_club", "data")
+        fan_status_value = fan_status(getattr(fan_data, "user_fans_club_status", None))
+        if fan_status_value is None:
+            preferred_statuses = [
+                fan_status(getattr(item, "user_fans_club_status", None))
+                for item in (prefer.values() if isinstance(prefer, dict) else [])
+            ]
+            known_statuses = {value for value in preferred_statuses if value is not None}
+            if len(known_statuses) == 1:
+                fan_status_value = known_statuses.pop()
+        legacy_fan_info = getattr(user, "fans_club_info", None)
+        heart_me_active = (fan_status_value == "active") if fan_status_value is not None else None
+        if heart_me_active is None and legacy_fan_info is not None:
+            legacy_level = first_level(getattr(legacy_fan_info, "fans_level", None))
+            if legacy_level > 0:
+                heart_me_active = not bool(getattr(legacy_fan_info, "is_sleeping", False))
+
+        follow_status = first_int(
+            getattr(user, "follow_status", None),
+            deep(user, "follow_info", "follow_status"),
+        )
+        direct_is_follower = getattr(user, "is_follower", None)
+        is_follower = (
+            follow_status in (1, 2) if follow_status is not None
+            else bool(direct_is_follower) if direct_is_follower is not None
+            else None
+        )
+        follow_role = first_int(getattr(user, "follow_role", None))
+        if follow_role is None:
+            follow_role = follow_status if follow_status is not None else (1 if is_follower else None)
+
         return {
-            "follow_role": getattr(user, "follow_role", None) if hasattr(user, "follow_role") else (1 if getattr(user, "is_follower", False) else None),
+            "follow_role": follow_role,
+            "follow_status": follow_status,
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
-            "is_follower": getattr(user, "is_follower", False) or getattr(user, "follow_info", None) is not None,
+            "is_follower": is_follower,
             # Níveis: presenteador (pay_grade) e membro/fã-clube (fans_club no v3).
             "gifter_level": first_level(deep(user, "pay_grade", "level"), getattr(user, "gifter_level", None)),
             "gifter_grade": deep(user, "pay_grade", "grade_describe"),
             "fan_club_level": fan_level,
             "fan_club_name": fan_name,
+            "fan_club_status": fan_status_value,
+            "is_heart_me_active": heart_me_active,
             "badges": [
                 {"name": str(getattr(b, "name", "") or ""), "level": getattr(b, "level", None)}
                 for b in (getattr(user, "badges", None) or [])
