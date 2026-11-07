@@ -1,6 +1,6 @@
 // Camada de estado e broadcast (tenants) — extraída de server.js na Fase B-2.
 // `broadcastStatus`/`broadcastStatusAll` (que dependem do daemonSend) permanecem no server.js.
-const { DEFAULT_SETTINGS } = require("../db");
+const { DEFAULT_SETTINGS, getActiveGameRecovery } = require("../db");
 const metrics = require("./metrics");
 
 const tenants = new Map();
@@ -37,9 +37,34 @@ function emptyGameState() {
 
 function getTenant(id) {
   if (!tenants.has(id)) {
+    const recovery = getActiveGameRecovery(id);
+    const gameState = emptyGameState();
+    if (recovery && recovery.room_id && recovery.secret_word && recovery.game_id) {
+      gameState.active = true;
+      gameState.game_id = recovery.game_id;
+      gameState.secret_length = recovery.size_revealed || !recovery.size_gift ? String(recovery.secret_word).length : 0;
+      gameState.guesses = Array.isArray(recovery.guesses) ? recovery.guesses.slice(-500) : [];
+      gameState.hints = Array.isArray(recovery.hints) ? recovery.hints.slice(-100) : [];
+      gameState.guess_count = gameState.guesses.length;
+      gameState.hint_gifts = Array.isArray(recovery.hint_gifts) ? recovery.hint_gifts : [];
+      gameState.riddle_gifts = Array.isArray(recovery.riddle_gifts) ? recovery.riddle_gifts : [];
+      gameState.size_gift = recovery.size_gift || "";
+      gameState.size_revealed = !!recovery.size_revealed;
+      gameState.letter_gift = recovery.letter_gift || "";
+      gameState.first_letter_revealed = !!recovery.first_letter_revealed;
+      gameState.first_letter = gameState.first_letter_revealed ? String(recovery.secret_word).slice(0, 1) : "";
+      gameState.current_riddle_stage = Number(recovery.current_riddle_stage) || 0;
+      gameState.current_riddle = recovery.current_riddle || null;
+      gameState.active_gift = recovery.active_gift || null;
+      gameState.tension_score = Number(recovery.tension_score) || 0;
+      gameState.is_final_boss = !!recovery.is_final_boss;
+      gameState.tap_meta_current = Number(recovery.tap_meta_current) || 0;
+      gameState.tap_meta_total = Number(recovery.tap_meta_total) || 1000;
+      gameState.tap_meta_ready = !!recovery.tap_meta_ready;
+    }
     tenants.set(id, {
       id,
-      gameState: emptyGameState(),
+      gameState,
       browserClients: [],
       logClients: [],
       currentStatus: null,
@@ -48,7 +73,8 @@ function getTenant(id) {
       activeDaemonSessionId: null,
       activeLiveUsername: null,
       activeLiveEngine: null,
-      currentRoomId: null,
+      currentRoomId: recovery && recovery.room_id || null,
+      gameRecoveryCheckpoint: recovery,
       currentSessionId: null,
       likesByUser: new Map(),
       likeEventIds: new Set(),

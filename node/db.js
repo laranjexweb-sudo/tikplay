@@ -504,6 +504,11 @@ CREATE TABLE IF NOT EXISTS app_schema_migrations (
   name TEXT PRIMARY KEY,
   applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS active_game_recovery (
+  tenant_id INTEGER PRIMARY KEY,
+  checkpoint_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `);
 try { db.exec("ALTER TABLE word_usage ADD COLUMN game_type TEXT NOT NULL DEFAULT 'palavra'"); } catch {}
 const likesOverlayDefaultMigration = "likes_overlay_default_top_left_v1";
@@ -746,6 +751,41 @@ function saveDueloConfig(tenantId, cfg) {
       settings=excluded.settings
   `).run(tenantId, JSON.stringify(gifts), active ? 1 : 0, JSON.stringify(settings));
   return getDueloConfig(tenantId);
+}
+
+function saveActiveGameRecovery(tenantId, checkpoint) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0 || !checkpoint || checkpoint.version !== 1) return false;
+  db.prepare(`INSERT INTO active_game_recovery (tenant_id, checkpoint_json, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET checkpoint_json=excluded.checkpoint_json, updated_at=excluded.updated_at`)
+    .run(id, JSON.stringify(checkpoint), Date.now());
+  return true;
+}
+
+function getActiveGameRecovery(tenantId, maxAgeMs = 24 * 60 * 60 * 1000) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const row = db.prepare("SELECT checkpoint_json, updated_at FROM active_game_recovery WHERE tenant_id = ?").get(id);
+  if (!row) return null;
+  if (Date.now() - Number(row.updated_at || 0) > maxAgeMs) {
+    clearActiveGameRecovery(id);
+    return null;
+  }
+  try {
+    const checkpoint = JSON.parse(row.checkpoint_json);
+    return checkpoint && checkpoint.version === 1 ? checkpoint : null;
+  } catch {
+    clearActiveGameRecovery(id);
+    return null;
+  }
+}
+
+function clearActiveGameRecovery(tenantId) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return false;
+  db.prepare("DELETE FROM active_game_recovery WHERE tenant_id = ?").run(id);
+  return true;
 }
 
 function registerWithInvite({ email, name, password_hash, token, role = "user" }) {
@@ -2912,6 +2952,9 @@ function getMonitorPlatformStats() {
 module.exports = {
   db,
   DEFAULT_SETTINGS,
+  saveActiveGameRecovery,
+  getActiveGameRecovery,
+  clearActiveGameRecovery,
   getGifts,
   getGiftById,
   getGiftByName,

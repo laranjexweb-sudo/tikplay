@@ -112,6 +112,7 @@ Aplicar o mesmo princípio a dica, charada, fechamento, replay, ranking, present
 - Preservar os limites atuais de persistência (`7` dias e teto por tenant conforme `db.js`) até aprovação explícita de uma política diferente. Throttle e retenção não substituem mascaramento.
 - Não emitir um evento por curtida, frame, tick ou comentário irrelevante. Usar transições, contagens agregadas e resumo periódico; suprimir repetição e incluir `suppressed_count` quando for útil.
 - Diagnóstico opcional de níveis TikTok agrupa observações por tenant em janelas de 10 segundos; não emitir um log por espectador/atualização.
+- Diagnóstico temporário do filtro de seguidor para `iampeu`: `access.follower_probe` (`diagnostic`/`debug`, `FOLLOW_STATUS_PROBE`) registra apenas mudanças de assinatura dos campos por sala e origem (`comment`, `like`, `gift`), sem texto do comentário, conteúdo do presente ou ID numérico. Remover a instrumentação após identificar a propriedade confiável.
 
 ## 5. Metodologia para apurar erros
 
@@ -130,6 +131,7 @@ Eventos repetidos devem indicar supressão/throttle. Uma ausência de debug no h
 - **Rotas/ações de painel:** solicitada, validada/rejeitada, enviada à fila, confirmação/falha de execução; registrar motivo estável e resultado.
 - **Preferências do ranking de diamantes:** `overlay.gift_ranking_layout.rejected` (`notice`/`warning`), `overlay.gift_ranking_layout.saved` (`diagnostic`/`debug`, agregado por 2 s) e `overlay.gift_ranking_layout.failed` (`error`/`error`). Permitir somente `x`, `y`, `scale`, `count` em `details`; nunca registrar token, URL ou identidade. Testar validação, persistência por tenant e atualização do cliente público via WebSocket.
 - **Fluxo assíncrono/daemon:** recebimento, início da etapa longa, fim/duração ou falha/timeout; propagar `trace_id`.
+- **Recuperação da Palavra Secreta:** `palavra.recovery.restored` (`game`/`info`) e `palavra.recovery.rejected` (`diagnostic`/`warning`). A rejeição inclui somente código estável; nunca registrar palavra secreta ou conteúdo dos palpites. Snapshot interno do daemon→Node é persistido na tabela privada `active_game_recovery`, fora do WebSocket e dos logs; inclui estado necessário para a mesma Room ID e é descartado se a sala mudar ou após 24 horas.
 - **Jogo:** transições de estado, alterações de ranking, presente aceito/ignorado com motivo, dica/charada solicitada e resultado, fechamento e encerramento. Valores secretos são proibidos.
 - **3 Dicas:** solicitação/filas, preparação e geração de dicas (sucesso/fallback/duração), rodada iniciada, etapa liberada, presentes que revelam tamanho/letra, vitória, timeout, pausa, retomada, parada, reset e auto-rodada. Correlacionar por `trace_id` da ação e `game_id` da rodada. Contabilizar palpites errados por etapa, sem registrar comentário, resposta ou texto das dicas.
 - **Integrações externas:** operação, resultado/status, duração, retry/timeout e código; ocultar credenciais e resposta bruta.

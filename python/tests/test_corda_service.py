@@ -100,7 +100,7 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.s.corda.stop()
         self.s.game = SimpleNamespace(secret_word="teste", finished=False, is_final_boss=False)
         self.s.tap_meta_current = 10
-        self.s._check_access = lambda meta: (False, "nao_seguidor")
+        self.s._check_access = lambda meta, user=None, source="unknown": (False, "nao_seguidor")
         self.s._likes_dirty = False
         emitted_events.clear()
 

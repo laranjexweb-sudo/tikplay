@@ -293,7 +293,7 @@ async def generate_tres_dicas(secret_word: str, log_cb=None, tenant_id=None) -> 
 
 
 class GameSession:
-    def __init__(self, tenant_id, username, api_key, history_path, gift_tags, engine="tiktools", session_id=None, connect_trace_id=None):
+    def __init__(self, tenant_id, username, api_key, history_path, gift_tags, engine="tiktools", session_id=None, connect_trace_id=None, game_recovery=None):
         self.tenant_id = tenant_id
         self.session_id = str(session_id or uuid.uuid4().hex)
         self.connect_trace_id = str(connect_trace_id or "") or None
@@ -302,6 +302,8 @@ class GameSession:
         self.api_key = api_key
         self.engine = engine or "tiktools"
         self.game = JogoContexto(tenant_id=tenant_id, gift_tags=gift_tags)
+        self._pending_game_recovery = game_recovery if isinstance(game_recovery, dict) else None
+        self._last_game_recovery_signature = None
         self.battle = BatalhaEngine(tenant_id)
         self.caca = CacaPalavras()
         self.caca_prefix = ""
@@ -367,11 +369,14 @@ class GameSession:
         self.likes = {}
         self._likes_dirty = False
         self._likes_loop_task = None
+        self._game_recovery_task = None
         # Sala (live) atual — dados de curtidas/ranking são escopados por room_id.
         self.current_room_id = None
         # Evidências positivas do filtro são compartilhadas entre tipos de evento
         # da mesma live, pois o TikTok pode omitir follow/fã-clube no GiftEvent.
         self._live_access_evidence = {}
+        # Diagnóstico temporário, deduplicado por usuário/sala/origem/valores.
+        self._follower_probe_logged = set()
         # Últimos níveis vistos por (room_id, user) — dedupe de observações.
         self._viewer_levels = {}
         # Meta de tap (likes) da Palavra Secreta: enche barra e libera dica/charada
@@ -454,7 +459,46 @@ class GameSession:
         for identity in identities:
             self._live_access_evidence.setdefault(identity, set()).update(evidence)
 
-    def _check_access(self, meta, user=None) -> tuple:
+    def _log_follower_probe(self, user, meta, source, remembered, allowed, reason):
+        """Registra campos de seguidor apenas para a conta investigada, sem chat bruto."""
+        username = str(user or "").strip().lstrip("@").casefold()
+        if username != "iampeu" or not self.settings.get("apenas_seguidores"):
+            return
+        meta = meta if isinstance(meta, dict) else {}
+        details = {
+            "username": username,
+            "source": str(source or "unknown"),
+            "room_id": str(getattr(self, "current_room_id", None) or ""),
+            "follow_info_present": meta.get("follow_info_present"),
+            "follow_info_follow_status": meta.get("follow_info_follow_status"),
+            "follow_status_top_level": meta.get("follow_status_top_level"),
+            "follow_status_normalized": meta.get("follow_status"),
+            "is_following": meta.get("is_following"),
+            "is_follower": meta.get("is_follower"),
+            "follow_role": meta.get("follow_role"),
+            "cached_follower_evidence": bool(remembered),
+            "allowed": bool(allowed),
+            "reason": str(reason or ""),
+        }
+        signature = (details["username"], details["source"], details["room_id"],
+                     details["follow_info_present"], details["follow_info_follow_status"],
+                     details["follow_status_top_level"], details["follow_status_normalized"],
+                     details["is_following"], details["is_follower"], details["follow_role"],
+                     details["cached_follower_evidence"], details["allowed"], details["reason"])
+        if not isinstance(getattr(self, "_follower_probe_logged", None), set):
+            self._follower_probe_logged = set()
+        if signature in self._follower_probe_logged:
+            return
+        if len(self._follower_probe_logged) >= 64:
+            self._follower_probe_logged.clear()
+        self._follower_probe_logged.add(signature)
+        self._log_event(
+            "diagnostic", "debug", "access.follower_probe",
+            "Diagnóstico temporário dos campos de seguidor recebidos.",
+            code="FOLLOW_STATUS_PROBE", details=details,
+        )
+
+    def _check_access(self, meta, user=None, source="unknown") -> tuple:
         """Aplica os filtros de engajamento configurados.
 
         Retorna (permitido: bool, motivo: str).
@@ -470,6 +514,7 @@ class GameSession:
         if not active:
             return (True, "")
         if not meta and not remembered:
+            self._log_follower_probe(user, meta, source, "apenas_seguidores" in remembered, False, "sem_dados")
             return (False, "sem_dados")
         checks = []
         for flag in active:
@@ -477,9 +522,12 @@ class GameSession:
             current = self._is_follower(meta) if flag == "apenas_seguidores" else self._is_heartme(meta)
             ok = current or flag in remembered
             if not ok:
+                self._log_follower_probe(user, meta, source, flag in remembered, False, f"nao_{label}")
                 return (False, f"nao_{label}")
             checks.append(label)
-        return (True, ",".join(checks))
+        reason = ",".join(checks)
+        self._log_follower_probe(user, meta, source, "apenas_seguidores" in remembered, True, reason)
+        return (True, reason)
 
     def _is_streamer_comment(self, user) -> bool:
         comment_username = str(user or "").strip().lstrip("@").casefold()
@@ -539,6 +587,150 @@ class GameSession:
 
     async def _on_live_start(self, room_id, force_new=False):
         self._ensure_room(room_id, force_new=force_new)
+        await self._restore_pending_game_recovery(room_id)
+
+    def _game_recovery_checkpoint(self):
+        if not self.game.secret_word or self.game.finished or not self.game.game_id:
+            return None
+        return {
+            "version": 1,
+            "game_id": self.game.game_id,
+            "room_id": str(self.current_room_id or self._live_room_id() or ""),
+            "secret_word": self.game.secret_word,
+            "guesses": [dict(g) for g in self.game.guesses[-500:]],
+            "hints": list(self.game.hints_given[-100:]),
+            "hint_gifts": list(self.game.hint_gifts or []),
+            "riddle_gifts": list(self.game.riddle_gifts or []),
+            "size_gift": str(self.game.size_gift or ""),
+            "size_revealed": bool(self.game.size_revealed),
+            "letter_gift": str(self.game.letter_gift or ""),
+            "first_letter_revealed": bool(self.game.first_letter_revealed),
+            "active_gift": self.game.get_active_gift(),
+            "current_riddle_stage": int(getattr(self.game, "current_riddle_stage", 0) or 0),
+            "tension_score": int(getattr(self.game, "tension_score", 0) or 0),
+            "is_final_boss": bool(getattr(self.game, "is_final_boss", False)),
+            "tap_meta_current": int(self.tap_meta_current or 0),
+            "tap_meta_total": int(self.tap_meta_total or 1000),
+            "tap_meta_ready": bool(self.tap_meta_ready),
+            "tap_meta_x2": bool(self._tap_meta_x2),
+        }
+
+    async def _game_recovery_loop(self):
+        try:
+            while True:
+                checkpoint = self._game_recovery_checkpoint()
+                signature = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True) if checkpoint and checkpoint["room_id"] else None
+                if signature and signature != self._last_game_recovery_signature:
+                    emit(self.tenant_id, "game", {
+                        "type": "game_recovery_checkpoint", "checkpoint": checkpoint,
+                    })
+                    self._last_game_recovery_signature = signature
+                elif not signature and self._last_game_recovery_signature is not None:
+                    emit(self.tenant_id, "game", {"type": "game_recovery_cleared"})
+                    self._last_game_recovery_signature = None
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            return
+
+    async def _restore_pending_game_recovery(self, room_id):
+        checkpoint = self._pending_game_recovery
+        if not checkpoint:
+            return
+        self._pending_game_recovery = None
+        if (checkpoint.get("version") != 1 or
+                not str(room_id or "").strip() or
+                str(checkpoint.get("room_id") or "") != str(room_id).strip()):
+            emit(self.tenant_id, "game", {"type": "game_recovery_cleared", "reason": "room_mismatch"})
+            self._log_event("diagnostic", "warning", "palavra.recovery.rejected",
+                            "Recuperação da partida descartada porque a sala da live mudou.",
+                            game="palavra", code="GAME_RECOVERY_ROOM_MISMATCH")
+            return
+        secret = str(checkpoint.get("secret_word") or "").strip()
+        game_id = checkpoint.get("game_id")
+        if not secret or not game_id or len(secret) > 80:
+            emit(self.tenant_id, "game", {"type": "game_recovery_cleared", "reason": "invalid_checkpoint"})
+            self._log_event("diagnostic", "warning", "palavra.recovery.rejected",
+                            "Recuperação da partida descartada por estado inválido.",
+                            game="palavra", code="GAME_RECOVERY_INVALID")
+            return
+
+        self.game.secret_word = secret
+        self.game.game_id = game_id
+        self.game.guesses = [g for g in checkpoint.get("guesses", [])[-500:] if isinstance(g, dict)]
+        self.game.hints_given = [str(h) for h in checkpoint.get("hints", [])[-100:] if isinstance(h, str)]
+        self.game.hint_gifts = checkpoint.get("hint_gifts", []) if isinstance(checkpoint.get("hint_gifts"), list) else []
+        self.game.riddle_gifts = checkpoint.get("riddle_gifts", []) if isinstance(checkpoint.get("riddle_gifts"), list) else []
+        self.game.size_gift = str(checkpoint.get("size_gift") or "")
+        self.game.size_revealed = bool(checkpoint.get("size_revealed"))
+        self.game.letter_gift = str(checkpoint.get("letter_gift") or "")
+        self.game.first_letter_revealed = bool(checkpoint.get("first_letter_revealed"))
+        self.game.current_riddle_stage = int(checkpoint.get("current_riddle_stage") or 0)
+        self.game.finished = False
+        self.game.winner = None
+        self.game._pool_ready = False
+        self.game.tension_score = int(checkpoint.get("tension_score") or 0)
+        self.game.is_final_boss = bool(checkpoint.get("is_final_boss"))
+        self.game.recent_active_gifts = []
+        self.tap_meta_current = max(0, int(checkpoint.get("tap_meta_current") or 0))
+        self.tap_meta_total = max(50, int(checkpoint.get("tap_meta_total") or 1000))
+        self.tap_meta_ready = bool(checkpoint.get("tap_meta_ready"))
+        self._tap_meta_x2 = bool(checkpoint.get("tap_meta_x2"))
+        self._preparing = True
+        try:
+            await asyncio.to_thread(self.game._build_hint_pool)
+        except Exception as exc:
+            self._log_event("error", "error", "palavra.recovery.pool_failed",
+                            "Partida recuperada, mas o índice de proximidade não pôde ser carregado.",
+                            game="palavra", game_id=str(game_id), code="PALAVRA_RECOVERY_POOL_FAILED",
+                            details={"error_type": type(exc).__name__})
+        finally:
+            self.game._pool_ready = bool(self.game.all_scored and self.game.hint_pool)
+            self._preparing = False
+
+        active_gift = self.game.get_active_gift()
+        emit(self.tenant_id, "panel_word", self.game.secret_word)
+        emit(self.tenant_id, "game", {
+            "type": "game_start", "game_id": self.game.game_id,
+            "secret_length": len(secret) if (self.game.size_revealed or not self.game.size_gift) else 0,
+            "hint_gifts": self.game.hint_gifts, "riddle_gifts": self.game.riddle_gifts,
+            "size_gift": self.game.size_gift, "size_revealed": self.game.size_revealed,
+            "letter_gift": self.game.letter_gift,
+            "first_letter_revealed": self.game.first_letter_revealed,
+            "first_letter": secret[0] if self.game.first_letter_revealed else "",
+            "active_gift": active_gift, "tension_score": self.game.tension_score,
+            "is_final_boss": self.game.is_final_boss,
+            "tap_meta_current": self.tap_meta_current, "tap_meta_total": self.tap_meta_total,
+            "tap_meta_ready": self.tap_meta_ready,
+        })
+        for guess in self.game.guesses:
+            emit(self.tenant_id, "game", {
+                "type": "guess", "user": guess.get("user", ""),
+                "nickname": guess.get("nickname") or guess.get("user", ""),
+                "avatar": guess.get("avatar", ""), "word": guess.get("word", ""),
+                "rank": int(guess.get("rank", 1001)),
+                "color": get_rank_color(int(guess.get("rank", 1001))),
+                "is_hint": bool(guess.get("is_hint")), "gift": guess.get("gift"),
+            })
+        for hint in self.game.hints_given:
+            emit(self.tenant_id, "game", {"type": "gift_hint", "hint_word": hint})
+        current_riddle = checkpoint.get("current_riddle")
+        if isinstance(current_riddle, dict) and current_riddle.get("text"):
+            self.game.current_riddle_stage = max(self.game.current_riddle_stage,
+                                                 int(current_riddle.get("stage") or 0))
+            emit(self.tenant_id, "game", {"type": "riddle_ready", **current_riddle})
+        checkpoint = self._game_recovery_checkpoint()
+        if checkpoint and checkpoint["room_id"]:
+            emit(self.tenant_id, "game", {"type": "game_recovery_checkpoint", "checkpoint": checkpoint})
+            self._last_game_recovery_signature = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True)
+        emit(self.tenant_id, "game", {"type": "likes_ranking", "ranking": self.build_likes_ranking(5),
+                                       "ranking_all": self.build_likes_ranking(10),
+                                       "tap_meta_current": self.tap_meta_current,
+                                       "tap_meta_total": self.tap_meta_total,
+                                       "tap_meta_ready": self.tap_meta_ready})
+        self._log_event("game", "info", "palavra.recovery.restored",
+                        "Partida restaurada após reinício do motor.", game="palavra",
+                        game_id=str(game_id), details={"guess_count": len(self.game.guesses),
+                                                       "hint_count": len(self.game.hints_given)})
 
     async def _on_live_end(self, room_id):
         self._log_event(
@@ -562,6 +754,7 @@ class GameSession:
         self.battle.reset_live_window(rid)
         self._viewer_levels = {}
         self._live_access_evidence = {}
+        self._follower_probe_logged = set()
         self._likes_dirty = True
         self._log_event(
             "connection", "info", "live.session.started",
@@ -1014,7 +1207,7 @@ class GameSession:
              "user": str(user or ""), "nickname": str(nickname or user or ""), "avatar": str(avatar or "")})
         self._emit_interaction("share", user, nickname, avatar, event_id=event_id, room_id=room_id,
                                user_id=self._stable_uid(user, user_meta))
-        allowed, _ = self._check_access(user_meta, user)
+        allowed, _ = self._check_access(user_meta, user, source="share")
         if allowed:
             self.corda.share(self._stable_uid(user, user_meta), user, nickname, avatar)
 
@@ -1082,7 +1275,7 @@ class GameSession:
         if not self.game.finished and not getattr(self.game, "is_final_boss", False):
             self.tap_meta_current += int(like_count or 0)
 
-        allowed, reason = self._check_access(user_meta, user)
+        allowed, reason = self._check_access(user_meta, user, source="like")
         if not allowed:
             emit(self.tenant_id, "log", f"[Access] @{user} bloqueado ({reason}): tap ignorado nos jogos")
             return
@@ -1592,6 +1785,10 @@ class GameSession:
             "tap_meta_ready": pub_tap["tap_meta_ready"],
             "tap_meta_multiplier": pub_tap["tap_meta_multiplier"],
         })
+        checkpoint = self._game_recovery_checkpoint()
+        if checkpoint and checkpoint["room_id"]:
+            emit(self.tenant_id, "game", {"type": "game_recovery_checkpoint", "checkpoint": checkpoint})
+            self._last_game_recovery_signature = json.dumps(checkpoint, ensure_ascii=False, sort_keys=True)
         self._palavra_debug(
             "start.game_started",
             game_id=self.game.game_id,
@@ -1671,7 +1868,7 @@ class GameSession:
 
     async def _process_caca_command(self, matched, user, nickname, avatar, user_meta, access_override=False):
         start, end = matched
-        allowed, reason = self._check_access(user_meta, user)
+        allowed, reason = self._check_access(user_meta, user, source="comment")
         if not allowed and not access_override:
             emit(self.tenant_id, "log", f"[CacaPalavras] @{user} bloqueado ({reason}): coordenadas ignoradas")
             return
@@ -1690,7 +1887,7 @@ class GameSession:
             })
 
     async def _process_caca_word(self, word, user, nickname, avatar, user_meta, access_override=False):
-        allowed, _ = self._check_access(user_meta, user)
+        allowed, _ = self._check_access(user_meta, user, source="comment")
         if not allowed and not access_override:
             return
         w = self.caca.find_word_text(word, finder=user, nickname=nickname or user, avatar=avatar or "")
@@ -1717,7 +1914,7 @@ class GameSession:
         self._track_levels(user, nickname, avatar, user_meta, room_id, event_id=event_id)
         raw = text.strip()
         prefix = self._command_prefix()
-        allowed, _ = self._check_access(user_meta, user)
+        allowed, _ = self._check_access(user_meta, user, source="comment")
         is_streamer_comment = self._is_streamer_comment(user)
         game_allowed = allowed or is_streamer_comment
         if game_allowed:
@@ -1857,7 +2054,7 @@ class GameSession:
                 final_avatar = ""
 
         # Filtros de engajamento (seguiu o canal e/ou heart-me ativo)
-        allowed, reason = self._check_access(user_meta, user)
+        allowed, reason = self._check_access(user_meta, user, source="comment")
         if not allowed and not is_streamer_comment:
             self._palavra_debug("guess.rejected", reason=reason, game_id=self.game.game_id,
                                 user=final_user, guess_count=len(self.game.guesses or []), trace_id=event_id)
@@ -2002,10 +2199,10 @@ class GameSession:
         if self.vpet.active:
             self.vpet.on_gift(user, nickname, avatar, gift_name, int(diamond_count or 0), repeat_count)
 
-        allowed, _ = self._check_access(user_meta, user)
-        if allowed:
-            self.corda.gift(gift_id, gift_name, diamond_count, repeat_count,
-                            self._stable_uid(user, user_meta), user, nickname, avatar)
+        # Presentes não usam os filtros de participação (seguidor/Heart Me).
+        # As ações configuradas por presente devem funcionar para qualquer espectador.
+        self.corda.gift(gift_id, gift_name, diamond_count, repeat_count,
+                        self._stable_uid(user, user_meta), user, nickname, avatar)
 
         # DUELO 1x1: presente cadastrado dispara golpe/escudo (módulo isolado, retrocompatível)
         duelo_would_match = False
@@ -2034,26 +2231,7 @@ class GameSession:
                 elif not duelo_would_match:
                     emit(self.tenant_id, "log", f"[Duelo] Presente '{gift_name}' NÃO cadastrado como golpe/escudo/apoio")
 
-        allowed, reason = self._check_access(user_meta, user)
-        if not allowed:
-            if self.game.secret_word and not self.game.finished:
-                self._palavra_debug("gift.ignored", game_id=self.game.game_id,
-                                    reason="access_denied", access_reason=reason, user=user,
-                                    trace_id=event_id)
-            evidence = ", ".join(
-                f"{key}={user_meta.get(key, '?')}"
-                for key in ("follow_status", "is_following", "is_follower", "follow_role", "is_heart_me_active")
-            ) if isinstance(user_meta, dict) else "metadados ausentes"
-            self._log_event("game", "warning", "live.gift.rejected_by_access",
-                            f"[Acesso] Presente ignorado nos jogos pelo filtro de participação ({reason}; {evidence}).",
-                            trace_id=event_id, code="GAME_GIFT_ACCESS_REJECTED",
-                            details={"user": user, "reason": reason,
-                                     "follow_status": user_meta.get("follow_status") if isinstance(user_meta, dict) else None,
-                                     "is_following": user_meta.get("is_following") if isinstance(user_meta, dict) else None,
-                                     "is_follower": user_meta.get("is_follower") if isinstance(user_meta, dict) else None,
-                                     "follow_role": user_meta.get("follow_role") if isinstance(user_meta, dict) else None,
-                                     "is_heart_me_active": user_meta.get("is_heart_me_active") if isinstance(user_meta, dict) else None})
-            return
+        # Presentes são processados pelos jogos sem consultar os filtros de acesso.
         self.battle.add_coins(user, nickname, avatar, int(diamond_count or 0) * max(1, repeat_count))
         if not self.game.secret_word or self.game.finished:
             self._log_event("notice", "info", "live.gift.ignored",
@@ -2829,6 +3007,7 @@ class GameSession:
             narration_task = asyncio.create_task(self._chat_narration_worker())
             self._chat_narration_task = narration_task
             self._likes_loop_task = asyncio.create_task(self._likes_loop())
+            self._game_recovery_task = asyncio.create_task(self._game_recovery_loop())
             self._vpet_task = asyncio.create_task(self.vpet.run())
             self._corda_task = asyncio.create_task(self._corda_loop())
             await asyncio.wait({handler_task, cmd_task}, return_when=asyncio.FIRST_COMPLETED)
@@ -2844,7 +3023,7 @@ class GameSession:
                     self.tres.stop()
                 tasks = [t for t in (
                     handler_task, cmd_task, narration_task, self._likes_loop_task, self._vpet_task,
-                    self._corda_task, *tres_tasks, self._duelo_reset_task,
+                    self._corda_task, self._game_recovery_task, *tres_tasks, self._duelo_reset_task,
                     self._duelo_match_task, self._duelo_timer_task, self._duelo_round_result_task,
                 ) if t is not None and not t.done()]
                 for task in tasks:
@@ -2867,6 +3046,7 @@ class GameSession:
                                             code="SESSION_TASKS_UNCONFIRMED")
 
                 self._likes_loop_task = None
+                self._game_recovery_task = None
                 self._chat_narration_task = None
                 self._vpet_task = None
                 self._corda_task = None
@@ -2877,18 +3057,19 @@ class GameSession:
                 self.corda.stop()
                 self.battle.stop()
                 if self.game and self.game.secret_word and not self.game.finished:
-                    self._palavra_debug("end.begin", cause="session_disconnect", game_id=self.game.game_id,
-                                        guess_count=len(self.game.guesses or []),
-                                        room_id=self.current_room_id or self._live_room_id() or None,
-                                        trace_id=self.shutdown_trace_id or self.connect_trace_id)
-                    payload = self.game.finalize_game(room_id=self._live_room_id())
-                    if payload:
-                        emit(self.tenant_id, "game", payload)
-                        self._palavra_debug("end.finished", cause="session_disconnect",
-                                            game_id=self.game.game_id, winner=payload.get("winner"),
+                    if self.shutdown_trace_id:
+                        self._palavra_debug("end.begin", cause="session_disconnect", game_id=self.game.game_id,
                                             guess_count=len(self.game.guesses or []),
-                                            trace_id=self.shutdown_trace_id or self.connect_trace_id)
-                        emit(self.tenant_id, "log", "[FIM] Partida encerrada devido à desconexão.")
+                                            room_id=self.current_room_id or self._live_room_id() or None,
+                                            trace_id=self.shutdown_trace_id)
+                        payload = self.game.finalize_game(room_id=self._live_room_id())
+                        if payload:
+                            emit(self.tenant_id, "game", payload)
+                            self._palavra_debug("end.finished", cause="session_disconnect",
+                                                game_id=self.game.game_id, winner=payload.get("winner"),
+                                                guess_count=len(self.game.guesses or []),
+                                                trace_id=self.shutdown_trace_id)
+                            emit(self.tenant_id, "log", "[FIM] Partida encerrada devido à desconexão.")
                 self._reset_chat_narration(False)
                 self._flush_chat_narration_stats()
                 self._log_event("connection", "info", "connection.session.ended",
@@ -3009,6 +3190,7 @@ async def process_commands(queue):
                 engine=str(cmd.get("engine", "tiktools") or "tiktools"),
                 session_id=session_id,
                 connect_trace_id=cmd.get("trace_id"),
+                game_recovery=cmd.get("game_recovery"),
             )
             settings = cmd.get("settings")
             if isinstance(settings, dict):

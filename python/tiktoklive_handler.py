@@ -184,12 +184,15 @@ class TikTokLiveHandler:
         else:
             heart_me_active = legacy_heart_me_active
 
+        follow_info = deep(user, "follow_info")
+        follow_info_follow_status = first_int(deep(user, "follow_info", "follow_status"))
+        top_level_follow_status = first_int(getattr(user, "follow_status", None))
         follow_status = first_int(
-            deep(user, "follow_info", "follow_status"),
+            follow_info_follow_status,
             # O FollowInfo aninhado é o campo canônico do protobuf. Em algumas
             # versões, `user.follow_status` pode existir como valor padrão (0)
             # mesmo quando `follow_info.follow_status` traz a relação atual.
-            getattr(user, "follow_status", None),
+            top_level_follow_status,
         )
         direct_is_follower = getattr(user, "is_follower", None)
         direct_is_following = getattr(user, "is_following", None)
@@ -214,6 +217,11 @@ class TikTokLiveHandler:
         return {
             "follow_role": follow_role,
             "follow_status": follow_status,
+            # Campos temporários usados pelo diagnóstico direcionado do filtro.
+            # Não carregam texto do chat nem o objeto protobuf original.
+            "follow_info_present": follow_info is not None,
+            "follow_info_follow_status": follow_info_follow_status,
+            "follow_status_top_level": top_level_follow_status,
             "is_following": direct_is_following,
             "is_subscriber": getattr(user, "is_subscriber", False) or getattr(user, "subscribed", False),
             "is_follower": is_follower,

@@ -7,6 +7,8 @@
 > Rankings compatíveis são capturados no início da rodada; o alvo permanece
 > #1, sem atualização no meio da partida. Ver `docs/gerador-contextos-openrouter.md`.
 
+> 2026-11-06 — A Palavra Secreta mantém checkpoint privado no SQLite enquanto a rodada está ativa. Se Node ou daemon Python reiniciar, reconecta-se à mesma Room ID e reidrata palavra, palpites, dicas e meta sem sortear outra rodada; Room ID diferente ou checkpoint com mais de 24 horas invalida a recuperação. Desconexões inesperadas não finalizam a rodada; encerramento explícito continua finalizando. O checkpoint não é difundido ao navegador nem registrado em logs.
+
 > 2026-10-16 — Catálogo administrável de palavras semeado de `python/words.json`;
 > novas entradas passam por revisão. Palavra Secreta e 3 Dicas reservam palavras
 > aleatórias sem repetição no ciclo de cada streamer; ciclos anteriores permanecem
@@ -86,9 +88,9 @@ Este documento contém todas as regras de negócio, convenções de código, cor
 - `follow_status` do evento é a fonte preferida: `1` = segue e `2` = segue mutuamente; `0` = não segue. Nunca inferir que alguém segue só porque `follow_info` existe. Usar `is_follower`/`follow_role` como fallback quando o status não vier.
 - No adaptador TikTokLive, preferir `user.follow_info.follow_status` ao campo superior `user.follow_status`, que pode conter `0` default do protobuf enquanto o relacionamento aninhado informa o status atual. Se ambos estiverem ausentes, manter bloqueio fail-closed.
 - Heart Me significa membro **ativo do Fan Club**, não assinatura paga. No TikTokLive, `user_fans_club_status` usa `0=NOTJOINED`, `1=ACTIVE`, `2=INACTIVE`; quando `NOTJOINED` for o default protobuf, aceitar o sinal legado `FansClubInfo.fans_level > 0` com `is_sleeping=false`. `INACTIVE` explícito continua bloqueando. TikTools aplica a mesma precedência. Não usar `is_subscriber` como substituto.
-- Quando ativos ao mesmo tempo, os filtros são cumulativos (seguidor **e** Heart Me ativo). Sem evidência suficiente, bloquear a participação (fail-closed). Aplicar a ações dos jogos que vêm de comentários, curtidas e presentes e à narração do chat. Comentários ainda podem aparecer no painel/histórico, mas não devem acionar jogo nem entrar na fila de voz se o autor não passar nos filtros.
+- Quando ativos ao mesmo tempo, os filtros são cumulativos (seguidor **e** Heart Me ativo). Sem evidência suficiente, bloquear a participação (fail-closed). Aplicar às ações de jogo originadas por comentários, curtidas e compartilhamentos, e à narração do chat. **Presentes não passam pelos filtros de seguidor/Heart Me**: cada presente segue as regras e configurações próprias dos jogos. Comentários ainda podem aparecer no painel/histórico, mas não devem acionar jogo nem entrar na fila de voz se o autor não passar nos filtros.
 - O filtro não altera contagem geral de curtidas, ranking/meta da live nem relatórios de atividade; limita apenas a participação nos jogos e a narração dos comentários.
-- Comentários de espectadores só entram na narração e nos jogos quando passam pelos filtros ativos. A conta configurada do streamer pode enviar palpites e comandos de chat nos jogos da própria live mesmo sem metadados de seguidor/fã-clube; a exceção depende de correspondência exata do `unique_id` e não se estende a curtidas ou presentes.
+- Comentários de espectadores só entram na narração e nos jogos quando passam pelos filtros ativos. A conta configurada do streamer pode enviar palpites e comandos de chat nos jogos da própria live mesmo sem metadados de seguidor/fã-clube; a exceção depende de correspondência exata do `unique_id` e vale apenas para comentários. Curtidas continuam sujeitas aos filtros; presentes independem deles.
 - APIs `/api/live-sessions` e `/api/reports/{summary,series,ranking,events}` — autenticadas e **sempre escopadas por `req.user.id`**; nunca aceitam `tenant_id` do cliente; datas em UTC. Ver `docs/relatorios-interacoes.md`.
 
 ### 2.7 Overlay de curtidas — personalização validada

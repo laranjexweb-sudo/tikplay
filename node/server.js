@@ -246,6 +246,8 @@ function updateGameState(tenant, msg) {
   const gs = tenant.gameState;
   switch (msg.type) {
     case "game_start":
+      tenant.gameRecoveryCheckpoint = null;
+      db.clearActiveGameRecovery(tenant.id);
       tenant.gameState = {
         active: true,
         game_id: msg.game_id,
@@ -385,6 +387,8 @@ function updateGameState(tenant, msg) {
       gs.tap_meta_ready = !!msg.ready;
       break;
     case "game_over":
+      tenant.gameRecoveryCheckpoint = null;
+      db.clearActiveGameRecovery(tenant.id);
       gs.finished = true;
       gs.secret_word = msg.secret_word;
       if (msg.secret_word) gs.secret_length = msg.secret_word.length;
@@ -715,6 +719,27 @@ function handleDaemonMessage(msg) {
       }
     } else if (msg.type === "game") {
       let gameMsg = msg.msg || {};
+      if (gameMsg.type === "game_recovery_checkpoint") {
+        const checkpoint = gameMsg.checkpoint;
+        if (checkpoint && checkpoint.version === 1 && checkpoint.game_id === tenant.gameState.game_id &&
+            tenant.gameState.active && !tenant.gameState.finished) {
+          tenant.gameRecoveryCheckpoint = {
+            ...checkpoint,
+            current_riddle: tenant.gameState.current_riddle || checkpoint.current_riddle || null,
+          };
+          db.saveActiveGameRecovery(tenant.id, tenant.gameRecoveryCheckpoint);
+        }
+        return;
+      }
+      if (gameMsg.type === "game_recovery_cleared") {
+        tenant.gameRecoveryCheckpoint = null;
+        db.clearActiveGameRecovery(tenant.id);
+        if (gameMsg.reason === "room_mismatch" && tenant.gameState.active && !tenant.gameState.finished) {
+          tenant.gameState.active = false;
+          tenant.gameState.current_riddle = null;
+        }
+        return;
+      }
       if (gameMsg.type === "likes_ranking_delta") {
         if (liveLikesState.applyLikeDelta(tenant, gameMsg)) {
           tenant.gameState.likes_ranking = liveLikesState.ranking(tenant, 5);
@@ -2557,6 +2582,13 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
     engine,
     tres_gifts: db.getTresGiftConfig(user.id),
     caca_config: db.getCacaConfig(user.id),
+    game_recovery: (() => {
+      const checkpoint = tenant.gameRecoveryCheckpoint;
+      const roomId = String(tenant.currentRoomId || (tenant.currentStatus && tenant.currentStatus.room_id) || "");
+      return checkpoint && tenant.gameState.active && !tenant.gameState.finished &&
+        checkpoint.game_id === tenant.gameState.game_id && checkpoint.room_id && checkpoint.room_id === roomId
+        ? { ...checkpoint, current_riddle: tenant.gameState.current_riddle || null } : null;
+    })(),
   });
   if (!ok) {
     Object.assign(tenant, previousSession);
