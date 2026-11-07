@@ -1,4 +1,5 @@
 # PWA TikPlay — Live e sons no celular
+> 2026-11-07: App Android nativo em `node/mobile-android/` reutiliza `/sons-mobile/` no WebView e assume alertas/narração em serviço de primeiro plano com ExoPlayer e WebSocket existentes. O painel e os arquivos de sons continuam no servidor; o navegador/PWA mantém o player de contingência. A troca evita áudio duplicado quando o socket nativo conecta. Build debug validado; roteamento do áudio para uma live do TikTok precisa ser confirmado em aparelho real. Ver `app-android-sons.md`.
 
 > 2026-11-02: Área de conexão reorganizada com espaçamento vertical uniforme entre instrução, status, usuário, botões e mensagem de estado. Alteração somente visual; rotas, eventos, telemetria e comportamento de conexão não mudaram.
 

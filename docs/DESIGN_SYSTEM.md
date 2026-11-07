@@ -63,6 +63,8 @@
 > 2026-10-17: Refinamento de densidade em Sons → Narração: controle mestre mais compacto, cards com altura conforme o conteúdo, créditos em linha única com custo logo abaixo, botões de teste com largura igual, feedback de prévia em estado visual acessível e textos secundários/status de conexão mais discretos. Fluxo e eventos de TTS existentes preservados; nenhum evento novo.
 
 # TikPlay — Design System Oficial (tema reutilizável)
+> 2026-11-07: App Android TikPlay Sons reutiliza a tela móvel existente no WebView; serviço de primeiro plano mantém a reprodução local, a fila de eventos e os controles da notificação. Nenhuma API/evento novo. Projeto e instruções em `node/mobile-android/`; mapa/limitações em `docs/app-android-sons.md`.
+
 
 > 2026-11-06: Sons → Narração concentra a regra de voz em “Quais mensagens narrar”, sem controles de filtro redundantes. A opção de seleção da voz expressiva mantém o cartão na posição anterior; controles de teste não usam ícone de play. A regra de estratégia é compartilhada com a PWA. Ver `narracao-chat-edge.md` e `pwa-sons-mobile.md`.
 
