@@ -126,3 +126,21 @@ Nenhuma. O contrato consumido (`activity`) ja e atendido sem nova rota; o
 Dashboard continua com atualizacao manual. Se, numa etapa futura, quiser
 *historico/tempo de uso* ou *detalhamento de jogos simultaneos*, sera necessario
 definir campos/rotas e a coleta passara a exigir persistencia no backend.
+
+## Administracao de usuarios (2026-11-07)
+
+A tabela do Super Admin apresenta nome/e-mail, status e papel, usuario TikTok,
+estado da conexao TikTok, ultima atividade e saldo de TikCoins. O indicador
+"No painel agora" conta apenas usuarios com `activity.panel_online === true`;
+nao representa conexao com a live. O saldo vem da rota administrativa existente
+`GET /api/admin/tts/credit-balances`; falha ou ausencia de dado aparece como
+indisponivel, nunca como saldo zero.
+
+A edicao abre em painel lateral e reutiliza `GET /api/admin/users`, os endpoints
+existentes de criacao/edicao/status e redefinicao de senha. O email permanece
+somente para leitura durante edicao, a chave Tik.Tools e mascarada e campo
+vazio preserva a chave existente. Os campos de plano legado continuam
+disponiveis para compatibilidade, sem indicador comercial na listagem. A antiga
+rota administrativa de autorizacao individual de vozes foi removida; detalhes
+e limites estao em `docs/tts-credit-pricing.md`. O painel lateral avisa sobre
+alteracoes nao salvas e usa somente os campos ainda editaveis pelo administrador.

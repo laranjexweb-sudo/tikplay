@@ -77,6 +77,8 @@ class AdditionalVoiceTests(unittest.TestCase):
 
     @patch("additional_voice_tts.urllib.request.urlopen", return_value=AudioResponse())
     def test_openrouter_model_sends_selected_voice_and_reuses_cache(self, network):
+        with closing(sqlite3.connect(self.database)) as conn, conn:
+            conn.execute("UPDATE tenant_elevenlabs SET enabled=0 WHERE tenant_id=1")
         path, code = provider.synthesize(1, "olá chat", self.audio)
         self.assertEqual(code, "SYNTHESIZED")
         self.assertTrue(Path(path).is_file())

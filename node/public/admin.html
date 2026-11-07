@@ -24,7 +24,7 @@
 </style>
 <link rel="stylesheet" href="/ui/tikplay-theme.css">
 <link rel="stylesheet" href="/ui/tikplay-panels.css">
-<link rel="stylesheet" href="/ui/tikplay-admin-site.css?v=20261017-dashboard-ux-v2">
+<link rel="stylesheet" href="/ui/tikplay-admin-site.css?v=20261107-users-ux-v1">
 <link rel="stylesheet" href="/ui/tikplay-admin-buttons.css?v=20261014-v2">
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
 <link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v11">
@@ -88,12 +88,6 @@
   <div class="tp-dashboard-two-column"><section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardGamesTitle"><div class="tp-dashboard-panel-heading"><div><h2 id="dashboardGamesTitle">Jogos em andamento</h2><p>Contas com estado atual identificado.</p></div></div><div id="dashboardGameList" class="tp-dashboard-game-list"><p class="text-secondary">Dados de uso indisponíveis.</p></div></section><section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardIncidentsTitle"><div class="tp-dashboard-panel-heading"><div><h2 id="dashboardIncidentsTitle">Incidentes recentes</h2><p>Alertas ativos do Monitor de Servidor.</p></div><a href="#adminMonitor/incidents">Ver todos</a></div><div id="dashboardIncidentList" class="tp-dashboard-incident-list"><p class="text-secondary">Carregando incidentes…</p></div></section></div>
   <section class="tp-dashboard-panel tp-admin-operation-block" aria-labelledby="dashboardCustomersTitle"><div class="tp-admin-dashboard-heading"><div><h2 id="dashboardCustomersTitle">Atividade dos clientes</h2><p>Estado atual, consumo de TikCoins e custos medidos por conta.</p></div><label class="tp-dashboard-search" for="dashboardSearch">Buscar cliente<input id="dashboardSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label></div><div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Cliente</th><th>TikTok</th><th>Painel</th><th>Conexão TikTok</th><th>Jogo atual</th><th>Última atividade</th><th>TikCoins usados</th><th>Custo medido</th><th>Conta</th></tr></thead><tbody id="dashboardActivity"><tr><td colspan="9">Carregando contas…</td></tr></tbody></table></div></section>
 </section>
-<div class="tp-admin-metrics" aria-label="Resumo de contas">
-  <div><span>Total de contas</span><strong id="metricTotal">—</strong></div>
-  <div><span>Contas ativas</span><strong id="metricActive">—</strong></div>
-  <div><span>Planos Pro</span><strong id="metricPro">—</strong></div>
-  <div><span>Contas desativadas</span><strong id="metricDisabled">—</strong></div>
-</div>
 <section class="tp-admin-section tp-admin-management tp-admin-management-integrations" id="adminRules" aria-label="Integrações">
   <div class="tp-integration-summary" aria-label="Resumo das integrações">
     <article class="tp-integration-metric"><span>Integrações conectadas</span><strong id="integrationConnectedCount">—</strong></article>
@@ -116,7 +110,7 @@
         </div></details>
       </article>
       <article class="tp-admin-operation-block tp-integration-card" id="elevenIntegrationCard" aria-labelledby="elevenGlobalTitle">
-        <div class="tp-integration-card-head"><div><h4 id="elevenGlobalTitle">ElevenLabs</h4><p>Vozes adicionais liberadas aos clientes.</p></div><span class="tp-integration-state" id="elevenConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-card-head"><div><h4 id="elevenGlobalTitle">ElevenLabs</h4><p>Integração usada pelas vozes expressivas disponíveis na plataforma.</p></div><span class="tp-integration-state" id="elevenConnectionState" data-state="loading">Verificando…</span></div>
         <div class="tp-integration-meta"><span id="elevenSourceSummary">Origem: verificando…</span><span id="elevenLastCheck">Ainda não testada nesta sessão</span></div>
         <div class="tp-admin-feedback tp-integration-test-feedback" id="elevenCardTestFeedback" role="status" aria-live="polite"></div>
         <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="elevenGlobalTest" type="button" onclick="testIntegration('elevenlabs')" disabled>Testar conexão</button></div>
@@ -232,28 +226,47 @@
 
 <section class="tp-admin-section tp-admin-management" id="adminAccounts" aria-labelledby="adminAccountsHeading">
   <header class="tp-admin-section-heading tp-admin-section-heading-wrap">
-    <div><h2 id="adminAccountsHeading">Usuários <span id="userCount" class="tp-admin-count">0</span></h2><p>Contas, permissões, plano e atividade dos clientes.</p></div>
-    <button type="button" class="btn btn-nb btn-success" onclick="toggleUserForm()">Criar conta</button>
+    <div><span class="tp-admin-eyebrow">WORKSPACE / SUPER ADMIN</span><h2 id="adminAccountsHeading">Usuários</h2><p>Gerencie contas, acessos e permissões da plataforma.</p></div>
+    <button type="button" class="btn btn-nb btn-success" id="createUserButton" onclick="toggleUserForm()">Criar usuário</button>
   </header>
 
+  <div class="tp-admin-metrics tp-admin-user-metrics" aria-label="Resumo de contas">
+    <div><span>Total de contas</span><strong id="metricTotal">—</strong></div>
+    <div><span>Contas ativas</span><strong id="metricActive">—</strong></div>
+    <div><span>Contas desativadas</span><strong id="metricDisabled">—</strong></div>
+    <div><span title="Sessões autenticadas do painel; não representa o estado da live.">No painel agora</span><strong id="metricOnline">—</strong></div>
+  </div>
+
   <div class="tp-admin-toolbar">
-    <label for="adminSearch">Buscar cliente<input id="adminSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label>
+    <label for="adminSearch">Buscar usuário<input id="adminSearch" type="search" class="form-control" placeholder="Nome, e-mail ou TikTok"></label>
     <label for="adminStatusFilter">Conta<select id="adminStatusFilter" class="form-select"><option value="">Todas</option><option value="active">Ativas</option><option value="disabled">Desativadas</option></select></label>
     <button type="button" class="btn btn-nb btn-dark" id="adminRefresh">Atualizar</button>
     <span id="adminLoadMsg" role="status" aria-live="polite"></span>
   </div>
-  <div id="userFormCard" class="tp-admin-user-form" style="display:none">
-    <div id="userFormTitle" class="tp-admin-form-title">Nova conta</div>
+
+  <div class="table-responsive tp-admin-user-table-wrap">
+    <table class="table table-striped align-middle tp-admin-table tp-admin-users-table">
+      <thead><tr><th>Usuário</th><th>Conta</th><th>TikTok</th><th>Conexão</th><th>Última atividade</th><th>TikCoins</th><th>Ações</th></tr></thead>
+      <tbody id="userTable"><tr><td colspan="7">Carregando contas…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="tp-admin-user-editor-overlay" id="userEditorOverlay" hidden>
+    <button type="button" class="tp-admin-user-editor-backdrop" id="userEditorBackdrop" aria-label="Fechar edição"></button>
+    <aside id="userFormCard" class="tp-admin-user-drawer" role="dialog" aria-modal="true" aria-labelledby="userFormTitle" tabindex="-1">
+    <header class="tp-admin-user-drawer-header"><div><span class="tp-admin-eyebrow">CONTA E PERMISSÕES</span><h2 id="userFormTitle">Novo usuário</h2></div><button type="button" class="tp-admin-user-drawer-close" id="userEditorClose" aria-label="Fechar painel">×</button></header>
+    <p class="tp-admin-user-unsaved" id="userEditorUnsaved" role="status" aria-live="polite" hidden>Alterações não salvas.</p>
     <div class="row g-2">
       <div class="col-md-4"><label class="form-label mb-0" for="uName">Nome</label><input type="text" class="form-control form-control-sm" id="uName"></div>
       <div class="col-md-4"><label class="form-label mb-0" for="uEmail">E-mail</label><input type="email" class="form-control form-control-sm" id="uEmail"></div>
-      <div class="col-md-4"><label class="form-label mb-0" for="uPassword">Senha <span>(mínimo 8 caracteres)</span></label><input type="password" class="form-control form-control-sm" id="uPassword" autocomplete="new-password"></div>
-      <div class="col-md-3"><label class="form-label mb-0" for="uPlan">Plano</label>
+      <div class="col-md-4" id="uPasswordField"><label class="form-label mb-0" for="uPassword">Senha <span>(mínimo 8 caracteres)</span></label><input type="password" class="form-control form-control-sm" id="uPassword" autocomplete="new-password"></div>
+      <div class="col-md-3"><label class="form-label mb-0" for="uPlan">Plano legado</label>
         <select class="form-select form-select-sm" id="uPlan">
           <option value="free">free</option>
           <option value="pro_mensal">pro_mensal</option>
           <option value="pro_anual">pro_anual</option>
         </select>
+        <small class="text-secondary">Mantido para compatibilidade com os dados existentes.</small>
       </div>
       <div class="col-md-3"><label class="form-label mb-0" for="uRole">Permissão</label>
         <select class="form-select form-select-sm" id="uRole">
@@ -262,52 +275,26 @@
         </select>
       </div>
       <div class="col-md-3"><label class="form-label mb-0" for="uTikTok">Usuário TikTok</label><input type="text" class="form-control form-control-sm" id="uTikTok"></div>
-      <div class="col-md-3"><label class="form-label mb-0" for="uApiKey">Chave da API Tik.Tools</label><input type="text" class="form-control form-control-sm" id="uApiKey"></div>
+      <div class="col-md-3"><label class="form-label mb-0" for="uApiKey">Chave da API Tik.Tools</label><input type="password" class="form-control form-control-sm" id="uApiKey" autocomplete="new-password"><small class="text-secondary" id="uApiKeyHelp"></small></div>
     </div>
     <div class="tp-admin-feature-box">
-      <div class="d-flex justify-content-between align-items-center mb-1">
+      <div class="tp-admin-feature-heading">
         <span class="tp-admin-form-title">Funcionalidades liberadas</span>
-        <span>
+        <div>
           <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(true)">Todas</button>
           <button type="button" class="btn btn-nb btn-dark btn-tiny" onclick="setAllFeatures(false)">Nenhuma</button>
-        </span>
+        </div>
       </div>
-      <div class="d-flex flex-wrap gap-3" id="featuresBox"></div>
+      <p class="tp-admin-feature-count" id="featureSelectionCount" role="status" aria-live="polite"></p>
+      <div class="tp-admin-feature-grid" id="featuresBox"></div>
       <div class="text-secondary tp-admin-help">Deixe todas marcadas para liberar tudo. Aba "Conectar Live" é sempre obrigatória.</div>
     </div>
-    <div class="tp-admin-feature-box" id="elevenAdminBox" hidden>
-      <span class="tp-admin-form-title">Voz adicional · Leitor de chat</span>
-      <label class="form-check"><input class="form-check-input" type="checkbox" id="elevenAdminEnabled">Liberar vozes adicionais nesta conta</label>
-      <div class="text-secondary small">Saldo atual: <strong id="elevenAdminBalance">0 TikCoins</strong></div>
-      <button class="btn btn-nb btn-dark" type="button" id="elevenAdminSave" onclick="saveElevenAccess()">Salvar acesso de voz</button>
-      <span id="elevenAdminStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span>
-    </div>
-    <div class="d-flex gap-2 mt-3 align-items-center">
-      <button type="button" class="btn btn-nb btn-success" onclick="submitUser()">Salvar usuário</button>
-      <button type="button" class="btn btn-nb btn-dark" onclick="toggleUserForm()">Cancelar</button>
+    <footer class="tp-admin-user-drawer-footer">
+      <button type="button" class="btn btn-nb btn-success" id="userEditorSave" onclick="submitUser()">Salvar</button>
+      <button type="button" class="btn btn-nb btn-dark" id="userEditorCancel" onclick="closeUserForm()">Cancelar</button>
       <span class="tp-admin-feedback" id="userFormMsg" role="status" aria-live="polite"></span>
-    </div>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table table-striped align-middle tp-admin-table tp-admin-users-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Nome</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Plano</th>
-          <th>TikTok</th>
-          <th>Sala</th>
-          <th>Uso atual</th>
-          <th>Conta criada</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="userTable"></tbody>
-    </table>
+    </footer>
+    </aside>
   </div>
 </section>
 
@@ -507,9 +494,36 @@ document.addEventListener("click", (event) => {
   if (menu && !event.target.closest("#adminAccountMenu")) menu.open = false;
 });
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.getElementById("userEditorOverlay").hidden) {
+    closeUserForm();
+    return;
+  }
   if (event.key === "Escape") document.getElementById("adminAccountMenu").open = false;
 });
-window.addEventListener('hashchange', selectAdminSection);
+document.getElementById("userEditorClose").addEventListener("click", () => closeUserForm());
+document.getElementById("userEditorBackdrop").addEventListener("click", () => closeUserForm());
+document.getElementById("userFormCard").addEventListener("input", refreshUserEditorDirtyState);
+document.getElementById("userFormCard").addEventListener("change", event => {
+  refreshUserEditorDirtyState();
+  if (event.target.matches("#featuresBox .feat-check")) refreshFeatureSelectionCount();
+});
+document.getElementById("userFormCard").addEventListener("keydown", event => {
+  if (event.key !== "Tab") return;
+  const focusable = [...event.currentTarget.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex]:not([tabindex="-1"])')]
+    .filter(element => element.getClientRects().length && !element.closest("[hidden]"));
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
+window.addEventListener("beforeunload", event => {
+  if (document.getElementById("userEditorOverlay").hidden || !refreshUserEditorDirtyState()) return;
+  event.preventDefault(); event.returnValue = "";
+});
+window.addEventListener('hashchange', () => {
+  selectAdminSection();
+  if (location.hash === '#adminAccounts' && usersData.length) loadAdminCreditBalances();
+});
 selectAdminSection();
 const token = localStorage.getItem("token");
 if (!token) location.href = "/login";
@@ -633,6 +647,9 @@ function formatAdminDate(value) {
 
 let usersData = [];
 let editingId = null;
+let adminCreditBalancesByUser = new Map();
+let userEditorBaseline = null;
+let userEditorReturnFocus = null;
 let dashboardData = { costs: null, monitor: null, incidents: null, integrations: null, rates: [] };
 let dashboardLastUpdatedAt = 0;
 let dashboardRefreshTimer = null;
@@ -827,12 +844,12 @@ async function loadUsers({ silent = false } = {}) {
   const data = await apiFetch("/api/admin/users");
   if (!data.success) throw new Error('Não foi possível carregar as contas.');
   usersData = data.users;
-  document.getElementById("userCount").textContent = usersData.length;
   document.getElementById('metricTotal').textContent = usersData.length;
   document.getElementById('metricActive').textContent = usersData.filter(u => u.status === 'active').length;
   document.getElementById('metricDisabled').textContent = usersData.filter(u => u.status === 'disabled').length;
-  document.getElementById('metricPro').textContent = usersData.filter(u => String(u.plan).startsWith('pro_')).length;
+  document.getElementById('metricOnline').textContent = usersData.filter(u => u.activity?.panel_online === true).length;
   renderAdminUsers();
+  if (location.hash === '#adminAccounts') await loadAdminCreditBalances();
   renderAdminDashboard();
   await loadDashboardData();
   if (!silent) message.textContent = '';
@@ -1037,58 +1054,92 @@ function renderAdminUsers() {
   tbody.innerHTML = "";
   for (const u of filtered) {
     const tr = document.createElement("tr");
-    const statusClass = u.status === "active" ? "text-bg-success" : "text-bg-danger";
-    const statusLabel = u.status === "active" ? "ativo" : "desativado";
     const toggleLabel = u.status === "active" ? "Desativar" : "Ativar";
-    tr.innerHTML = `
-      <td>${u.id}</td>
-      <td>${esc(u.name)}</td>
-      <td>${esc(u.email)}</td>
-      <td><span class="badge ${u.role === "admin" ? "text-bg-dark" : "text-bg-light"} badge-outline">${esc(u.role)}</span></td>
-      <td><span class="badge ${statusClass} badge-outline">${statusLabel}</span></td>
-      <td>${esc(u.plan)}</td>
-      <td>${esc(u.tiktok_username) || "-"}</td>
-      <td><code>${esc(u.room_code)}</code></td>
-      <td>${renderAdminUsage(u.activity)}</td>
-      <td><time>${esc(formatAdminDate(u.created_at))}</time></td>
-      <td><div class="tp-admin-row-actions">
-        <button type="button" class="btn btn-nb tp-admin-icon-action ${u.status === "active" ? "btn-danger" : "btn-success"}" aria-label="${toggleLabel} conta de ${esc(u.name)}" title="${toggleLabel} conta" onclick="toggleStatus(${u.id}, '${u.status === "active" ? "disabled" : "active"}')">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
-        </button>
-        <button type="button" class="btn btn-nb btn-warn tp-admin-icon-action" aria-label="Redefinir senha de ${esc(u.name)}" title="Redefinir senha" onclick="resetPassword(${u.id})">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 8-8a2 2 0 0 1 2.83 2.83l-1.42 1.42-1.41-1.41-2.12 2.12 1.41 1.41-2.12 2.12"/></svg>
-        </button>
-        <button type="button" class="btn btn-nb btn-dark tp-admin-icon-action" aria-label="Editar conta de ${esc(u.name)}" title="Editar conta" onclick="editUser(${u.id})">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 4 4 4L9 19l-5 1 1-5Z"/><path d="m14 6 4 4"/></svg>
-        </button>
-      </div></td>
-    `;
+    const statusLabel = u.status === "active" ? "Ativa" : "Desativada";
+    const statusClass = u.status === "active" ? "text-bg-success" : "text-bg-danger";
+    const connection = { connected: "Conectado", connecting: "Conectando", reconnecting: "Reconectando", disconnected: "Desconectado", offline: "Offline" };
+    const connectionLabel = u.activity && Object.hasOwn(connection, u.activity.tiktok_status) ? connection[u.activity.tiktok_status] : "Indisponível";
+    const connectionClass = u.activity?.tiktok_status === "connected" ? "text-bg-success" : "text-bg-secondary";
+    const lastActivity = typeof u.activity?.last_activity_at === "string" ? formatAdminDate(u.activity.last_activity_at) : "Indisponível";
+    const balance = adminCreditBalancesByUser.get(Number(u.id));
+    tr.innerHTML = `<td><strong>${esc(u.name || "Sem nome")}</strong><small class="tp-dashboard-email">${esc(u.email || "")}</small></td>
+      <td><div class="tp-admin-user-account"><span class="badge ${statusClass} badge-outline">${statusLabel}</span>${u.role === "admin" ? '<span class="badge text-bg-dark badge-outline">Administrador</span>' : '<span class="tp-admin-user-role">Streamer</span>'}</div></td>
+      <td>${u.tiktok_username ? `<span class="tp-admin-tiktok">@${esc(String(u.tiktok_username).replace(/^@/, ""))}</span>` : '<span class="tp-admin-muted">Não informado</span>'}</td>
+      <td><span class="badge ${connectionClass} badge-outline">${esc(connectionLabel)}</span></td>
+      <td>${lastActivity === "Indisponível" ? '<span class="tp-admin-muted">Indisponível</span>' : `<time>${esc(lastActivity)}</time>`}</td>
+      <td>${balance === undefined ? '<span class="tp-admin-muted" title="Saldo indisponível">—</span>' : `<strong class="tp-admin-user-balance">${Number(balance).toLocaleString("pt-BR")}</strong><small class="tp-dashboard-email">TikCoins</small>`}</td>
+      <td><div class="tp-admin-user-actions"><button type="button" class="btn btn-nb btn-dark btn-tiny" data-user-edit>Editar</button><button type="button" class="btn btn-nb ${u.status === "active" ? "btn-danger" : "btn-success"} btn-tiny" data-user-status>${toggleLabel}</button><button type="button" class="btn btn-nb btn-warn btn-tiny" data-user-password>Redefinir senha</button></div></td>`;
+    tr.querySelector("[data-user-edit]").addEventListener("click", event => editUser(u.id, event.currentTarget));
+    tr.querySelector("[data-user-status]").addEventListener("click", () => toggleStatus(u.id, u.status === "active" ? "disabled" : "active"));
+    tr.querySelector("[data-user-password]").addEventListener("click", () => resetPassword(u.id));
     tbody.appendChild(tr);
   }
   if (!filtered.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 11;
+    cell.colSpan = 7;
     cell.textContent = 'Nenhuma conta encontrada.';
     row.appendChild(cell);
     tbody.appendChild(row);
   }
 }
 
+function loadAdminCreditBalances() {
+  return apiFetch("/api/admin/tts/credit-balances").then(result => {
+    if (!result.success) throw new Error(result.error || "Falha ao carregar saldos.");
+    adminCreditBalancesByUser = new Map((result.accounts || []).map(account => [Number(account.id), Number(account.balance || 0)]));
+    renderAdminUsers();
+  }).catch(() => {
+    adminCreditBalancesByUser = new Map(); renderAdminUsers();
+  });
+}
+
+function userFormSnapshot() {
+  const values = ["uName", "uEmail", "uPassword", "uPlan", "uRole", "uTikTok", "uApiKey"]
+    .map(id => document.getElementById(id).value);
+  values.push(...[...document.querySelectorAll("#featuresBox .feat-check")].map(input => input.checked));
+  return JSON.stringify(values);
+}
+
+function refreshUserEditorDirtyState() {
+  const dirty = userEditorBaseline !== null && userEditorBaseline !== userFormSnapshot();
+  document.getElementById("userEditorUnsaved").hidden = !dirty;
+  document.getElementById("userEditorSave").classList.toggle("tp-admin-user-save-dirty", dirty);
+  return dirty;
+}
+
+function showUserEditor(trigger = document.activeElement) {
+  const overlay = document.getElementById("userEditorOverlay");
+  userEditorReturnFocus = trigger instanceof HTMLElement ? trigger : null;
+  overlay.hidden = false;
+  userEditorBaseline = userFormSnapshot();
+  refreshUserEditorDirtyState();
+  requestAnimationFrame(() => document.getElementById("uName").focus());
+}
+
 function toggleUserForm() {
-  const card = document.getElementById("userFormCard");
-  const show = card.style.display === "none";
-  card.style.display = show ? "block" : "none";
-  if (show) {
-    editingId = null;
-    document.getElementById("elevenAdminBox").hidden = true;
-    document.getElementById("userFormTitle").textContent = "Nova conta";
-    for (const id of ["uName", "uEmail", "uPassword", "uTikTok", "uApiKey"]) document.getElementById(id).value = "";
-    document.getElementById("uPlan").value = "free";
-    document.getElementById("uRole").value = "user";
-    document.getElementById("userFormMsg").textContent = "";
-    renderFeaturesBox({});
-  }
+  if (!document.getElementById("userEditorOverlay").hidden) { closeUserForm(); return; }
+  editingId = null;
+  document.getElementById("userFormTitle").textContent = "Criar usuário";
+  for (const id of ["uName", "uEmail", "uPassword", "uTikTok", "uApiKey"]) document.getElementById(id).value = "";
+  document.getElementById("uEmail").readOnly = false;
+  document.getElementById("uPasswordField").hidden = false;
+  document.getElementById("uApiKeyHelp").textContent = "";
+  document.getElementById("uPlan").value = "free";
+  document.getElementById("uRole").value = "user";
+  document.getElementById("userFormMsg").textContent = "";
+  renderFeaturesBox({});
+  showUserEditor();
+}
+
+function closeUserForm(force = false) {
+  if (!force && refreshUserEditorDirtyState() && !confirm("Há alterações não salvas. Descartar as alterações?")) return false;
+  document.getElementById("userEditorOverlay").hidden = true;
+  document.getElementById("userEditorUnsaved").hidden = true;
+  userEditorBaseline = null;
+  editingId = null;
+  if (userEditorReturnFocus?.isConnected) userEditorReturnFocus.focus();
+  return true;
 }
 
 const FEATURE_LIST = [
@@ -1096,12 +1147,12 @@ const FEATURE_LIST = [
   { key: "chat", label: "Leitura de Chat" },
   { key: "alerts", label: "Alertas Sonoros" },
   { key: "games", label: "Palavra Secreta" },
-  { key: "batalha", label: "BATALHA" },
+  { key: "batalha", label: "Batalha" },
   { key: "caca", label: "Caça Palavras" },
   { key: "bichinho", label: "Bichinho" },
   { key: "tres", label: "3 Dicas" },
   { key: "duelo", label: "Duelo 1x1" },
-  { key: "corda", label: "CORDA" },
+  { key: "corda", label: "Corda" },
   { key: "quiz", label: "Quiz Live" },
   { key: "ring_arena", label: "Arena dos Anéis" },
 ];
@@ -1111,20 +1162,41 @@ function renderFeaturesBox(features) {
   if (!box) return;
   const f = (features && typeof features === "object") ? features : {};
   const allChecked = !Object.keys(f).length; // {} = tudo liberado
-  box.innerHTML = FEATURE_LIST.map((ft) => {
+  const groups = [
+    ["Acesso e interação", ["connect", "chat", "alerts"]],
+    ["Jogos", FEATURE_LIST.map(item => item.key).filter(key => !["connect", "chat", "alerts"].includes(key))],
+  ];
+  box.innerHTML = groups.map(([title, keys]) => `<section class="tp-admin-feature-group"><h4>${title}</h4><div>${FEATURE_LIST.filter(ft => keys.includes(ft.key)).map((ft) => {
     const featureKey = ft.key === "corda" && !Object.hasOwn(f, "corda") ? "duelo" : ft.key;
     const checked = ft.key === "connect" ? true : (allChecked ? true : (ft.key === "ring_arena" && !Object.hasOwn(f, featureKey) ? false : f[featureKey] !== false));
-    return `<label class="form-check form-check-inline mb-0" style="font-size:0.8rem">
-      <input class="form-check-input feat-check" type="checkbox" value="${ft.key}" data-feat="${ft.key}" ${checked ? "checked" : ""} ${ft.key === "connect" ? "disabled" : ""}>
-      ${ft.label}
-    </label>`;
-  }).join("");
+    const required = ft.key === "connect";
+    return `<label class="tp-admin-feature-option ${checked ? "is-enabled" : "is-disabled"} ${required ? "is-required" : ""}"><input class="feat-check" type="checkbox" value="${ft.key}" data-feat="${ft.key}" ${checked ? "checked" : ""} ${required ? "disabled" : ""}><span>${ft.label}</span><small>${required ? "Obrigatório" : checked ? "Liberado" : "Bloqueado"}</small></label>`;
+  }).join("")}</div></section>`).join("");
+  refreshFeatureSelectionCount();
+}
+
+function refreshFeatureSelectionCount() {
+  const counter = document.getElementById("featureSelectionCount");
+  if (!counter) return;
+  const inputs = [...document.querySelectorAll("#featuresBox .feat-check")];
+  const selected = inputs.filter(input => input.checked).length;
+  counter.textContent = `${selected} de ${inputs.length} funcionalidades liberadas`;
+  for (const input of inputs) {
+    const card = input.closest(".tp-admin-feature-option");
+    const isSelected = input.checked;
+    card.classList.toggle("is-enabled", isSelected);
+    card.classList.toggle("is-disabled", !isSelected);
+    const state = card.querySelector("small");
+    if (state && !input.disabled) state.textContent = isSelected ? "Liberado" : "Bloqueado";
+  }
 }
 
 function setAllFeatures(val) {
   document.querySelectorAll(".feat-check").forEach((c) => {
     if (c.value !== "connect") c.checked = !!val;
   });
+  refreshFeatureSelectionCount();
+  refreshUserEditorDirtyState();
 }
 
 function getFeatures() {
@@ -1140,24 +1212,24 @@ function getFeatures() {
   return anyUnchecked ? f : {};
 }
 
-function editUser(id) {
+function editUser(id, trigger = document.activeElement) {
   const u = usersData.find((x) => x.id === id);
   if (!u) return;
   editingId = id;
-  loadElevenAccess(id);
-  document.getElementById("userFormTitle").textContent = `Editar conta #${id}`;
+  document.getElementById("userFormTitle").textContent = `Editar ${u.name || "usuário"}`;
   document.getElementById("uName").value = u.name || "";
   document.getElementById("uEmail").value = u.email || "";
+  document.getElementById("uEmail").readOnly = true;
+  document.getElementById("uPasswordField").hidden = true;
+  document.getElementById("uApiKeyHelp").textContent = "Deixe em branco para manter a chave atual.";
   document.getElementById("uPassword").value = "";
   document.getElementById("uPlan").value = u.plan || "free";
   document.getElementById("uRole").value = u.role || "user";
   document.getElementById("uTikTok").value = u.tiktok_username || "";
   document.getElementById("uApiKey").value = "";
-  document.getElementById("userFormMsg").textContent = "Deixe a senha em branco para manter a atual.";
+  document.getElementById("userFormMsg").textContent = "Para alterar a senha, use a ação “Redefinir senha” na tabela.";
   renderFeaturesBox(u.features || {});
-  const card = document.getElementById("userFormCard");
-  card.style.display = "block";
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  showUserEditor(trigger);
 }
 
 let elevenGlobalConfigured = false;
@@ -1943,46 +2015,10 @@ async function previewAdditionalVoice(modelId, voiceId, button) {
   }
 }
 
-async function loadElevenAccess(id) {
-  const box = document.getElementById("elevenAdminBox");
-  const button = document.getElementById("elevenAdminSave");
-  box.hidden = false;
-  button.disabled = true;
-  document.getElementById("elevenAdminStatus").textContent = "Carregando...";
-  try {
-    const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`);
-    if (editingId !== id) return;
-    if (!data.success) throw new Error("Falha ao carregar.");
-    document.getElementById("elevenAdminEnabled").checked = data.enabled;
-    document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} TikCoins`;
-    document.getElementById("elevenAdminStatus").textContent = data.configured || data.openrouter_configured
-      ? "Acesso e saldo de TikCoins disponíveis." : "Configure ElevenLabs ou OpenRouter nas integrações globais.";
-    button.disabled = false;
-  } catch {
-    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = "Não foi possível carregar o acesso.";
-  }
-}
-
-async function saveElevenAccess() {
-  const id = editingId;
-  if (!id) return;
-  const button = document.getElementById("elevenAdminSave");
-  button.disabled = true;
-  try {
-    const data = await apiFetch(`/api/admin/users/${id}/elevenlabs`, { method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: document.getElementById("elevenAdminEnabled").checked }) });
-    if (!data.success) throw new Error(data.error || "Falha ao salvar.");
-    if (editingId === id) {
-      document.getElementById("elevenAdminBalance").textContent = `${Number(data.credit_balance || 0).toLocaleString("pt-BR")} TikCoins`;
-      document.getElementById("elevenAdminStatus").textContent = "Acesso de voz salvo.";
-    }
-  } catch (error) {
-    if (editingId === id) document.getElementById("elevenAdminStatus").textContent = error.message || "Não foi possível salvar o acesso ou saldo.";
-  } finally { if (editingId === id) button.disabled = false; }
-}
-
 async function submitUser() {
   const msg = document.getElementById("userFormMsg");
+  const saveButton = document.getElementById("userEditorSave");
+  saveButton.disabled = true;
   const body = {
     name: document.getElementById("uName").value.trim(),
     email: document.getElementById("uEmail").value.trim(),
@@ -1993,21 +2029,27 @@ async function submitUser() {
     features: getFeatures(),
   };
   const pw = document.getElementById("uPassword").value;
-  if (!editingId) {
-    if (!body.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) { msg.textContent = "Email invalido"; return; }
-    if (pw.length < 8) { msg.textContent = "Senha deve ter no minimo 8 caracteres"; return; }
-    body.password = pw;
-    const data = await apiFetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!data.success) { msg.textContent = data.error || "Erro"; return; }
-    msg.textContent = `Conta criada! Sala: ${data.user.room_code}`;
-  } else {
-    if (pw) body.password = pw;
-    delete body.email;
-    const data = await apiFetch(`/api/admin/users/${editingId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!data.success) { msg.textContent = data.error || "Erro"; return; }
-    msg.textContent = "Conta atualizada!";
-  }
-  loadUsers();
+  try {
+    if (!editingId) {
+      if (!body.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) { msg.textContent = "Informe um e-mail válido."; return; }
+      if (pw.length < 8) { msg.textContent = "A senha precisa ter no mínimo 8 caracteres."; return; }
+      body.password = pw;
+      const data = await apiFetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!data.success) { msg.textContent = data.error || "Não foi possível criar o usuário."; return; }
+      await loadUsers();
+      document.getElementById("adminLoadMsg").textContent = `Usuário criado. Código da sala: ${data.user.room_code}`;
+    } else {
+      delete body.email;
+      delete body.password;
+      if (!body.tiktools_api_key) delete body.tiktools_api_key;
+      const data = await apiFetch(`/api/admin/users/${editingId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!data.success) { msg.textContent = data.error || "Não foi possível atualizar o usuário."; return; }
+      await loadUsers();
+      document.getElementById("adminLoadMsg").textContent = "Usuário atualizado.";
+    }
+    closeUserForm(true);
+  } catch (error) { msg.textContent = error.message || "Não foi possível salvar o usuário."; }
+  finally { if (!document.getElementById("userEditorOverlay").hidden) saveButton.disabled = false; }
 }
 
 async function toggleStatus(id, status) {

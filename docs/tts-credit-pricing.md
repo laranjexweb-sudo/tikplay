@@ -31,3 +31,25 @@ Os preços são uma política comercial inicial. Custos OpenRouter variáveis po
 - Os três pacotes são inseridos pelo seed idempotente da carteira; IDs determinísticos evitam duplicação. Pacotes antigos não são removidos automaticamente e podem ser desativados em Pacotes e TikCoins.
 - O painel do streamer mostra o multiplicador e o custo por 150 caracteres ao lado de cada voz no seletor, na tarifa selecionada e no estimador. A compra mostra nome, saldo e preço do pacote.
 - Nenhum evento/log novo por mensagem foi criado; a cobrança e o ledger existentes permanecem responsáveis pelo débito, enquanto eventos existentes de tarifa, pacote e pagamento são mantidos.
+
+## Acesso universal às vozes expressivas (2026-11-07)
+
+O acesso individual foi encerrado. Contas ativas com a funcionalidade `chat`
+liberada podem listar, selecionar e testar as vozes adicionais. A API valida
+autenticação, status da conta e `requireFeature("chat")`. O Super Admin continua
+controlando disponibilidade por voz e modelo, configuração do provedor e tarifa;
+somente modelos/vozes ativos globalmente e com tarifa positiva são listados e
+aceitos pelo servidor.
+
+`tenant_elevenlabs.enabled` permanece no schema para compatibilidade, mas já não
+é consultado como autorização na API, no checkout nem na síntese Python. Não há
+backfill nem exclusão de coluna. A preferência por `model_id`/`voice_id` continua
+por conta; o primeiro salvamento cria o registro caso ainda não exista. A antiga
+rota de concessão administrativa por usuário foi removida.
+
+A cobrança permanece proporcional aos caracteres de cada mensagem, com
+arredondamento para cima e débito atômico no saldo/ledger. O teste de voz usa o
+mesmo sintetizador pago. Se uma mensagem do chat não puder ser cobrada por saldo
+insuficiente, a síntese expressiva não troca silenciosamente para voz gratuita:
+o painel sinaliza o motivo e oferece o atalho para recarregar TikCoins. A
+recarga de pacotes não depende do antigo sinalizador individual.

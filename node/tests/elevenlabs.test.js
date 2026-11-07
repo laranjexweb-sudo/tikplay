@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const express = require("express");
 
-test("ElevenLabs tenant authorization, catalog, persistence and delivery", async () => {
+test("Global voice release, tenant preferences, persistence and delivery", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tikplay-eleven-"));
   process.env.DB_PATH = path.join(dir, "test.db");
   process.env.ELEVENLABS_CONFIG_PATH = path.join(dir, "integrations", "elevenlabs.json");
@@ -50,12 +50,9 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
   };
   try {
     assert.equal((await request(null, "/api/tts/elevenlabs")).status, 401);
-    assert.equal((await request(first, `/api/admin/users/${first}/elevenlabs`)).status, 403);
-    assert.equal((await request(first, "/api/tts/elevenlabs")).data.enabled, false);
-    assert.equal(upstreamCalls, 0);
-    assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one" })).status, 403);
-    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true, monthly_limit: -1 })).status, 400);
-    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true })).status, 200);
+    assert.equal((await request(first, "/api/tts/elevenlabs")).data.enabled, true);
+    assert.equal(upstreamCalls, 1);
+    assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one" })).status, 400);
     db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=3 WHERE model_id=?")
       .run("elevenlabs/eleven-v4-turbo");
     db.db.prepare("INSERT INTO additional_voice_options(model_id,voice_id,label,enabled) VALUES(?,?,?,1)")
@@ -65,20 +62,20 @@ test("ElevenLabs tenant authorization, catalog, persistence and delivery", async
     assert.ok(!JSON.stringify(listing.data).includes("test-secret"));
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "forged" })).status, 400);
     assert.equal((await request(first, "/api/tts/elevenlabs", "PUT", { voice_id: "voice_one", tenant_id: second })).status, 200);
-    assert.equal((await request(second, "/api/tts/elevenlabs")).data.enabled, false);
+    assert.equal((await request(second, "/api/tts/elevenlabs")).data.enabled, true);
+    assert.equal(db.db.prepare("SELECT enabled FROM tenant_elevenlabs WHERE tenant_id=?").get(first).enabled, 0,
+      "legacy per-account access flag is not required");
     assert.equal((await request(first, "/api/tts/elevenlabs")).data.voice_id, "voice_one");
     assert.equal(upstreamCalls, 1, "catalog cached across requests");
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 200);
     assert.equal(commands[0].tenant_id, first);
     assert.equal(commands[0].cmd, "elevenlabs_test");
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 429);
-    assert.equal((await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: false })).status, 200);
-    assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 403);
-    assert.equal((await request(first, "/api/tts/elevenlabs")).data.enabled, false);
-    assert.ok(db.getLogEntries({ tenantId: first, event: "tts.provider.access_changed" }).length > 0);
+    assert.equal((await request(second, "/api/tts/elevenlabs/test", "POST")).status, 400,
+      "a streamer without a selected voice gets a selection error, not an access denial");
+    assert.equal((await request(first, "/api/tts/elevenlabs")).data.enabled, true);
     assert.ok(!JSON.stringify(logs).includes("test-secret"));
     delete process.env.ELEVENLABS_API_KEY;
-    await request(admin, `/api/admin/users/${first}/elevenlabs`, "PUT", { enabled: true });
     assert.equal((await request(first, "/api/tts/elevenlabs")).data.configured, false);
     assert.equal((await request(first, "/api/tts/elevenlabs/test", "POST")).status, 503);
     const configRoute = "/api/admin/integrations/elevenlabs";

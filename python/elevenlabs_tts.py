@@ -48,8 +48,8 @@ def _connect():
 
 
 def _config(conn, tenant_id):
-    return conn.execute("""SELECT e.* FROM tenant_elevenlabs e JOIN users u ON u.id=e.tenant_id
-        WHERE e.tenant_id=? AND e.enabled=1 AND u.status='active'""", (tenant_id,)).fetchone()
+    return conn.execute("""SELECT e.tenant_id,e.voice_id,e.monthly_limit FROM tenant_elevenlabs e JOIN users u ON u.id=e.tenant_id
+        WHERE e.tenant_id=? AND u.status='active'""", (tenant_id,)).fetchone()
 
 
 def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None, credit_charger=None):

@@ -51,8 +51,8 @@ def _clean(text):
 
 def _selection(conn, tenant_id):
     try:
-        row = conn.execute("""SELECT e.*,u.status FROM tenant_elevenlabs e JOIN users u ON u.id=e.tenant_id
-            WHERE e.tenant_id=? AND e.enabled=1""", (tenant_id,)).fetchone()
+        row = conn.execute("""SELECT e.tenant_id,e.voice_id,e.model_id,u.status FROM tenant_elevenlabs e JOIN users u ON u.id=e.tenant_id
+            WHERE e.tenant_id=?""", (tenant_id,)).fetchone()
         if not row or row["status"] != "active":
             return None
         values = dict(row)

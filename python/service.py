@@ -983,7 +983,7 @@ class GameSession:
                     )
                 else:
                     self._record_chat_narration("failed")
-                    self._log_chat_narration_failure("EDGE_TTS_NO_AUDIO", item)
+                    self._log_chat_narration_failure(item.get("_failure_reason") or "EDGE_TTS_NO_AUDIO", item)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -1023,6 +1023,9 @@ class GameSession:
             code = str(exc)
         except Exception:
             code = "PROVIDER_UNAVAILABLE"
+        if code == "INSUFFICIENT_CREDITS":
+            item["_failure_reason"] = code
+            return None
         if code not in ("NOT_CONFIGURED", "NOT_SELECTED", "NOT_AVAILABLE"):
             now = time.monotonic()
             if now - getattr(self, "_elevenlabs_failure_at", 0) >= 30:
@@ -3483,6 +3486,7 @@ async def main():
     cmd_queue = asyncio.Queue()
     reader = threading.Thread(target=stdin_reader, args=(loop, cmd_queue), daemon=True)
     reader.start()
+    emit(None, "daemon_ready", {"ready": True})
     emit(None, "log", "[Service] Daemon Jogo Contexto iniciado")
     await process_commands(cmd_queue)
     emit(None, "log", "[Service] Daemon encerrado")

@@ -108,8 +108,6 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.equal(catalog.status, 200);
     assert.ok(logs.some(entry => entry.event === "tts.models.config_saved"));
 
-    assert.equal((await request(admin, `/api/admin/users/${streamer}/elevenlabs`, "PUT",
-      { enabled: true })).status, 200);
     assert.equal((await request(admin, "/api/admin/integrations/elevenlabs", "PUT",
       { api_key: "eleven-test-secret" })).status, 200);
     const elevenIntegration = await request(admin, "/api/admin/integrations/elevenlabs");

@@ -509,6 +509,10 @@ CREATE TABLE IF NOT EXISTS active_game_recovery (
   checkpoint_json TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS active_live_connections (
+  tenant_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  requested_at INTEGER NOT NULL
+);
 `);
 try { db.exec("ALTER TABLE word_usage ADD COLUMN game_type TEXT NOT NULL DEFAULT 'palavra'"); } catch {}
 const likesOverlayDefaultMigration = "likes_overlay_default_top_left_v1";
@@ -786,6 +790,32 @@ function clearActiveGameRecovery(tenantId) {
   if (!Number.isInteger(id) || id <= 0) return false;
   db.prepare("DELETE FROM active_game_recovery WHERE tenant_id = ?").run(id);
   return true;
+}
+
+function saveActiveLiveConnection(tenantId) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return false;
+  db.prepare(`INSERT INTO active_live_connections (tenant_id, requested_at) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET requested_at=excluded.requested_at`).run(id, Date.now());
+  return true;
+}
+
+function clearActiveLiveConnection(tenantId) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return false;
+  db.prepare("DELETE FROM active_live_connections WHERE tenant_id=?").run(id);
+  return true;
+}
+
+function hasActiveLiveConnection(tenantId) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return false;
+  return Boolean(db.prepare("SELECT 1 FROM active_live_connections WHERE tenant_id=?").get(id));
+}
+
+function listActiveLiveConnections() {
+  return db.prepare("SELECT tenant_id FROM active_live_connections ORDER BY requested_at").all()
+    .map(row => Number(row.tenant_id)).filter(id => Number.isInteger(id) && id > 0);
 }
 
 function registerWithInvite({ email, name, password_hash, token, role = "user" }) {
@@ -2955,6 +2985,10 @@ module.exports = {
   saveActiveGameRecovery,
   getActiveGameRecovery,
   clearActiveGameRecovery,
+  saveActiveLiveConnection,
+  clearActiveLiveConnection,
+  hasActiveLiveConnection,
+  listActiveLiveConnections,
   getGifts,
   getGiftById,
   getGiftByName,

@@ -513,7 +513,7 @@
             <div class="field"><label for="elevenChatVoice">Voz</label><select class="control" id="elevenChatVoice" onchange="saveElevenChatVoice()"></select></div>
             <div class="tts-emotion-guide"><strong>Tags de emoção aceitas</strong><div class="tts-emotion-chips"><code>#grito</code><code>#feliz</code><code>#triste</code><code>#sussurro</code></div><small>Adicione uma tag ao final do comentário. Ex.: “Obrigado pelo presente! #feliz”.</small></div>
             <div class="row-actions"><button class="btn btn-primary" id="elevenChatTest" type="button" onclick="testElevenChatVoice()">Testar voz expressiva</button></div>
-            <small id="elevenChatStatus" class="tts-inline-status" role="status" aria-live="polite"></small>
+            <div class="tts-inline-status-actions"><small id="elevenChatStatus" class="tts-inline-status" role="status" aria-live="polite"></small><button class="btn btn-nb btn-dark btn-tiny" id="elevenChatRecharge" type="button" hidden onclick="switchTab('credits')">Recarregar TikCoins</button></div>
           </div>
         </section>
 
@@ -1845,6 +1845,11 @@ function connectLogs() {
       addIncomingChatLog(msg);
     } else if (msg.type === "log") {
       addLog(msg);
+      if ((msg.event === "chat.tts.failed" && msg.details?.reason === "INSUFFICIENT_CREDITS")
+          || (msg.event === "tts.provider.failed" && msg.code === "INSUFFICIENT_CREDITS")) {
+        setElevenChatStatus("Saldo insuficiente para a voz expressiva. Recarregue TikCoins para continuar usando esta voz.", "error");
+        document.getElementById("elevenChatRecharge").hidden = false;
+      }
       if (msg.event === "tts.provider.failed" && msg.details && msg.details.operation === "test")
         setElevenChatStatus("Não foi possível reproduzir esta voz agora. Tente outra voz ou verifique seu saldo de TikCoins.", "error");
     } else if (msg.type === "status") {
@@ -3257,7 +3262,15 @@ function updateStatus(s) {
   const rateEl = document.getElementById("apiRate");
 
   window.lastStateStr = s.state;
-  if(["connected","connecting","waiting"].includes(s.state)) lockLiveUser(true);
+  if(["connected","connecting","waiting","reconnecting"].includes(s.state)) {
+    setRunningUI(true);
+    if (s.state === "reconnecting") document.getElementById("btnConnect").textContent = "Reconectando automaticamente…";
+    else if (s.state === "connecting") document.getElementById("btnConnect").textContent = "Conectando à TikTok Live…";
+    else if (s.state === "waiting") document.getElementById("btnConnect").textContent = "Aguardando a TikTok Live…";
+  } else if (s.state === "offline") {
+    lockLiveUser(false);
+    setRunningUI(false);
+  }
 
   if (s.state === "connected") {
     stateEl.textContent = "Conectado";
@@ -3267,6 +3280,9 @@ function updateStatus(s) {
     stateEl.style.color = "#b30000";
   } else if (s.state === "waiting") {
     stateEl.textContent = "Aguardando live...";
+    stateEl.style.color = "#9a6a00";
+  } else if (s.state === "reconnecting") {
+    stateEl.textContent = "Reconectando automaticamente...";
     stateEl.style.color = "#9a6a00";
   } else {
     stateEl.textContent = "Aguardando...";

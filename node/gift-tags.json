@@ -72,6 +72,10 @@
     "diamond_count": 1
   },
   {
+    "name": "Little Acorn",
+    "diamond_count": 1
+  },
+  {
     "name": "Love KSA",
     "diamond_count": 1
   },
@@ -88,11 +92,19 @@
     "diamond_count": 1
   },
   {
+    "name": "Match Star",
+    "diamond_count": 1
+  },
+  {
     "name": "Mate Melody",
     "diamond_count": 1
   },
   {
     "name": "Mirwas Beat",
+    "diamond_count": 1
+  },
+  {
+    "name": "Music  Album",
     "diamond_count": 1
   },
   {
@@ -117,10 +129,6 @@
   },
   {
     "name": "Pop",
-    "diamond_count": 1
-  },
-  {
-    "name": "Pumpkin",
     "diamond_count": 1
   },
   {
@@ -280,15 +288,15 @@
     "diamond_count": 10
   },
   {
-    "name": "Little Ghost",
-    "diamond_count": 10
-  },
-  {
     "name": "Magic Feather",
     "diamond_count": 10
   },
   {
     "name": "Magnifying Glass",
+    "diamond_count": 10
+  },
+  {
+    "name": "Pan de Muerto",
     "diamond_count": 10
   },
   {
@@ -328,6 +336,10 @@
     "diamond_count": 15
   },
   {
+    "name": "Live Up Earth",
+    "diamond_count": 15
+  },
+  {
     "name": "Lyric Mail",
     "diamond_count": 15
   },
@@ -336,11 +348,31 @@
     "diamond_count": 20
   },
   {
+    "name": "Huh?",
+    "diamond_count": 20
+  },
+  {
+    "name": "LOL",
+    "diamond_count": 20
+  },
+  {
     "name": "Mushroom",
     "diamond_count": 20
   },
   {
+    "name": "No Comment",
+    "diamond_count": 20
+  },
+  {
     "name": "Perfume",
+    "diamond_count": 20
+  },
+  {
+    "name": "Rage Mode",
+    "diamond_count": 20
+  },
+  {
+    "name": "Tiny Blush",
     "diamond_count": 20
   },
   {
@@ -382,10 +414,6 @@
   {
     "name": "Single Strike",
     "diamond_count": 70
-  },
-  {
-    "name": "Small Ghost",
-    "diamond_count": 88
   },
   {
     "name": "Bloom Melody",
@@ -504,10 +532,6 @@
     "diamond_count": 99
   },
   {
-    "name": "Aussie Pie",
-    "diamond_count": 100
-  },
-  {
     "name": "Balloon Gift Box",
     "diamond_count": 100
   },
@@ -532,10 +556,6 @@
     "diamond_count": 100
   },
   {
-    "name": "Haunted Houseparty",
-    "diamond_count": 100
-  },
-  {
     "name": "Heart My Earthling",
     "diamond_count": 100
   },
@@ -545,6 +565,14 @@
   },
   {
     "name": "Mishka Bear",
+    "diamond_count": 100
+  },
+  {
+    "name": "Mishka Bear",
+    "diamond_count": 100
+  },
+  {
+    "name": "Mountain Baby",
     "diamond_count": 100
   },
   {
@@ -561,6 +589,10 @@
   },
   {
     "name": "Singing Magic",
+    "diamond_count": 100
+  },
+  {
+    "name": "Tsar",
     "diamond_count": 100
   },
   {
@@ -736,6 +768,10 @@
     "diamond_count": 199
   },
   {
+    "name": "Peeka-Bro",
+    "diamond_count": 199
+  },
+  {
     "name": "Rhythm Bot",
     "diamond_count": 199
   },
@@ -764,10 +800,6 @@
     "diamond_count": 199
   },
   {
-    "name": "Spider",
-    "diamond_count": 199
-  },
-  {
     "name": "Sunglasses",
     "diamond_count": 199
   },
@@ -788,7 +820,7 @@
     "diamond_count": 200
   },
   {
-    "name": "Fiesta Taco",
+    "name": "Cute Bunny",
     "diamond_count": 200
   },
   {
@@ -829,6 +861,10 @@
   },
   {
     "name": "Face-pulling",
+    "diamond_count": 249
+  },
+  {
+    "name": "Flower Courier",
     "diamond_count": 249
   },
   {
@@ -932,11 +968,11 @@
     "diamond_count": 299
   },
   {
-    "name": "Cooked",
+    "name": "Corgi",
     "diamond_count": 299
   },
   {
-    "name": "Corgi",
+    "name": "Dreamy Penguin",
     "diamond_count": 299
   },
   {
@@ -1036,10 +1072,6 @@
     "diamond_count": 299
   },
   {
-    "name": "Trick or Treat",
-    "diamond_count": 299
-  },
-  {
     "name": "Tropical Mask",
     "diamond_count": 299
   },
@@ -1128,7 +1160,15 @@
     "diamond_count": 349
   },
   {
+    "name": "Rock Demon",
+    "diamond_count": 349
+  },
+  {
     "name": "Rocking Shroom",
+    "diamond_count": 349
+  },
+  {
+    "name": "Rose Wreath",
     "diamond_count": 349
   },
   {
@@ -1153,6 +1193,10 @@
   },
   {
     "name": "Vintage flight",
+    "diamond_count": 349
+  },
+  {
+    "name": "Vinyl Flip",
     "diamond_count": 349
   },
   {
@@ -1213,6 +1257,10 @@
   },
   {
     "name": "Health Potion",
+    "diamond_count": 399
+  },
+  {
+    "name": "Jiggly Pudding",
     "diamond_count": 399
   },
   {
@@ -1452,6 +1500,10 @@
     "diamond_count": 450
   },
   {
+    "name": "Diva Feathers",
+    "diamond_count": 450
+  },
+  {
     "name": "Glow Chant",
     "diamond_count": 450
   },
@@ -1533,6 +1585,10 @@
   },
   {
     "name": "Bunny Crown",
+    "diamond_count": 500
+  },
+  {
+    "name": "Chubby Hamster",
     "diamond_count": 500
   },
   {
@@ -1672,11 +1728,11 @@
     "diamond_count": 500
   },
   {
-    "name": "Starry Fluff",
+    "name": "Spark Ring Earth",
     "diamond_count": 500
   },
   {
-    "name": "Trick or Treats",
+    "name": "Starry Fluff",
     "diamond_count": 500
   },
   {
@@ -1752,6 +1808,10 @@
     "diamond_count": 700
   },
   {
+    "name": "Which Bro?",
+    "diamond_count": 799
+  },
+  {
     "name": "Epic Pianist",
     "diamond_count": 800
   },
@@ -1778,6 +1838,10 @@
   {
     "name": "Funky Hatter",
     "diamond_count": 900
+  },
+  {
+    "name": "Grand show",
+    "diamond_count": 999
   },
   {
     "name": "Grand show",
@@ -1848,6 +1912,14 @@
     "diamond_count": 1000
   },
   {
+    "name": "Gerry the Giraffe",
+    "diamond_count": 1000
+  },
+  {
+    "name": "Giraffe",
+    "diamond_count": 1000
+  },
+  {
     "name": "Iron Rod",
     "diamond_count": 1000
   },
@@ -1860,7 +1932,15 @@
     "diamond_count": 1000
   },
   {
+    "name": "Match Drum",
+    "diamond_count": 1000
+  },
+  {
     "name": "Shiny Air Balloon",
+    "diamond_count": 1000
+  },
+  {
+    "name": "Silver Sports Car",
     "diamond_count": 1000
   },
   {
@@ -2048,15 +2128,11 @@
     "diamond_count": 1999
   },
   {
-    "name": "Spooktacular",
-    "diamond_count": 1999
-  },
-  {
     "name": "Star of Red Carpet",
     "diamond_count": 1999
   },
   {
-    "name": "Hot Churrasco",
+    "name": "Maple Fireworks",
     "diamond_count": 2000
   },
   {
@@ -2088,7 +2164,7 @@
     "diamond_count": 2199
   },
   {
-    "name": "Haunted House",
+    "name": "Spooky Rock",
     "diamond_count": 2200
   },
   {
@@ -2110,6 +2186,10 @@
   {
     "name": "Animal Band",
     "diamond_count": 2500
+  },
+  {
+    "name": "Wanted a Treat?",
+    "diamond_count": 2599
   },
   {
     "name": "Celebration Tape",
@@ -2180,6 +2260,10 @@
     "diamond_count": 2999
   },
   {
+    "name": "Car Drifting",
+    "diamond_count": 3000
+  },
+  {
     "name": "Meteor Shower",
     "diamond_count": 3000
   },
@@ -2208,6 +2292,10 @@
     "diamond_count": 3088
   },
   {
+    "name": "Halloween Idol",
+    "diamond_count": 3200
+  },
+  {
     "name": "Hip-Hop Hen",
     "diamond_count": 3200
   },
@@ -2220,11 +2308,11 @@
     "diamond_count": 3350
   },
   {
-    "name": "Candy Party",
+    "name": "LIVE Ranking Party",
     "diamond_count": 3999
   },
   {
-    "name": "LIVE Ranking Party",
+    "name": "Spark Stage Earth",
     "diamond_count": 3999
   },
   {
@@ -2272,6 +2360,14 @@
     "diamond_count": 4999
   },
   {
+    "name": "Knockout",
+    "diamond_count": 4999
+  },
+  {
+    "name": "Sage’s Venture",
+    "diamond_count": 4999
+  },
+  {
     "name": "Sage’s Venture",
     "diamond_count": 4999
   },
@@ -2285,10 +2381,6 @@
   },
   {
     "name": "Arcane Card",
-    "diamond_count": 5000
-  },
-  {
-    "name": "Burger Truck",
     "diamond_count": 5000
   },
   {
@@ -2328,10 +2420,6 @@
     "diamond_count": 5000
   },
   {
-    "name": "Scarecrow",
-    "diamond_count": 5000
-  },
-  {
     "name": "Seaside Romance",
     "diamond_count": 5000
   },
@@ -2341,10 +2429,6 @@
   },
   {
     "name": "Unicorn Fantasy",
-    "diamond_count": 5000
-  },
-  {
-    "name": "Witch",
     "diamond_count": 5000
   },
   {
@@ -2381,6 +2465,10 @@
   },
   {
     "name": "Lovely to Have You",
+    "diamond_count": 6000
+  },
+  {
+    "name": "Moonlight Pond",
     "diamond_count": 6000
   },
   {
@@ -2460,6 +2548,10 @@
     "diamond_count": 9699
   },
   {
+    "name": "You Are Wanted!",
+    "diamond_count": 9999
+  },
+  {
     "name": "Crystal Rod",
     "diamond_count": 10000
   },
@@ -2484,11 +2576,23 @@
     "diamond_count": 10999
   },
   {
+    "name": "Falcon",
+    "diamond_count": 10999
+  },
+  {
+    "name": "Falcon",
+    "diamond_count": 10999
+  },
+  {
     "name": "Verified Glider",
     "diamond_count": 10999
   },
   {
     "name": "Hot Rods",
+    "diamond_count": 12000
+  },
+  {
+    "name": "Keeper of the Stars",
     "diamond_count": 12000
   },
   {
@@ -2524,6 +2628,10 @@
     "diamond_count": 14999
   },
   {
+    "name": "Iron Resolve",
+    "diamond_count": 14999
+  },
+  {
     "name": "Proof of the King",
     "diamond_count": 14999
   },
@@ -2556,11 +2664,11 @@
     "diamond_count": 15000
   },
   {
-    "name": "Food Fair",
+    "name": "Future Journey",
     "diamond_count": 15000
   },
   {
-    "name": "Future Journey",
+    "name": "Keeper of Atlantis",
     "diamond_count": 15000
   },
   {
@@ -2569,10 +2677,6 @@
   },
   {
     "name": "Leopard",
-    "diamond_count": 15000
-  },
-  {
-    "name": "Nightshade Kingdom",
     "diamond_count": 15000
   },
   {
@@ -2588,11 +2692,19 @@
     "diamond_count": 15000
   },
   {
+    "name": "Ultimate Match",
+    "diamond_count": 15000
+  },
+  {
     "name": "Vintage Car",
     "diamond_count": 15000
   },
   {
     "name": "Stadium",
+    "diamond_count": 15999
+  },
+  {
+    "name": "White Tiger",
     "diamond_count": 15999
   },
   {
@@ -2614,6 +2726,10 @@
   {
     "name": "Super Car",
     "diamond_count": 19000
+  },
+  {
+    "name": "Fantastic Fly Love",
+    "diamond_count": 19999
   },
   {
     "name": "Fly Love",
@@ -2644,11 +2760,15 @@
     "diamond_count": 20000
   },
   {
+    "name": "Legacy in Bloom",
+    "diamond_count": 21000
+  },
+  {
     "name": "Level Ship",
     "diamond_count": 21000
   },
   {
-    "name": "Pop Off",
+    "name": "Pop Out",
     "diamond_count": 21000
   },
   {
@@ -2672,6 +2792,10 @@
     "diamond_count": 25999
   },
   {
+    "name": "Villainy Slain",
+    "diamond_count": 25999
+  },
+  {
     "name": "Dragon Flame",
     "diamond_count": 26999
   },
@@ -2689,6 +2813,10 @@
   },
   {
     "name": "Magic Rod",
+    "diamond_count": 30000
+  },
+  {
+    "name": "Sam the Whale",
     "diamond_count": 30000
   },
   {
@@ -2717,6 +2845,10 @@
   },
   {
     "name": "Pegasus",
+    "diamond_count": 42999
+  },
+  {
+    "name": "The Fair King",
     "diamond_count": 42999
   },
   {

@@ -527,7 +527,7 @@ function logStructuredEvent(tenant, { category, level, event, message, game, gam
   });
 }
 
-function broadcastStatus(tenant, status) {
+function broadcastStatus(tenant, status, { daemonUnavailable = false } = {}) {
   tenant.currentStatus = status;
   broadcastToClients(tenant.logClients, { type: "status", ...status });
   if (status.state === "connected") {
@@ -536,14 +536,14 @@ function broadcastStatus(tenant, status) {
     // Não limpa currentWord: mantém a palavra da rodada em andamento mesmo com queda
     broadcastToClients(tenant.browserClients, { type: "python_disconnected" });
     if (tenant.cordaState?.active) {
-      daemonSend({ cmd: "corda_stop", tenant_id: tenant.id });
+      if (!daemonUnavailable) daemonSend({ cmd: "corda_stop", tenant_id: tenant.id });
       tenant.cordaState = { ...tenant.cordaState, active: false, round_active: false, pending_force: 0 };
       broadcastToClients(tenant.browserClients, tenant.cordaState);
     }
     // Auto-pause: se o V-Pet está ativo, pausa para não zerar fome/energia offline
     const vs = tenant.vpetState;
     if (vs && vs.active) {
-      daemonSend({ cmd: "vpet_stop", tenant_id: tenant.id });
+      if (!daemonUnavailable) daemonSend({ cmd: "vpet_stop", tenant_id: tenant.id });
       vs.active = false;
       broadcastToClients(tenant.browserClients, { type: "vpet_state", ...vs });
       broadcastLog(tenant, {
@@ -579,12 +579,47 @@ function resetAllTenantSessions() {
     tenant.activeDaemonSessionId = null;
     tenant.activeLiveUsername = null;
     tenant.activeLiveEngine = null;
+    tenant.autoResumeSessionId = null;
+    tenant.autoResumeExpectedRoomId = null;
   }
 }
 
 function onDaemonDown() {
+  const resumable = new Set(db.listActiveLiveConnections());
+  for (const id of resumable) getTenant(id);
   resetAllTenantSessions();
-  broadcastStatusAll({ state: "offline" });
+  for (const tenant of tenants.values()) {
+    if (resumable.has(Number(tenant.id))) {
+      const user = db.getUserById(tenant.id);
+      tenant.currentStatus = { state: "reconnecting", user: user?.tiktok_username || "",
+        room_id: tenant.currentRoomId || "" };
+      broadcastToClients(tenant.logClients, { type: "status", ...tenant.currentStatus });
+      logAutoResumeWaiting(tenant, user);
+    } else {
+      broadcastStatus(tenant, { state: "offline" }, { daemonUnavailable: true });
+    }
+  }
+}
+
+function resumePersistedLiveConnections(reason = "daemon_ready") {
+  for (const id of db.listActiveLiveConnections()) {
+    const user = db.getUserById(id);
+    const tenant = getTenant(id);
+    if (!user || user.status !== "active" || !featureAllowed(user, "connect")) {
+      db.clearActiveLiveConnection(id);
+      logStructuredEvent(tenant, { category: "connection", level: "warning",
+        event: "connection.auto_resume.rejected", code: "ACCOUNT_NOT_ELIGIBLE",
+        message: "Reconexão automática cancelada porque a conta não está ativa ou não tem acesso à conexão." });
+      broadcastStatus(tenant, { state: "offline" }, { daemonUnavailable: true });
+      continue;
+    }
+    if (tenant.sessionStarted && tenant.activeDaemonSessionId) continue;
+    const result = startTenantLive(user, { automatic: true, reason });
+    if (!result.success && result.permanent) {
+      db.clearActiveLiveConnection(id);
+      broadcastStatus(tenant, { state: "offline" }, { daemonUnavailable: true });
+    }
+  }
 }
 
 function routeDaemonStderr(line) {
@@ -632,6 +667,21 @@ function getDaemonStatus() {
 const TTS_CONFIGURED = !!process.env.KOKORO_URL;
 const staleSessionWarnAt = new Map();
 const levelDiagnosticWindows = new Map();
+const autoResumeLogWindows = new Map();
+
+function logAutoResumeWaiting(tenant, user) {
+  const now = Date.now();
+  const previous = autoResumeLogWindows.get(tenant.id);
+  if (previous && now - previous.at < 30000) {
+    previous.suppressed_count++;
+    return;
+  }
+  autoResumeLogWindows.set(tenant.id, { at: now, suppressed_count: 0 });
+  logStructuredEvent(tenant, { category: "connection", level: "warning",
+    event: "connection.auto_resume.waiting", code: "DAEMON_RESTARTED",
+    message: "Serviço reiniciando; reconectando à live automaticamente.",
+    details: { engine: user?.tiktok_engine || "tiktoklive", suppressed_count: previous?.suppressed_count || 0 } });
+}
 
 function logLevelObservationSummary(tenant, observation, levelUpCount) {
   if (!/^(1|true|yes)$/i.test(String(process.env.TIKTOK_LEVEL_DIAGNOSTICS || ""))) return;
@@ -670,6 +720,12 @@ function warnStaleSessionMessage(tenant, msg) {
 function handleDaemonMessage(msg) {
   // Respostas do motor público (site) não têm tenant_id e são resolvidas por req_id.
   if (contextoPublic.handleDaemonMessage(msg)) return;
+  if (msg.type === "daemon_ready") {
+    processLog({ category: "connection", level: "info", event: "daemon.ready",
+      message: "Daemon pronto para receber comandos.", source: "python" });
+    resumePersistedLiveConnections("daemon_ready");
+    return;
+  }
   const tenantId = msg.tenant_id;
   if (tenantId !== null && tenantId !== undefined) {
     const tenant = getTenant(tenantId);
@@ -679,11 +735,31 @@ function handleDaemonMessage(msg) {
     }
     if (msg.type === "status") {
       const status = msg.status || {};
+      const expectedRoomId = tenant.autoResumeExpectedRoomId;
+      if (status.room_id) tenant.currentRoomId = String(status.room_id);
+      if (status.state === "connected" && tenant.autoResumeSessionId === msg.session_id) {
+        logStructuredEvent(tenant, { category: "connection", level: "info",
+          event: "connection.auto_resume.completed", code: "LIVE_RECONNECTED",
+          trace_id: msg.trace_id, message: "Conexão com a live retomada automaticamente.",
+          details: { engine: tenant.activeLiveEngine || "tiktoklive",
+            same_room: expectedRoomId ? String(status.room_id || "") === String(expectedRoomId) : null } });
+        tenant.autoResumeSessionId = null;
+        tenant.autoResumeExpectedRoomId = null;
+      }
       if (status.state === "offline" && msg.session_id === tenant.activeDaemonSessionId) {
+        if (tenant.autoResumeSessionId === msg.session_id) {
+          logStructuredEvent(tenant, { category: "connection", level: "warning",
+            event: "connection.auto_resume.failed", code: "LIVE_UNAVAILABLE",
+            trace_id: msg.trace_id, message: "Não foi possível retomar a conexão porque a live não está disponível.",
+            details: { engine: tenant.activeLiveEngine || "tiktoklive" } });
+          tenant.autoResumeSessionId = null;
+          tenant.autoResumeExpectedRoomId = null;
+        }
         tenant.sessionStarted = false;
         tenant.activeDaemonSessionId = null;
         tenant.activeLiveUsername = null;
         tenant.activeLiveEngine = null;
+        db.clearActiveLiveConnection(tenant.id);
       }
       broadcastStatus(tenant, status);
     } else if (msg.type === "interaction") {
@@ -696,6 +772,7 @@ function handleDaemonMessage(msg) {
       // explicitamente quando a mesma sala iniciou uma nova transmissão.
       const p = msg.live_session || {};
       if (p.state === "start") {
+        if (p.room_id) tenant.currentRoomId = String(p.room_id);
         interactions.openSession(tenant, p);
         if (liveLikesState.ensureRoomState(tenant, p.room_id, p.new_live === true)) {
           tenant.gameState.likes_ranking = [];
@@ -839,6 +916,11 @@ function msgTenant(line) {
 }
 
 function killDaemon() {
+  // Em encerramento gracioso do Node, mantém a intenção de conexão para que
+  // a próxima instância retome as lives sem depender de um clique no painel.
+  for (const tenant of tenants.values()) {
+    if (tenant.sessionStarted && tenant.activeDaemonSessionId) db.saveActiveLiveConnection(tenant.id);
+  }
   if (daemon) daemon.kill();
   daemon = null;
 }
@@ -1313,7 +1395,7 @@ app.post("/api/presenter-level/test", auth.requireAuth, (req, res) => {
 
 // ---------------- TTS (voz do servidor) ----------------
 
-require("./routes/elevenlabs")(app, { db, auth, daemonSend,
+require("./routes/elevenlabs")(app, { db, auth, daemonSend, requireFeature,
   log: (id, entry) => logStructuredEvent(getTenant(id), entry),
 });
 
@@ -2533,36 +2615,39 @@ app.post("/api/duelo/audio", auth.requireAuth, requireFeature("duelo"), (req, re
   });
 });
 
-app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
-  const user = db.getUserById(req.user.id);
-  if (!user) return res.status(401).json({ success: false, error: "Usuario nao encontrado" });
+function startTenantLive(user, { automatic = false, reason = "manual" } = {}) {
   const tenant = getTenant(user.id);
   const trace_id = crypto.randomUUID();
   if (!user.tiktok_username) {
-    logStructuredEvent(tenant, { category: "notice", level: "warning", event: "connection.start.rejected",
+    logStructuredEvent(tenant, { category: "notice", level: "warning", event: automatic ? "connection.auto_resume.rejected" : "connection.start.rejected",
       trace_id, code: "TIKTOK_USERNAME_MISSING", message: "Conexão não iniciada: usuário TikTok não configurado." });
-    return res.json({ success: false, error: "Defina o usuario do TikTok no painel", trace_id });
+    return { success: false, permanent: true, error: "Defina o usuário do TikTok no painel.", trace_id };
   }
   const engine = user.tiktok_engine || "tiktoklive";
   if (engine === "tiktools" && !user.tiktools_api_key) {
-    logStructuredEvent(tenant, { category: "notice", level: "warning", event: "connection.start.rejected",
+    logStructuredEvent(tenant, { category: "notice", level: "warning", event: automatic ? "connection.auto_resume.rejected" : "connection.start.rejected",
       trace_id, code: "TIKTOOLS_KEY_MISSING", message: "Conexão não iniciada: credencial do motor TikTools ausente." });
-    return res.json({ success: false, error: "Defina a API key do Tik.Tools no painel (motor Tik.Tools)", trace_id });
+    return { success: false, permanent: true, error: "Defina a API key do Tik.Tools no painel.", trace_id };
   }
-  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.requested",
-    trace_id, message: "Solicitação de conexão com a live recebida.", details: { engine } });
+  logStructuredEvent(tenant, { category: "connection", level: "info",
+    event: automatic ? "connection.auto_resume.requested" : "connection.start.requested",
+    trace_id, message: automatic ? "Retomada automática da conexão com a live solicitada." : "Solicitação de conexão com a live recebida.",
+    details: { engine, reason } });
   // Duplo clique/outra aba não deve abrir uma segunda sessão igual.
   if (tenant.sessionStarted && tenant.activeDaemonSessionId &&
       tenant.activeLiveUsername === user.tiktok_username && tenant.activeLiveEngine === engine) {
-    logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.already_running",
+    logStructuredEvent(tenant, { category: "connection", level: "info", event: automatic ? "connection.auto_resume.already_running" : "connection.start.already_running",
       trace_id, message: "A conexão solicitada já está ativa." });
-    return res.json({ success: true, already_running: true, message: "Monitoramento da live já ativo", trace_id });
+    return { success: true, already_running: true, message: "Monitoramento da live já ativo", trace_id };
   }
+  const hadResumeIntent = db.hasActiveLiveConnection(user.id);
   const previousSession = {
     sessionStarted: tenant.sessionStarted,
     activeDaemonSessionId: tenant.activeDaemonSessionId,
     activeLiveUsername: tenant.activeLiveUsername,
     activeLiveEngine: tenant.activeLiveEngine,
+    autoResumeSessionId: tenant.autoResumeSessionId,
+    autoResumeExpectedRoomId: tenant.autoResumeExpectedRoomId,
   };
   const session_id = crypto.randomUUID();
   // Ativa a geração ANTES de enviar start: qualquer mensagem atrasada da geração
@@ -2570,7 +2655,10 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
   tenant.activeDaemonSessionId = session_id;
   tenant.activeLiveUsername = user.tiktok_username;
   tenant.activeLiveEngine = engine;
+  tenant.autoResumeSessionId = automatic ? session_id : null;
+  tenant.autoResumeExpectedRoomId = automatic ? String(tenant.currentRoomId || tenant.currentStatus?.room_id || "") : null;
   tenant.sessionStarted = true;
+  db.saveActiveLiveConnection(user.id);
   const ok = daemonSend({
     cmd: "start",
     tenant_id: user.id,
@@ -2592,27 +2680,54 @@ app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) 
   });
   if (!ok) {
     Object.assign(tenant, previousSession);
-    logStructuredEvent(tenant, { category: "error", level: "error", event: "connection.start.failed",
+    if (!automatic && !hadResumeIntent) db.clearActiveLiveConnection(user.id);
+    logStructuredEvent(tenant, { category: "error", level: "error", event: automatic ? "connection.auto_resume.failed" : "connection.start.failed",
       trace_id, code: "DAEMON_UNAVAILABLE", message: "Serviço Python indisponível para iniciar a conexão." });
-    return res.json({ success: false, error: "Servico Python indisponivel", trace_id });
+    return { success: false, permanent: false, error: "Serviço Python indisponível", trace_id };
   }
-  broadcastStatus(tenant, { state: "connecting", user: user.tiktok_username });
-  logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.start.queued",
-    trace_id, session_id, message: "Comando de conexão enviado ao daemon.", details: { engine } });
+  broadcastStatus(tenant, { state: automatic ? "reconnecting" : "connecting", user: user.tiktok_username,
+    room_id: tenant.currentRoomId || "" });
+  logStructuredEvent(tenant, { category: "connection", level: "info",
+    event: automatic ? "connection.auto_resume.queued" : "connection.start.queued",
+    trace_id, session_id, message: automatic ? "Comando de retomada enviado ao daemon." : "Comando de conexão enviado ao daemon.",
+    details: { engine, reason } });
   // Ao iniciar a live, a ÁREA do Duelo fica DESATIVADA por padrão;
   // só entra quando o operador clicar em "Ativar Área".
-  dueloForceStop(user.id);
-  res.json({ success: true, message: "Jogo iniciado", trace_id });
+  if (!automatic) dueloForceStop(user.id);
+  return { success: true, message: automatic ? "Retomada automática iniciada" : "Conexão iniciada", trace_id };
+}
+
+app.post("/start-game", auth.requireAuth, requireFeature("connect"), (req, res) => {
+  const user = db.getUserById(req.user.id);
+  if (!user) return res.status(401).json({ success: false, error: "Usuário não encontrado" });
+  res.json(startTenantLive(user));
 });
 
 app.post("/stop-game", auth.requireAuth, (req, res) => {
   const tenant = getTenant(req.user.id);
   const session_id = tenant.activeDaemonSessionId;
   const trace_id = crypto.randomUUID();
+  const hadResumeIntent = db.hasActiveLiveConnection(req.user.id);
+  // Uma solicitação explícita do streamer cancela a retomada persistida mesmo
+  // quando o daemon está indisponível ou ainda inicializando.
+  db.clearActiveLiveConnection(req.user.id);
   logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.stop.requested",
     trace_id, session_id, message: "Solicitação para desconectar a live recebida." });
   const ok = daemonSend({ cmd: "stop", tenant_id: req.user.id, session_id, trace_id });
   if (!ok) {
+    if (hadResumeIntent) {
+      tenant.sessionStarted = false;
+      tenant.activeDaemonSessionId = null;
+      tenant.activeLiveUsername = null;
+      tenant.activeLiveEngine = null;
+      tenant.autoResumeSessionId = null;
+      tenant.autoResumeExpectedRoomId = null;
+      broadcastStatus(tenant, { state: "offline", user: tenant.currentStatus?.user || "" }, { daemonUnavailable: true });
+      logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.auto_resume.cancelled",
+        trace_id, code: "STREAMER_REQUESTED_DISCONNECT",
+        message: "Retomada automática cancelada por solicitação do streamer." });
+      return res.json({ success: true, message: "Reconexão automática cancelada", trace_id });
+    }
     logStructuredEvent(tenant, { category: "error", level: "error", event: "connection.stop.failed",
       trace_id, session_id, code: "DAEMON_UNAVAILABLE", message: "Serviço Python indisponível para desconectar." });
     return res.json({ success: false, error: "Servico Python indisponivel", trace_id });
@@ -2622,6 +2737,8 @@ app.post("/stop-game", auth.requireAuth, (req, res) => {
   tenant.activeDaemonSessionId = null;
   tenant.activeLiveUsername = null;
   tenant.activeLiveEngine = null;
+  tenant.autoResumeSessionId = null;
+  tenant.autoResumeExpectedRoomId = null;
   broadcastStatus(tenant, { state: "offline", user: tenant.currentStatus?.user || "" });
   logStructuredEvent(tenant, { category: "connection", level: "info", event: "connection.stop.queued",
     trace_id, session_id, message: "Comando de desconexão enviado ao daemon." });

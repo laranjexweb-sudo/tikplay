@@ -28,10 +28,9 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
   app.post("/api/tts/credits/checkout", auth.requireAuth, async (req, res) => {
     const tenantId = req.user.id;
     const user = db.getUserById(tenantId);
-    const access = db.db.prepare("SELECT enabled FROM tenant_elevenlabs WHERE tenant_id=?").get(tenantId);
     const item = typeof req.body?.package_id === "string"
       ? db.db.prepare("SELECT * FROM tts_credit_packages WHERE id=? AND enabled=1").get(req.body.package_id) : null;
-    if (!user || user.status !== "active" || !access?.enabled || !item)
+    if (!user || user.status !== "active" || !item)
       return res.status(400).json({ success: false, error: "Pacote de TikCoins indisponível para esta conta." });
     if (!(typeof mpConfigured === "function" ? mpConfigured() : mpConfigured))
       return res.status(503).json({ success: false, error: "Compra de TikCoins indisponível no momento." });

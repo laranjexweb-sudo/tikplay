@@ -1,16 +1,23 @@
-# Vozes adicionais por streamer
+# Vozes expressivas — histórico e regra vigente
 
-Status: implementado com API oficial ElevenLabs e chave global configuravel pelo admin; ativacao real pendente de chave, reinicio inicial e escolha das contas.
+**Regra vigente (2026-11-07):** o acesso individual experimental foi encerrado. Todas as contas ativas com a funcionalidade `chat` habilitada podem selecionar qualquer voz expressiva/modelo ativo globalmente e com tarifa configurada. O saldo em TikCoins continua sendo verificado e debitado pela tarifa existente antes da síntese. Saldo insuficiente impede a narração paga e oferece o caminho de recarga.
+
+O painel Super Admin mantém o catálogo global de vozes, modelos, fornecedores e tarifas. A permissão por streamer não faz mais parte da edição de usuários. A coluna legada `tenant_elevenlabs.enabled` permanece no banco por compatibilidade, mas nenhum fluxo de acesso deve consultá-la; não remover essa coluna sem uma migração avaliada.
+
+As seções abaixo documentam o piloto e decisões históricas. Não use instruções de concessão individual como configuração vigente.
+
+## Histórico do piloto
+
+Status histórico: implementado inicialmente com API oficial ElevenLabs e chave global configurável pelo admin.
 
 Atualizacao 2026-10-16: Super Admin controla quais modelos adicionais aparecem, agrupados em
 vozes padrao (HeyGen Voice Turbo e Kokoro 82M via OpenRouter) e personalizadas (ElevenLabs
-v4 Turbo). Streamer escolhe modelo e voz; acesso individual e limite existente continuam
-valendo. OpenRouter reutiliza `OPENROUTER_API_KEY` do servidor. Mapa de eventos e detalhes
-em `docs/modelos-voz-adicionais.md`.
+v4 Turbo). Streamer escolhe modelo e voz. OpenRouter reutiliza `OPENROUTER_API_KEY` do servidor.
+Mapa de eventos e detalhes em `docs/modelos-voz-adicionais.md`.
 
 ## Escopo
 
-Liberar vozes adicionais no leitor de chat apenas para contas autorizadas pelo administrador. Usar inicialmente uma credencial da plataforma, configurada no servidor. Nenhuma conta deve receber acesso automaticamente. Nao alterar o comportamento das charadas por efeito indireto da selecao de voz do chat.
+Regra histórica do piloto: liberar vozes adicionais no leitor de chat apenas para contas autorizadas pelo administrador. Essa restrição foi removida em 2026-11-07. Usar uma credencial da plataforma, configurada no servidor. Nao alterar o comportamento das charadas por efeito indireto da selecao de voz do chat.
 
 Integra a API oficial ElevenLabs. A referencia anterior do agente a "NoElevenLabs" foi uma interpretacao incorreta. Nunca solicitar credenciais no chat.
 
@@ -26,10 +33,10 @@ Integra a API oficial ElevenLabs. A referencia anterior do agente a "NoElevenLab
 ## Etapas de implementacao
 
 1. Confirmar o provedor, autenticacao, listagem de vozes, sintese, formato de resposta e limites. Definir variaveis de ambiente e documentar configuracao sem valores secretos.
-2. Persistir habilitacao por tenant em configuracao controlada pelo admin. Validar a permissao no servidor tanto na listagem quanto no teste e na sintese real. A escolha de uma voz nunca concede acesso ao provedor.
+2. (Histórico) Persistia habilitação por tenant em configuração controlada pelo admin. A regra atual ignora esse campo e valida conta ativa, permissão `chat` e liberação global da voz/modelo.
 3. Criar adaptador do provedor com timeout, validacao do audio e codigos de falha estaveis. Calcular e debitar creditos pela tarifa do modelo antes da chamada externa; testar saldo insuficiente e concorrencia.
-4. Separar a preferencia adicional do chat da configuracao compartilhada atual, preservando a voz da charada. Revalidar autorizacao a cada sintese, inclusive apos revogacao ou reinicio.
-5. Entregar catalogo permitido ao painel autenticado. Exibir as vozes adicionais somente nas contas habilitadas, salvar a escolha por tenant e disponibilizar teste com texto fixo em portugues brasileiro.
+4. Separar a preferencia adicional do chat da configuracao compartilhada atual, preservando a voz da charada. Revalidar disponibilidade global a cada sintese, inclusive apos alteracao administrativa ou reinicio.
+5. Entregar catálogo globalmente habilitado ao painel autenticado. Exibir as vozes disponíveis a todas as contas ativas com permissão de chat, salvar a escolha por tenant e disponibilizar teste com texto fixo em portugues brasileiro.
 6. Integrar sintese a fila existente e entregar o audio somente aos clientes do painel do tenant. Em falha ou revogacao, aplicar fallback para a voz padrao e impedir dupla reproducao.
 7. Validar integracao e registrar instrucoes de ativacao do piloto. Recurso inicia desabilitado; a ativacao de contas reais exige informar quais streamers participam.
 
@@ -65,8 +72,8 @@ Nao registrar texto do chat, chave, cabecalhos, URL autenticada ou resposta brut
 1. Em Admin > Configuracoes globais > Integracao ElevenLabs, colar a chave e clicar **Salvar chave**. O formulario limpa o campo apos salvar e nunca recupera a chave. `ELEVENLABS_API_KEY` continua como alternativa quando nao existe configuracao salva. Nenhuma dependencia nova precisa ser instalada.
 2. Opcional: `ELEVENLABS_MODEL_ID`; padrao `eleven_v4_turbo` (Eleven v4 Turbo), solicitado pelo usuario.
 3. Reiniciar servidor/daemon em uma janela segura para carregar esta versao pela primeira vez. Depois disso, alteracoes da chave pelo admin sao lidas em runtime, sem reiniciar. A implementacao nao reinicia a live automaticamente.
-4. Admin: editar uma conta existente, bloco **ElevenLabs - Leitor de chat**, marcar liberacao, escolher limite e clicar **Salvar acesso ElevenLabs**. Esta acao e separada de **Salvar usuario**. Para conta nova, primeiro criar e depois editar.
-5. Atualizar o painel streamer, abrir Sons / Narracao, escolher **Voz ElevenLabs do chat** e usar **Testar voz do chat**. O teste toca apenas no painel dessa conta e consome o mesmo limite.
+4. (Histórico do piloto, não executar) A edição individual de acesso foi removida. O Super Admin configura modelos, vozes e tarifas globalmente em **Integrações → Vozes liberadas**.
+5. No painel streamer, abrir Sons / Narração, escolher uma voz disponível e usar o teste. O teste toca apenas no painel dessa conta e consome TikCoins conforme a tarifa atual.
 6. Ativar a leitura pelo controle existente. A selecao adicional permite voltar a voz padrao; a configuracao das charadas permanece independente.
 
 ## Contrato e limites
@@ -76,13 +83,13 @@ Nao registrar texto do chat, chave, cabecalhos, URL autenticada ou resposta brut
 - Node e Python leem o mesmo arquivo; `ELEVENLABS_CONFIG_PATH` permite definir o caminho absoluto para ambos. Em caso de arquivo invalido/inacessivel, a integracao fica desativada em vez de reutilizar silenciosamente uma chave antiga.
 - Catalogo e invalidado ao mudar a chave. Salvar configura a credencial, mas nao comprova validade na ElevenLabs; catalogo e teste exercitam a autenticacao real depois.
 
-- `tenant_elevenlabs`: enabled, voice_id e model_id por tenant; acesso desabilitado por padrao. A coluna monthly_limit e preservada para compatibilidade historica.
+- `tenant_elevenlabs`: `voice_id` e `model_id` armazenam a preferência por tenant. As colunas legadas `enabled` e `monthly_limit` são mantidas para compatibilidade histórica; não controlam o acesso nem a tarifa vigente.
 - `tts_credit_wallets` e `tts_credit_ledger`: saldo inteiro sem validade mensal e historico append-only de compra, uso e ajuste; debito atomicamente bloqueado quando insuficiente.
-- GET/PUT `/api/admin/users/:id/elevenlabs`: somente admin; habilitacao individual.
+- (Removido em 2026-11-07) GET/PUT `/api/admin/users/:id/elevenlabs`; não existe autorização individual de voz.
 - `additional_voice_models.credits_per_150_chars`: tarifa inteira em TikCoins definida pelo Super Admin. O uso cobra `max(1, ceil(caracteres × tarifa / 150))`, arredondado para cima por mensagem; cada modelo pode ter tarifa diferente. Tarifas legadas por 100 caracteres são migradas para essa referência com `ceil(tarifa_antiga × 1,5)`.
 - `tts_credit_packages` e `/api/admin/tts/credit-packages`: pacotes avulsos configuraveis pelo Super Admin; checkout via Mercado Pago Preferences e credito liberado somente apos consulta e validacao do pagamento aprovado, valor, BRL e referencia externa. Webhook idempotente.
 - `/api/tts/credits` mostra saldo, tarifas liberadas, pacotes e movimentacoes recentes. `/api/tts/credits/checkout` cria a compra do streamer autenticado. Ajuste manual fica em `/api/admin/users/:id/tts-credits`.
-- GET/PUT `/api/tts/elevenlabs`: consulta acesso/catalogo e salva a propria voz; identidade vem do token.
+- GET/PUT `/api/tts/elevenlabs`: lista vozes globais disponíveis e salva a preferência do próprio streamer; identidade vem do token. Requer conta ativa e funcionalidade `chat`.
 - POST `/api/tts/elevenlabs/test`: voz persistida, texto fixo, tenant do token.
 - Catalogo GET oficial `/v2/voices`, paginado, cache de cinco minutos; retorna somente IDs e nomes.
 - Sintese POST oficial `/v1/text-to-speech/{voice_id}`, MP3, timeout de oito segundos, sem retry automatico pago.

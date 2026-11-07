@@ -6,7 +6,8 @@ const voiceModels = require("../lib/additional-voice-models.json");
 const creditWallet = require("../lib/tts-credit-wallet");
 const apiCosts = require("../lib/api-costs");
 
-module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log }) {
+module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, requireFeature }) {
+  const chatFeature = typeof requireFeature === "function" ? requireFeature("chat") : (_req, _res, next) => next();
   db.db.exec(`CREATE TABLE IF NOT EXISTS tenant_elevenlabs (
     tenant_id INTEGER PRIMARY KEY REFERENCES users(id),
     enabled INTEGER NOT NULL DEFAULT 0,
@@ -60,8 +61,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
     });
     seedRates.immediate();
   }
-  const get = id => db.db.prepare("SELECT * FROM tenant_elevenlabs WHERE tenant_id=?").get(id)
-    || { tenant_id: id, enabled: 0, voice_id: "", model_id: "elevenlabs/eleven-v4-turbo", monthly_limit: 10000 };
+  const get = id => db.db.prepare("SELECT tenant_id,voice_id,model_id FROM tenant_elevenlabs WHERE tenant_id=?").get(id)
+    || { tenant_id: id, voice_id: "", model_id: "elevenlabs/eleven-v4-turbo" };
   const configured = () => Boolean(providerConfig.read().apiKey);
   let catalog = [], catalogUntil = 0, catalogKey = "", pendingCatalog = null;
   const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map();
@@ -239,7 +240,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
   }
   function view(id) {
     const row = get(id);
-    return { enabled: row.enabled === 1, configured: configured(), openrouter_configured: openRouterConfigured(), voice_id: row.voice_id,
+    return { enabled: Boolean(active(id)), configured: configured(), openrouter_configured: openRouterConfigured(), voice_id: row.voice_id,
       model_id: row.model_id || "elevenlabs/eleven-v4-turbo",
       credit_balance: creditWallet.getBalance(db, id) };
   }
@@ -253,9 +254,9 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       message: "Configuração de voz adicional.", details });
   }
   function allowed(req, res, next) {
-    if (!active(req.user.id) || get(req.user.id).enabled !== 1) {
-      audit(req.user.id, "tts.provider.rejected", "notice", "warning", { code: "ACCESS_DENIED" });
-      return res.status(403).json({ success: false, error: "Vozes adicionais não liberadas para esta conta." });
+    if (!active(req.user.id)) {
+      audit(req.user.id, "tts.provider.rejected", "notice", "warning", { code: "ACCOUNT_INACTIVE" });
+      return res.status(403).json({ success: false, error: "Conta inativa." });
     }
     next();
   }
@@ -444,25 +445,9 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       res.status(500).json({ success: false, error: "Não foi possível salvar a configuração da integração." });
     }
   });
-  app.get("/api/admin/users/:id/elevenlabs", auth.requireAdmin, (req, res) => {
-    const id = Number(req.params.id);
-    if (!db.getUserById(id)) return res.status(404).json({ success: false });
-    res.json({ success: true, ...view(id) });
-  });
-  app.put("/api/admin/users/:id/elevenlabs", auth.requireAdmin, (req, res) => {
-    const id = Number(req.params.id), { enabled } = req.body || {};
-    if (!db.getUserById(id)) return res.status(404).json({ success: false });
-    if (typeof enabled !== "boolean" || req.body?.monthly_limit !== undefined)
-      return res.status(400).json({ success: false, error: "Informe somente se as vozes adicionais serão liberadas para esta conta." });
-    db.db.prepare(`INSERT INTO tenant_elevenlabs(tenant_id,enabled) VALUES(?,?)
-      ON CONFLICT(tenant_id) DO UPDATE SET enabled=excluded.enabled`)
-      .run(id, enabled ? 1 : 0);
-    audit(id, "tts.provider.access_changed", "system", "info", { enabled, actor_id: req.user.id });
-    res.json({ success: true, ...view(id) });
-  });
-  app.get("/api/tts/elevenlabs", auth.requireAuth, async (req, res) => {
+  app.get("/api/tts/elevenlabs", auth.requireAuth, chatFeature, async (req, res) => {
     const state = view(req.user.id);
-    if (!active(req.user.id) || !state.enabled) return res.json({ success: true, enabled: false, voices: [] });
+    if (!active(req.user.id)) return res.json({ success: true, ...state, voices: [] });
     try {
       const catalog = await modelsForStreamer(req.user.id);
       const currentModel = catalog.models.find(model => model.id === state.model_id);
@@ -475,7 +460,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
       res.json({ success: true, ...state, voices: [], catalog_error: true });
     }
   });
-  app.put("/api/tts/elevenlabs", auth.requireAuth, allowed, async (req, res) => {
+  app.put("/api/tts/elevenlabs", auth.requireAuth, chatFeature, allowed, async (req, res) => {
     const voice = req.body?.voice_id;
     const current = get(req.user.id);
     const selectedModel = typeof req.body?.model_id === "string" ? req.body.model_id : (current.model_id || "elevenlabs/eleven-v4-turbo");
@@ -487,15 +472,16 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log })
           || !(await voicesForModel(selectedModel)).some(v => v.key === voice)))
         return res.status(400).json({ success: false, error: "Voz não liberada pelo administrador." });
       // Recheck after the asynchronous catalog request in case the admin revoked access.
-      if (!active(req.user.id) || get(req.user.id).enabled !== 1) return res.status(403).json({ success: false });
+      if (!active(req.user.id)) return res.status(403).json({ success: false, error: "Conta inativa." });
       if (voice && !voiceIsEnabled(selectedModel, voice))
         return res.status(400).json({ success: false, error: "Voz sem tarifa em TikCoins ou não liberada pelo administrador." });
-      db.db.prepare("UPDATE tenant_elevenlabs SET model_id=?,voice_id=? WHERE tenant_id=?").run(selectedModel, voice, req.user.id);
+      db.db.prepare(`INSERT INTO tenant_elevenlabs(tenant_id,model_id,voice_id) VALUES(?,?,?)
+        ON CONFLICT(tenant_id) DO UPDATE SET model_id=excluded.model_id,voice_id=excluded.voice_id`).run(req.user.id, selectedModel, voice);
       audit(req.user.id, "tts.provider.preference_saved", "diagnostic", "debug", { model_id: selectedModel, voice_type: model.voice_type });
       res.json({ success: true, ...view(req.user.id) });
     } catch { res.status(502).json({ success: false, error: "Não foi possível salvar a voz." }); }
   });
-  app.post("/api/tts/elevenlabs/test", auth.requireAuth, allowed, (req, res) => {
+  app.post("/api/tts/elevenlabs/test", auth.requireAuth, chatFeature, allowed, (req, res) => {
     const selection = get(req.user.id);
     const model = getModelStates().find(item => item.id === (selection.model_id || "elevenlabs/eleven-v4-turbo"));
     if (!selection.voice_id || !model || !voiceIsEnabled(model.id, selection.voice_id)) return res.status(400).json({ success: false, error: "Selecione uma voz adicional disponível primeiro." });

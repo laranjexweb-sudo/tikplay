@@ -142,9 +142,9 @@ class ElevenLabsTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as conn:
             row = conn.execute("SELECT provider,resource,quantity,status,cost_source FROM api_cost_usage").fetchone()
         self.assertEqual(row, ("elevenlabs", "chat_voice", len("Olá Brasil"), "success", "unknown"))
-        self.assertEqual(provider.synthesize(2, "Olá Brasil", self.audio)[1], "NOT_SELECTED")
+        self.assertEqual(provider.synthesize(2, "Olá Brasil", self.audio)[1], "SYNTHESIZED")
         self.update("UPDATE tenant_elevenlabs SET enabled=0 WHERE tenant_id=1")
-        self.assertIsNone(provider.synthesize(1, "Olá Brasil", self.audio)[0])
+        self.assertEqual(provider.synthesize(1, "Olá Brasil", self.audio)[1], "CACHE_HIT")
 
     @patch("elevenlabs_tts.urllib.request.urlopen")
     def test_limit_prevents_upstream_call(self, network):
@@ -173,7 +173,7 @@ class ElevenLabsTests(unittest.TestCase):
     @patch("elevenlabs_tts.urllib.request.urlopen")
     def test_revocation_during_request_discards_audio(self, network):
         def respond(*args, **kwargs):
-            self.update("UPDATE tenant_elevenlabs SET enabled=0 WHERE tenant_id=1")
+            self.update("UPDATE tenant_elevenlabs SET voice_id='another_voice' WHERE tenant_id=1")
             return AudioResponse()
         network.side_effect = respond
         self.assertEqual(provider.synthesize(1, "Olá Brasil", self.audio)[1], "ACCESS_CHANGED")

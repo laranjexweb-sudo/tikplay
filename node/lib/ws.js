@@ -73,6 +73,8 @@ function getTenant(id) {
       activeDaemonSessionId: null,
       activeLiveUsername: null,
       activeLiveEngine: null,
+      autoResumeSessionId: null,
+      autoResumeExpectedRoomId: null,
       currentRoomId: recovery && recovery.room_id || null,
       gameRecoveryCheckpoint: recovery,
       currentSessionId: null,
