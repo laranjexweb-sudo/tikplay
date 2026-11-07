@@ -6,8 +6,11 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
   const trace = () => crypto.randomUUID();
   const report = (category, level, event, message, details = {}, code) =>
     log({ category, level, event, message, code, trace_id: trace(), details });
-  const packages = (enabledOnly = false) => db.db.prepare(`SELECT id,name,credits,price_cents,enabled
-    FROM tts_credit_packages ${enabledOnly ? "WHERE enabled=1" : ""} ORDER BY price_cents,id`).all();
+  const packages = (enabledOnly = false) => db.db.prepare(enabledOnly
+    ? "SELECT id,name,credits,price_cents,enabled FROM tts_credit_packages WHERE enabled=1 ORDER BY price_cents,id"
+    : `SELECT p.id,p.name,p.credits,p.price_cents,p.enabled,
+      (SELECT COUNT(*) FROM tts_credit_purchases x WHERE x.package_id=p.id) AS purchase_count
+      FROM tts_credit_packages p ORDER BY p.price_cents,p.id`).all();
 
   app.get("/api/tts/credits", auth.requireAuth, (req, res) => {
     const tenantId = req.user.id;
@@ -137,10 +140,19 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
   });
 
   app.get("/api/admin/tts/credit-balances", auth.requireAdmin, (req, res) => {
+    const search = String(req.query?.search || "").trim().slice(0, 120);
+    const rawLimit = Number(req.query?.limit || 0), rawOffset = Number(req.query?.offset || 0);
+    const paged = Number.isSafeInteger(rawLimit) && rawLimit > 0;
+    const limit = paged ? Math.max(1, Math.min(100, rawLimit)) : 0;
+    const offset = Number.isSafeInteger(rawOffset) ? Math.max(0, Math.min(1000000, rawOffset)) : 0;
+    const where = "WHERE COALESCE(u.role,'user')<>'admin' AND (?='' OR lower(u.name) LIKE lower(?) OR lower(u.email) LIKE lower(?))";
+    const params = [search, `%${search}%`, `%${search}%`];
+    const total = db.db.prepare(`SELECT COUNT(*) AS count FROM users u ${where}`).get(...params).count;
     const accounts = db.db.prepare(`SELECT u.id,u.name,u.email,u.status,COALESCE(w.balance,0) AS balance
       FROM users u LEFT JOIN tts_credit_wallets w ON w.tenant_id=u.id
-      WHERE COALESCE(u.role,'user')<>'admin' ORDER BY lower(u.name),u.id`).all();
-    res.set("Cache-Control", "no-store").json({ success: true, accounts });
+      ${where} ORDER BY lower(u.name),u.id ${paged ? "LIMIT ? OFFSET ?" : ""}`).all(...params, ...(paged ? [limit, offset] : []));
+    res.set("Cache-Control", "no-store").json({ success: true, accounts, total: Number(total || 0),
+      limit: paged ? limit : null, offset: paged ? offset : 0, has_more: paged && offset + accounts.length < Number(total || 0) });
   });
 
   app.get("/api/admin/tts/credit-report", auth.requireAdmin, (req, res) => {
@@ -183,6 +195,39 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       }));
     const totalRows = db.db.prepare(`SELECT COUNT(*) AS count FROM tts_credit_ledger l
       WHERE l.kind IN ('purchase','purchase_reversal','admin_adjustment') ${periodSql}`).get(...periodParams).count;
+    const purchaseFilters = [];
+    const purchaseParams = [];
+    if (since) { purchaseFilters.push("datetime(COALESCE(p.paid_at,p.created_at))>=datetime('now', ?)"); purchaseParams.push(since); }
+    const streamerId = Number(req.query?.streamer_id || 0);
+    if (Number.isSafeInteger(streamerId) && streamerId > 0) { purchaseFilters.push("p.tenant_id=?"); purchaseParams.push(streamerId); }
+    const packageId = String(req.query?.package_id || "").slice(0, 64);
+    if (packageId) { purchaseFilters.push("p.package_id=?"); purchaseParams.push(packageId); }
+    const purchaseStatus = String(req.query?.status || "");
+    const purchaseStatuses = ["approved", "pending", "in_process", "authorized", "in_mediation", "cancelled", "rejected", "refunded", "charged_back", "checkout_failed"];
+    if (purchaseStatus && !purchaseStatuses.includes(purchaseStatus))
+      return res.status(400).json({ success: false, error: "Status de compra inválido." });
+    if (purchaseStatus) { purchaseFilters.push("p.status=?"); purchaseParams.push(purchaseStatus); }
+    const purchaseWhere = purchaseFilters.length ? `WHERE ${purchaseFilters.join(" AND ")}` : "";
+    const purchaseTotals = db.db.prepare(`SELECT
+      SUM(CASE WHEN p.status IN ('approved','refunded') THEN 1 ELSE 0 END) AS confirmed_count,
+      SUM(CASE WHEN p.status IN ('approved','refunded') THEN p.price_cents ELSE 0 END) AS gross_cents,
+      SUM(CASE WHEN p.status IN ('approved','refunded') THEN p.credits ELSE 0 END) AS sold_credits,
+      SUM(CASE WHEN p.status IN ('pending','in_process','authorized','in_mediation') THEN 1 ELSE 0 END) AS pending_count,
+      SUM(CASE WHEN p.status IN ('cancelled','rejected','refunded','charged_back','checkout_failed') THEN 1 ELSE 0 END) AS cancelled_count
+      FROM tts_credit_purchases p ${purchaseWhere}`).get(...purchaseParams);
+    const purchasesTotal = Number(db.db.prepare(`SELECT COUNT(*) AS count FROM tts_credit_purchases p ${purchaseWhere}`)
+      .get(...purchaseParams).count || 0);
+    const purchaseOffset = Number.isSafeInteger(Number(req.query?.purchase_offset))
+      ? Math.max(0, Math.min(1000000, Number(req.query.purchase_offset))) : offset;
+    const purchaseRows = db.db.prepare(`SELECT p.id,p.tenant_id,p.package_id,p.package_name,p.credits,p.price_cents,
+      p.status,p.payment_id,p.created_at,p.paid_at,u.name AS streamer_name,u.email AS streamer_email
+      FROM tts_credit_purchases p JOIN users u ON u.id=p.tenant_id ${purchaseWhere}
+      ORDER BY COALESCE(p.paid_at,p.created_at) DESC,p.id DESC LIMIT ? OFFSET ?`)
+      .all(...purchaseParams, pageSize, purchaseOffset);
+    const reportOptions = {
+      streamers: db.db.prepare(`SELECT id,name,email FROM users WHERE COALESCE(role,'user')<>'admin' ORDER BY lower(name),id`).all(),
+      packages: packages(false),
+    };
     res.set("Cache-Control", "no-store").json({ success: true, range, offset, page_size: pageSize,
       total_rows: Number(totalRows || 0), has_more: offset + rows.length < Number(totalRows || 0),
       totals: {
@@ -192,7 +237,42 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         net_paid_cents: Number(totals.gross_paid_cents || 0) - Number(totals.refunded_cents || 0),
         manual_add_count: Number(totals.manual_add_count || 0), manual_added_credits: Number(totals.manual_added_credits || 0),
         manual_remove_count: Number(totals.manual_remove_count || 0), manual_removed_credits: Number(totals.manual_removed_credits || 0),
-      }, rows });
+      }, rows,
+      purchase_totals: { confirmed_count: Number(purchaseTotals.confirmed_count || 0),
+        gross_cents: Number(purchaseTotals.gross_cents || 0), sold_credits: Number(purchaseTotals.sold_credits || 0),
+        pending_count: Number(purchaseTotals.pending_count || 0), cancelled_count: Number(purchaseTotals.cancelled_count || 0) },
+      purchases: purchaseRows, purchases_total: purchasesTotal, purchase_offset: purchaseOffset,
+      purchases_has_more: purchaseOffset + purchaseRows.length < purchasesTotal, options: reportOptions });
+  });
+
+  app.get("/api/admin/tts/credit-movements", auth.requireAdmin, (req, res) => {
+    const kind = String(req.query?.kind || "all");
+    const kindMap = { purchase: ["purchase"], manual_add: ["admin_adjustment"], manual_remove: ["admin_adjustment"],
+      usage: ["usage"], refund: ["purchase_reversal"] };
+    if (kind !== "all" && !kindMap[kind]) return res.status(400).json({ success: false, error: "Tipo de movimentação inválido." });
+    const filters = [], params = [];
+    if (kind !== "all") { filters.push(`l.kind IN (${kindMap[kind].map(() => "?").join(",")})`); params.push(...kindMap[kind]); }
+    if (kind === "manual_add") filters.push("l.amount>0");
+    if (kind === "manual_remove") filters.push("l.amount<0");
+    const streamerId = Number(req.query?.streamer_id || 0);
+    if (Number.isSafeInteger(streamerId) && streamerId > 0) { filters.push("l.tenant_id=?"); params.push(streamerId); }
+    const range = String(req.query?.range || "30d"), daysByRange = { "7d": 7, "30d": 30, "90d": 90 };
+    if (range !== "all" && !daysByRange[range]) return res.status(400).json({ success: false, error: "Período inválido." });
+    if (range !== "all") { filters.push("datetime(l.created_at)>=datetime('now', ?)"); params.push(`-${daysByRange[range]} days`); }
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+    const rawLimit = Number(req.query?.limit || 50), rawOffset = Number(req.query?.offset || 0);
+    const limit = Number.isSafeInteger(rawLimit) ? Math.max(1, Math.min(100, rawLimit)) : 50;
+    const offset = Number.isSafeInteger(rawOffset) ? Math.max(0, Math.min(1000000, rawOffset)) : 0;
+    const total = Number(db.db.prepare(`SELECT COUNT(*) AS count FROM tts_credit_ledger l ${where}`).get(...params).count || 0);
+    const rows = db.db.prepare(`SELECT l.id,l.tenant_id,l.amount,l.kind,l.model_id,l.unit_count,l.reference_id,l.actor_id,l.reason,l.created_at,
+      u.name AS streamer_name,u.email AS streamer_email,a.name AS actor_name,a.email AS actor_email,
+      p.package_name,p.payment_id
+      FROM tts_credit_ledger l JOIN users u ON u.id=l.tenant_id LEFT JOIN users a ON a.id=l.actor_id
+      LEFT JOIN tts_credit_purchases p ON p.payment_id=l.reference_id ${where}
+      ORDER BY l.id DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
+    const streamers = db.db.prepare(`SELECT id,name,email FROM users WHERE COALESCE(role,'user')<>'admin' ORDER BY lower(name),id`).all();
+    res.set("Cache-Control", "no-store").json({ success: true, rows, total, limit, offset,
+      has_more: offset + rows.length < total, streamers });
   });
 
   app.put("/api/admin/tts/credit-packages", auth.requireAdmin, (req, res) => {
@@ -237,14 +317,16 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
   app.post("/api/admin/users/:id/tts-credits", auth.requireAdmin, (req, res) => {
     const tenantId = Number(req.params.id);
     const amount = req.body?.amount;
-    if (!Number.isSafeInteger(amount) || amount === 0) {
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+    if (!Number.isSafeInteger(amount) || amount === 0 || reason.length > 500
+        || (req.body?.reason !== undefined && reason.length > 0 && reason.length < 3)) {
       report("notice", "warning", "tts.credits.adjustment_rejected", "Ajuste de créditos inválido.",
         { tenant_id: tenantId, actor_id: req.user.id, code: "INVALID_ADJUSTMENT" }, "INVALID_ADJUSTMENT");
-      return res.status(400).json({ success: false, error: "Informe uma quantidade inteira diferente de zero." });
+      return res.status(400).json({ success: false, error: "Informe uma quantidade inteira e um motivo válido." });
     }
     const referenceId = crypto.randomUUID();
     try {
-      const result = wallet.adjust(db, { tenantId, amount, actorId: req.user.id, referenceId });
+      const result = wallet.adjust(db, { tenantId, amount, actorId: req.user.id, referenceId, reason });
       if (!result.success) {
         report("notice", "warning", "tts.credits.adjustment_rejected", "Ajuste de créditos não foi aplicado.",
           { tenant_id: tenantId, actor_id: req.user.id, code: result.code }, result.code);

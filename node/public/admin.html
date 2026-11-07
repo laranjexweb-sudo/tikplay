@@ -173,37 +173,41 @@
 
 <section class="tp-admin-section tp-admin-management" id="adminCredits" aria-labelledby="adminCreditsHeading">
   <header class="tp-admin-section-heading">
-    <div><h2 id="adminCreditsHeading">Pacotes e TikCoins</h2><p>Cadastre os pacotes vendidos e faça ajustes manuais de saldo dos streamers.</p></div>
+    <div><h2 id="adminCreditsHeading">Pacotes e TikCoins</h2><p>Gerencie saldos, pacotes de recarga, compras e auditoria da carteira.</p></div>
   </header>
-  <div class="tp-admin-operation-block" aria-labelledby="ttsCreditPackagesTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="ttsCreditPackagesTitle">Pacotes de TikCoins</h3><p>Inicial: 30 mil por R$ 14,90 · Criador: 100 mil por R$ 39,90 · Pro: 300 mil por R$ 99,90. Edite ou desative os pacotes abaixo.</p></div></div>
-    <div id="ttsCreditPackagesList" class="tp-admin-credit-packages"><p class="text-secondary">Carregando pacotes…</p></div>
-    <div class="tp-admin-operation-actions">
-      <button class="btn btn-nb btn-dark" type="button" id="ttsCreditPackageAdd">Adicionar pacote</button>
-      <button class="btn btn-nb btn-success" type="button" id="ttsCreditPackageSave">Salvar pacotes</button>
+  <div class="tp-admin-credit-console">
+    <div class="tp-admin-credit-tabs" role="tablist" aria-label="Seções de TikCoins">
+      <button type="button" role="tab" id="creditTabBalances" aria-controls="creditPanelBalances" aria-selected="true">Saldos dos streamers</button>
+      <button type="button" role="tab" id="creditTabPackages" aria-controls="creditPanelPackages" aria-selected="false" tabindex="-1">Pacotes de recarga</button>
+      <button type="button" role="tab" id="creditTabReport" aria-controls="creditPanelReport" aria-selected="false" tabindex="-1">Relatório de recargas</button>
+      <button type="button" role="tab" id="creditTabMovements" aria-controls="creditPanelMovements" aria-selected="false" tabindex="-1">Movimentações</button>
     </div>
-    <div class="tp-admin-feedback" id="ttsCreditPackagesStatus" role="status" aria-live="polite"></div>
-  </div>
-  <div class="tp-admin-operation-block" aria-labelledby="adminCreditBalancesTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="adminCreditBalancesTitle">Saldo dos streamers</h3><p>Informe uma quantidade inteira e escolha adicionar ou remover. Remoções não podem deixar o saldo negativo.</p></div></div>
-    <div class="tp-admin-toolbar"><label for="adminCreditSearch">Buscar streamer<input class="form-control" id="adminCreditSearch" type="search" placeholder="Nome ou e-mail"></label><button class="btn btn-nb btn-dark" type="button" id="adminCreditRefresh">Atualizar saldos</button></div>
-    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Conta</th><th>Saldo</th><th>Quantidade</th><th>Ações</th></tr></thead><tbody id="adminCreditRows"><tr><td colspan="5">Carregando saldos…</td></tr></tbody></table></div>
-    <div class="tp-admin-feedback" id="adminCreditStatus" role="status" aria-live="polite"></div>
-  </div>
-  <div class="tp-admin-operation-block" aria-labelledby="adminCreditReportTitle">
-    <div class="tp-dashboard-panel-heading tp-dashboard-cost-heading mb-0">
-      <div class="tp-admin-operation-heading"><div><h3 id="adminCreditReportTitle">Relatório de recargas</h3><p>Compras só entram como pagas após confirmação do Mercado Pago. Créditos inseridos pelo admin ficam separados.</p></div></div>
-      <label>Período<select class="form-select" id="adminCreditReportRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label>
-    </div>
-    <div class="tp-dashboard-cost-kpis" id="adminCreditReportSummary">
-      <article class="tp-card"><span>Compras confirmadas</span><strong>—</strong><small>Carregando relatório</small></article>
-      <article class="tp-card"><span>Receita líquida</span><strong>—</strong><small>Compras aprovadas menos reembolsos</small></article>
-      <article class="tp-card"><span>TikCoins adicionados manualmente</span><strong>—</strong><small>Carregando relatório</small></article>
-      <article class="tp-card"><span>TikCoins removidos manualmente</span><strong>—</strong><small>Carregando relatório</small></article>
-    </div>
-    <div class="tp-admin-toolbar"><span id="adminCreditReportStatus" class="text-secondary">Carregando movimentações…</span><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportRefresh">Atualizar relatório</button></div>
-    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Data</th><th>Streamer</th><th>Origem</th><th>Pacote / admin</th><th>TikCoins</th><th>Valor</th></tr></thead><tbody id="adminCreditReportRows"><tr><td colspan="6">Carregando movimentações…</td></tr></tbody></table></div>
-    <div class="d-flex align-items-center justify-content-between gap-2 mt-3"><span id="adminCreditReportPageStatus" class="text-secondary small"></span><div class="d-flex gap-2"><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportNext" disabled>Próxima</button></div></div>
+    <section class="tp-admin-credit-panel" id="creditPanelBalances" role="tabpanel" aria-labelledby="creditTabBalances">
+      <div class="tp-admin-credit-panel-head"><div><h3 id="adminCreditBalancesTitle">Saldos dos streamers</h3><p>Consulte a carteira e faça ajustes auditados. O saldo não pode ficar negativo.</p></div><button class="btn btn-nb btn-dark" type="button" id="adminCreditRefresh">Atualizar</button></div>
+      <div class="tp-admin-toolbar"><label for="adminCreditSearch">Buscar por nome ou e-mail<input class="form-control" id="adminCreditSearch" type="search" placeholder="Digite para buscar"></label></div>
+      <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Streamer</th><th>Status da conta</th><th>Saldo atual</th><th>Ações</th></tr></thead><tbody id="adminCreditRows"><tr><td colspan="4">Carregando saldos…</td></tr></tbody></table></div>
+      <div class="tp-admin-credit-pagination"><span id="adminCreditStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditNext" disabled>Próxima</button></div></div>
+    </section>
+    <section class="tp-admin-credit-panel" id="creditPanelPackages" role="tabpanel" aria-labelledby="creditTabPackages" hidden>
+      <div class="tp-admin-credit-panel-head"><div><h3 id="ttsCreditPackagesTitle">Pacotes de recarga</h3><p>Pacotes desativados deixam de aparecer para compra; compras anteriores permanecem no histórico.</p></div><button class="btn btn-nb btn-success" type="button" id="ttsCreditPackageAdd">Novo pacote</button></div>
+      <div id="ttsCreditPackageEditor" class="tp-admin-credit-editor" hidden></div>
+      <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Pacote</th><th>TikCoins</th><th>Preço</th><th>Disponibilidade</th><th>Ações</th></tr></thead><tbody id="ttsCreditPackagesList"><tr><td colspan="5">Abra esta aba para carregar os pacotes.</td></tr></tbody></table></div>
+      <div class="tp-admin-feedback" id="ttsCreditPackagesStatus" role="status" aria-live="polite"></div>
+    </section>
+    <section class="tp-admin-credit-panel" id="creditPanelReport" role="tabpanel" aria-labelledby="creditTabReport" hidden>
+      <div class="tp-admin-credit-panel-head"><div><h3 id="adminCreditReportTitle">Relatório de recargas</h3><p>Indicadores de receita consideram somente compras confirmadas.</p></div><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportRefresh">Atualizar</button></div>
+      <div class="tp-admin-credit-filters"><label>Período<select class="form-select" id="adminCreditReportRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><label>Streamer<select class="form-select" id="adminCreditReportStreamer"><option value="">Todos</option></select></label><label>Status<select class="form-select" id="adminCreditReportFilterStatus"><option value="">Todos</option><option value="approved">Confirmada</option><option value="pending">Pendente</option><option value="in_process">Em processamento</option><option value="authorized">Autorizada</option><option value="in_mediation">Em análise</option><option value="cancelled">Cancelada</option><option value="rejected">Recusada</option><option value="refunded">Estornada</option><option value="charged_back">Contestada</option><option value="checkout_failed">Falha no checkout</option></select></label><label>Pacote<select class="form-select" id="adminCreditReportPackage"><option value="">Todos</option></select></label></div>
+      <div class="tp-admin-credit-kpis" id="adminCreditReportSummary"><article><span>Compras confirmadas</span><strong>—</strong></article><article><span>Receita bruta</span><strong>—</strong></article><article><span>TikCoins vendidos</span><strong>—</strong></article><article><span>Pendentes / canceladas</span><strong>—</strong></article></div>
+      <div class="tp-admin-feedback" id="adminCreditReportStatus" role="status" aria-live="polite">Abra esta aba para carregar o relatório.</div>
+      <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Data</th><th>Streamer</th><th>Pacote</th><th>TikCoins</th><th>Valor</th><th>Status</th></tr></thead><tbody id="adminCreditReportRows"><tr><td colspan="6">—</td></tr></tbody></table></div>
+      <div class="tp-admin-credit-pagination"><span id="adminCreditReportPageStatus" class="text-secondary small"></span><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportNext" disabled>Próxima</button></div></div>
+    </section>
+    <section class="tp-admin-credit-panel" id="creditPanelMovements" role="tabpanel" aria-labelledby="creditTabMovements" hidden>
+      <div class="tp-admin-credit-panel-head"><div><h3>Movimentações</h3><p>Auditoria de recargas, ajustes administrativos, consumo e estornos.</p></div><button class="btn btn-nb btn-dark" type="button" id="adminCreditMovementsRefresh">Atualizar</button></div>
+      <div class="tp-admin-credit-filters"><label>Tipo<select class="form-select" id="adminCreditMovementKind"><option value="all">Todas</option><option value="purchase">Recarga paga</option><option value="manual_add">Crédito manual</option><option value="manual_remove">Débito manual</option><option value="usage">Consumo</option><option value="refund">Estorno</option></select></label><label>Período<select class="form-select" id="adminCreditMovementRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><label>Streamer<select class="form-select" id="adminCreditMovementStreamer"><option value="">Todos</option></select></label></div>
+      <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Data</th><th>Streamer</th><th>Tipo / origem</th><th>Quantidade</th><th>Administrador</th><th>Motivo</th><th>Transação</th></tr></thead><tbody id="adminCreditMovementRows"><tr><td colspan="7">Abra esta aba para carregar movimentações.</td></tr></tbody></table></div>
+      <div class="tp-admin-credit-pagination"><span id="adminCreditMovementStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditMovementPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditMovementNext" disabled>Próxima</button></div></div>
+    </section>
   </div>
 </section>
 
@@ -1626,195 +1630,205 @@ function saveAdditionalVoiceModels(changedToggle) {
   return additionalVoiceSaveQueue;
 }
 
-function createTtsCreditPackageRow(item = {}) {
-  const row = document.createElement("div");
-  row.className = "tp-admin-credit-package-row";
-  row.dataset.packageId = item.id || "";
-  const field = (labelText, type, value, attrs = {}) => {
-    const label = document.createElement("label"); label.className = "tp-admin-field tp-admin-field-compact";
-    label.appendChild(document.createTextNode(labelText));
-    const input = document.createElement("input"); input.className = "form-control form-control-sm"; input.type = type;
-    if (type === "checkbox") input.checked = value === true || value === 1;
-    else input.value = value ?? "";
-    for (const [key, val] of Object.entries(attrs)) input.setAttribute(key, val);
-    label.appendChild(input); return { label, input };
-  };
-  const name = field("Nome do pacote", "text", item.name || "", { maxlength: "80", placeholder: "Ex.: Básico" });
-  const credits = field("TikCoins", "number", item.credits ?? "", { min: "1", max: "100000000", step: "1" });
-  const price = field("Preço (R$)", "number", item.price_cents ? (item.price_cents / 100).toFixed(2) : "",
-    { min: "0.01", max: "1000000", step: "0.01" });
-  const enabled = field("Vendido aos clientes", "checkbox", item.enabled !== false && item.enabled !== 0);
-  const remove = document.createElement("button"); remove.type = "button"; remove.className = "btn btn-nb btn-danger";
-  remove.textContent = "Remover"; remove.setAttribute("aria-label", `Remover pacote ${item.name || "novo"}`);
-  remove.addEventListener("click", () => row.remove());
-  row.append(name.label, credits.label, price.label, enabled.label, remove);
-  row._fields = { name: name.input, credits: credits.input, price: price.input, enabled: enabled.input };
-  return row;
-}
-
-function renderTtsCreditPackages(items = []) {
-  const list = document.getElementById("ttsCreditPackagesList");
-  list.replaceChildren();
-  if (!items.length) list.appendChild(Object.assign(document.createElement("p"), {
-    className: "text-secondary", textContent: "Nenhum pacote criado. Adicione um pacote para começar a vender TikCoins.",
-  }));
-  for (const item of items) list.appendChild(createTtsCreditPackageRow(item));
-}
-
-async function loadTtsCreditPackages() {
-  const status = document.getElementById("ttsCreditPackagesStatus");
-  try {
-    const data = await apiFetch("/api/admin/tts/credit-packages");
-    if (!data.success) throw new Error(data.error || "Falha ao carregar os pacotes.");
-    renderTtsCreditPackages(data.packages || []);
-    status.textContent = "Defina o preço e os TikCoins de cada pacote; pagamentos aprovados no Mercado Pago entram automaticamente no saldo.";
-  } catch {
-    status.textContent = "Não foi possível carregar os pacotes de TikCoins.";
-  }
-}
-
 let adminCreditAccounts = [];
+let adminCreditAccountOffset = 0;
+const adminCreditAccountPageSize = 50;
+let adminCreditAccountTotal = 0;
+let adminCreditSearchTimer = null;
 let adminCreditReportOffset = 0;
 let adminCreditReportPageSize = 100;
+let adminCreditMovementOffset = 0;
+const adminCreditMovementPageSize = 50;
+let adminCreditPackages = [];
+let activeCreditTab = "balances";
+const loadedCreditTabs = new Set();
 
 function formatAdminCreditMoney(cents) {
   return (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+function creditDate(value) {
+  const date = new Date(`${String(value || "").replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("pt-BR");
+}
+function setCreditTab(name) {
+  activeCreditTab = name;
+  for (const tab of document.querySelectorAll(".tp-admin-credit-tabs [role=tab]")) {
+    const selected = tab.id === `creditTab${name[0].toUpperCase()}${name.slice(1)}`;
+    tab.setAttribute("aria-selected", String(selected)); tab.tabIndex = selected ? 0 : -1;
+  }
+  for (const panel of document.querySelectorAll(".tp-admin-credit-panel"))
+    panel.hidden = panel.id !== `creditPanel${name[0].toUpperCase()}${name.slice(1)}`;
+  if (loadedCreditTabs.has(name)) return;
+  loadedCreditTabs.add(name);
+  if (name === "balances") loadAdminCreditAccounts();
+  if (name === "packages") loadTtsCreditPackages();
+  if (name === "report") loadAdminCreditReport(0);
+  if (name === "movements") loadAdminCreditMovements(0);
+}
 
-function renderAdminCreditReport(data) {
-  const t = data.totals || {};
-  document.getElementById("adminCreditReportSummary").innerHTML = [
-    ["Compras confirmadas", Number(t.paid_purchase_count || 0).toLocaleString("pt-BR"), `${Number(t.paid_credits || 0).toLocaleString("pt-BR")} TikCoins vendidos`],
-    ["Receita líquida", formatAdminCreditMoney(t.net_paid_cents), `Bruto ${formatAdminCreditMoney(t.gross_paid_cents)} · Reembolsos ${formatAdminCreditMoney(t.refunded_cents)} (${Number(t.refund_count || 0)} compras)`],
-    ["TikCoins adicionados manualmente", Number(t.manual_added_credits || 0).toLocaleString("pt-BR"), `${Number(t.manual_add_count || 0).toLocaleString("pt-BR")} ajustes do admin`],
-    ["TikCoins removidos manualmente", Number(t.manual_removed_credits || 0).toLocaleString("pt-BR"), `${Number(t.manual_remove_count || 0).toLocaleString("pt-BR")} ajustes do admin`],
-  ].map(([label, value, note]) => `<article class="tp-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
-
-  const body = document.getElementById("adminCreditReportRows");
-  body.replaceChildren();
-  for (const item of data.rows || []) {
+function renderTtsCreditPackages(items = []) {
+  adminCreditPackages = items;
+  const body = document.getElementById("ttsCreditPackagesList"); body.replaceChildren();
+  for (const item of items) {
     const tr = document.createElement("tr");
-    const date = new Date(`${String(item.created_at || "").replace(" ", "T")}Z`);
-    const dateLabel = Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("pt-BR");
-    const sourceLabel = item.source === "manual" ? (Number(item.amount) > 0 ? "Crédito manual adicionado" : "Crédito manual removido")
-      : item.source === "refund" ? "Compra reembolsada" : "Compra paga";
-    const referenceLabel = item.source === "manual" ? (item.actor_name || item.actor_email || "Admin")
-      : (item.package_name || "Pacote") + (item.payment_id ? ` · Pagamento ${item.payment_id}` : "");
-    const signedAmount = Number(item.amount || 0);
-    const value = item.source === "manual" ? "—" : `${item.source === "refund" ? "−" : ""}${formatAdminCreditMoney(item.price_cents)}`;
-    tr.innerHTML = `<td>${esc(dateLabel)}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(sourceLabel)}</td><td>${esc(referenceLabel)}</td><td>${signedAmount > 0 ? "+" : ""}${signedAmount.toLocaleString("pt-BR")} TikCoins</td><td>${esc(value)}</td>`;
+    tr.innerHTML = `<td><strong>${esc(item.name)}</strong><small class="tp-dashboard-email">${Number(item.purchase_count || 0).toLocaleString("pt-BR")} compra(s) no histórico</small></td><td>${Number(item.credits).toLocaleString("pt-BR")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td><span class="badge ${item.enabled ? "text-bg-success" : "text-bg-secondary"} badge-outline">${item.enabled ? "Disponível" : "Desativado"}</span></td><td><div class="tp-admin-row-actions"><button type="button" class="btn btn-nb btn-dark" data-package-edit>Editar</button><button type="button" class="btn btn-nb ${item.enabled ? "btn-danger" : "btn-success"}" data-package-toggle>${item.enabled ? "Remover" : "Reativar"}</button></div></td>`;
+    tr.querySelector("[data-package-edit]").addEventListener("click", () => openCreditPackageEditor(item));
+    tr.querySelector("[data-package-toggle]").addEventListener("click", () => toggleCreditPackage(item));
     body.appendChild(tr);
   }
-  if (!body.children.length) body.innerHTML = '<tr><td colspan="6">Nenhuma compra, recarga ou remoção no período.</td></tr>';
-  document.getElementById("adminCreditReportStatus").textContent = `${Number(data.total_rows || 0).toLocaleString("pt-BR")} movimentações financeiras no período.`;
-  const start = Number(data.total_rows || 0) ? Number(data.offset || 0) + 1 : 0;
-  const end = Math.min(Number(data.offset || 0) + (data.rows || []).length, Number(data.total_rows || 0));
-  document.getElementById("adminCreditReportPageStatus").textContent = `${start}–${end} de ${Number(data.total_rows || 0).toLocaleString("pt-BR")}`;
-  document.getElementById("adminCreditReportPrev").disabled = Number(data.offset || 0) <= 0;
-  document.getElementById("adminCreditReportNext").disabled = !data.has_more;
+  if (!items.length) body.innerHTML = '<tr><td colspan="5">Nenhum pacote cadastrado.</td></tr>';
+}
+
+async function loadTtsCreditPackages() {
+  const status = document.getElementById("ttsCreditPackagesStatus"); status.textContent = "Carregando pacotes…";
+  try {
+    const data = await apiFetch("/api/admin/tts/credit-packages");
+    if (!data.success) throw new Error(data.error || "Falha ao carregar os pacotes.");
+    renderTtsCreditPackages(data.packages || []); status.textContent = `${adminCreditPackages.length} pacote(s). Compras anteriores permanecem registradas ao desativar.`;
+  } catch (error) { status.textContent = error.message || "Não foi possível carregar os pacotes de TikCoins."; }
+}
+
+function openCreditPackageEditor(item = {}) {
+  const editor = document.getElementById("ttsCreditPackageEditor"); editor.hidden = false;
+  editor.dataset.packageId = item.id || "";
+  editor.innerHTML = `<label>Nome<input class="form-control" name="name" maxlength="80" required value="${esc(item.name || "")}"></label><label>TikCoins<input class="form-control" name="credits" type="number" min="1" max="100000000" step="1" required value="${item.credits || ""}"></label><label>Preço (R$)<input class="form-control" name="price" type="number" min="0.01" max="1000000" step="0.01" required value="${item.price_cents ? (item.price_cents / 100).toFixed(2) : ""}"></label><label class="tp-admin-credit-check"><input name="enabled" type="checkbox" ${item.enabled === false || item.enabled === 0 ? "" : "checked"}> Disponível para compra</label><div class="tp-admin-row-actions"><button type="button" class="btn btn-nb btn-success" data-save>Salvar pacote</button><button type="button" class="btn btn-nb btn-dark" data-cancel>Cancelar</button></div>`;
+  editor.querySelector("[data-save]").addEventListener("click", saveCreditPackage);
+  editor.querySelector("[data-cancel]").addEventListener("click", () => { editor.hidden = true; });
+  editor.querySelector('[name="name"]').focus();
+}
+
+async function saveCreditPackage() {
+  const editor = document.getElementById("ttsCreditPackageEditor"), status = document.getElementById("ttsCreditPackagesStatus");
+  const name = editor.querySelector('[name="name"]').value.trim(), credits = Number(editor.querySelector('[name="credits"]').value);
+  const price_cents = Math.round(Number(editor.querySelector('[name="price"]').value) * 100), enabled = editor.querySelector('[name="enabled"]').checked;
+  if (!name || !Number.isSafeInteger(credits) || credits < 1 || !Number.isSafeInteger(price_cents) || price_cents < 1) { status.textContent = "Confira nome, TikCoins e preço."; return; }
+  if (!editor.dataset.packageId && adminCreditPackages.length >= 20) { status.textContent = "O limite atual é de 20 pacotes."; return; }
+  const pkg = { id: editor.dataset.packageId || undefined, name, credits, price_cents, enabled };
+  const packages = [...adminCreditPackages];
+  const index = packages.findIndex(item => item.id === pkg.id);
+  if (index >= 0) packages[index] = pkg; else packages.push(pkg);
+  status.textContent = "Salvando pacote…";
+  try {
+    const data = await apiFetch("/api/admin/tts/credit-packages", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packages }) });
+    if (!data.success) throw new Error(data.error || "Não foi possível salvar o pacote.");
+    editor.hidden = true; renderTtsCreditPackages(data.packages || []); status.textContent = "Pacote salvo.";
+  } catch (error) { status.textContent = error.message || "Não foi possível salvar o pacote."; }
+}
+
+async function toggleCreditPackage(item) {
+  if (item.enabled && !confirm(Number(item.purchase_count || 0) > 0
+    ? `O pacote “${item.name}” tem ${Number(item.purchase_count).toLocaleString("pt-BR")} compra(s) associada(s). Remover desativa novas compras e preserva o histórico. Continuar?`
+    : `Remover “${item.name}” da lista de pacotes disponíveis? O pacote será desativado e poderá ser reativado depois.`)) return;
+  const packages = adminCreditPackages.map(pkg => ({ ...pkg, enabled: pkg.id === item.id ? !item.enabled : Boolean(pkg.enabled) }));
+  const status = document.getElementById("ttsCreditPackagesStatus"); status.textContent = "Atualizando disponibilidade…";
+  try {
+    const data = await apiFetch("/api/admin/tts/credit-packages", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packages }) });
+    if (!data.success) throw new Error(data.error || "Não foi possível atualizar o pacote.");
+    renderTtsCreditPackages(data.packages || []); status.textContent = item.enabled ? "Pacote desativado; histórico de compras preservado." : "Pacote ativado.";
+  } catch (error) { status.textContent = error.message || "Não foi possível atualizar o pacote."; }
+}
+
+function renderAdminCreditReport(data) {
+  const t = data.purchase_totals || {};
+  document.getElementById("adminCreditReportSummary").innerHTML = [
+    ["Compras confirmadas", Number(t.confirmed_count || 0).toLocaleString("pt-BR")],
+    ["Receita bruta", formatAdminCreditMoney(t.gross_cents)],
+    ["TikCoins vendidos", Number(t.sold_credits || 0).toLocaleString("pt-BR")],
+    ["Pendentes / canceladas", `${Number(t.pending_count || 0).toLocaleString("pt-BR")} / ${Number(t.cancelled_count || 0).toLocaleString("pt-BR")}`],
+  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+  const body = document.getElementById("adminCreditReportRows"); body.replaceChildren();
+  for (const item of data.purchases || []) {
+    const tr = document.createElement("tr"), statusNames = { approved: "Confirmada", pending: "Pendente", in_process: "Em processamento", authorized: "Autorizada", in_mediation: "Em análise", cancelled: "Cancelada", rejected: "Recusada", refunded: "Estornada", charged_back: "Contestada", checkout_failed: "Falha no checkout" };
+    tr.innerHTML = `<td>${esc(creditDate(item.paid_at || item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(item.package_name || "Pacote")}</td><td>${Number(item.credits || 0).toLocaleString("pt-BR")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td><span class="badge ${item.status === "approved" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${esc(statusNames[item.status] || item.status)}</span></td>`;
+    body.appendChild(tr);
+  }
+  if (!body.children.length) body.innerHTML = '<tr><td colspan="6">Nenhuma recarga encontrada com estes filtros.</td></tr>';
+  const total = Number(data.purchases_total || 0), offset = Number(data.purchase_offset || 0), count = (data.purchases || []).length;
+  document.getElementById("adminCreditReportStatus").textContent = `${total.toLocaleString("pt-BR")} compra(s) no filtro.`;
+  document.getElementById("adminCreditReportPageStatus").textContent = `${total ? offset + 1 : 0}–${Math.min(offset + count, total)} de ${total.toLocaleString("pt-BR")}`;
+  document.getElementById("adminCreditReportPrev").disabled = offset <= 0;
+  document.getElementById("adminCreditReportNext").disabled = !data.purchases_has_more;
+  populateCreditReportOptions(data.options || {});
+}
+
+function populateCreditReportOptions(options) {
+  for (const [id, items] of [["adminCreditReportStreamer", options.streamers || []], ["adminCreditMovementStreamer", options.streamers || []]]) {
+    const select = document.getElementById(id), value = select.value;
+    select.innerHTML = '<option value="">Todos</option>' + items.map(item => `<option value="${item.id}">${esc(item.name || item.email)}${item.email ? ` · ${esc(item.email)}` : ""}</option>`).join("");
+    select.value = value;
+  }
+  const select = document.getElementById("adminCreditReportPackage"), value = select.value;
+  select.innerHTML = '<option value="">Todos</option>' + (options.packages || []).map(item => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join(""); select.value = value;
 }
 
 async function loadAdminCreditReport(offset = adminCreditReportOffset) {
-  const status = document.getElementById("adminCreditReportStatus");
-  status.textContent = "Carregando movimentações…";
-  const range = document.getElementById("adminCreditReportRange").value;
+  const status = document.getElementById("adminCreditReportStatus"); status.textContent = "Carregando recargas…";
+  const query = new URLSearchParams({ range: document.getElementById("adminCreditReportRange").value, purchase_offset: String(Math.max(0, offset)), offset: "0" });
+  const streamer = document.getElementById("adminCreditReportStreamer").value, pkg = document.getElementById("adminCreditReportPackage").value, purchaseStatus = document.getElementById("adminCreditReportFilterStatus").value;
+  if (streamer) query.set("streamer_id", streamer); if (pkg) query.set("package_id", pkg); if (purchaseStatus) query.set("status", purchaseStatus);
   try {
-    const data = await apiFetch(`/api/admin/tts/credit-report?range=${encodeURIComponent(range)}&offset=${Math.max(0, offset)}`);
-    if (!data.success) throw new Error(data.error || "Não foi possível carregar o relatório.");
-    adminCreditReportOffset = Number(data.offset || 0);
-    adminCreditReportPageSize = Number(data.page_size || 100);
-    renderAdminCreditReport(data);
-  } catch (error) {
-    status.textContent = error.message || "Não foi possível carregar o relatório de recargas.";
-    document.getElementById("adminCreditReportRows").innerHTML = '<tr><td colspan="6">Falha ao carregar o relatório.</td></tr>';
-  }
+    const data = await apiFetch(`/api/admin/tts/credit-report?${query}`); if (!data.success) throw new Error(data.error || "Não foi possível carregar o relatório.");
+    adminCreditReportOffset = Number(data.purchase_offset || 0); adminCreditReportPageSize = Number(data.page_size || 100); renderAdminCreditReport(data);
+  } catch (error) { status.textContent = error.message || "Não foi possível carregar o relatório de recargas."; document.getElementById("adminCreditReportRows").innerHTML = '<tr><td colspan="6">Falha ao carregar o relatório.</td></tr>'; }
 }
 
-function renderAdminCreditAccounts() {
-  const body = document.getElementById("adminCreditRows");
-  const query = document.getElementById("adminCreditSearch").value.trim().toLocaleLowerCase("pt-BR");
-  const items = adminCreditAccounts.filter(item => [item.name, item.email]
-    .some(value => String(value || "").toLocaleLowerCase("pt-BR").includes(query)));
-  body.replaceChildren();
-  if (!items.length) {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="5">${adminCreditAccounts.length ? "Nenhum streamer encontrado." : "Nenhuma conta de streamer cadastrada."}</td>`;
-    body.appendChild(row);
-    return;
-  }
+function renderAdminCreditAccounts(items) {
+  const body = document.getElementById("adminCreditRows"); body.replaceChildren();
+  if (!items.length) { body.innerHTML = '<tr><td colspan="4">Nenhum streamer encontrado.</td></tr>'; return; }
   for (const item of items) {
-    const row = document.createElement("tr");
-    const name = esc(item.name || "Streamer"), email = esc(item.email || "—");
-    row.innerHTML = `<td><strong>${name}</strong><small class="tp-dashboard-email">${email}</small></td>
-      <td><span class="badge ${item.status === "active" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${item.status === "active" ? "Ativa" : "Desativada"}</span></td>
-      <td><strong data-credit-balance>${Number(item.balance || 0).toLocaleString("pt-BR")} TikCoins</strong></td>
-      <td><input class="form-control form-control-sm" type="number" min="1" max="100000000" step="1" inputmode="numeric" aria-label="Quantidade de TikCoins para ${name}" placeholder="Ex.: 100"></td>
-      <td><div class="tp-admin-row-actions"><button type="button" class="btn btn-nb btn-success" data-credit-add>Adicionar</button><button type="button" class="btn btn-nb btn-danger" data-credit-remove>Remover</button></div><small class="tp-admin-feedback" data-credit-feedback role="status" aria-live="polite"></small></td>`;
-    const input = row.querySelector("input");
-    const feedback = row.querySelector("[data-credit-feedback]");
-    const balance = row.querySelector("[data-credit-balance]");
-    const adjust = async sign => {
-      const amount = Number(input.value);
-      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
-        feedback.textContent = "Informe um número inteiro entre 1 e 100.000.000.";
-        return;
-      }
-      if (sign < 0 && !confirm(`Remover ${amount.toLocaleString("pt-BR")} TikCoins de ${item.name || item.email}?`)) return;
-      const buttons = [...row.querySelectorAll("button")];
-      buttons.forEach(button => { button.disabled = true; });
-      feedback.textContent = "Atualizando saldo…";
-      try {
-        const result = await apiFetch(`/api/admin/users/${item.id}/tts-credits`, { method: "POST",
-          headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: sign * amount }) });
-        if (!result.success) throw new Error(result.error || "Não foi possível ajustar o saldo.");
-        item.balance = result.balance;
-        balance.textContent = `${Number(item.balance).toLocaleString("pt-BR")} TikCoins`;
-        input.value = "";
-        feedback.textContent = sign > 0 ? "TikCoins adicionados." : "TikCoins removidos.";
-        loadAdminCreditReport();
-      } catch (error) { feedback.textContent = error.message || "Não foi possível ajustar o saldo."; }
-      finally { buttons.forEach(button => { button.disabled = false; }); }
-    };
-    row.querySelector("[data-credit-add]").addEventListener("click", () => adjust(1));
-    row.querySelector("[data-credit-remove]").addEventListener("click", () => adjust(-1));
-    body.appendChild(row);
+    const row = document.createElement("tr"), current = Number(item.balance || 0);
+    row.innerHTML = `<td><strong>${esc(item.name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.email || "—")}</small></td><td><span class="badge ${item.status === "active" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${item.status === "active" ? "Ativa" : "Desativada"}</span></td><td><strong data-balance>${current.toLocaleString("pt-BR")} TikCoins</strong></td><td><button class="btn btn-nb btn-dark" type="button" data-adjust>Ajustar saldo</button></td>`;
+    row.querySelector("[data-adjust]").addEventListener("click", () => {
+      document.querySelectorAll("[data-credit-editor]").forEach(node => node.remove());
+      const editorRow = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 4;
+      cell.innerHTML = `<div class="tp-admin-credit-inline-editor" data-credit-editor><strong>Ajustar saldo de ${esc(item.name || item.email)}</strong><div class="tp-admin-credit-editor-fields"><label>Operação<select class="form-select" data-operation><option value="add">Adicionar</option><option value="remove">Remover</option></select></label><label>TikCoins<input class="form-control" data-quantity type="number" min="1" max="100000000" step="1" value="1"></label><label>Motivo<input class="form-control" data-reason maxlength="500" placeholder="Informe o motivo"></label></div><p>Saldo atual: <b>${current.toLocaleString("pt-BR")}</b> · Novo saldo previsto: <b data-projected>${(current + 1).toLocaleString("pt-BR")}</b></p><small data-error role="status" aria-live="polite"></small><div class="tp-admin-row-actions"><button type="button" class="btn btn-nb btn-success" data-confirm>Confirmar</button><button type="button" class="btn btn-nb btn-dark" data-cancel>Cancelar</button></div></div>`;
+      editorRow.appendChild(cell); row.after(editorRow);
+      const editor = cell.querySelector("[data-credit-editor]"), operation = editor.querySelector("[data-operation]"), quantity = editor.querySelector("[data-quantity]"), reason = editor.querySelector("[data-reason]"), projected = editor.querySelector("[data-projected]"), error = editor.querySelector("[data-error]"), confirmButton = editor.querySelector("[data-confirm]");
+      const update = () => { const n = Number(quantity.value), next = current + (operation.value === "add" ? n : -n); projected.textContent = Number.isSafeInteger(n) && n > 0 ? next.toLocaleString("pt-BR") : "—"; confirmButton.disabled = !Number.isSafeInteger(n) || n < 1 || n > 100000000 || next < 0 || reason.value.trim().length < 3; };
+      operation.addEventListener("change", update); quantity.addEventListener("input", update); reason.addEventListener("input", update); update();
+      editor.querySelector("[data-cancel]").addEventListener("click", () => editorRow.remove());
+      confirmButton.addEventListener("click", async () => {
+        const amount = Number(quantity.value) * (operation.value === "add" ? 1 : -1); confirmButton.disabled = true; error.textContent = "Salvando ajuste…";
+        try {
+          const result = await apiFetch(`/api/admin/users/${item.id}/tts-credits`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount, reason: reason.value.trim() }) });
+          if (!result.success) throw new Error(result.error || "Não foi possível ajustar o saldo.");
+          item.balance = result.balance; row.querySelector("[data-balance]").textContent = `${Number(result.balance).toLocaleString("pt-BR")} TikCoins`; editorRow.remove();
+          if (activeCreditTab === "movements") loadAdminCreditMovements(0); else loadedCreditTabs.delete("movements");
+        } catch (e) { error.textContent = e.message || "Falha ao salvar."; update(); }
+      });
+    }); body.appendChild(row);
   }
 }
 
-async function loadAdminCreditAccounts() {
-  const status = document.getElementById("adminCreditStatus");
+async function loadAdminCreditAccounts(offset = adminCreditAccountOffset) {
+  const status = document.getElementById("adminCreditStatus"), query = new URLSearchParams({ limit: String(adminCreditAccountPageSize), offset: String(offset), search: document.getElementById("adminCreditSearch").value.trim() });
   status.textContent = "Carregando saldos…";
   try {
-    const result = await apiFetch("/api/admin/tts/credit-balances");
-    if (!result.success) throw new Error(result.error || "Falha ao carregar saldos.");
-    adminCreditAccounts = result.accounts || [];
-    renderAdminCreditAccounts();
-    status.textContent = `${adminCreditAccounts.length} streamer(s) carregado(s). Os ajustes ficam registrados no histórico financeiro.`;
-  } catch (error) {
-    document.getElementById("adminCreditRows").innerHTML = '<tr><td colspan="5">Não foi possível carregar os saldos.</td></tr>';
-    status.textContent = error.message || "Não foi possível carregar os saldos.";
-  }
+    const result = await apiFetch(`/api/admin/tts/credit-balances?${query}`); if (!result.success) throw new Error(result.error || "Falha ao carregar saldos.");
+    adminCreditAccounts = result.accounts || []; adminCreditAccountOffset = Number(result.offset || 0); adminCreditAccountTotal = Number(result.total || 0);
+    renderAdminCreditAccounts(adminCreditAccounts); status.textContent = `${adminCreditAccountTotal.toLocaleString("pt-BR")} streamer(s)`;
+    document.getElementById("adminCreditPrev").disabled = adminCreditAccountOffset <= 0; document.getElementById("adminCreditNext").disabled = !result.has_more;
+  } catch (error) { document.getElementById("adminCreditRows").innerHTML = '<tr><td colspan="4">Não foi possível carregar os saldos.</td></tr>'; status.textContent = error.message || "Não foi possível carregar os saldos."; }
 }
 
-async function saveTtsCreditPackages() {
-  const status = document.getElementById("ttsCreditPackagesStatus");
-  const rows = Array.from(document.querySelectorAll("#ttsCreditPackagesList .tp-admin-credit-package-row"));
-  const packages = rows.map(row => ({ id: row.dataset.packageId || undefined, name: row._fields.name.value.trim(),
-    credits: Number(row._fields.credits.value), price_cents: Math.round(Number(row._fields.price.value) * 100),
-    enabled: row._fields.enabled.checked }));
-  if (packages.some(item => !item.name || !Number.isSafeInteger(item.credits) || item.credits < 1
-      || !Number.isSafeInteger(item.price_cents) || item.price_cents < 1)) {
-    status.textContent = "Preencha o nome, a quantidade de TikCoins e o preço válido de cada pacote.";
-    return;
-  }
-  status.textContent = "Salvando pacotes…";
+async function loadAdminCreditMovements(offset = adminCreditMovementOffset) {
+  const query = new URLSearchParams({ kind: document.getElementById("adminCreditMovementKind").value, range: document.getElementById("adminCreditMovementRange").value, limit: String(adminCreditMovementPageSize), offset: String(offset) });
+  const streamer = document.getElementById("adminCreditMovementStreamer").value; if (streamer) query.set("streamer_id", streamer);
+  const status = document.getElementById("adminCreditMovementStatus"); status.textContent = "Carregando movimentações…";
   try {
-    const data = await apiFetch("/api/admin/tts/credit-packages", { method: "PUT",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ packages }) });
-    if (!data.success) throw new Error(data.error || "Não foi possível salvar os pacotes.");
-    renderTtsCreditPackages(data.packages || []);
-    status.textContent = "Pacotes salvos.";
-  } catch (error) { status.textContent = error.message || "Não foi possível salvar os pacotes."; }
+    const data = await apiFetch(`/api/admin/tts/credit-movements?${query}`); if (!data.success) throw new Error(data.error || "Falha ao carregar movimentações.");
+    populateCreditReportOptions({ streamers: data.streamers || [] });
+    adminCreditMovementOffset = Number(data.offset || 0); const body = document.getElementById("adminCreditMovementRows"); body.replaceChildren();
+    const kinds = { purchase: "Recarga paga", admin_adjustment: "Ajuste manual", usage: "Consumo", purchase_reversal: "Estorno" };
+    for (const item of data.rows || []) {
+      const label = item.kind === "admin_adjustment" ? (Number(item.amount) > 0 ? "Crédito manual" : "Débito manual") : kinds[item.kind] || item.kind;
+      const source = item.kind === "purchase" ? item.package_name || "Mercado Pago" : item.kind === "usage" ? item.model_id || "Voz" : item.kind === "purchase_reversal" ? "Mercado Pago" : "Admin";
+      const tr = document.createElement("tr"); tr.innerHTML = `<td>${esc(creditDate(item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(label)}<small class="tp-dashboard-email">${esc(source)}</small></td><td class="${Number(item.amount) >= 0 ? "tp-credit-in" : "tp-credit-out"}">${Number(item.amount) > 0 ? "+" : ""}${Number(item.amount).toLocaleString("pt-BR")} TikCoins${item.unit_count ? `<small class="tp-dashboard-email">${Number(item.unit_count).toLocaleString("pt-BR")} caracteres</small>` : ""}</td><td>${esc(item.actor_name || item.actor_email || "—")}</td><td>${esc(item.reason || "—")}</td><td><code>${esc(item.payment_id || item.reference_id || "—")}</code></td>`; body.appendChild(tr);
+    }
+    if (!body.children.length) body.innerHTML = '<tr><td colspan="7">Nenhuma movimentação encontrada.</td></tr>';
+    status.textContent = `${Number(data.total || 0).toLocaleString("pt-BR")} movimentação(ões)`;
+    document.getElementById("adminCreditMovementPrev").disabled = adminCreditMovementOffset <= 0; document.getElementById("adminCreditMovementNext").disabled = !data.has_more;
+  } catch (error) { status.textContent = error.message || "Falha ao carregar movimentações."; document.getElementById("adminCreditMovementRows").innerHTML = '<tr><td colspan="7">Falha ao carregar as movimentações.</td></tr>'; }
 }
 
 let activeVoicePreview = null;
@@ -2032,9 +2046,7 @@ apiFetch("/api/auth/me").then((data) => {
   loadElevenGlobal();
   loadAdminIntegrationState();
   loadAdditionalVoiceModels();
-  loadTtsCreditPackages();
-  loadAdminCreditAccounts();
-  loadAdminCreditReport(0);
+  setCreditTab("balances");
   refreshGiftSyncState();
 });
 
@@ -2174,17 +2186,31 @@ document.getElementById('dashboardRateForm').addEventListener('submit', async ev
 });
 document.getElementById('adminStatusFilter').addEventListener('change', renderAdminUsers);
 document.getElementById('adminRefresh').addEventListener('click', loadUsers);
-document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => {
-  if (document.querySelectorAll("#ttsCreditPackagesList .tp-admin-credit-package-row").length >= 20) return;
-  document.getElementById("ttsCreditPackagesList").appendChild(createTtsCreditPackageRow());
+document.querySelectorAll(".tp-admin-credit-tabs [role=tab]").forEach((tab, index, tabs) => {
+  tab.addEventListener("click", () => setCreditTab(({ creditTabBalances: "balances", creditTabPackages: "packages", creditTabReport: "report", creditTabMovements: "movements" })[tab.id]));
+  tab.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault(); const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+      : (index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+    tabs[next].focus(); tabs[next].click();
+  });
 });
-document.getElementById("ttsCreditPackageSave").addEventListener("click", saveTtsCreditPackages);
-document.getElementById("adminCreditSearch").addEventListener("input", renderAdminCreditAccounts);
-document.getElementById("adminCreditRefresh").addEventListener("click", loadAdminCreditAccounts);
+document.getElementById("ttsCreditPackageAdd").addEventListener("click", () => openCreditPackageEditor());
+document.getElementById("adminCreditSearch").addEventListener("input", () => { clearTimeout(adminCreditSearchTimer); adminCreditSearchTimer = setTimeout(() => loadAdminCreditAccounts(0), 250); });
+document.getElementById("adminCreditRefresh").addEventListener("click", () => loadAdminCreditAccounts(adminCreditAccountOffset));
+document.getElementById("adminCreditPrev").addEventListener("click", () => loadAdminCreditAccounts(Math.max(0, adminCreditAccountOffset - adminCreditAccountPageSize)));
+document.getElementById("adminCreditNext").addEventListener("click", () => loadAdminCreditAccounts(adminCreditAccountOffset + adminCreditAccountPageSize));
 document.getElementById("adminCreditReportRange").addEventListener("change", () => loadAdminCreditReport(0));
+for (const id of ["adminCreditReportStreamer", "adminCreditReportFilterStatus", "adminCreditReportPackage"])
+  document.getElementById(id).addEventListener("change", () => loadAdminCreditReport(0));
 document.getElementById("adminCreditReportRefresh").addEventListener("click", () => loadAdminCreditReport());
 document.getElementById("adminCreditReportPrev").addEventListener("click", () => loadAdminCreditReport(Math.max(0, adminCreditReportOffset - adminCreditReportPageSize)));
 document.getElementById("adminCreditReportNext").addEventListener("click", () => loadAdminCreditReport(adminCreditReportOffset + adminCreditReportPageSize));
+for (const id of ["adminCreditMovementKind", "adminCreditMovementRange", "adminCreditMovementStreamer"])
+  document.getElementById(id).addEventListener("change", () => loadAdminCreditMovements(0));
+document.getElementById("adminCreditMovementsRefresh").addEventListener("click", () => loadAdminCreditMovements(adminCreditMovementOffset));
+document.getElementById("adminCreditMovementPrev").addEventListener("click", () => loadAdminCreditMovements(Math.max(0, adminCreditMovementOffset - adminCreditMovementPageSize)));
+document.getElementById("adminCreditMovementNext").addEventListener("click", () => loadAdminCreditMovements(adminCreditMovementOffset + adminCreditMovementPageSize));
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
 document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });

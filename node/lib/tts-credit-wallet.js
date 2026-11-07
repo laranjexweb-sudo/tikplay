@@ -44,6 +44,9 @@ function ensureSchema(db) {
       paid_at TEXT
     );
   `);
+  const ledgerColumns = new Set(db.db.prepare("PRAGMA table_info(tts_credit_ledger)").all().map(column => column.name));
+  if (!ledgerColumns.has("reason"))
+    db.db.exec("ALTER TABLE tts_credit_ledger ADD COLUMN reason TEXT NOT NULL DEFAULT ''");
   const seedPackage = db.db.prepare(`INSERT OR IGNORE INTO tts_credit_packages
     (id,name,credits,price_cents,enabled) VALUES(?,?,?,?,1)`);
   [
@@ -63,13 +66,14 @@ function getBalance(db, tenantId) {
 }
 
 function ledger(db, tenantId, limit = 20) {
-  return db.db.prepare(`SELECT id,amount,kind,model_id,unit_count,reference_id,created_at
+  return db.db.prepare(`SELECT id,amount,kind,model_id,unit_count,reference_id,actor_id,reason,created_at
     FROM tts_credit_ledger WHERE tenant_id=? ORDER BY id DESC LIMIT ?`).all(tenantId, limit);
 }
 
-function adjust(db, { tenantId, amount, actorId, referenceId }) {
+function adjust(db, { tenantId, amount, actorId, referenceId, reason = "" }) {
   if (!Number.isSafeInteger(tenantId) || !Number.isSafeInteger(amount) || amount === 0
-      || Math.abs(amount) > 100000000 || !db.getUserById(tenantId))
+      || Math.abs(amount) > 100000000 || !db.getUserById(tenantId)
+      || typeof reason !== "string" || reason.trim().length > 500)
     return { success: false, code: "INVALID_ADJUSTMENT" };
   const key = `admin:${referenceId || crypto.randomUUID()}`;
   const transaction = db.db.transaction(() => {
@@ -77,8 +81,9 @@ function adjust(db, { tenantId, amount, actorId, referenceId }) {
     const current = db.db.prepare("SELECT balance FROM tts_credit_wallets WHERE tenant_id=?").get(tenantId).balance;
     if (current + amount < 0) return { success: false, code: "INSUFFICIENT_BALANCE", balance: current };
     db.db.prepare(`UPDATE tts_credit_wallets SET balance=balance+?,updated_at=CURRENT_TIMESTAMP WHERE tenant_id=?`).run(amount, tenantId);
-    db.db.prepare(`INSERT INTO tts_credit_ledger(tenant_id,amount,kind,idempotency_key,reference_id,actor_id)
-      VALUES(?,?,'admin_adjustment',?,?,?)`).run(tenantId, amount, key, referenceId || "", actorId || null);
+    db.db.prepare(`INSERT INTO tts_credit_ledger(tenant_id,amount,kind,idempotency_key,reference_id,actor_id,reason)
+      VALUES(?,?,'admin_adjustment',?,?,?,?)`).run(tenantId, amount, key, referenceId || "", actorId || null,
+      reason.trim() || "Ajuste manual sem motivo informado (cliente legado)");
     return { success: true, balance: current + amount };
   });
   try { return transaction.immediate(); }
