@@ -699,6 +699,8 @@ node/public/
 
 **Concluído:**
 
+- 2026-11-10 — Sobreposições → ranking vertical de diamantes com seis posições: prévia do painel exibe somente a moldura PNG; link V4 usa fotos atrás da arte e textos calibrados. Ajustes globais de posição/escala reutilizam a preferência existente por conta; links e renderizador V3 permanecem disponíveis. Dados e atualização usam as rotas/WS de ranking existentes. Mapa em `docs/ranking-vertical-6-overlay.md`; sem novos eventos/logs.
+
 - 2026-11-06 — Narração do chat: escolha de voz padrão, expressiva ou ambas, com regra por prefixo nas opções de uma voz e roteamento entre as duas quando ambas estão ativas. Preferências aplicadas no painel web, PWA e daemon; contagens das rotas agregadas em `chat.tts.batch`, sem conteúdo por comentário. Mapa e critérios em `docs/narracao-chat-edge.md`.
 
 - 2026-10-17 — Caça Palavras: ações de iniciar/encerrar movidas para a mesma faixa do stepper de quantidade; em viewport estreita, os botões podem usar uma linha própria. IDs, handlers e estado desabilitado preservados.
