@@ -699,7 +699,7 @@ node/public/
 
 **Concluído:**
 
-- 2026-11-10 — Sobreposições → ranking vertical V4 de diamantes com seis posições adicionado ao lado do card V3 restaurado. Cada versão gera seu próprio link; V3 mantém a quantidade configurável, V4 permanece em seis e ambos compartilham posição/escala. A prévia V4 mostra somente a moldura PNG. Dados e atualização usam as rotas/WS existentes. Mapa em `docs/ranking-vertical-6-overlay.md`; sem novos eventos/logs.
+- 2026-11-11 — Sobreposições → ranking vertical V4 de diamantes com seis posições tem controles e preferências próprias de posição/escala, separados do V3. O V3 mantém seu card, link e quantidade configurável. Mapa de persistência e eventos em `docs/ranking-vertical-6-overlay.md`.
 
 - 2026-11-06 — Narração do chat: escolha de voz padrão, expressiva ou ambas, com regra por prefixo nas opções de uma voz e roteamento entre as duas quando ambas estão ativas. Preferências aplicadas no painel web, PWA e daemon; contagens das rotas agregadas em `chat.tts.batch`, sem conteúdo por comentário. Mapa e critérios em `docs/narracao-chat-edge.md`.
 

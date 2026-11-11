@@ -6,8 +6,8 @@ Nova apresentação da moldura `../../Site/Overlay-game/overleyvertical.png` em
 `node/public/overlays/gifts/v4/`. O painel **Sobreposições** mantém o card e o
 link do ranking V3 e acrescenta um card V4 separado. A prévia V4 mostra somente
 a moldura PNG (sem dados de exemplo); os botões V3 e V4 geram seus próprios
-links. Os controles de posição e escala são compartilhados; quantidade continua
-configurável no V3 e fixa em seis no V4.
+links. Posição e escala têm controles e preferências independentes para cada
+versão; quantidade continua configurável no V3 e fixa em seis no V4.
 
 A composição tem seis posições fixas. As fotos usam as coordenadas calibradas
 na prévia; o PNG fica acima delas, e nomes/pontuações ficam na camada frontal.
@@ -22,26 +22,31 @@ numérico com ícone de moeda.
 - Dados: `GET /api/reports/ranking` e `GET /api/reports/events`, tipo `gift`,
   com limite de seis participantes; `/api/game-state` identifica a sala atual.
 - Atualização: WebSocket `/browser` recebe `status`, `gift_event` e
-  `gift_ranking_layout`; o overlay reconcilia o ranking pelo endpoint atual.
-- Posição e escala: mesmas preferências por conta em
-  `/api/gift-ranking/layout`; o painel transmite a prévia com
-  `gift-ranking-preview-config`.
+  `gift_ranking_vertical_layout`; o overlay reconcilia o ranking pelo endpoint
+  atual.
+- Posição e escala independentes: `/api/gift-ranking/vertical-layout`, com
+  preferência própria por conta e transmissão de prévia via
+  `gift-ranking-vertical-preview-config`. O V3 mantém
+  `/api/gift-ranking/layout` sem alterações. Na primeira configuração do V4,
+  ele parte da posição e escala atuais do V3; o painel salva esse ponto inicial
+  no campo independente do V4.
 - Sem alterações no cálculo/ordem do ranking, histórico, armazenamento,
   autenticação, saldo ou eventos de presentes.
 
 ## Mapa de observabilidade
 
-Esta apresentação não adiciona produtores de log nem eventos. Os ajustes seguem
-o mapa existente em `PADRAO_DE_LOGS.md` §6:
+Os ajustes V4 usam produtores estruturados próprios, descritos em
+`PADRAO_DE_LOGS.md` §6:
 
-- Salvar layout: `overlay.gift_ranking_layout.saved`, `diagnostic`/`debug`,
-  agregado por 2 s; detalhes limitados a `x`, `y`, `scale`, `count` e
+- Salvar layout: `overlay.gift_ranking_vertical_layout.saved`, `diagnostic`/`debug`,
+  agregado por 2 s; detalhes limitados a `x`, `y`, `scale` e
   `suppressed_count`.
-- Layout inválido: `overlay.gift_ranking_layout.rejected`,
+- Layout inválido: `overlay.gift_ranking_vertical_layout.rejected`,
   `notice`/`warning`, código `INVALID_LAYOUT`.
-- Falha ao salvar: `overlay.gift_ranking_layout.failed`, `error`/`error`,
+- Falha ao salvar: `overlay.gift_ranking_vertical_layout.failed`, `error`/`error`,
   código `LAYOUT_SAVE_FAILED`.
 - Não registrar token, URL assinada, nome, foto, comentário ou payload bruto.
+- As preferências e eventos do V3 continuam separados e inalterados.
 - `status`, `gift_event` e snapshots são somente consumidos; sem log por
   presente, participante, reconexão ou atualização visual.
 

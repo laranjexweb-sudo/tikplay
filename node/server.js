@@ -1338,6 +1338,76 @@ app.post("/api/gift-ranking/layout", auth.requireAuth, requireActiveLikesOverlay
   }
 });
 
+const giftRankingVerticalLayoutLogWindows = new Map();
+function logGiftRankingVerticalLayoutSaved(tenantId, layout) {
+  const pending = giftRankingVerticalLayoutLogWindows.get(tenantId);
+  if (pending) {
+    pending.layout = layout;
+    pending.suppressed_count += 1;
+    return;
+  }
+  const state = { layout, suppressed_count: 0 };
+  giftRankingVerticalLayoutLogWindows.set(tenantId, state);
+  const timer = setTimeout(() => {
+    giftRankingVerticalLayoutLogWindows.delete(tenantId);
+    logStructuredEvent(getTenant(tenantId), {
+      category: "diagnostic", level: "debug", event: "overlay.gift_ranking_vertical_layout.saved",
+      message: "Preferências do ranking vertical de diamantes atualizadas.", code: "LAYOUT_SAVED",
+      details: { ...state.layout, suppressed_count: state.suppressed_count },
+    });
+  }, 2000);
+  timer.unref?.();
+}
+
+app.get("/api/gift-ranking/vertical-layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const configured = db.hasGiftRankingVerticalOverlayLayout(req.user.id);
+  return res.json({
+    success: true,
+    // A primeira visita do V4 herda a posição atual do V3, que antes era
+    // compartilhada. O painel grava esse ponto de partida como preferência V4.
+    layout: configured
+      ? db.getGiftRankingVerticalOverlayLayout(req.user.id)
+      : db.getGiftRankingOverlayLayout(req.user.id),
+    defaults: db.DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT,
+    configured,
+  });
+});
+
+app.post("/api/gift-ranking/vertical-layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
+  const layout = req.body && req.body.layout;
+  if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "notice", level: "warning", event: "overlay.gift_ranking_vertical_layout.rejected",
+      message: "A configuração do ranking vertical foi rejeitada.", code: "INVALID_LAYOUT",
+    });
+    return res.status(400).json({ success: false, error: "Layout invalido" });
+  }
+  let normalized;
+  try {
+    normalized = db.normalizeGiftRankingVerticalOverlayLayout(layout, true);
+  } catch (error) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "notice", level: "warning", event: "overlay.gift_ranking_vertical_layout.rejected",
+      message: "A configuração do ranking vertical foi rejeitada.", code: "INVALID_LAYOUT",
+    });
+    return res.status(400).json({ success: false, error: error.message || "Layout invalido" });
+  }
+  try {
+    const saved = db.saveGiftRankingVerticalOverlayLayout(req.user.id, normalized);
+    const tenant = getTenant(req.user.id);
+    broadcastToClients(tenant.browserClients, { type: "gift_ranking_vertical_layout", layout: saved });
+    logGiftRankingVerticalLayoutSaved(req.user.id, saved);
+    return res.json({ success: true, layout: saved });
+  } catch (error) {
+    logStructuredEvent(getTenant(req.user.id), {
+      category: "error", level: "error", event: "overlay.gift_ranking_vertical_layout.failed",
+      message: "Não foi possível salvar os ajustes do ranking vertical.", code: "LAYOUT_SAVE_FAILED",
+    });
+    return res.status(500).json({ success: false, error: "Não foi possível salvar os ajustes." });
+  }
+});
+
 app.get("/api/presenter-level/layout", auth.requireAuth, requireActiveLikesOverlayAccount, (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({

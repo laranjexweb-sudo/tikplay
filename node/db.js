@@ -97,6 +97,9 @@ try {
 try {
   db.exec("ALTER TABLE tenant_settings ADD COLUMN gift_ranking_overlay_layout TEXT DEFAULT NULL");
 } catch {}
+try {
+  db.exec("ALTER TABLE tenant_settings ADD COLUMN gift_ranking_vertical_overlay_layout TEXT DEFAULT NULL");
+} catch {}
 
 // Catálogo de gifts sincronizado (DDL owner). Escrita: python/sync_gifts.py (único escritor).
 db.exec(`
@@ -333,7 +336,8 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
   likes_overlay_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}',
   likes_overlay_v2_layout TEXT DEFAULT '{"x":0,"y":0,"scale":1,"count":5}',
   presenter_level_overlay_layout TEXT DEFAULT '{"x":50,"y":50,"scale":1}',
-  gift_ranking_overlay_layout TEXT DEFAULT NULL
+  gift_ranking_overlay_layout TEXT DEFAULT NULL,
+  gift_ranking_vertical_overlay_layout TEXT DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS tenant_gift_config (
   tenant_id INTEGER PRIMARY KEY,
@@ -996,6 +1000,7 @@ const DEFAULT_LIKES_OVERLAY_LAYOUT = Object.freeze({
 });
 const DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT = Object.freeze({ x: 50, y: 50, scale: 1 });
 const DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT = Object.freeze({ x: 0, y: 0, scale: 1, count: 10 });
+const DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT = Object.freeze({ x: 0, y: 0, scale: 1 });
 
 function normalizeGiftRankingOverlayLayout(layout, strict = false) {
   const value = (layout && typeof layout === "object" && !Array.isArray(layout)) ? layout : {};
@@ -1025,6 +1030,37 @@ function saveGiftRankingOverlayLayout(tenantId, layout) {
   db.prepare(`
     INSERT INTO tenant_settings (tenant_id, gift_ranking_overlay_layout) VALUES (?, ?)
     ON CONFLICT(tenant_id) DO UPDATE SET gift_ranking_overlay_layout=excluded.gift_ranking_overlay_layout
+  `).run(tenantId, JSON.stringify(normalized));
+  return normalized;
+}
+
+function normalizeGiftRankingVerticalOverlayLayout(layout, strict = false) {
+  const value = (layout && typeof layout === "object" && !Array.isArray(layout)) ? layout : {};
+  const defaults = DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT;
+  return {
+    x: pickNumber(value.x, defaults.x, 0, 100, strict, "x"),
+    y: pickNumber(value.y, defaults.y, 0, 100, strict, "y"),
+    scale: pickNumber(value.scale, defaults.scale, 0.5, 2, strict, "scale"),
+  };
+}
+
+function getGiftRankingVerticalOverlayLayout(tenantId) {
+  const row = db.prepare("SELECT gift_ranking_vertical_overlay_layout AS layout_json FROM tenant_settings WHERE tenant_id = ?").get(tenantId);
+  if (!row || !row.layout_json) return { ...DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT };
+  try { return normalizeGiftRankingVerticalOverlayLayout(JSON.parse(row.layout_json)); } catch {}
+  return { ...DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT };
+}
+
+function hasGiftRankingVerticalOverlayLayout(tenantId) {
+  const row = db.prepare("SELECT gift_ranking_vertical_overlay_layout AS layout_json FROM tenant_settings WHERE tenant_id = ?").get(tenantId);
+  return Boolean(row && row.layout_json);
+}
+
+function saveGiftRankingVerticalOverlayLayout(tenantId, layout) {
+  const normalized = normalizeGiftRankingVerticalOverlayLayout(layout, true);
+  db.prepare(`
+    INSERT INTO tenant_settings (tenant_id, gift_ranking_vertical_overlay_layout) VALUES (?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET gift_ranking_vertical_overlay_layout=excluded.gift_ranking_vertical_overlay_layout
   `).run(tenantId, JSON.stringify(normalized));
   return normalized;
 }
@@ -2985,6 +3021,8 @@ module.exports = {
   saveActiveGameRecovery,
   getActiveGameRecovery,
   clearActiveGameRecovery,
+  saveLiveLikesState,
+  getLiveLikesState,
   saveActiveLiveConnection,
   clearActiveLiveConnection,
   hasActiveLiveConnection,
@@ -3022,13 +3060,17 @@ module.exports = {
   getPresenterLevelOverlayLayout,
   savePresenterLevelOverlayLayout,
   getGiftRankingOverlayLayout,
+  getGiftRankingVerticalOverlayLayout,
   hasGiftRankingOverlayLayout,
   saveGiftRankingOverlayLayout,
+  saveGiftRankingVerticalOverlayLayout,
   normalizeGiftRankingOverlayLayout,
+  normalizeGiftRankingVerticalOverlayLayout,
   LIKES_OVERLAY_OPTIONS,
   DEFAULT_LIKES_OVERLAY_LAYOUT,
   DEFAULT_PRESENTER_LEVEL_OVERLAY_LAYOUT,
   DEFAULT_GIFT_RANKING_OVERLAY_LAYOUT,
+  DEFAULT_GIFT_RANKING_VERTICAL_OVERLAY_LAYOUT,
   getTenantGiftConfig,
   saveTenantGiftConfig,
   getTresGiftConfig,

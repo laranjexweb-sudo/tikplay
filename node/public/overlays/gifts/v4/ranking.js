@@ -100,7 +100,7 @@
   async function loadLayout() {
     if (demo || !token) return;
     try {
-      const data = await api('/api/gift-ranking/layout');
+      const data = await api('/api/gift-ranking/vertical-layout');
       if (data.success) applyLayout(data.layout || {});
     } catch {}
   }
@@ -124,7 +124,7 @@
     socket.onmessage = event => {
       try {
         const message = JSON.parse(event.data);
-        if (message.type === 'gift_ranking_layout') applyLayout(message.layout || {});
+        if (message.type === 'gift_ranking_vertical_layout') applyLayout(message.layout || {});
         else if (message.type === 'status') {
           const nextRoom = String(message.room_id || '');
           if (nextRoom !== state.roomId) {
@@ -145,7 +145,7 @@
   }
 
   window.addEventListener('message', event => {
-    if (event.origin === location.origin && event.data?.type === 'gift-ranking-preview-config') applyLayout(event.data.layout || {});
+    if (event.origin === location.origin && event.data?.type === 'gift-ranking-vertical-preview-config') applyLayout(event.data.layout || {});
   });
   window.addEventListener('pagehide', () => {
     state.closing = true;
