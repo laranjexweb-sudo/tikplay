@@ -3060,6 +3060,7 @@ module.exports = {
   getGiftRankingOverlayLayout,
   getGiftRankingVerticalOverlayLayout,
   hasGiftRankingOverlayLayout,
+  hasGiftRankingVerticalOverlayLayout,
   saveGiftRankingOverlayLayout,
   saveGiftRankingVerticalOverlayLayout,
   normalizeGiftRankingOverlayLayout,

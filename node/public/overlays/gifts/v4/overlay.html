@@ -9,7 +9,7 @@
     * { box-sizing:border-box; }
     html,body { width:100%; height:100%; min-height:100%; margin:0; overflow:hidden; background:transparent!important; }
     body.overlay { position:relative; width:100%; max-width:none; min-height:100vh; }
-    .gift-position { position:absolute; left:0; top:0; width:min(941px,100vw); aspect-ratio:941/1672; transform-origin:top left; }
+    .gift-position { position:absolute; left:0; top:0; width:min(941px,100vw); aspect-ratio:941/1672; container-type:inline-size; transform-origin:top left; }
     .portrait { position:absolute; z-index:1; display:grid; place-items:center; overflow:hidden; border-radius:50%; background:linear-gradient(145deg,#3c195f,#152047); box-shadow:0 0 12px #08d8ff77; color:#f6d7ff; font-weight:900; }
     .portrait[hidden],.slot[hidden] { display:none; }
     .portrait img { width:100%; height:100%; object-fit:cover; }
@@ -20,10 +20,10 @@
     .slot .score { display:block; max-width:100%; margin-top:4px; overflow:hidden; color:#ffe779; font-weight:800; line-height:1; text-overflow:ellipsis; white-space:nowrap; }
     .slot .coin { position:relative; display:inline-block; width:.92em; height:.92em; margin-right:.25em; border:1.5px solid #fff0a6; border-radius:50%; background:radial-gradient(circle at 32% 28%,#fff6be 0 12%,#ffd94f 30%,#e99c16 72%,#a95708 100%); box-shadow:0 0 3px #ffcf39a8,inset 0 0 0 1px #b76c18; vertical-align:-.08em; }
     .slot .coin::after { position:absolute; inset:20%; border:1px solid #a85c0d; border-radius:50%; content:""; }
-    .slot.one .name,.slot.two .name { font-size:clamp(9px,2vw,15px); }
-    .slot.one .score,.slot.two .score { font-size:clamp(8px,1.5vw,11px); }
-    .slot.three .name,.slot.four .name,.slot.five .name,.slot.six .name { font-size:clamp(8px,1.45vw,11px); }
-    .slot.three .score,.slot.four .score,.slot.five .score,.slot.six .score { margin-top:3px; font-size:clamp(7px,1.15vw,9px); }
+    .slot.one .name,.slot.two .name { font-size:clamp(22px,3.1cqw,31px); }
+    .slot.one .score,.slot.two .score { font-size:clamp(14px,2.7vw,20px); }
+    .slot.three .name,.slot.four .name,.slot.five .name,.slot.six .name { font-size:clamp(20px,2.7cqw,26px); }
+    .slot.three .score,.slot.four .score,.slot.five .score,.slot.six .score { margin-top:3px; font-size:clamp(13px,2.3vw,18px); }
     /* Coordenadas validadas na prévia vertical 941 × 1672. */
     .portrait.one { left:19.1%; top:7.4%; width:23%; aspect-ratio:1; font-size:24px; }
     .portrait.two { left:calc(19.1% + 1px); top:34.5%; width:20.5%; aspect-ratio:1; font-size:23px; }
@@ -68,6 +68,6 @@
     <div class="slot five" data-slot="4"></div>
     <div class="slot six" data-slot="5"></div>
   </div>
-  <script src="ranking.js?v=gift-ranking-v4-vertical-6-3"></script>
+  <script src="ranking.js?v=gift-ranking-v4-vertical-6-9"></script>
 </body>
 </html>
