@@ -3021,8 +3021,6 @@ module.exports = {
   saveActiveGameRecovery,
   getActiveGameRecovery,
   clearActiveGameRecovery,
-  saveLiveLikesState,
-  getLiveLikesState,
   saveActiveLiveConnection,
   clearActiveLiveConnection,
   hasActiveLiveConnection,
