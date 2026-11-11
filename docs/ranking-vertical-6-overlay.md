@@ -3,10 +3,11 @@
 ## Escopo
 
 Nova apresentação da moldura `../../Site/Overlay-game/overleyvertical.png` em
-`node/public/overlays/gifts/v4/`. O painel **Sobreposições** mostra somente a
-moldura PNG na prévia (sem dados de exemplo) e gera links para essa versão. A
-rota V3 e os links V3 já distribuídos continuam
-disponíveis.
+`node/public/overlays/gifts/v4/`. O painel **Sobreposições** mantém o card e o
+link do ranking V3 e acrescenta um card V4 separado. A prévia V4 mostra somente
+a moldura PNG (sem dados de exemplo); os botões V3 e V4 geram seus próprios
+links. Os controles de posição e escala são compartilhados; quantidade continua
+configurável no V3 e fixa em seis no V4.
 
 A composição tem seis posições fixas. As fotos usam as coordenadas calibradas
 na prévia; o PNG fica acima delas, e nomes/pontuações ficam na camada frontal.
@@ -46,9 +47,10 @@ o mapa existente em `PADRAO_DE_LOGS.md` §6:
 
 ## Verificações recomendadas após publicar
 
-- Abrir a prévia e conferir as seis posições, moldura acima das fotos e texto
-  contido nas placas na fonte pública; a prévia do painel deve mostrar apenas
-  a arte PNG.
+- Conferir no painel as duas opções: V3 com seu preview e controles de
+  quantidade; V4 com somente a arte PNG no preview.
+- Abrir cada link e conferir a versão correspondente; V4 mostra as seis
+  posições, moldura acima das fotos e texto contido nas placas.
 - Abrir/copiar link autenticado e confirmar a atualização em tempo real após
   presente, troca de sala e alteração de posição/escala.
 - Confirmar que URL V3 anteriormente copiada continua carregando a versão V3.
