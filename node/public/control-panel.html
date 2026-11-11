@@ -1579,26 +1579,45 @@
 </div>
 
 <dialog class="tts-credit-dialog" id="ttsCreditCheckoutDialog" aria-labelledby="ttsCreditCheckoutTitle">
-  <form method="dialog" class="tts-credit-dialog-head"><div><span class="tts-card-kicker">COMPRA SEGURA</span><h2 id="ttsCreditCheckoutTitle">Comprar TikCoins</h2><p id="ttsCreditPackageSummary"></p></div><button class="tts-credit-dialog-close" aria-label="Fechar checkout">×</button></form>
+  <header class="tts-credit-dialog-head">
+    <div><span class="tts-card-kicker">RECARGA DE CRÉDITOS</span><h2 id="ttsCreditCheckoutTitle">Recarregar TikCoins</h2></div>
+    <button type="button" class="tts-credit-dialog-close" aria-label="Fechar checkout" onclick="document.getElementById('ttsCreditCheckoutDialog').close()">×</button>
+  </header>
+  <section class="tts-credit-order" aria-label="Resumo do pedido">
+    <span class="tts-credit-order-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="5"/><circle cx="16" cy="16" r="5"/><path d="M8 6v4m-2-2h4m6 6v4m-2-2h4"/></svg></span>
+    <div class="tts-credit-order-copy"><strong id="ttsCreditOrderQuantity">— TikCoins</strong><span id="ttsCreditOrderName">Recarga de saldo</span></div>
+    <div class="tts-credit-order-total"><strong id="ttsCreditOrderPrice">R$ 0,00</strong><span>Total</span></div>
+  </section>
+  <div class="tts-credit-method-label">Forma de pagamento</div>
   <div class="tts-credit-methods" role="tablist" aria-label="Forma de pagamento">
-    <button type="button" class="is-active" id="ttsCreditCardTab" role="tab" aria-selected="true" onclick="selectTtsCreditMethod('card')">Cartão</button>
-    <button type="button" id="ttsCreditPixTab" role="tab" aria-selected="false" onclick="selectTtsCreditMethod('pix')">Pix</button>
+    <button type="button" class="is-active" id="ttsCreditPixTab" role="tab" aria-selected="true" aria-controls="ttsCreditPixPanel" onclick="selectTtsCreditMethod('pix')"><svg class="tts-pix-qr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/><path d="M5 5h3v3H5zM16 5h3v3h-3zM5 16h3v3H5zM14 14h3v3h-3zM19 14h2v2h-2zM19 19h2v2h-2zM14 19h2v2h-2zM17 18h2v3h-2z"/></svg><span>Pix</span><span class="tts-credit-method-check" aria-hidden="true">✓</span></button>
+    <button type="button" id="ttsCreditCardTab" role="tab" aria-selected="false" aria-controls="ttsCreditCardForm" onclick="selectTtsCreditMethod('card')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg><span>Cartão</span><span class="tts-credit-method-check" aria-hidden="true">✓</span></button>
   </div>
-  <form id="ttsCreditCardForm" class="tts-credit-payment-form">
+  <div id="ttsCreditPixPanel" class="tts-credit-payment-form" role="tabpanel" aria-labelledby="ttsCreditPixTab">
+    <label class="tts-mp-field"><span>CPF do pagador</span><input class="control" id="ttsPixCpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00" aria-describedby="ttsPixNextStep"></label>
+    <p id="ttsPixNextStep" class="tts-credit-next-step"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Depois de gerar, você poderá escanear o QR Code ou copiar o código Pix.</span></p>
+    <button class="btn btn-primary tts-credit-submit" id="ttsPixCreate" type="button" onclick="createTtsPixPayment()"><svg class="tts-pix-qr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/><path d="M5 5h3v3H5zM16 5h3v3h-3zM5 16h3v3H5zM14 14h3v3h-3zM19 14h2v2h-2zM19 19h2v2h-2zM14 19h2v2h-2zM17 18h2v3h-2z"/></svg><span>Gerar Pix</span></button>
+    <section id="ttsPixResult" class="tts-pix-result" aria-label="Dados do Pix" hidden>
+      <div class="tts-pix-order-summary"><span>Valor desta recarga</span><strong id="ttsPixOrderAmount">R$ 0,00</strong></div>
+      <div class="tts-pix-payment-state" id="ttsPixPaymentState"><span class="tts-pix-state-dot" aria-hidden="true"></span><span id="ttsPixPaymentStateText">Aguardando pagamento</span></div>
+      <p id="ttsPixExpiration" class="tts-pix-expiration" hidden></p>
+      <img id="ttsPixQr" alt="QR Code Pix para pagamento">
+      <label class="tts-mp-field"><span>Pix copia e cola</span><textarea class="control" id="ttsPixCode" readonly rows="3" aria-label="Código Pix copia e cola"></textarea></label>
+      <button class="btn btn-dark tts-pix-copy" id="ttsPixCopy" type="button" onclick="copyTtsPixCode()"><span>Copiar código Pix</span></button>
+    </section>
+  </div>
+  <form id="ttsCreditCardForm" class="tts-credit-payment-form" role="tabpanel" aria-labelledby="ttsCreditCardTab" hidden>
     <label class="tts-mp-field"><span>Número do cartão</span><div id="ttsMpCardNumber"></div></label>
     <div class="tts-mp-row"><label class="tts-mp-field"><span>Validade</span><div id="ttsMpExpiration"></div></label><label class="tts-mp-field"><span>CVV</span><div id="ttsMpSecurity"></div></label></div>
-    <label class="tts-mp-field"><span>Nome impresso no cartão</span><input class="control" id="ttsMpCardholder" autocomplete="cc-name"></label>
-    <div class="tts-mp-row"><label class="tts-mp-field"><span>Banco emissor</span><select class="control" id="ttsMpIssuer"></select></label><label class="tts-mp-field"><span>Parcelas</span><select class="control" id="ttsMpInstallments"></select></label></div>
-    <div class="tts-mp-row"><label class="tts-mp-field"><span>Documento</span><select class="control" id="ttsMpIdentificationType"></select></label><label class="tts-mp-field"><span>Número do documento</span><input class="control" id="ttsMpIdentificationNumber" inputmode="numeric" autocomplete="off"></label></div>
-    <label class="tts-mp-field"><span>E-mail do titular</span><input class="control" id="ttsMpEmail" type="email" autocomplete="email"></label>
-    <button class="btn btn-primary" id="ttsMpSubmit" type="submit">Pagar agora</button>
+    <label class="tts-mp-field"><span>Nome impresso no cartão</span><input class="control" id="ttsMpCardholder" autocomplete="cc-name" placeholder="Ex.: MARIA DE SOUZA"></label>
+    <div class="tts-mp-row"><label class="tts-mp-field"><span>CPF ou CNPJ do titular</span><input class="control" id="ttsMpIdentificationNumber" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="Somente números"><small>Use o documento vinculado ao titular do cartão.</small></label><label class="tts-mp-field"><span>E-mail para recibo</span><input class="control" id="ttsMpEmail" type="email" autocomplete="email" placeholder="voce@email.com"></label></div>
+    <select id="ttsMpIssuer" hidden aria-hidden="true" tabindex="-1"></select>
+    <select id="ttsMpInstallments" hidden aria-hidden="true" tabindex="-1"></select>
+    <select id="ttsMpIdentificationType" hidden aria-hidden="true" tabindex="-1"></select>
+    <button class="btn btn-primary tts-credit-submit" id="ttsMpSubmit" type="submit"><span>Pagar à vista</span></button>
   </form>
-  <div id="ttsCreditPixPanel" class="tts-credit-payment-form" hidden>
-    <label class="tts-mp-field"><span>CPF do pagador</span><input class="control" id="ttsPixCpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"></label>
-    <button class="btn btn-primary" id="ttsPixCreate" type="button" onclick="createTtsPixPayment()">Gerar Pix</button>
-    <div id="ttsPixResult" class="tts-pix-result" hidden><img id="ttsPixQr" alt="QR Code Pix para pagamento"><label class="tts-mp-field"><span>Pix copia e cola</span><textarea class="control" id="ttsPixCode" readonly rows="3"></textarea></label><button class="btn btn-dark" id="ttsPixCopy" type="button" onclick="copyTtsPixCode()">Copiar código Pix</button></div>
-  </div>
   <div id="ttsCreditPaymentStatus" class="tts-credit-payment-status" role="status" aria-live="polite"></div>
+  <footer class="tts-credit-trust"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Pagamento processado pelo Mercado Pago</span></footer>
 </dialog>
 
 <script>
@@ -4657,6 +4676,14 @@ let ttsCreditAccountEmail = "";
 let ttsCreditCheckoutPackage = null;
 let ttsCreditMp = null;
 let ttsCreditCardForm = null;
+let ttsCreditCardUnmountPromise = Promise.resolve();
+let ttsCreditCardUnmountResolve = null;
+let ttsCreditCardMountPromise = null;
+let ttsCreditCheckoutSubmitting = false;
+let ttsCreditCheckoutPaymentPending = false;
+let ttsCreditCheckoutCompleted = false;
+let ttsCreditCheckoutPaymentMethod = "";
+let ttsCreditCheckoutSession = 0;
 const ttsCreditPaymentPolls = new Map();
 let ttsMpSdkPromise = null;
 let creditBalanceRefreshInFlight = false;
@@ -4952,22 +4979,70 @@ function loadTtsMercadoPagoSdk() {
   return ttsMpSdkPromise;
 }
 
+function formatTtsCreditPrice(item = ttsCreditCheckoutPackage) {
+  const cents = Number(item?.price_cents);
+  const price = Number.isFinite(cents) && cents > 0 ? cents / 100 : Number(item?.price || 0);
+  return price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function setTtsCreditPaymentStatus(message, state = "info") {
+  const status = document.getElementById("ttsCreditPaymentStatus");
+  status.textContent = message;
+  status.dataset.state = state;
+}
+
+function updateTtsCreditPaymentActions() {
+  const disabled = ttsCreditCheckoutSubmitting || ttsCreditCheckoutPaymentPending || ttsCreditCheckoutCompleted;
+  document.getElementById("ttsPixCreate").disabled = disabled;
+  document.getElementById("ttsMpSubmit").disabled = disabled;
+}
+
+function formatTtsPixExpiration(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : `Pix válido até ${date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.`;
+}
+
 async function openTtsCreditCheckout(item) {
+  await ttsCreditCardUnmountPromise;
+  ttsCreditCheckoutSession++;
   ttsCreditCheckoutPackage = item;
   const dialog = document.getElementById("ttsCreditCheckoutDialog");
   const cardTab = document.getElementById("ttsCreditCardTab");
   const pixTab = document.getElementById("ttsCreditPixTab");
-  document.getElementById("ttsCreditPackageSummary").textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins · ${Number(item.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
-  document.getElementById("ttsCreditPaymentStatus").textContent = ttsCreditPublicKey
-    ? "Os dados do cartão são tokenizados pelo Mercado Pago e não passam pelo TikPlay."
-    : "Cartão indisponível no momento. Gere um Pix para pagar dentro do painel.";
+  const price = formatTtsCreditPrice(item);
+  document.getElementById("ttsCreditOrderQuantity").textContent = `${Number(item.credits).toLocaleString("pt-BR")} TikCoins`;
+  document.getElementById("ttsCreditOrderName").textContent = String(item.name || "Recarga de saldo");
+  document.getElementById("ttsCreditOrderPrice").textContent = price;
+  document.getElementById("ttsPixOrderAmount").textContent = price;
+  document.getElementById("ttsPixCreate").querySelector("span").textContent = `Gerar Pix de ${price}`;
+  document.getElementById("ttsMpSubmit").querySelector("span").textContent = `Pagar ${price}`;
+  document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = "ready";
+  ttsCreditCheckoutSubmitting = false;
+  ttsCreditCheckoutPaymentPending = false;
+  ttsCreditCheckoutCompleted = false;
+  ttsCreditCheckoutPaymentMethod = "";
+  updateTtsCreditPaymentActions();
+  setTtsCreditPaymentStatus("Escolha como deseja pagar esta recarga.");
   document.getElementById("ttsPixResult").hidden = true;
+  document.getElementById("ttsPixQr").hidden = false;
+  document.getElementById("ttsPixQr").src = "";
+  document.getElementById("ttsPixCode").value = "";
+  document.getElementById("ttsPixExpiration").hidden = true;
+  document.getElementById("ttsPixExpiration").textContent = "";
+  document.getElementById("ttsPixPaymentState").dataset.state = "pending";
+  document.getElementById("ttsPixPaymentStateText").textContent = "Aguardando pagamento";
+  document.getElementById("ttsPixCopy").querySelector("span").textContent = "Copiar código Pix";
   document.getElementById("ttsPixCpf").value = "";
+  document.getElementById("ttsPixCpf").setCustomValidity("");
+  document.getElementById("ttsMpEmail").value = ttsCreditAccountEmail;
+  document.getElementById("ttsMpCardholder").value = "";
+  document.getElementById("ttsMpIdentificationNumber").value = "";
   cardTab.hidden = !ttsCreditPublicKey;
   pixTab.hidden = false;
   if (typeof dialog.showModal === "function") dialog.showModal();
   else { document.getElementById("voiceCreditStatus").textContent = "Seu navegador não oferece suporte ao checkout seguro."; return; }
-  selectTtsCreditMethod(ttsCreditPublicKey ? "card" : "pix");
+  selectTtsCreditMethod("pix");
 }
 
 function selectTtsCreditMethod(method) {
@@ -4979,9 +5054,16 @@ function selectTtsCreditMethod(method) {
   document.getElementById("ttsCreditPixTab").setAttribute("aria-selected", String(!cardSelected));
   document.getElementById("ttsCreditCardForm").hidden = !cardSelected;
   document.getElementById("ttsCreditPixPanel").hidden = cardSelected;
-  if (cardSelected && !ttsCreditCardForm) mountTtsCreditCardForm().catch(error => {
-    document.getElementById("ttsCreditPaymentStatus").textContent = error.message || "Não foi possível abrir o formulário de cartão.";
-  });
+  document.getElementById("ttsCreditCheckoutDialog").dataset.method = cardSelected ? "card" : "pix";
+  if (cardSelected && !ttsCreditCardForm && !ttsCreditCardMountPromise) {
+    const mountPromise = ttsCreditCardUnmountPromise.then(mountTtsCreditCardForm);
+    ttsCreditCardMountPromise = mountPromise;
+    mountPromise.catch(() => {
+      setTtsCreditPaymentStatus("Não foi possível carregar o formulário do cartão. Tente novamente ou escolha Pix.", "error");
+    }).finally(() => {
+      if (ttsCreditCardMountPromise === mountPromise) ttsCreditCardMountPromise = null;
+    });
+  }
 }
 
 async function mountTtsCreditCardForm() {
@@ -4999,9 +5081,9 @@ async function mountTtsCreditCardForm() {
     iframe: true,
     form: {
       id: "ttsCreditCardForm",
-      cardNumber: { id: "ttsMpCardNumber", placeholder: "Número do cartão" },
-      expirationDate: { id: "ttsMpExpiration", placeholder: "MM/AA" },
-      securityCode: { id: "ttsMpSecurity", placeholder: "CVV" },
+      cardNumber: { id: "ttsMpCardNumber", placeholder: "Número do cartão", style: { color: "#f4f7fb", fontFamily: "Arial, sans-serif", fontSize: "16px", fontWeight: "500", placeholderColor: "#8795a8" } },
+      expirationDate: { id: "ttsMpExpiration", placeholder: "MM/AA", mode: "short", style: { color: "#f4f7fb", fontFamily: "Arial, sans-serif", fontSize: "16px", fontWeight: "500", placeholderColor: "#8795a8" } },
+      securityCode: { id: "ttsMpSecurity", placeholder: "CVV", style: { color: "#f4f7fb", fontFamily: "Arial, sans-serif", fontSize: "16px", fontWeight: "500", placeholderColor: "#8795a8" } },
       cardholderName: { id: "ttsMpCardholder", placeholder: "Nome impresso no cartão" },
       issuer: { id: "ttsMpIssuer", placeholder: "Banco emissor" },
       installments: { id: "ttsMpInstallments", placeholder: "Parcelas" },
@@ -5011,15 +5093,23 @@ async function mountTtsCreditCardForm() {
     },
     callbacks: {
       onFormMounted: error => {
-        status.textContent = error ? "Não foi possível montar o formulário. Tente novamente." : "Os dados do cartão são capturados diretamente pelo Mercado Pago.";
+        if (error) setTtsCreditPaymentStatus("Não foi possível carregar o formulário do cartão. Tente novamente ou escolha Pix.", "error");
+        else setTtsCreditPaymentStatus("Preencha os dados para pagar à vista no cartão.");
       },
+      onFormUnmounted: () => { ttsCreditCardUnmountResolve?.(); },
       onSubmit: async event => {
         event.preventDefault();
         const formData = ttsCreditCardForm.getCardFormData();
-        await submitTtsCreditPayment({ payment_method: "card", identification_type: formData.identificationType,
-          identification_number: formData.identificationNumber, card: {
-            token: formData.token, payment_method_id: formData.paymentMethodId, issuer_id: formData.issuerId,
-            installments: Number(formData.installments),
+        const documentNumber = String(formData.identificationNumber || "").replace(/\D/g, "");
+        const documentType = documentNumber.length === 11 ? "CPF" : documentNumber.length === 14 ? "CNPJ" : "";
+        if (!documentType) {
+          setTtsCreditPaymentStatus("Informe CPF com 11 números ou CNPJ com 14 números do titular do cartão.", "error");
+          document.getElementById("ttsMpIdentificationNumber").focus();
+          return;
+        }
+        await submitTtsCreditPayment({ payment_method: "card", identification_type: documentType,
+          identification_number: documentNumber, card: {
+            token: formData.token, payment_method_id: formData.paymentMethodId,
           } });
       },
     },
@@ -5027,12 +5117,16 @@ async function mountTtsCreditCardForm() {
 }
 
 async function submitTtsCreditPayment(payload) {
-  const status = document.getElementById("ttsCreditPaymentStatus");
-  const submit = document.getElementById("ttsMpSubmit");
-  const pixButton = document.getElementById("ttsPixCreate");
-  submit.disabled = true;
-  pixButton.disabled = true;
-  status.textContent = "Enviando pagamento com segurança…";
+  const activeButton = payload.payment_method === "pix" ? document.getElementById("ttsPixCreate") : document.getElementById("ttsMpSubmit");
+  if (ttsCreditCheckoutSubmitting || ttsCreditCheckoutPaymentPending || ttsCreditCheckoutCompleted) return;
+  ttsCreditCheckoutSubmitting = true;
+  ttsCreditCheckoutPaymentMethod = payload.payment_method;
+  activeButton.classList.add("is-loading");
+  activeButton.setAttribute("aria-busy", "true");
+  activeButton.querySelector("span").textContent = payload.payment_method === "pix" ? "Gerando Pix…" : "Processando cartão…";
+  document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = payload.payment_method === "pix" ? "creating-pix" : "processing-card";
+  updateTtsCreditPaymentActions();
+  setTtsCreditPaymentStatus(payload.payment_method === "pix" ? "Gerando os dados do Pix…" : "Enviando o pagamento para processamento…", "pending");
   try {
     const result = await apiFetch("/api/tts/credits/checkout", { method: "POST",
       headers: { "Content-Type": "application/json" }, body: JSON.stringify({ package_id: ttsCreditCheckoutPackage.id, ...payload }) });
@@ -5042,56 +5136,126 @@ async function submitTtsCreditPayment(payload) {
       const image = String(result.pix.qr_code_base64 || "");
       document.getElementById("ttsPixCode").value = qr;
       document.getElementById("ttsPixQr").src = /^[A-Za-z0-9+/=]{100,200000}$/.test(image) ? `data:image/png;base64,${image}` : "";
+      document.getElementById("ttsPixQr").hidden = !document.getElementById("ttsPixQr").src;
+      const expiration = formatTtsPixExpiration(result.pix.date_of_expiration);
+      document.getElementById("ttsPixExpiration").textContent = expiration;
+      document.getElementById("ttsPixExpiration").hidden = !expiration;
       document.getElementById("ttsPixResult").hidden = false;
     }
-    await handleTtsCreditPaymentStatus(result.payment.id, result.payment.status, result.settled);
+    await handleTtsCreditPaymentStatus(result.payment.id, result.payment.status, result.settled, result.payment.status_detail);
   } catch (error) {
-    status.textContent = error?.message || "Não foi possível iniciar o pagamento. Tente novamente.";
+    setTtsCreditPaymentStatus(error?.message || "Não foi possível iniciar o pagamento. Confira sua conexão e tente novamente.", "error");
+    document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = "connection-error";
   } finally {
-    submit.disabled = false;
-    pixButton.disabled = false;
+    ttsCreditCheckoutSubmitting = false;
+    activeButton.classList.remove("is-loading");
+    activeButton.removeAttribute("aria-busy");
+    activeButton.querySelector("span").textContent = payload.payment_method === "pix"
+      ? (["rejected", "pix-expired"].includes(document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState)
+        ? `Gerar novo Pix de ${formatTtsCreditPrice()}`
+        : document.getElementById("ttsPixResult").hidden ? `Gerar Pix de ${formatTtsCreditPrice()}` : "Pix gerado · aguardando pagamento")
+      : `Pagar ${formatTtsCreditPrice()}`;
+    updateTtsCreditPaymentActions();
   }
 }
 
 async function createTtsPixPayment() {
-  const cpf = document.getElementById("ttsPixCpf").value.replace(/\D/g, "");
-  if (cpf.length !== 11) { document.getElementById("ttsCreditPaymentStatus").textContent = "Informe um CPF válido para gerar o Pix."; return; }
+  const input = document.getElementById("ttsPixCpf");
+  const cpf = input.value.replace(/\D/g, "");
+  if (cpf.length !== 11) { input.setCustomValidity("Digite um CPF com 11 números."); input.reportValidity(); setTtsCreditPaymentStatus("Confira o CPF: ele precisa ter 11 números.", "error"); return; }
+  input.setCustomValidity("");
+  document.getElementById("ttsPixResult").hidden = true;
   await submitTtsCreditPayment({ payment_method: "pix", identification_type: "CPF", identification_number: cpf });
 }
 
-async function handleTtsCreditPaymentStatus(paymentId, paymentStatus, settled = false) {
-  const status = document.getElementById("ttsCreditPaymentStatus");
+function maskTtsPixCpf(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
+  return digits.replace(/^(\d{3})(\d)/, "$1.$2").replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2").replace(/(\.\d{3})(\d{1,2})$/, "$1-$2");
+}
+document.getElementById("ttsPixCpf")?.addEventListener("input", event => {
+  event.currentTarget.value = maskTtsPixCpf(event.currentTarget.value);
+  event.currentTarget.setCustomValidity("");
+});
+document.getElementById("ttsMpIdentificationNumber")?.addEventListener("input", event => {
+  event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "").slice(0, 14);
+});
+
+async function handleTtsCreditPaymentStatus(paymentId, paymentStatus, settled = false, paymentStatusDetail = "") {
   const normalized = String(paymentStatus || "pending");
+  const expired = normalized === "expired" || (ttsCreditCheckoutPaymentMethod === "pix" && String(paymentStatusDetail).toLowerCase() === "expired");
   if (normalized === "approved" || settled) {
-    status.textContent = "Pagamento aprovado. Seus TikCoins já foram adicionados ao saldo.";
+    ttsCreditCheckoutPaymentPending = false;
+    ttsCreditCheckoutCompleted = true;
+    document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = "approved";
+    if (ttsCreditCheckoutPaymentMethod === "pix") {
+      document.getElementById("ttsPixPaymentState").dataset.state = "success";
+      document.getElementById("ttsPixPaymentStateText").textContent = "Pagamento aprovado";
+    }
+    setTtsCreditPaymentStatus("Pagamento aprovado. Seus TikCoins foram adicionados ao saldo.", "success");
+    updateTtsCreditPaymentActions();
     await loadVoiceCredits();
     return;
   }
-  if (normalized === "rejected" || normalized === "cancelled") {
-    status.textContent = "Pagamento recusado. Confira os dados ou tente outro meio de pagamento.";
+  if (["rejected", "cancelled", "expired", "refunded", "charged_back"].includes(normalized)) {
+    ttsCreditCheckoutPaymentPending = false;
+    document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = expired ? "pix-expired" : "rejected";
+    if (ttsCreditCheckoutPaymentMethod === "pix") {
+      document.getElementById("ttsPixPaymentState").dataset.state = "error";
+      document.getElementById("ttsPixPaymentStateText").textContent = expired ? "Pix expirado" : "Pagamento não aprovado";
+      document.getElementById("ttsPixCreate").querySelector("span").textContent = `Gerar novo Pix de ${formatTtsCreditPrice()}`;
+    }
+    setTtsCreditPaymentStatus(expired ? "Este Pix expirou. Você pode gerar outro para concluir a recarga." : "Pagamento recusado. Confira os dados ou tente outro meio de pagamento.", "error");
+    updateTtsCreditPaymentActions();
     return;
   }
-  status.textContent = normalized === "pending" && document.getElementById("ttsPixResult").hidden
-    ? "Pagamento em análise. A confirmação pode levar alguns instantes."
-    : "Aguardando confirmação do pagamento. Esta tela será atualizada automaticamente.";
+  ttsCreditCheckoutPaymentPending = true;
+  document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = "awaiting-payment";
+  if (ttsCreditCheckoutPaymentMethod === "pix") {
+    document.getElementById("ttsPixPaymentState").dataset.state = "pending";
+    document.getElementById("ttsPixPaymentStateText").textContent = "Aguardando pagamento";
+  }
+  setTtsCreditPaymentStatus("Pagamento criado. Aguardando a confirmação do Mercado Pago…", "pending");
+  updateTtsCreditPaymentActions();
   if (ttsCreditPaymentPolls.has(String(paymentId))) return;
+  const checkoutSession = ttsCreditCheckoutSession;
   let attempts = 0;
   const poll = setInterval(async () => {
     attempts++;
     try {
       const current = await apiFetch(`/api/tts/credits/payments/${encodeURIComponent(paymentId)}`);
+      if (checkoutSession !== ttsCreditCheckoutSession) {
+        if (current.status === "approved") { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); await loadVoiceCredits(); }
+        else if (["rejected", "cancelled", "refunded", "charged_back", "expired"].includes(current.status)) { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); }
+        else if (attempts >= 120) { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); }
+        return;
+      }
+      const expiration = formatTtsPixExpiration(current.date_of_expiration);
+      if (expiration) { document.getElementById("ttsPixExpiration").textContent = expiration; document.getElementById("ttsPixExpiration").hidden = false; }
       if (current.status === "approved") {
         clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
-        status.textContent = "Pagamento aprovado. Seus TikCoins já foram adicionados ao saldo.";
-        await loadVoiceCredits();
-      } else if (["rejected", "cancelled", "refunded"].includes(current.status)) {
+        await handleTtsCreditPaymentStatus("", "approved", true);
+      } else if (["rejected", "cancelled", "refunded", "charged_back"].includes(current.status)) {
         clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
-        status.textContent = "Pagamento não aprovado. Confira os dados ou tente novamente.";
+        await handleTtsCreditPaymentStatus("", current.status, false, current.status_detail);
+      } else if (current.status === "expired") {
+        clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
+        await handleTtsCreditPaymentStatus("", current.status, false, current.status_detail);
       } else if (attempts >= 120) {
         clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId));
-        status.textContent = "A confirmação ainda está pendente. Você pode fechar esta janela; o saldo atualiza quando o Mercado Pago confirmar.";
+        setTtsCreditPaymentStatus("A confirmação ainda está pendente. Você pode fechar esta janela; o saldo será atualizado quando o Mercado Pago confirmar.", "pending");
+      } else {
+        ttsCreditCheckoutPaymentPending = true;
+        document.getElementById("ttsCreditCheckoutDialog").dataset.paymentState = "awaiting-payment";
+        if (ttsCreditCheckoutPaymentMethod === "pix") {
+          document.getElementById("ttsPixPaymentState").dataset.state = "pending";
+          document.getElementById("ttsPixPaymentStateText").textContent = "Aguardando pagamento";
+        }
+        setTtsCreditPaymentStatus("Aguardando confirmação do Mercado Pago…", "pending");
       }
-    } catch { if (attempts >= 120) { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); } }
+    } catch {
+      setTtsCreditPaymentStatus("Não foi possível consultar o pagamento agora. A verificação será tentada novamente.", "error");
+      if (attempts >= 120) { clearInterval(poll); ttsCreditPaymentPolls.delete(String(paymentId)); }
+    }
   }, 5000);
   ttsCreditPaymentPolls.set(String(paymentId), poll);
 }
@@ -5099,13 +5263,32 @@ async function handleTtsCreditPaymentStatus(paymentId, paymentStatus, settled = 
 async function copyTtsPixCode() {
   try {
     await navigator.clipboard.writeText(document.getElementById("ttsPixCode").value);
-    document.getElementById("ttsCreditPaymentStatus").textContent = "Código Pix copiado.";
-  } catch { document.getElementById("ttsCreditPaymentStatus").textContent = "Não foi possível copiar. Selecione e copie o código Pix."; }
+    document.getElementById("ttsPixCopy").querySelector("span").textContent = "Código copiado";
+    setTtsCreditPaymentStatus("Código Pix copiado.", "success");
+  } catch { setTtsCreditPaymentStatus("Não foi possível copiar. Selecione o código Pix e copie manualmente.", "error"); }
 }
 
 document.getElementById("ttsCreditCheckoutDialog")?.addEventListener("close", () => {
-  try { ttsCreditCardForm?.unmount?.(); } catch {}
+  const cardForm = ttsCreditCardForm;
   ttsCreditCardForm = null; ttsCreditMp = null; ttsCreditCheckoutPackage = null;
+  if (!cardForm?.unmount) return;
+  ttsCreditCardUnmountPromise = new Promise(resolve => {
+    let timer;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      ttsCreditCardUnmountResolve = null;
+      resolve();
+    };
+    ttsCreditCardUnmountResolve = finish;
+    timer = setTimeout(finish, 1000);
+    try {
+      const result = cardForm.unmount();
+      if (result && typeof result.then === "function") result.then(finish, finish);
+    } catch { finish(); }
+  });
 });
 
 async function saveElevenChatVoice() {
