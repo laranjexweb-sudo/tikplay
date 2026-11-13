@@ -1010,3 +1010,5 @@ node/public/
 > 2026-11-10: Checkout transparente recomposto com resumo destacado do pacote, seletores de Pix/Cartão com ícones, painéis no mesmo modal, ações com valor da compra e estados de carregamento/confirmação. Pix mostra QR, copia e cola e expiração retornada pela API; polling/validação do servidor seguem como fonte da confirmação e do crédito. Rodapé descreve apenas o processamento do Mercado Pago. Ver `docs/tikcoins-wallet-ui.md`.
 
 > 2026-11-10: Ajuste do checkout após revisão visual: campos e espaçamentos do cartão compactados para evitar rolagem na altura usual do dispositivo; o símbolo de Pix substituído por ícone QR Code. Em viewports muito baixos, a rolagem interna continua disponível para não cortar campos. Ver `docs/tikcoins-wallet-ui.md`.
+
+> 2026-11-13: Super Admin ganhou a seção Gestão financeira para resumir recargas confirmadas/estornos, despesas pagas, resultado operacional e contas a pagar; despesas e fornecedores usam formulários compactos, filtros, paginação e tokens `--tp-*`. Ver `docs/admin-finance.md`.

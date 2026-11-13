@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="/ui/tikplay-support.css?v=20261014-v1">
 <link rel="stylesheet" href="/ui/tikplay-admin-monitor.css?v=20261015-v11">
 <link rel="stylesheet" href="/ui/tikplay-admin-quiz-bank.css?v=20261017-v2">
+<link rel="stylesheet" href="/ui/tikplay-admin-finance.css?v=20261113-v1">
 
 </head>
 <body class="tp-super-admin">
@@ -42,6 +43,7 @@
     <a href="#adminInvites"><span aria-hidden="true">◆</span>Convites</a>
     <a href="#adminRules"><span aria-hidden="true">⚙</span>Integrações</a>
     <a href="#adminCredits"><span aria-hidden="true">◈</span>Pacotes e TikCoins</a>
+    <a href="#adminFinance"><span aria-hidden="true">▤</span>Gestão financeira</a>
     <a href="#adminQuizBank"><span aria-hidden="true">▤</span>Banco de Perguntas</a>
     <a href="#adminOperations"><span aria-hidden="true">⌁</span>Operação local</a>
     <span class="tp-admin-caption">INFRAESTRUTURA</span>
@@ -203,6 +205,47 @@
       <div class="tp-admin-credit-pagination"><span id="adminCreditMovementStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditMovementPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="adminCreditMovementNext" disabled>Próxima</button></div></div>
     </section>
   </div>
+</section>
+
+<section class="tp-admin-section tp-admin-management" id="adminFinance" aria-labelledby="adminFinanceHeading">
+  <header class="tp-admin-section-heading tp-admin-section-heading-wrap">
+    <div><h2 id="adminFinanceHeading">Gestão financeira</h2><p>Entradas confirmadas das recargas, despesas, contas a pagar e resultado do período.</p></div>
+    <div class="tp-finance-heading-actions"><label>Período<select class="form-select" id="financeRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><button class="btn btn-nb btn-dark" type="button" id="financeRefresh">Atualizar</button></div>
+  </header>
+  <div class="tp-admin-credit-kpis tp-finance-kpis" id="financeSummary" aria-live="polite">
+    <article><span>Recargas líquidas</span><strong>—</strong><small>Recebimentos confirmados menos estornos</small></article>
+    <article><span>Despesas pagas</span><strong>—</strong><small>No período selecionado</small></article>
+    <article><span>Resultado operacional</span><strong>—</strong><small>Recargas líquidas menos despesas pagas</small></article>
+    <article><span>Contas a pagar</span><strong>—</strong><small>Saldo pendente total</small></article>
+  </div>
+  <div class="tp-admin-credit-tabs tp-finance-tabs" role="tablist" aria-label="Gestão financeira">
+    <button type="button" role="tab" id="financeTabExpenses" aria-controls="financePanelExpenses" aria-selected="true">Contas e despesas</button>
+    <button type="button" role="tab" id="financeTabSuppliers" aria-controls="financePanelSuppliers" aria-selected="false" tabindex="-1">Fornecedores</button>
+  </div>
+  <section class="tp-admin-credit-panel tp-finance-panel" id="financePanelExpenses" role="tabpanel" aria-labelledby="financeTabExpenses">
+    <div class="tp-admin-credit-panel-head"><div><h3>Despesas e contas</h3><p>Cadastre custos de APIs, hospedagem, serviços e outras despesas. Marcar como paga atualiza o resultado do período.</p></div><button class="btn btn-nb btn-success" type="button" id="financeNewExpense">Nova despesa</button></div>
+    <form class="tp-finance-form" id="financeExpenseForm" hidden>
+      <input type="hidden" name="id">
+      <label>Descrição<input class="form-control" name="description" maxlength="180" required placeholder="Ex.: Recarga de API"></label>
+      <label>Categoria<select class="form-select" name="category" required></select></label>
+      <label>Fornecedor<select class="form-select" name="supplier_id"><option value="">Sem fornecedor vinculado</option></select></label>
+      <label>Valor (R$)<input class="form-control" name="amount" type="number" min="0.01" max="1000000000" step="0.01" required placeholder="0,00"></label>
+      <label>Vencimento<input class="form-control" name="due_date" type="date"></label>
+      <label class="tp-finance-form-notes">Observações<input class="form-control" name="notes" maxlength="2000" placeholder="Referência, período coberto ou detalhes"></label>
+      <label class="tp-finance-form-paid"><input type="checkbox" name="pay_now"> Já foi paga</label>
+      <div class="tp-finance-form-actions"><button class="btn btn-nb btn-success" type="submit">Salvar despesa</button><button class="btn btn-nb btn-dark" type="button" id="financeCancelExpense">Cancelar</button></div>
+      <p class="tp-admin-feedback" id="financeExpenseMessage" role="status" aria-live="polite"></p>
+    </form>
+    <div class="tp-finance-filters"><label>Situação<select class="form-select" id="financeExpenseFilterState"><option value="pending">A pagar</option><option value="paid">Pagas</option><option value="overdue">Em atraso</option><option value="all">Todas</option><option value="cancelled">Canceladas</option></select></label><label>Buscar<input class="form-control" id="financeExpenseSearch" type="search" placeholder="Descrição, categoria ou fornecedor"></label></div>
+    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Despesa</th><th>Fornecedor</th><th>Vencimento / pagamento</th><th>Valor</th><th>Situação</th><th>Ações</th></tr></thead><tbody id="financeExpenseRows"><tr><td colspan="6">Carregando despesas…</td></tr></tbody></table></div>
+    <div class="tp-admin-credit-pagination"><span class="tp-admin-feedback" id="financeExpenseStatus" role="status" aria-live="polite"></span><div><button class="btn btn-nb btn-dark" type="button" id="financeExpensePrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="financeExpenseNext" disabled>Próxima</button></div></div>
+  </section>
+  <section class="tp-admin-credit-panel tp-finance-panel" id="financePanelSuppliers" role="tabpanel" aria-labelledby="financeTabSuppliers" hidden>
+    <div class="tp-admin-credit-panel-head"><div><h3>Fornecedores</h3><p>Mantenha uma lista de serviços e empresas para vincular às despesas.</p></div><button class="btn btn-nb btn-success" type="button" id="financeNewSupplier">Novo fornecedor</button></div>
+    <form class="tp-finance-supplier-form" id="financeSupplierForm" hidden><input type="hidden" name="id"><label>Nome<input class="form-control" name="name" maxlength="120" required placeholder="Nome do fornecedor"></label><label>Categoria<select class="form-select" name="category" required></select></label><button class="btn btn-nb btn-success" type="submit">Salvar fornecedor</button><button class="btn btn-nb btn-dark" type="button" id="financeCancelSupplier">Cancelar</button><span id="financeSupplierMessage" class="tp-admin-feedback" role="status" aria-live="polite"></span></form>
+    <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Fornecedor</th><th>Categoria</th><th>Despesas vinculadas</th><th>Status</th><th>Ação</th></tr></thead><tbody id="financeSupplierRows"><tr><td colspan="5">Abra esta aba para carregar fornecedores.</td></tr></tbody></table></div>
+    <span id="financeSupplierStatus" class="tp-admin-feedback" role="status" aria-live="polite"></span>
+  </section>
 </section>
 
 <section class="tp-admin-section tp-admin-management" id="adminInvites" aria-labelledby="adminInvitesHeading">
@@ -486,6 +529,7 @@ function selectAdminSection() {
   }
   document.getElementById('adminPageTitle').textContent = selected.lastChild.textContent.trim();
   document.querySelector('.tp-admin-metrics').hidden = selected.hash !== '#adminAccounts';
+  if (sectionId === 'adminFinance') window.setTimeout(() => loadFinanceSummary(), 0);
   window.TikPlayMonitor?.setActive(sectionId === 'adminMonitor');
   if (sectionId === 'adminMonitor' && location.hash.endsWith('/incidents')) document.getElementById('monitor-incidents')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -1714,6 +1758,198 @@ const adminCreditMovementPageSize = 50;
 let adminCreditPackages = [];
 let activeCreditTab = "balances";
 const loadedCreditTabs = new Set();
+let financeExpenseOffset = 0;
+const financeExpensePageSize = 50;
+let financeExpenseSearchTimer = null;
+let financeSuppliers = [];
+let financeLoaded = false;
+let financeExpenses = [];
+const financeCategories = ["APIs e serviços", "Hospedagem", "Infraestrutura", "Software", "Tarifas e impostos", "Marketing", "Outros"];
+
+function fillFinanceSelect(select, includeEmpty = false, currentValue = "") {
+  const first = includeEmpty ? '<option value="">Sem fornecedor vinculado</option>' : '';
+  select.innerHTML = first + financeCategories.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join("");
+  if (currentValue) select.value = currentValue;
+}
+
+function formatFinanceDate(value) {
+  if (!value) return "—";
+  const normalized = String(value).match(/^\d{4}-\d{2}-\d{2}$/) ? `${value}T12:00:00` : String(value).replace(" ", "T") + "Z";
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("pt-BR");
+}
+
+function financeQuery() {
+  return new URLSearchParams({ range: document.getElementById("financeRange").value });
+}
+
+async function loadFinanceSummary() {
+  if (financeLoaded) {
+    loadFinanceExpenses();
+    return;
+  }
+  financeLoaded = true;
+  fillFinanceSelect(document.querySelector('#financeExpenseForm [name="category"]'));
+  fillFinanceSelect(document.querySelector('#financeSupplierForm [name="category"]'));
+  await Promise.all([loadFinanceSummaryData(), loadFinanceSuppliers(), loadFinanceExpenses()]);
+}
+
+async function loadFinanceSummaryData() {
+  const query = financeQuery();
+  try {
+    const data = await apiFetch(`/api/admin/finance/summary?${query}`);
+    if (!data.success) throw new Error(data.error || "Falha ao carregar o resumo.");
+    const s = data.summary || {}, values = [
+      formatAdminCreditMoney(s.recharge_net_cents), formatAdminCreditMoney(s.paid_expenses_cents),
+      formatAdminCreditMoney(s.operating_result_cents), formatAdminCreditMoney(s.payable_cents),
+    ];
+    document.querySelectorAll("#financeSummary article strong").forEach((node, index) => { node.textContent = values[index]; });
+    document.querySelectorAll("#financeSummary article strong")[2].classList.toggle("tp-finance-negative", Number(s.operating_result_cents || 0) < 0);
+    document.querySelectorAll("#financeSummary article small")[0].textContent = `${Number(s.recharge_count || 0).toLocaleString("pt-BR")} recargas · ${formatAdminCreditMoney(s.recharge_refunds_cents)} em estornos · ${Number(s.pending_recharges || 0)} pagamentos pendentes`;
+    document.querySelectorAll("#financeSummary article small")[3].textContent = `${Number(s.payable_count || 0).toLocaleString("pt-BR")} conta(s) pendente(s)`;
+  } catch (error) {
+    document.querySelectorAll("#financeSummary article strong").forEach(node => { node.textContent = "—"; });
+    document.getElementById("financeExpenseStatus").textContent = error.message || "Não foi possível carregar o resumo financeiro.";
+  }
+}
+
+function refreshFinanceSupplierOptions() {
+  const select = document.querySelector('#financeExpenseForm [name="supplier_id"]');
+  const selected = select.value;
+  select.innerHTML = '<option value="">Sem fornecedor vinculado</option>' + financeSuppliers.filter(item => Number(item.active)).map(item =>
+    `<option value="${Number(item.id)}">${esc(item.name)}</option>`).join("");
+  if (Array.from(select.options).some(option => option.value === selected)) select.value = selected;
+}
+
+async function loadFinanceSuppliers() {
+  const status = document.getElementById("financeSupplierStatus");
+  try {
+    const data = await apiFetch("/api/admin/finance/suppliers?all=1");
+    if (!data.success) throw new Error(data.error || "Falha ao carregar fornecedores.");
+    financeSuppliers = data.rows || [];
+    refreshFinanceSupplierOptions();
+    const body = document.getElementById("financeSupplierRows"); body.replaceChildren();
+    for (const item of financeSuppliers) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><strong>${esc(item.name)}</strong></td><td>${esc(item.category)}</td><td>${Number(item.expense_count || 0).toLocaleString("pt-BR")}</td><td><span class="badge ${Number(item.active) ? "text-bg-success" : "text-bg-secondary"}">${Number(item.active) ? "Ativo" : "Arquivado"}</span></td><td><div class="tp-admin-row-actions"><button class="btn btn-nb btn-dark" type="button" data-supplier-edit>Editar</button><button class="btn btn-nb ${Number(item.active) ? "btn-danger" : "btn-success"}" type="button" data-supplier-toggle>${Number(item.active) ? "Arquivar" : "Reativar"}</button></div></td>`;
+      tr.querySelector("[data-supplier-edit]").addEventListener("click", () => openFinanceSupplierForm(item));
+      tr.querySelector("[data-supplier-toggle]").addEventListener("click", () => saveFinanceSupplier({ ...item, active: !Number(item.active) }));
+      body.appendChild(tr);
+    }
+    if (!financeSuppliers.length) body.innerHTML = '<tr><td colspan="5">Nenhum fornecedor cadastrado.</td></tr>';
+    status.textContent = `${financeSuppliers.length.toLocaleString("pt-BR")} fornecedor(es)`;
+  } catch (error) { status.textContent = error.message || "Não foi possível carregar os fornecedores."; }
+}
+
+function openFinanceSupplierForm(item = null) {
+  const form = document.getElementById("financeSupplierForm");
+  form.hidden = false; form.elements.namedItem("id").value = item?.id || ""; form.elements.name.value = item?.name || "";
+  form.dataset.active = String(item ? Number(item.active) : 1);
+  fillFinanceSelect(form.elements.category, false, item?.category || "Outros");
+  document.getElementById("financeSupplierMessage").textContent = "";
+  form.elements.name.focus();
+}
+
+async function saveFinanceSupplier(item) {
+  const message = document.getElementById("financeSupplierMessage");
+  try {
+    const isEdit = Boolean(item.id);
+    const data = await apiFetch(isEdit ? `/api/admin/finance/suppliers/${Number(item.id)}` : "/api/admin/finance/suppliers", {
+      method: isEdit ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: item.name, category: item.category, active: item.active }),
+    });
+    if (!data.success) throw new Error(data.error || "Não foi possível salvar o fornecedor.");
+    document.getElementById("financeSupplierForm").hidden = true;
+    await loadFinanceSuppliers();
+    message.textContent = "Fornecedor salvo.";
+  } catch (error) { message.textContent = error.message || "Falha ao salvar fornecedor."; }
+}
+
+function openFinanceExpenseForm(item = null) {
+  const form = document.getElementById("financeExpenseForm");
+  form.hidden = false; form.elements.namedItem("id").value = item?.id || "";
+  form.elements.description.value = item?.description || "";
+  fillFinanceSelect(form.elements.category, false, item?.category || "APIs e serviços");
+  refreshFinanceSupplierOptions(); form.elements.supplier_id.value = item?.supplier_id || "";
+  form.elements.amount.value = item ? (Number(item.amount_cents) / 100).toFixed(2) : "";
+  form.elements.due_date.value = item?.due_date || ""; form.elements.notes.value = item?.notes || "";
+  form.elements.pay_now.checked = item?.status === "paid";
+  form.elements.pay_now.disabled = item?.status === "paid" || item?.status === "cancelled";
+  document.getElementById("financeExpenseMessage").textContent = "";
+  form.scrollIntoView({ behavior: "smooth", block: "nearest" }); form.elements.description.focus();
+}
+
+function renderFinanceExpenses() {
+  const body = document.getElementById("financeExpenseRows"); body.replaceChildren();
+  const now = new Date(), today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  for (const item of financeExpenses) {
+    const dateText = item.status === "paid" ? `Pago em ${formatFinanceDate(item.paid_at)}` : item.due_date ? `Vence ${formatFinanceDate(item.due_date)}` : "Sem vencimento";
+    const isOverdue = item.status === "pending" && item.due_date && item.due_date < today;
+    const state = item.status === "paid" ? "Paga" : item.status === "cancelled" ? "Cancelada" : isOverdue ? "Em atraso" : "A pagar";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><strong>${esc(item.description)}</strong><small class="tp-dashboard-email">${esc(item.category)}${item.notes ? ` · ${esc(item.notes)}` : ""}</small></td><td>${esc(item.supplier_name || "—")}</td><td>${esc(dateText)}</td><td class="${item.status === "paid" ? "tp-credit-out" : ""}">${esc(formatAdminCreditMoney(item.amount_cents))}</td><td><span class="badge ${item.status === "paid" ? "text-bg-success" : item.status === "cancelled" ? "text-bg-secondary" : isOverdue ? "text-bg-danger" : "text-bg-warning"}">${state}</span></td><td><div class="tp-admin-row-actions">${item.status !== "cancelled" ? '<button type="button" class="btn btn-nb btn-dark" data-expense-edit>Editar</button>' : ""}${item.status === "pending" ? '<button type="button" class="btn btn-nb btn-success" data-expense-pay>Marcar paga</button><button type="button" class="btn btn-nb btn-danger" data-expense-cancel>Cancelar</button>' : ""}</div></td>`;
+    tr.querySelector("[data-expense-edit]")?.addEventListener("click", () => openFinanceExpenseForm(item));
+    tr.querySelector("[data-expense-pay]")?.addEventListener("click", () => updateFinanceExpense(item, { status: "paid" }));
+    tr.querySelector("[data-expense-cancel]")?.addEventListener("click", () => updateFinanceExpense(item, { status: "cancelled" }));
+    body.appendChild(tr);
+  }
+  if (!financeExpenses.length) body.innerHTML = '<tr><td colspan="6">Nenhuma despesa encontrada para este filtro.</td></tr>';
+}
+
+async function loadFinanceExpenses(offset = financeExpenseOffset) {
+  const status = document.getElementById("financeExpenseStatus");
+  const query = new URLSearchParams({ status: document.getElementById("financeExpenseFilterState").value,
+    search: document.getElementById("financeExpenseSearch").value.trim(), limit: String(financeExpensePageSize), offset: String(offset) });
+  status.textContent = "Carregando contas…";
+  try {
+    const data = await apiFetch(`/api/admin/finance/expenses?${query}`);
+    if (!data.success) throw new Error(data.error || "Falha ao carregar despesas.");
+    financeExpenses = data.rows || []; financeExpenseOffset = Number(data.offset || 0); renderFinanceExpenses();
+    status.textContent = `${Number(data.total || 0).toLocaleString("pt-BR")} conta(s)`;
+    document.getElementById("financeExpensePrev").disabled = financeExpenseOffset <= 0;
+    document.getElementById("financeExpenseNext").disabled = !data.has_more;
+  } catch (error) { status.textContent = error.message || "Falha ao carregar despesas."; }
+}
+
+async function updateFinanceExpense(item, changes) {
+  try {
+    const data = await apiFetch(`/api/admin/finance/expenses/${Number(item.id)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes),
+    });
+    if (!data.success) throw new Error(data.error || "Não foi possível atualizar a conta.");
+    await Promise.all([loadFinanceSummaryData(), loadFinanceExpenses(financeExpenseOffset)]);
+  } catch (error) { document.getElementById("financeExpenseStatus").textContent = error.message || "Falha ao atualizar conta."; }
+}
+
+async function submitFinanceExpense(event) {
+  event.preventDefault();
+  const form = event.currentTarget, message = document.getElementById("financeExpenseMessage");
+  const amountCents = Math.round(Number(form.elements.amount.value) * 100);
+  const payload = { description: form.elements.description.value.trim(), category: form.elements.category.value,
+    supplier_id: form.elements.supplier_id.value || null, amount_cents: amountCents,
+    due_date: form.elements.due_date.value || null, notes: form.elements.notes.value.trim(),
+    status: form.elements.pay_now.checked ? "paid" : "pending" };
+  const id = form.elements.namedItem("id").value;
+  message.textContent = "Salvando despesa…";
+  try {
+    const data = await apiFetch(id ? `/api/admin/finance/expenses/${Number(id)}` : "/api/admin/finance/expenses", {
+      method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    if (!data.success) throw new Error(data.error || "Não foi possível salvar a despesa.");
+    form.reset(); form.hidden = true; form.elements.namedItem("id").value = "";
+    await Promise.all([loadFinanceSummaryData(), loadFinanceExpenses(0)]);
+  } catch (error) { message.textContent = error.message || "Falha ao salvar despesa."; }
+}
+
+function setFinanceTab(name) {
+  for (const tab of document.querySelectorAll(".tp-finance-tabs [role=tab]")) {
+    const selected = tab.id === `financeTab${name[0].toUpperCase()}${name.slice(1)}`;
+    tab.setAttribute("aria-selected", String(selected)); tab.tabIndex = selected ? 0 : -1;
+  }
+  for (const panel of document.querySelectorAll(".tp-finance-panel"))
+    panel.hidden = panel.id !== `financePanel${name[0].toUpperCase()}${name.slice(1)}`;
+  if (name === "suppliers") loadFinanceSuppliers();
+}
 
 function formatAdminCreditMoney(cents) {
   return (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -2253,6 +2489,31 @@ for (const id of ["adminCreditMovementKind", "adminCreditMovementRange", "adminC
 document.getElementById("adminCreditMovementsRefresh").addEventListener("click", () => loadAdminCreditMovements(adminCreditMovementOffset));
 document.getElementById("adminCreditMovementPrev").addEventListener("click", () => loadAdminCreditMovements(Math.max(0, adminCreditMovementOffset - adminCreditMovementPageSize)));
 document.getElementById("adminCreditMovementNext").addEventListener("click", () => loadAdminCreditMovements(adminCreditMovementOffset + adminCreditMovementPageSize));
+document.querySelectorAll(".tp-finance-tabs [role=tab]").forEach((tab, index, tabs) => {
+  tab.addEventListener("click", () => setFinanceTab(tab.id === "financeTabSuppliers" ? "suppliers" : "expenses"));
+  tab.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+    tabs[next].focus(); tabs[next].click();
+  });
+});
+document.getElementById("financeRange").addEventListener("change", loadFinanceSummaryData);
+document.getElementById("financeRefresh").addEventListener("click", () => Promise.all([loadFinanceSummaryData(), loadFinanceExpenses(0), loadFinanceSuppliers()]));
+document.getElementById("financeNewExpense").addEventListener("click", () => openFinanceExpenseForm());
+document.getElementById("financeCancelExpense").addEventListener("click", () => { const form = document.getElementById("financeExpenseForm"); form.reset(); form.hidden = true; form.elements.namedItem("id").value = ""; });
+document.getElementById("financeExpenseForm").addEventListener("submit", submitFinanceExpense);
+document.getElementById("financeExpenseFilterState").addEventListener("change", () => loadFinanceExpenses(0));
+document.getElementById("financeExpenseSearch").addEventListener("input", () => { clearTimeout(financeExpenseSearchTimer); financeExpenseSearchTimer = setTimeout(() => loadFinanceExpenses(0), 250); });
+document.getElementById("financeExpensePrev").addEventListener("click", () => loadFinanceExpenses(Math.max(0, financeExpenseOffset - financeExpensePageSize)));
+document.getElementById("financeExpenseNext").addEventListener("click", () => loadFinanceExpenses(financeExpenseOffset + financeExpensePageSize));
+document.getElementById("financeNewSupplier").addEventListener("click", () => openFinanceSupplierForm());
+document.getElementById("financeCancelSupplier").addEventListener("click", () => { const form = document.getElementById("financeSupplierForm"); form.reset(); form.hidden = true; form.elements.namedItem("id").value = ""; });
+document.getElementById("financeSupplierForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  saveFinanceSupplier({ id: form.elements.namedItem("id").value, name: form.elements.name.value.trim(), category: form.elements.category.value, active: form.dataset.active === "1" });
+});
 document.getElementById("btnSyncGifts").addEventListener("click", syncGiftCatalog);
 document.getElementById("wordCatalogSearch").addEventListener("input", () => { clearTimeout(window.wordCatalogSearchTimer); window.wordCatalogSearchTimer = setTimeout(() => { wordCatalogPage = 1; loadWordCatalog(); }, 250); });
 document.getElementById("wordCatalogStatus").addEventListener("change", () => { wordCatalogPage = 1; loadWordCatalog(); });

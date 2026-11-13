@@ -1081,6 +1081,7 @@ async function mpFetch(path, opts = {}) {
 const ttsCreditRoutes = require("./routes/tts-credits")(app, { db, auth, mpFetch,
   mpConfigured: () => Boolean(mpAccessToken()), getPublicBaseUrl: () => checkoutConfig.read().publicBaseUrl,
   getPublicKey: () => integrationSecrets.read("mercadopago_public_key").secret, log: processLog });
+require("./routes/admin-finance")(app, { db, auth, log: processLog });
 
 require("./routes/admin-integrations")(app, { auth, integrationSecrets, providerConfig: require("./lib/elevenlabs-config"), checkoutConfig,
   getDaemonOpenRouterKey: () => DAEMON_ENV.OPENROUTER_API_KEY, log: processLog });
