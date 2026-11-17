@@ -1,5 +1,7 @@
 import asyncio
 import os
+import socket
+import ssl
 import time
 
 from TikTokLive import TikTokLiveClient
@@ -40,6 +42,7 @@ class TikTokLiveHandler:
         self.log_cb = None
         self._room_id = None
         self._connected = False
+        self._attempt_connected = False
         self.client = None
         self._last_like_total = {}
         self._connected_at = None
@@ -54,6 +57,70 @@ class TikTokLiveHandler:
             self.log_cb(text)
         else:
             print(text, flush=True)
+
+    @staticmethod
+    def _connection_error_details(error):
+        """Retorna somente metadados seguros; nunca inclui str(error) ou payloads."""
+        details = {"error_type": type(error).__name__}
+        chain = []
+        current = error
+        for _ in range(4):
+            if current is None or current in chain:
+                break
+            chain.append(current)
+            current = getattr(current, "__cause__", None) or getattr(current, "__context__", None)
+
+        root = next((item for item in chain if isinstance(item, (socket.gaierror, ssl.SSLError,
+            TimeoutError, asyncio.TimeoutError, OSError))), error)
+        if root is not error:
+            details["cause_type"] = type(root).__name__
+        error_number = next((getattr(item, "errno", None) for item in chain
+                             if isinstance(getattr(item, "errno", None), int)), None)
+        winerror = next((getattr(item, "winerror", None) for item in chain
+                         if isinstance(getattr(item, "winerror", None), int)), None)
+        if error_number is not None:
+            details["network_errno"] = error_number
+        if winerror is not None:
+            details["network_winerror"] = winerror
+
+        status = None
+        for item in chain:
+            response = getattr(item, "response", None)
+            candidate = getattr(item, "status_code", None) or getattr(response, "status_code", None)
+            if isinstance(candidate, int) and 100 <= candidate <= 599:
+                status = candidate
+                details["http_status"] = status
+                break
+
+        close_code = None
+        for item in chain:
+            close = getattr(item, "rcvd", None)
+            candidate = getattr(item, "code", None)
+            if not isinstance(candidate, int):
+                candidate = getattr(close, "code", None)
+            if isinstance(candidate, int) and 0 <= candidate <= 65535:
+                close_code = candidate
+                details["websocket_close_code"] = candidate
+                break
+
+        if any(isinstance(item, socket.gaierror) for item in chain):
+            details["failure_family"] = "dns"
+        elif any(isinstance(item, ssl.SSLError) for item in chain):
+            details["failure_family"] = "tls"
+        elif any(isinstance(item, (TimeoutError, asyncio.TimeoutError))
+                 or "timeout" in type(item).__name__.lower() for item in chain):
+            details["failure_family"] = "timeout"
+        elif status == 429:
+            details["failure_family"] = "provider_rate_limit"
+        elif status in (401, 403):
+            details["failure_family"] = "provider_rejected"
+        elif close_code is not None:
+            details["failure_family"] = "websocket_closed"
+        elif error_number is not None or winerror is not None:
+            details["failure_family"] = "network"
+        else:
+            details["failure_family"] = "client_or_protocol"
+        return details
 
     @staticmethod
     def _avatar(user) -> str:
@@ -305,6 +372,7 @@ class TikTokLiveHandler:
 
     async def _on_connect(self, event: ConnectEvent):
         self._connected = True
+        self._attempt_connected = True
         self._connected_at = time.time()
         previous_room_id = self._room_id
         ended_before_connect = self._live_ended
@@ -504,7 +572,13 @@ class TikTokLiveHandler:
 
     async def run(self):
         backoff = 5
+        attempt = 0
         while True:
+            attempt += 1
+            attempt_started = time.monotonic()
+            self._attempt_connected = False
+            outcome = "connection_closed"
+            failure_details = None
             self.log(f"[TikTokLive] Iniciando conexao com @{self.username}...")
             client = TikTokLiveClient(
                 unique_id=self.username,
@@ -535,6 +609,7 @@ class TikTokLiveHandler:
                 # process_connect_events=False descarta o chat/gifts/likes acumulados
                 # dos ultimos instantes antes de conectar (evita ler coisa atrasada).
                 task = await client.start(process_connect_events=False)
+                outcome = "live_stream_ended"
                 await task
                 self.log("[TikTokLive] Conexao encerrada")
                 self._connected = False
@@ -546,19 +621,29 @@ class TikTokLiveHandler:
                     pass
                 raise
             except UserOfflineError:
+                outcome = "live_offline"
                 self._room_id = None
                 self._connected = False
                 self._emit_status("waiting")
                 self.log(f"[TikTokLive] @{self.username} nao esta ao vivo. Verificando novamente em {backoff}s...")
             except Exception as e:
+                outcome = "connection_failed"
+                failure_details = self._connection_error_details(e)
+                failure_details.update({
+                    "attempt": attempt,
+                    "phase": "live_stream" if self._attempt_connected else "client_start",
+                    "connected_this_attempt": self._attempt_connected,
+                    "duration_ms": max(0, round((time.monotonic() - attempt_started) * 1000)),
+                    "retry_seconds": backoff,
+                })
                 self.log({
-                    "text": "[TikTokLive] Falha na conexão com o provedor.",
+                    "text": "[TikTokLive] Falha na conexão com o provedor; nova tentativa agendada.",
                     "category": "error",
                     "level": "error",
                     "event": "tiktoklive.connection.failed",
                     "source": "python",
                     "code": "TIKTOKLIVE_CONNECTION_FAILED",
-                    "details": {"error_type": type(e).__name__},
+                    "details": failure_details,
                 })
                 self._connected = False
                 self._emit_status("waiting")
@@ -568,5 +653,21 @@ class TikTokLiveHandler:
                 except Exception:
                     pass
                 self.client = None
+            self.log({
+                "text": f"[TikTokLive] Nova tentativa de conexão em {backoff}s.",
+                "category": "connection",
+                "level": "warning" if outcome == "connection_failed" else "info",
+                "event": "tiktoklive.connection.retry_scheduled",
+                "source": "python",
+                "code": "TIKTOKLIVE_RETRY_SCHEDULED",
+                "details": {
+                    "attempt": attempt,
+                    "reason": outcome,
+                    "retry_seconds": backoff,
+                    "connected_this_attempt": self._attempt_connected,
+                    "duration_ms": max(0, round((time.monotonic() - attempt_started) * 1000)),
+                    "error_type": failure_details.get("error_type") if failure_details else None,
+                },
+            })
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 60)
