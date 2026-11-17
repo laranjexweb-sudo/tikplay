@@ -73,8 +73,13 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         payer: { email: user.email, identification: { type: identificationType, number: identificationNumber } },
       };
       if (paymentMethod === "card") Object.assign(paymentPayload, {
+        // For cards, Mercado Pago expects the actual brand ID returned by CardForm
+        // (e.g. "visa"), not the generic "card" label used by this checkout UI.
+        payment_method_id: card.payment_method_id,
         token: card.token,
         installments: 1,
+        ...(typeof card.issuer_id === "string" && /^\d{1,20}$/.test(card.issuer_id)
+          ? { issuer_id: card.issuer_id } : {}),
       });
       const result = await mpFetch("/v1/payments", { method: "POST",
         headers: { "X-Idempotency-Key": purchaseId }, body: JSON.stringify(paymentPayload) });
@@ -83,6 +88,12 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
         report("error", "error", "tts.credits.payment_failed", "Não foi possível iniciar o pagamento de créditos.",
           { tenant_id: tenantId, package_id: item.id, payment_method: paymentMethod, http_status: result.status,
+            ...(typeof result.data?.error === "string" && /^[a-z0-9_-]{1,64}$/i.test(result.data.error)
+              ? { provider_error_code: result.data.error } : {}),
+            ...(typeof result.data?.status_detail === "string" && /^[a-z0-9_-]{1,64}$/i.test(result.data.status_detail)
+              ? { provider_status_detail: result.data.status_detail } : {}),
+            ...(Array.isArray(result.data?.cause) && Number.isSafeInteger(Number(result.data.cause[0]?.code))
+              ? { provider_cause_code: Number(result.data.cause[0].code) } : {}),
             code: "PAYMENT_CREATE_FAILED" }, "PAYMENT_CREATE_FAILED");
         return res.status(502).json({ success: false, error: "O Mercado Pago não conseguiu iniciar o pagamento. Confira os dados e tente novamente." });
       }
@@ -103,10 +114,14 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         qr_code_base64: String(result.data.point_of_interaction?.transaction_data?.qr_code_base64 || "").slice(0, 200000),
         date_of_expiration: String(result.data.date_of_expiration || "").slice(0, 64),
       } : undefined, settled: Boolean(settled.success && (settled.approved || settled.duplicate)) });
-    } catch {
+    } catch (error) {
       db.db.prepare("UPDATE tts_credit_purchases SET status='checkout_failed' WHERE id=?").run(purchaseId);
       report("error", "error", "tts.credits.payment_failed", "Não foi possível iniciar o pagamento de créditos.",
-        { tenant_id: tenantId, package_id: item.id, payment_method: paymentMethod, code: "PAYMENT_CREATE_FAILED" }, "PAYMENT_CREATE_FAILED");
+        { tenant_id: tenantId, package_id: item.id, payment_method: paymentMethod,
+          error_type: error?.name || "Error",
+          ...(typeof error?.code === "string" && /^[a-z0-9_-]{1,64}$/i.test(error.code) ? { network_code: error.code } : {}),
+          ...(Number.isInteger(error?.cause?.errno) ? { network_errno: error.cause.errno } : {}),
+          code: "PAYMENT_CREATE_FAILED" }, "PAYMENT_CREATE_FAILED");
       res.status(502).json({ success: false, error: "Não foi possível iniciar o pagamento. Tente novamente." });
     }
   });

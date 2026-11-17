@@ -1834,7 +1834,12 @@ function apiFetch(path, opts = {}) {
       logout();
       throw new Error("Sessão expirada");
     }
-    if (!res.ok) throw new Error("Falha HTTP " + res.status);
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch {}
+      throw new Error(typeof data?.error === "string" && data.error.trim()
+        ? data.error : "Falha HTTP " + res.status);
+    }
     return res.json();
   });
 }
@@ -5134,6 +5139,7 @@ async function mountTtsCreditCardForm() {
         await submitTtsCreditPayment({ payment_method: "card", identification_type: documentType,
           identification_number: documentNumber, card: {
             token: formData.token, payment_method_id: formData.paymentMethodId,
+            issuer_id: formData.issuerId,
           } });
       },
     },

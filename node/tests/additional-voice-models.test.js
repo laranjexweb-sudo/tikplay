@@ -36,10 +36,12 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
   let checkoutPayload = null;
   let paymentRequestHeaders = null;
   let payment = null;
+  let paymentResponseOverride = null;
   const mpFetch = async (route, options = {}) => {
     if (route === "/v1/payments") {
       checkoutPayload = JSON.parse(options.body);
       paymentRequestHeaders = options.headers;
+      if (paymentResponseOverride) return paymentResponseOverride;
       payment = { id: checkoutPayload.payment_method_id === "pix" ? 987655 : 987654,
         status: "pending", status_detail: "pending_waiting_transfer", currency_id: "BRL",
         transaction_amount: checkoutPayload.transaction_amount, external_reference: checkoutPayload.external_reference,
@@ -154,8 +156,24 @@ test("admin controla modelos de voz e streamers só selecionam opções habilita
     assert.match(checkoutPayload.external_reference, /^tts-credit:/);
     assert.equal(checkoutPayload.transaction_amount, 12.5, "amount is calculated from the saved package, never the client");
     assert.equal(checkoutPayload.token, "card-token-test");
+    assert.equal(checkoutPayload.payment_method_id, "visa", "cards must send the actual card brand, not generic 'card'");
+    assert.equal(checkoutPayload.issuer_id, "123", "send the issuer selected by Mercado Pago CardForm when provided");
+    assert.equal(checkoutPayload.installments, 1, "the checkout is configured for one installment");
     assert.equal(checkoutPayload.payer.email, "voice-streamer@test.local");
     assert.equal(paymentRequestHeaders["X-Idempotency-Key"].length, 36);
+    paymentResponseOverride = { status: 400, data: { error: "bad_request", status_detail: "cc_rejected_bad_filled_card_number",
+      cause: [{ code: 205, description: "private provider text must not be copied to logs" }] } };
+    const rejectedCard = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId,
+      payment_method: "card", identification_number: "12345678901",
+      card: { token: "another-card-token", payment_method_id: "visa", issuer_id: "123" } });
+    assert.equal(rejectedCard.status, 502);
+    const paymentFailure = logs.find(entry => entry.event === "tts.credits.payment_failed"
+      && entry.details?.provider_error_code === "bad_request");
+    assert.equal(paymentFailure.details.provider_status_detail, "cc_rejected_bad_filled_card_number");
+    assert.equal(paymentFailure.details.provider_cause_code, 205);
+    assert.equal(JSON.stringify(paymentFailure).includes("private provider text"), false,
+      "provider response messages must not be copied into persistent logs");
+    paymentResponseOverride = null;
     assert.equal((await request(streamer, "/api/tts/credits/payments/987654")).data.status, "pending");
     const pixCheckout = await request(streamer, "/api/tts/credits/checkout", "POST", { package_id: packageId,
       payment_method: "pix", identification_type: "CPF", identification_number: "12345678901" });
