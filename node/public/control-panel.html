@@ -4694,6 +4694,7 @@ let ttsCreditCheckoutSession = 0;
 const ttsCreditPaymentPolls = new Map();
 let ttsMpSdkPromise = null;
 let creditBalanceRefreshInFlight = false;
+let ttsCreditsUnlimited = false;
 async function loadElevenChatVoices() {
   const box = document.getElementById("elevenChatBox");
   const select = document.getElementById("elevenChatVoice");
@@ -4767,14 +4768,19 @@ async function loadVoiceCredits() {
   try {
     const data = await apiFetch("/api/tts/credits");
     if (!data?.success) throw new Error("Falha ao carregar TikCoins");
-    setTtsCreditBalance(data.balance);
+    ttsCreditsUnlimited = data.credits_unlimited === true;
+    setTtsCreditBalance(data.balance, ttsCreditsUnlimited);
     ttsCreditPublicKey = typeof data.checkout?.public_key === "string" ? data.checkout.public_key : "";
     ttsCreditAccountEmail = typeof data.account_email === "string" ? data.account_email : "";
     elevenCreditCosts = new Map((data.model_costs || []).map(item => [item.model_id, Number(item.credits_per_150_chars)]));
     packages.replaceChildren();
     const availablePackages = data.packages || [];
-    document.getElementById("voiceCreditPackagesEmpty").hidden = availablePackages.length > 0;
-    availablePackages.forEach(item => {
+    const packageSection = document.getElementById("creditPackagesSection");
+    const rechargeButton = document.querySelector(".tp-credit-overview-actions .btn-primary");
+    packageSection.hidden = ttsCreditsUnlimited;
+    if (rechargeButton) rechargeButton.hidden = ttsCreditsUnlimited;
+    document.getElementById("voiceCreditPackagesEmpty").hidden = ttsCreditsUnlimited || availablePackages.length > 0;
+    availablePackages.filter(() => !ttsCreditsUnlimited).forEach(item => {
       const card = document.createElement("article"); card.className = "tp-credit-package";
       const title = document.createElement("h3"); title.textContent = item.name;
       const quantityLabel = document.createElement("span"); quantityLabel.className = "tp-credit-package-label"; quantityLabel.textContent = "Créditos no pacote";
@@ -4793,7 +4799,11 @@ async function loadVoiceCredits() {
     const recentLedger = data.ledger || [];
     const recentConsumption = recentLedger.filter(item => item.kind === "usage")
       .reduce((total, item) => total + Math.abs(Number(item.amount || 0)), 0);
-    document.getElementById("voiceCreditRecentConsumption").textContent = `${recentConsumption.toLocaleString("pt-BR")} TikCoins`;
+    const recentConsumptionLabel = document.getElementById("voiceCreditRecentConsumption")?.parentElement?.querySelector("span");
+    if (recentConsumptionLabel) recentConsumptionLabel.textContent = ttsCreditsUnlimited
+      ? "Cobranças atuais de vozes adicionais" : "Consumo nas movimentações exibidas";
+    document.getElementById("voiceCreditRecentConsumption").textContent = ttsCreditsUnlimited
+      ? "Isento · sem débito de TikCoins" : `${recentConsumption.toLocaleString("pt-BR")} TikCoins`;
     if (!recentLedger.length) {
       const empty = document.createElement("p"); empty.className = "tp-credit-empty"; empty.textContent = "Ainda não há movimentações nesta carteira.";
       history.append(empty);
@@ -4835,17 +4845,21 @@ async function loadVoiceCredits() {
     if (paymentResult === "success") status.textContent = "Pagamento recebido. O saldo será atualizado após a confirmação do Mercado Pago.";
     else if (paymentResult === "pending") status.textContent = "Pagamento pendente. Os TikCoins entram após a confirmação.";
     else if (paymentResult === "failure") status.textContent = "Pagamento não concluído. Você pode tentar novamente.";
-    else status.textContent = availablePackages.length ? "Os TikCoins são adicionados após a confirmação do pagamento." : "";
+    else status.textContent = ttsCreditsUnlimited
+      ? "Esta conta Super Admin pode usar as vozes adicionais sem limite de TikCoins. O uso de APIs segue registrado nos custos da plataforma."
+      : availablePackages.length ? "Os TikCoins são adicionados após a confirmação do pagamento." : "";
   } catch {
     status.textContent = "Não foi possível carregar o saldo e os pacotes de TikCoins.";
   }
 }
 
-function setTtsCreditBalance(value) {
-  const formatted = `${Number(value || 0).toLocaleString("pt-BR")} TikCoins`;
+function setTtsCreditBalance(value, unlimited = ttsCreditsUnlimited) {
+  const formatted = unlimited ? "APIs ilimitadas" : `${Number(value || 0).toLocaleString("pt-BR")} TikCoins`;
   const pageBalance = document.getElementById("voiceCreditBalance");
   const headerBalance = document.getElementById("ttsCreditHeaderBalance");
-  if (pageBalance) pageBalance.textContent = Number(value || 0).toLocaleString("pt-BR");
+  const pageUnit = pageBalance?.parentElement?.querySelector("span");
+  if (pageBalance) pageBalance.textContent = unlimited ? "Ilimitado" : Number(value || 0).toLocaleString("pt-BR");
+  if (pageUnit) pageUnit.textContent = unlimited ? "uso de APIs" : "TikCoins";
   if (headerBalance) headerBalance.textContent = formatted;
 }
 
@@ -4854,7 +4868,10 @@ async function refreshTtsCreditBalance() {
   creditBalanceRefreshInFlight = true;
   try {
     const data = await apiFetch("/api/tts/credits");
-    if (data?.success) setTtsCreditBalance(data.balance);
+    if (data?.success) {
+      ttsCreditsUnlimited = data.credits_unlimited === true;
+      setTtsCreditBalance(data.balance, ttsCreditsUnlimited);
+    }
   } catch {} finally { creditBalanceRefreshInFlight = false; }
 }
 

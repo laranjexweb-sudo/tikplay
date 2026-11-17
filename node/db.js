@@ -517,6 +517,13 @@ CREATE TABLE IF NOT EXISTS active_live_connections (
   tenant_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   requested_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS live_like_ranking_state (
+  tenant_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  room_id TEXT NOT NULL,
+  ranking_json TEXT NOT NULL,
+  event_ids_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `);
 try { db.exec("ALTER TABLE word_usage ADD COLUMN game_type TEXT NOT NULL DEFAULT 'palavra'"); } catch {}
 const likesOverlayDefaultMigration = "likes_overlay_default_top_left_v1";
@@ -794,6 +801,50 @@ function clearActiveGameRecovery(tenantId) {
   if (!Number.isInteger(id) || id <= 0) return false;
   db.prepare("DELETE FROM active_game_recovery WHERE tenant_id = ?").run(id);
   return true;
+}
+
+function saveLiveLikesState(tenantId, state) {
+  const id = Number(tenantId);
+  const roomId = String(state && state.room_id || "").trim();
+  if (!Number.isInteger(id) || id <= 0 || !roomId) return false;
+  const ranking = Array.isArray(state.ranking) ? state.ranking.slice(0, 50000).map((entry) => {
+    const user = String(entry && entry.user || "").trim().slice(0, 256);
+    const likes = Math.max(0, Math.floor(Number(entry && entry.likes) || 0));
+    if (!user || !likes) return null;
+    return {
+      user,
+      nickname: String(entry.nickname || user).slice(0, 256),
+      avatar: String(entry.avatar || "").slice(0, 2048),
+      likes,
+    };
+  }).filter(Boolean) : [];
+  const eventIds = Array.isArray(state.event_ids)
+    ? state.event_ids.slice(-2000).map(value => String(value || "").slice(0, 256)).filter(Boolean)
+    : [];
+  db.prepare(`INSERT INTO live_like_ranking_state (tenant_id, room_id, ranking_json, event_ids_json, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET room_id=excluded.room_id,
+      ranking_json=excluded.ranking_json, event_ids_json=excluded.event_ids_json, updated_at=excluded.updated_at`)
+    .run(id, roomId.slice(0, 256), JSON.stringify(ranking), JSON.stringify(eventIds), Date.now());
+  return true;
+}
+
+function getLiveLikesState(tenantId) {
+  const id = Number(tenantId);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const row = db.prepare("SELECT room_id, ranking_json, event_ids_json FROM live_like_ranking_state WHERE tenant_id = ?").get(id);
+  if (!row || !row.room_id) return null;
+  try {
+    const ranking = JSON.parse(row.ranking_json || "[]");
+    const eventIds = JSON.parse(row.event_ids_json || "[]");
+    return {
+      room_id: String(row.room_id),
+      ranking: Array.isArray(ranking) ? ranking : [],
+      event_ids: Array.isArray(eventIds) ? eventIds : [],
+    };
+  } catch {
+    return null;
+  }
 }
 
 function saveActiveLiveConnection(tenantId) {
@@ -3021,6 +3072,8 @@ module.exports = {
   saveActiveGameRecovery,
   getActiveGameRecovery,
   clearActiveGameRecovery,
+  saveLiveLikesState,
+  getLiveLikesState,
   saveActiveLiveConnection,
   clearActiveLiveConnection,
   hasActiveLiveConnection,

@@ -1,20 +1,21 @@
 const crypto = require("crypto");
 const maskSecret = require("../lib/mask-secret");
 
-const PROVIDERS = new Set(["elevenlabs", "openrouter", "mercadopago"]);
+const PROVIDERS = new Set(["elevenlabs", "openrouter", "starsg", "mercadopago"]);
 
 module.exports = function registerAdminIntegrationRoutes(app, {
-  auth, integrationSecrets, providerConfig, checkoutConfig, getDaemonOpenRouterKey, log,
+  auth, integrationSecrets, providerConfig, checkoutConfig, getDaemonOpenRouterKey, getDaemonStarsgKey = () => "", log,
 }) {
   const testState = new Map();
   const trace = () => crypto.randomUUID();
-  const report = (actorId, event, level, message, details = {}, code) => log({
-    category: level === "error" ? "error" : "system", level,
+  const report = (actorId, event, level, message, details = {}, code, category = level === "error" ? "error" : "system") => log({
+    category, level,
     event, message, code, source: "node", trace_id: trace(),
     details: { actor_id: actorId, ...details },
   });
   const status = () => {
     const openrouter = integrationSecrets.read("openrouter");
+    const starsg = integrationSecrets.read("starsg");
     const mercadopago = integrationSecrets.read("mercadopago");
     const publicKey = integrationSecrets.read("mercadopago_public_key");
     const webhook = integrationSecrets.read("mercadopago_webhook");
@@ -28,6 +29,9 @@ module.exports = function registerAdminIntegrationRoutes(app, {
         openrouter: { configured: Boolean(openrouter.secret), source: openrouter.source,
           api_key_masked: maskSecret(openrouter.secret),
           daemon_restart_required: openrouter.secret !== getDaemonOpenRouterKey() },
+        starsg: { configured: Boolean(starsg.secret), source: starsg.source,
+          api_key_masked: maskSecret(starsg.secret),
+          daemon_restart_required: starsg.secret !== getDaemonStarsgKey() },
         mercadopago: { configured: Boolean(mercadopago.secret), source: mercadopago.source,
           access_token_masked: maskSecret(mercadopago.secret),
           public_key_configured: Boolean(publicKey.secret), public_key_masked: maskSecret(publicKey.secret), public_key_source: publicKey.source,
@@ -55,6 +59,24 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       report(req.user.id, "integrations.openrouter.save_failed", "error", "Falha ao salvar o OpenRouter.",
         { code: "CONFIG_SAVE_FAILED" }, "CONFIG_SAVE_FAILED");
       res.status(500).json({ success: false, error: "Não foi possível salvar a configuração do OpenRouter." });
+    }
+  });
+
+  app.put("/api/admin/integrations/starsg", auth.requireAdmin, (req, res) => {
+    const { api_key: apiKey, clear } = req.body || {};
+    const key = typeof apiKey === "string" ? apiKey.trim() : "";
+    if ((clear !== undefined && typeof clear !== "boolean") || (clear === true && key)
+        || (clear !== true && !/^[\x21-\x7e]{10,4096}$/.test(key)))
+      return res.status(400).json({ success: false, error: "Informe uma chave válida ou escolha remover a chave." });
+    try {
+      integrationSecrets.save("starsg", clear === true ? "" : key);
+      report(req.user.id, "integrations.starsg.saved", "info", "Configuração da StarsG atualizada.",
+        { operation: clear === true ? "clear" : "replace" }, undefined, "diagnostic");
+      res.set("Cache-Control", "no-store").json(status());
+    } catch {
+      report(req.user.id, "integrations.starsg.save_failed", "error", "Falha ao salvar a StarsG.",
+        { code: "CONFIG_SAVE_FAILED" }, "CONFIG_SAVE_FAILED", "error");
+      res.status(500).json({ success: false, error: "Não foi possível salvar a configuração da StarsG." });
     }
   });
 
@@ -103,7 +125,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
     const draft = req.body?.api_key ?? req.body?.access_token;
     const key = typeof draft === "string" ? draft.trim()
       : provider === "elevenlabs" ? providerConfig.read().apiKey
-        : integrationSecrets.read(provider === "mercadopago" ? "mercadopago" : "openrouter").secret;
+      : integrationSecrets.read(provider === "mercadopago" ? "mercadopago" : provider).secret;
     if (!key) return res.status(400).json({ success: false, error: "Configure a chave da API antes de testar." });
     if (!/^[\x21-\x7e]{10,4096}$/.test(key))
       return res.status(400).json({ success: false, error: "A chave informada tem formato inválido." });
@@ -123,6 +145,9 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       else if (provider === "openrouter") response = await fetch("https://openrouter.ai/api/v1/key", {
         headers: { Authorization: `Bearer ${key}` }, signal: controller.signal,
       });
+      else if (provider === "starsg") response = await fetch("https://api.starsg.ai/v1/models", {
+        headers: { Authorization: `Bearer ${key}` }, signal: controller.signal,
+      });
       else response = await fetch("https://api.mercadolibre.com/users/me", {
         headers: { Authorization: `Bearer ${key}` }, signal: controller.signal,
       });
@@ -140,6 +165,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       let account = "Conexão validada";
       if (provider === "elevenlabs") account = payload?.subscription?.tier || "Conta autenticada";
       if (provider === "openrouter") account = "Chave OpenRouter validada";
+      if (provider === "starsg") account = "Chave autenticada; catálogo de vozes é validado separadamente";
       if (provider === "mercadopago") account = payload?.nickname || "Conta autenticada";
       report(req.user.id, "integrations.test.succeeded", "info", "Teste de integração concluído.",
         { provider, http_status: response.status });

@@ -22,14 +22,15 @@ numérico com ícone de moeda.
 - Dados: `GET /api/reports/ranking` e `GET /api/reports/events`, tipo `gift`,
   com limite de seis participantes; `/api/game-state` identifica a sala atual.
 - Atualização: WebSocket `/browser` recebe `status`, `gift_event` e
-  `gift_ranking_vertical_layout`; o overlay reconcilia o ranking pelo endpoint
-  atual.
+  `gift_ranking_vertical_layout`; o overlay sincroniza a posição/escala ao
+  conectar ou reconectar e aplica eventos de layout sem recarregar a fonte.
 - Posição e escala independentes: `/api/gift-ranking/vertical-layout`, com
   preferência própria por conta e transmissão de prévia via
   `gift-ranking-vertical-preview-config`. O V3 mantém
   `/api/gift-ranking/layout` sem alterações. Na primeira configuração do V4,
   ele parte da posição e escala atuais do V3; o painel salva esse ponto inicial
-  no campo independente do V4.
+  no campo independente do V4. A prévia aplica o layout diretamente no iframe
+  quando disponível e usa `postMessage` como alternativa.
 - Sem alterações no cálculo/ordem do ranking, histórico, armazenamento,
   autenticação, saldo ou eventos de presentes.
 

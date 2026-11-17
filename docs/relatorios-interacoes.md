@@ -26,6 +26,10 @@ overlays de curtidas e isolamento de dados por live.
   gift = diamantes × repetições; guess/hint = rank; winner = 1.
 - **Idempotência:** `event_id` (ex.: `msg_id` do Webhook) com índice único parcial
   + `INSERT OR IGNORE`. Duplicatas **não** inflam agregados.
+- **Ranking de diamantes:** a sobreposição V3 consulta os agregados de `gift` do
+  SQLite filtrados por conta e `room_id`; reiniciar o Node não zera o ranking.
+  No encerramento gracioso, o lote de interações ainda em memória também é
+  descarregado antes de o processo sair.
 - **Motores:** `TikTokLive` fornece `room_id` e `event_id` por evento
   (`common.room_id`/`common.msg_id`) → dedupe/descarte exatos. No **TikTools**
   isso é **best-effort** (a sala vem do `live_status`; não há `event_id` por evento).

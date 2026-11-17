@@ -111,6 +111,18 @@
           <div class="tp-admin-feedback" id="openRouterGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div>
         </div></details>
       </article>
+      <article class="tp-admin-operation-block tp-integration-card" id="starsgIntegrationCard" aria-labelledby="starsgGlobalTitle">
+        <div class="tp-integration-card-head"><div><h4 id="starsgGlobalTitle">StarsG</h4><p>Vozes Altair Mini e Vega Flash.</p></div><span class="tp-integration-state" id="starsgConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-meta"><span id="starsgSourceSummary">Origem: verificando…</span><span id="starsgLastCheck">Ainda não testada nesta sessão</span></div>
+        <div class="tp-admin-feedback tp-integration-test-feedback" id="starsgTestFeedback" role="status" aria-live="polite"></div>
+        <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="starsgGlobalTest" type="button" onclick="testIntegration('starsg')">Testar conexão</button></div>
+        <details class="tp-integration-editor"><summary>Editar configuração</summary><div class="tp-integration-editor-body">
+          <p class="tp-integration-technical-note">Depois de salvar ou remover a chave, reinicie o daemon em uma janela segura para aplicar às narrações das lives.</p>
+          <label class="tp-admin-field" for="starsgGlobalKey">Chave da API<input class="form-control" id="starsgGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="Cole a chave da StarsG"></label>
+          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="starsgGlobalSave" type="button" onclick="saveStarsgGlobal()">Salvar chave</button><button class="btn btn-nb btn-danger" id="starsgGlobalClear" type="button" onclick="saveStarsgGlobal(true)" disabled>Remover chave</button></div>
+          <div class="tp-admin-feedback" id="starsgGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div>
+        </div></details>
+      </article>
       <article class="tp-admin-operation-block tp-integration-card" id="elevenIntegrationCard" aria-labelledby="elevenGlobalTitle">
         <div class="tp-integration-card-head"><div><h4 id="elevenGlobalTitle">ElevenLabs</h4><p>Integração usada pelas vozes expressivas disponíveis na plataforma.</p></div><span class="tp-integration-state" id="elevenConnectionState" data-state="loading">Verificando…</span></div>
         <div class="tp-integration-meta"><span id="elevenSourceSummary">Origem: verificando…</span><span id="elevenLastCheck">Ainda não testada nesta sessão</span></div>
@@ -951,7 +963,7 @@ function renderDashboardHealth() {
   const serviceNames = { api: 'API Node', ws: 'Tempo real', db: 'Banco de dados', daemon: 'Daemon Python', storage: 'Armazenamento', tts: 'TTS do servidor', tiktok: 'TikTok Live' };
   const services = (snap?.services || []).map(item => ({ name: serviceNames[item.id] || item.name, state: item.status, note: item.note || '', metrics: item.metrics || '', href: item.id === 'api' || item.id === 'db' || item.id === 'daemon' ? '#adminMonitor' : null }));
   const configured = dashboardData.integrations || {};
-  for (const [key, name] of [['openrouter','OpenRouter'],['elevenlabs','ElevenLabs'],['mercadopago','Mercado Pago']]) {
+  for (const [key, name] of [['openrouter','OpenRouter'],['starsg','StarsG'],['elevenlabs','ElevenLabs'],['mercadopago','Mercado Pago']]) {
     services.push({ name, state: configured[key]?.configured ? 'configured' : 'unconfigured',
       note: configured[key]?.configured ? 'Credencial configurada · teste manual' : 'Credencial ausente', href: '#adminRules' });
   }
@@ -1283,7 +1295,7 @@ function integrationSourceLabel(source) {
     : source === "default" ? "padrão da plataforma" : "não configurada";
 }
 
-const integrationUiState = { openrouter: null, elevenlabs: null, mercadopago: null };
+const integrationUiState = { openrouter: null, starsg: null, elevenlabs: null, mercadopago: null };
 const integrationChecksInMemory = {};
 function updateIntegrationSummary() {
   const connected = Object.values(integrationUiState).filter(Boolean).length;
@@ -1293,7 +1305,7 @@ function updateIntegrationSummary() {
 function setIntegrationCardState(provider, connected, source, detail = "") {
   integrationUiState[provider] = connected === true;
   updateIntegrationSummary();
-  const ids = { openrouter: ["openRouterConnectionState", "openRouterSourceSummary"], elevenlabs: ["elevenConnectionState", "elevenSourceSummary"], mercadopago: ["mercadoPagoConnectionState", "mercadoPagoSourceSummary"] }[provider];
+  const ids = { openrouter: ["openRouterConnectionState", "openRouterSourceSummary"], starsg: ["starsgConnectionState", "starsgSourceSummary"], elevenlabs: ["elevenConnectionState", "elevenSourceSummary"], mercadopago: ["mercadoPagoConnectionState", "mercadoPagoSourceSummary"] }[provider];
   if (!ids) return;
   const state = document.getElementById(ids[0]);
   state.dataset.state = connected ? "connected" : "missing";
@@ -1313,19 +1325,19 @@ function integrationLastCheck(provider) {
 
 function showIntegrationCheck(provider, success) {
   if (success === null) {
-    const targetId = { openrouter: "openRouterLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+    const targetId = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
     const target = document.getElementById(targetId);
     if (target) target.textContent = integrationLastCheck(provider);
     return;
   }
   integrationChecksInMemory[provider] = { at: Date.now(), success };
-  const id = { openrouter: "openRouterLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+  const id = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
   const target = document.getElementById(id);
   if (target) target.textContent = integrationLastCheck(provider);
 }
 
 function initializeIntegrationChecks() {
-  for (const provider of ["openrouter", "elevenlabs", "mercadopago"]) showIntegrationCheck(provider, null);
+  for (const provider of ["openrouter", "starsg", "elevenlabs", "mercadopago"]) showIntegrationCheck(provider, null);
 }
 
 function showAdminIntegrationState(data) {
@@ -1338,6 +1350,14 @@ function showAdminIntegrationState(data) {
   setIntegrationCardState("openrouter", openrouter.configured, openrouter.source,
     `Origem: ${integrationSourceLabel(openrouter.source)}${openrouter.api_key_masked ? ` · chave ${openrouter.api_key_masked}` : ""}${openrouter.daemon_restart_required ? " · reinício seguro pendente" : ""}`);
   document.getElementById("openRouterLastCheck").textContent = integrationLastCheck("openrouter");
+  const starsg = integrations.starsg || {};
+  document.getElementById("starsgGlobalStatus").textContent = starsg.configured
+    ? `Conectada · ${starsg.api_key_masked || "chave mascarada"} · ${integrationSourceLabel(starsg.source)}${starsg.daemon_restart_required ? " · reinício seguro do daemon pendente" : " · daemon atualizado"}`
+    : "Sem chave configurada.";
+  document.getElementById("starsgGlobalClear").disabled = !starsg.configured;
+  setIntegrationCardState("starsg", starsg.configured, starsg.source,
+    `Origem: ${integrationSourceLabel(starsg.source)}${starsg.api_key_masked ? ` · chave ${starsg.api_key_masked}` : ""}${starsg.daemon_restart_required ? " · reinício seguro pendente" : ""}`);
+  document.getElementById("starsgLastCheck").textContent = integrationLastCheck("starsg");
   const mercado = integrations.mercadopago || {};
   document.getElementById("mercadoPagoPublicUrl").placeholder = mercado.public_base_url
     ? `${mercado.public_base_url} · endereço atual` : "https://painel.seudominio.com.br";
@@ -1389,6 +1409,26 @@ async function saveOpenRouterGlobal(clear = false) {
   finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
 }
 
+async function saveStarsgGlobal(clear = false) {
+  const input = document.getElementById("starsgGlobalKey");
+  const status = document.getElementById("starsgGlobalStatus");
+  if (!clear && !input.value.trim()) { status.textContent = "Cole a chave da API antes de salvar."; input.focus(); return; }
+  const buttons = ["starsgGlobalSave", "starsgGlobalTest", "starsgGlobalClear"].map(id => document.getElementById(id));
+  buttons.forEach(button => { button.disabled = true; });
+  status.textContent = "Salvando configuração…";
+  let resultMessage = "";
+  try {
+    const data = await apiFetch("/api/admin/integrations/starsg", { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clear ? { clear: true } : { api_key: input.value.trim() }) });
+    if (!data.success) throw new Error(data.error || "Falha ao salvar a chave.");
+    input.value = "";
+    showAdminIntegrationState(data);
+    resultMessage = clear ? "Chave removida." : "Chave salva. Teste a conexão e reinicie o daemon em uma janela segura para ativar nas lives.";
+    await loadAdditionalVoiceModels();
+  } catch (error) { resultMessage = error.message || "Não foi possível salvar a chave."; }
+  finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
+}
+
 async function saveMercadoPago(options = {}) {
   const accessInput = document.getElementById("mercadoPagoAccessToken");
   const publicKeyInput = document.getElementById("mercadoPagoPublicKey");
@@ -1422,9 +1462,9 @@ async function saveMercadoPago(options = {}) {
 }
 
 async function testIntegration(provider) {
-  const inputId = { elevenlabs: "elevenGlobalKey", openrouter: "openRouterGlobalKey", mercadopago: "mercadoPagoAccessToken" }[provider];
-  const statusId = { elevenlabs: "elevenCardTestFeedback", openrouter: "openRouterTestFeedback", mercadopago: "mercadoPagoCardTestFeedback" }[provider];
-  const buttonId = { elevenlabs: "elevenGlobalTest", openrouter: "openRouterGlobalTest", mercadopago: "mercadoPagoTest" }[provider];
+  const inputId = { elevenlabs: "elevenGlobalKey", openrouter: "openRouterGlobalKey", starsg: "starsgGlobalKey", mercadopago: "mercadoPagoAccessToken" }[provider];
+  const statusId = { elevenlabs: "elevenCardTestFeedback", openrouter: "openRouterTestFeedback", starsg: "starsgTestFeedback", mercadopago: "mercadoPagoCardTestFeedback" }[provider];
+  const buttonId = { elevenlabs: "elevenGlobalTest", openrouter: "openRouterGlobalTest", starsg: "starsgGlobalTest", mercadopago: "mercadoPagoTest" }[provider];
   const input = document.getElementById(inputId), status = document.getElementById(statusId), button = document.getElementById(buttonId);
   button.disabled = true; status.textContent = "Testando conexão…";
   try {
@@ -1548,7 +1588,9 @@ function renderAdditionalVoiceModels() {
       }
       if (!model.voices.length) {
         const empty = document.createElement("p"); empty.className = "text-secondary";
-        empty.textContent = model.configured ? (model.pt_br_note || "Nenhuma voz identificada como português brasileiro neste modelo.") : "Configure a integração para carregar as vozes.";
+        empty.textContent = model.catalog_error_code === "STARSG_MODEL_CATALOG_NOT_FOUND" || model.catalog_error_code === "STARSG_VOICE_CATALOG_NOT_FOUND"
+          ? "A StarsG respondeu 404 ao listar as vozes. A chave autentica, mas o catálogo está indisponível no provedor."
+          : model.configured ? (model.pt_br_note || "Nenhuma voz identificada como português brasileiro neste modelo.") : "Configure a integração para carregar as vozes.";
         modelBody.appendChild(empty); section.appendChild(modelBody); container.appendChild(section); continue;
       }
       const voiceGrid = document.createElement("div"); voiceGrid.className = "tp-voice-model-voice-grid";
@@ -1600,7 +1642,7 @@ function renderAdditionalVoiceModels() {
 }
 
 function voiceProviderLabel(provider) {
-  const labels = { elevenlabs: "ElevenLabs", openrouter: "OpenRouter", heygen: "HeyGen", kokoro: "Kokoro" };
+  const labels = { elevenlabs: "ElevenLabs", openrouter: "OpenRouter", starsg: "StarsG", heygen: "HeyGen", kokoro: "Kokoro" };
   return labels[String(provider || "").toLowerCase()] || provider || "Fornecedor";
 }
 
@@ -1694,8 +1736,10 @@ async function loadAdditionalVoiceModels() {
     additionalVoiceModels = data.models || [];
     renderAdditionalVoiceModels();
     const openRouter = data.openrouter_configured ? "OpenRouter conectado" : "OpenRouter sem chave";
+    const starsg = data.starsg_configured ? "StarsG conectada" : "StarsG sem chave";
     const eleven = data.elevenlabs_configured ? "ElevenLabs conectada" : "ElevenLabs sem chave";
-    status.textContent = `${openRouter} · ${eleven}. O catálogo prioriza sotaque PT-BR identificado; vozes próprias da ElevenLabs sem idioma marcado aparecem para teste manual. Ative somente vozes aprovadas para os clientes.${data.catalog_error ? " Parte do catálogo não pôde ser carregada." : ""}`;
+    const starsgCatalogUnavailable = data.catalog_errors?.starsg === "STARSG_MODEL_CATALOG_NOT_FOUND" || data.catalog_errors?.starsg === "STARSG_VOICE_CATALOG_NOT_FOUND";
+    status.textContent = `${openRouter} · ${starsg}${starsgCatalogUnavailable ? " · API de catálogo StarsG indisponível (404); Altair Mini usa 13 vozes manuais e Vega Flash 15 das 30 vozes informadas" : ""} · ${eleven}. O catálogo prioriza sotaque PT-BR identificado; vozes próprias da ElevenLabs sem idioma marcado aparecem para teste manual. Ative somente vozes aprovadas para os clientes.${data.catalog_error && !starsgCatalogUnavailable ? " Parte do catálogo não pôde ser carregada." : ""}`;
   } catch {
     status.textContent = "Não foi possível carregar o catálogo de vozes.";
     document.getElementById("additionalVoiceModelsMsg").textContent = "Atualize a página para tentar novamente.";

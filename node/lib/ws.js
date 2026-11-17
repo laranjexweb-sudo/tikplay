@@ -1,6 +1,7 @@
 // Camada de estado e broadcast (tenants) — extraída de server.js na Fase B-2.
 // `broadcastStatus`/`broadcastStatusAll` (que dependem do daemonSend) permanecem no server.js.
-const { DEFAULT_SETTINGS, getActiveGameRecovery } = require("../db");
+const { DEFAULT_SETTINGS, getActiveGameRecovery, getLiveLikesState } = require("../db");
+const liveLikesState = require("./live-likes-state");
 const metrics = require("./metrics");
 
 const tenants = new Map();
@@ -38,6 +39,7 @@ function emptyGameState() {
 function getTenant(id) {
   if (!tenants.has(id)) {
     const recovery = getActiveGameRecovery(id);
+    const savedLikes = getLiveLikesState(id);
     const gameState = emptyGameState();
     if (recovery && recovery.room_id && recovery.secret_word && recovery.game_id) {
       gameState.active = true;
@@ -62,7 +64,7 @@ function getTenant(id) {
       gameState.tap_meta_total = Number(recovery.tap_meta_total) || 1000;
       gameState.tap_meta_ready = !!recovery.tap_meta_ready;
     }
-    tenants.set(id, {
+    const tenant = {
       id,
       gameState,
       browserClients: [],
@@ -75,7 +77,7 @@ function getTenant(id) {
       activeLiveEngine: null,
       autoResumeSessionId: null,
       autoResumeExpectedRoomId: null,
-      currentRoomId: recovery && recovery.room_id || null,
+      currentRoomId: savedLikes && savedLikes.room_id || recovery && recovery.room_id || null,
       gameRecoveryCheckpoint: recovery,
       currentSessionId: null,
       likesByUser: new Map(),
@@ -84,7 +86,11 @@ function getTenant(id) {
       cacaState: { active: false, size: 10, board: [], words: [], found_count: 0, total: 0, finished: false },
       vpetState: null,
       tresState: null,
-    });
+    };
+    if (savedLikes) liveLikesState.restoreState(tenant, savedLikes);
+    gameState.likes_ranking = liveLikesState.ranking(tenant, 5);
+    gameState.likes_ranking_all = liveLikesState.ranking(tenant, 10);
+    tenants.set(id, tenant);
   }
   return tenants.get(id);
 }

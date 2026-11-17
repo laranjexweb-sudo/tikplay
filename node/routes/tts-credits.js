@@ -15,7 +15,8 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
   app.get("/api/tts/credits", auth.requireAuth, (req, res) => {
     const tenantId = req.user.id;
     const account = db.getUserById(tenantId);
-    res.set("Cache-Control", "no-store").json({ success: true, balance: wallet.getBalance(db, tenantId),
+    const credits_unlimited = account?.role === "admin" && account?.status === "active";
+    res.set("Cache-Control", "no-store").json({ success: true, balance: wallet.getBalance(db, tenantId), credits_unlimited,
       account_email: account?.email || "",
       checkout: { public_key: typeof getPublicKey === "function" ? getPublicKey() : "" },
       packages: packages(true).map(item => ({ ...item, price: (item.price_cents / 100).toFixed(2) })),

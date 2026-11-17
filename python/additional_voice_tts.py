@@ -15,6 +15,7 @@ import elevenlabs_tts
 import tts_emotions
 import tts_credits
 import api_costs
+import starsg_tts
 
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
 MAX_CHAT_CHARACTERS = 150
@@ -154,6 +155,36 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None):
             voice = selection.get("voice_id") or ""
             if not model or not voice or not _model_enabled(conn, model_id) or not _voice_enabled(conn, model_id, voice):
                 return None, "ACCESS_CHANGED"
+            if model["provider"] == "starsg":
+                key = os.environ.get("STARSG_API_KEY") or ""
+                if not key:
+                    return None, "NOT_CONFIGURED"
+                digest = hashlib.sha256(f"{text}|{model_id}|{voice}|{emotion}".encode("utf-8")).hexdigest()
+                output = Path(out_dir) / f"voice_{digest}.wav"
+                if output.is_file() and output.stat().st_size:
+                    return str(output), "CACHE_HIT"
+                _, charge_code = tts_credits.charge(tenant_id, model_id, len(text))
+                if charge_code not in ("CHARGED", "ADMIN_EXEMPT"):
+                    return None, charge_code
+                audio = starsg_tts.synthesize(tenant_id, model["model_id"], voice, text, key)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                tts._prune_audio_cache(str(output.parent))
+                temp = output.with_name(f"{output.stem}.{uuid.uuid4().hex}.tmp")
+                try:
+                    temp.write_bytes(audio)
+                    os.replace(temp, output)
+                finally:
+                    if temp.exists():
+                        temp.unlink()
+                with _connect() as current_conn:
+                    current = _selection(current_conn, tenant_id)
+                    if not current or current.get("model_id") != model_id or current.get("voice_id") != voice or not _voice_enabled(current_conn, model_id, voice):
+                        try:
+                            output.unlink()
+                        except OSError:
+                            pass
+                        return None, "ACCESS_CHANGED"
+                return str(output), "SYNTHESIZED"
             if model["provider"] == "elevenlabs":
                 path, code = elevenlabs_tts.synthesize(tenant_id, text, out_dir, rate, emotion=emotion,
                     credit_charger=lambda: tts_credits.charge(tenant_id, model_id, len(text)))
@@ -182,7 +213,7 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None):
             if not selection or selection.get("model_id", "elevenlabs/eleven-v4-turbo") != model_id or not _model_enabled(conn, model_id) or not _voice_enabled(conn, model_id, voice):
                 return None, "ACCESS_CHANGED"
             _, charge_code = tts_credits.charge(tenant_id, model_id, len(text))
-            if charge_code != "CHARGED":
+            if charge_code not in ("CHARGED", "ADMIN_EXEMPT"):
                 return None, charge_code
         audio, suffix = _synthesize_openrouter(model, voice, text, key, tenant_id, emotion)
         output = output_base.with_suffix(suffix)
@@ -204,7 +235,7 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None):
                     pass
                 return None, "ACCESS_CHANGED"
         return str(output), "SYNTHESIZED"
-    except ProviderError as exc:
+    except (ProviderError, starsg_tts.ProviderError) as exc:
         return None, str(exc)
     except sqlite3.OperationalError:
         return None, "NOT_AVAILABLE"

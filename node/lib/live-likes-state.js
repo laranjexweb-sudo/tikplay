@@ -43,4 +43,36 @@ function ranking(tenant, limit = 10) {
     .slice(0, Math.max(0, Number(limit) || 0));
 }
 
-module.exports = { ensureRoomState, applyLikeDelta, ranking };
+function restoreState(tenant, state) {
+  if (!tenant || !state || !String(state.room_id || "").trim()) return false;
+  const roomId = String(state.room_id).trim();
+  const rankingEntries = Array.isArray(state.ranking) ? state.ranking : [];
+  const eventIds = Array.isArray(state.event_ids) ? state.event_ids : [];
+  tenant.currentRoomId = roomId;
+  tenant.likesByUser = new Map();
+  for (const entry of rankingEntries) {
+    const user = String(entry && entry.user || "").trim();
+    const likes = Math.max(0, Math.floor(Number(entry && entry.likes) || 0));
+    if (!user || !likes) continue;
+    tenant.likesByUser.set(user, {
+      user,
+      nickname: String(entry.nickname || user),
+      avatar: String(entry.avatar || ""),
+      likes,
+    });
+  }
+  tenant.likeEventIds = new Set(eventIds.map(value => String(value || "")).filter(Boolean).slice(-2000));
+  return true;
+}
+
+function serializeState(tenant) {
+  ensureCollections(tenant);
+  if (!tenant || !String(tenant.currentRoomId || "").trim()) return null;
+  return {
+    room_id: String(tenant.currentRoomId),
+    ranking: [...tenant.likesByUser.values()],
+    event_ids: [...tenant.likeEventIds],
+  };
+}
+
+module.exports = { ensureRoomState, applyLikeDelta, ranking, restoreState, serializeState };

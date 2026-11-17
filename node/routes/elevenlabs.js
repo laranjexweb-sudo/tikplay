@@ -5,6 +5,7 @@ const maskSecret = require("../lib/mask-secret");
 const voiceModels = require("../lib/additional-voice-models.json");
 const creditWallet = require("../lib/tts-credit-wallet");
 const apiCosts = require("../lib/api-costs");
+const starsgTts = require("../lib/starsg-tts");
 
 module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, requireFeature }) {
   const chatFeature = typeof requireFeature === "function" ? requireFeature("chat") : (_req, _res, next) => next();
@@ -61,14 +62,71 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     });
     seedRates.immediate();
   }
+  const starsgPricingVersion = "starsg-voice-v1";
+  if (!db.db.prepare("SELECT 1 FROM tts_credit_policy_migrations WHERE version=?").get(starsgPricingVersion)) {
+    const seedStarsgRates = db.db.transaction(() => {
+      const saveRate = db.db.prepare("UPDATE additional_voice_models SET credits_per_150_chars=? WHERE model_id=?");
+      saveRate.run(120, "starsg/tts-altair-v1-mini");
+      saveRate.run(120, "starsg/tts-vega-v1-flash");
+      db.db.prepare("INSERT INTO tts_credit_policy_migrations(version) VALUES(?)").run(starsgPricingVersion);
+    });
+    seedStarsgRates.immediate();
+  }
   const get = id => db.db.prepare("SELECT tenant_id,voice_id,model_id FROM tenant_elevenlabs WHERE tenant_id=?").get(id)
     || { tenant_id: id, voice_id: "", model_id: "elevenlabs/eleven-v4-turbo" };
   const configured = () => Boolean(providerConfig.read().apiKey);
   let catalog = [], catalogUntil = 0, catalogKey = "", pendingCatalog = null;
   const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map();
   let openRouterCatalog = [], openRouterCatalogUntil = 0, pendingOpenRouterCatalog = null;
+  let starsgCatalog = [], starsgCatalogUntil = 0, starsgCatalogKey = "", starsgCatalogErrorCode = null, pendingStarsgCatalog = null;
+  // IDs conferidos manualmente no catálogo oficial da StarsG para tts-altair-v1-mini.
+  // Mantemos o catálogo utilizável mesmo quando os endpoints de listagem da API retornam 404.
+  const STARSG_ALTAR_VOICES = [
+    ["female_ballad", "Ballad · Feminina · Elegante"],
+    ["female_coral", "Coral · Feminina · Brilhante"],
+    ["female_marin", "Marin · Feminina · Brilhante"],
+    ["female_nova", "Nova · Feminina · Animada"],
+    ["female_sage", "Sage · Feminina · Calma"],
+    ["female_shimmer", "Shimmer · Feminina · Expressiva"],
+    ["male_alloy", "Alloy · Masculina · Neutra"],
+    ["male_ash", "Ash · Masculina · Amigável"],
+    ["male_cedar", "Cedar · Masculina · Acolhedora"],
+    ["male_echo", "Echo · Masculina · Natural"],
+    ["male_fable", "Fable · Masculina · Narrativa"],
+    ["male_onyx", "Onyx · Masculina · Grave"],
+    ["male_verse", "Verse · Masculina · Expressiva"],
+  ].map(([key, label]) => ({ key, label, language: "Português · pt" }));
+  // IDs enviados pelo usuário a partir do catálogo oficial do tts-vega-v1-flash.
+  const STARSG_VEGA_VOICES = [
+    ["female_achernar", "Achernar · Feminina · Suave"],
+    ["female_aoede", "Aoede · Feminina · Leve"],
+    ["female_autonoe", "Autonoe · Feminina · Brilhante"],
+    ["female_callirrhoe", "Callirrhoe · Feminina · Descontraída"],
+    ["female_despina", "Despina · Feminina · Fluida"],
+    ["female_erinome", "Erinome · Feminina · Clara"],
+    ["female_gacrux", "Gacrux · Feminina · Madura"],
+    ["female_kore", "Kore · Feminina · Firme"],
+    ["female_laomedeia", "Laomedeia · Feminina · Animada"],
+    ["female_leda", "Leda · Feminina · Jovem"],
+    ["female_pulcherrima", "Pulcherrima · Feminina · Expressiva"],
+    ["female_sulafat", "Sulafat · Feminina · Acolhedora"],
+    ["female_vindemiatrix", "Vindemiatrix · Feminina · Gentil"],
+    ["female_zephyr", "Zephyr · Feminina · Brilhante"],
+    ["male_achird", "Achird · Masculina · Amigável"],
+  ].map(([key, label]) => ({ key, label, language: "Português · pt" }));
+  const starsgDefaultVoice = () => ({ key: starsgTts.DEFAULT_VOICE_ID,
+    label: "Voz padrão do modelo", language: "Padrão StarsG", is_default: true });
+  function starsgFallbackCatalog() {
+    return voiceModels.filter(item => item.provider === "starsg").map(model => ({
+      model_id: model.model_id,
+      voices: [starsgDefaultVoice(), ...(model.model_id === "tts-altair-v1-mini" ? STARSG_ALTAR_VOICES
+        : model.model_id === "tts-vega-v1-flash" ? STARSG_VEGA_VOICES : [])],
+    }));
+  }
   function openRouterKey() { return integrationSecrets.read("openrouter").secret; }
   function openRouterConfigured() { return Boolean(openRouterKey()); }
+  function starsgKey() { return integrationSecrets.read("starsg").secret; }
+  function starsgConfigured() { return Boolean(starsgKey()); }
   function getModelStates() {
     const states = new Map(db.db.prepare("SELECT model_id,enabled,credits_per_150_chars FROM additional_voice_models").all()
       .map(row => [row.model_id, { enabled: row.enabled === 1, credits_per_150_chars: row.credits_per_150_chars }]));
@@ -132,15 +190,76 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     const model = voiceModels.find(item => item.id === id);
     if (!model) return [];
     if (model.provider === "elevenlabs") return await voices();
+    if (model.provider === "starsg") return (await starsgVoices()).find(item => item.model_id === model.model_id)?.voices || [];
     return (await openRouterVoices()).find(item => item.model_id === model.model_id)?.voices || [];
   }
   function modelConfigured(model) {
-    return model.provider === "elevenlabs" ? configured() : openRouterConfigured();
+    if (model.provider === "elevenlabs") return configured();
+    if (model.provider === "starsg") return starsgConfigured();
+    return openRouterConfigured();
+  }
+  async function starsgVoices() {
+    const apiKey = starsgKey();
+    if (!apiKey) throw new Error("STARSG_NOT_CONFIGURED");
+    const fingerprint = crypto.createHash("sha256").update(apiKey).digest("hex");
+    if (Date.now() < starsgCatalogUntil && starsgCatalogKey === fingerprint) return starsgCatalog;
+    if (pendingStarsgCatalog?.key === fingerprint) return pendingStarsgCatalog.promise;
+    const task = (async () => {
+      try {
+        const modelsResponse = await fetch("https://api.starsg.ai/v1/realtime/models", {
+          headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000),
+        });
+        if (!modelsResponse.ok) throw new Error(modelsResponse.status === 404
+          ? "STARSG_MODEL_CATALOG_NOT_FOUND" : "STARSG_MODEL_CATALOG_FAILED");
+        const modelBody = await modelsResponse.json();
+        const modelRows = Array.isArray(modelBody.data) ? modelBody.data
+          : Array.isArray(modelBody.models) ? modelBody.models : [];
+        const result = [];
+        for (const model of voiceModels.filter(item => item.provider === "starsg")) {
+          const advertised = modelRows.length === 0 || modelRows.some(item =>
+            [item.id, item.model, item.model_id].includes(model.model_id));
+          if (!advertised) { result.push({ model_id: model.model_id, voices: [] }); continue; }
+          const response = await fetch(`https://api.starsg.ai/v1/realtime/models/${encodeURIComponent(model.model_id)}/voices`, {
+            headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000),
+          });
+          if (!response.ok) throw new Error(response.status === 404
+            ? "STARSG_VOICE_CATALOG_NOT_FOUND" : "STARSG_VOICE_CATALOG_FAILED");
+          const body = await response.json();
+          const rows = Array.isArray(body.voices) ? body.voices : Array.isArray(body.data) ? body.data
+            : Array.isArray(body.items) ? body.items : [];
+          const voices = rows.map(item => {
+            const key = typeof item === "string" ? item : item.voice_id || item.id || item.key;
+            if (typeof key !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(key)) return null;
+            const label = typeof item === "string" ? item : item.name || item.label || item.display_name || key;
+            const language = typeof item === "object" && (item.language || item.locale || item.languages?.[0]);
+            return { key, label: String(label).slice(0, 120), language: language ? String(language) : "Multilíngue · teste PT-BR" };
+          }).filter(Boolean);
+          result.push({ model_id: model.model_id, voices: [
+            starsgDefaultVoice(),
+            ...voices.filter(voice => voice.key !== starsgTts.DEFAULT_VOICE_ID),
+          ] });
+        }
+        starsgCatalog = result;
+        starsgCatalogErrorCode = null;
+        starsgCatalogKey = fingerprint;
+        starsgCatalogUntil = Date.now() + 300000;
+      } catch (error) {
+        starsgCatalogErrorCode = ["STARSG_MODEL_CATALOG_NOT_FOUND", "STARSG_MODEL_CATALOG_FAILED", "STARSG_VOICE_CATALOG_NOT_FOUND", "STARSG_VOICE_CATALOG_FAILED"].includes(error?.message)
+          ? error.message : "STARSG_CATALOG_FAILED";
+        starsgCatalog = starsgFallbackCatalog();
+        starsgCatalogKey = fingerprint;
+        starsgCatalogUntil = Date.now() + 15000;
+      }
+      return starsgCatalog;
+    })();
+    pendingStarsgCatalog = { key: fingerprint, promise: task };
+    try { return await task; } finally { if (pendingStarsgCatalog?.promise === task) pendingStarsgCatalog = null; }
   }
   async function modelsForStreamer(tenantId) {
     const states = getModelStates().filter(model => model.enabled && modelConfigured(model));
     const approved = new Map(selectedVoiceOptions().map(item => [`${item.model_id}:${item.voice_id}`, item]));
     let catalog = [], catalogError = false;
+    let starsg = [];
     if (states.some(model => model.provider === "openrouter") && openRouterConfigured()) {
       try { catalog = await openRouterVoices(); }
       catch {
@@ -149,6 +268,21 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
       }
     }
     let eleven = [];
+    if (states.some(model => model.provider === "starsg") && starsgConfigured()) {
+      try {
+        starsg = await starsgVoices();
+        if (starsgCatalogErrorCode) {
+          catalogError = true;
+          audit(tenantId, "tts.provider.failed", "error", "error", { operation: "catalog", provider: "starsg", code: starsgCatalogErrorCode });
+        }
+      }
+      catch (error) {
+        catalogError = true;
+        audit(tenantId, "tts.provider.failed", "error", "error", { operation: "catalog", provider: "starsg",
+          code: ["STARSG_MODEL_CATALOG_NOT_FOUND", "STARSG_MODEL_CATALOG_FAILED", "STARSG_VOICE_CATALOG_NOT_FOUND", "STARSG_VOICE_CATALOG_FAILED"].includes(error?.message)
+            ? error.message : "STARSG_CATALOG_FAILED" });
+      }
+    }
     if (states.some(model => model.provider === "elevenlabs") && configured()) {
       try { eleven = await voices(); }
       catch {
@@ -160,7 +294,9 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
       id: model.id, label: model.label, type: model.voice_type, provider: model.provider,
       credits_per_150_chars: model.credits_per_150_chars, credit_multiplier: model.credit_multiplier,
       configured: modelConfigured(model),
-      voices: (model.provider === "elevenlabs" ? eleven : (catalog.find(item => item.model_id === model.model_id)?.voices || []))
+      voices: (model.provider === "elevenlabs" ? eleven : model.provider === "starsg"
+        ? (starsg.find(item => item.model_id === model.model_id)?.voices || [])
+        : (catalog.find(item => item.model_id === model.model_id)?.voices || []))
         .filter(voice => approved.has(`${model.id}:${voice.key}`))
         .map(voice => ({ ...voice, credits_per_150_chars: model.credits_per_150_chars,
           credit_multiplier: model.credit_multiplier })),
@@ -171,12 +307,23 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     const approved = new Map(db.db.prepare("SELECT model_id,voice_id,label,enabled FROM additional_voice_options").all()
       .map(item => [`${item.model_id}:${item.voice_id}`, item]));
     const models = getModelStates();
-    let eleven = [], openRouter = [], catalogError = false;
-    let elevenAvailable = false, openRouterAvailable = false;
+    let eleven = [], openRouter = [], starsg = [], catalogError = false;
+    const catalogErrors = {};
+    let elevenAvailable = false, openRouterAvailable = false, starsgAvailable = false;
     if (configured()) try { eleven = await voices(); elevenAvailable = true; } catch { catalogError = true; }
     if (openRouterConfigured()) try { openRouter = await openRouterVoices(); openRouterAvailable = true; } catch { catalogError = true; }
+    if (starsgConfigured()) try {
+      starsg = await starsgVoices(); starsgAvailable = true;
+      if (starsgCatalogErrorCode) { catalogError = true; catalogErrors.starsg = starsgCatalogErrorCode; }
+    } catch (error) {
+      catalogError = true;
+      catalogErrors.starsg = ["STARSG_MODEL_CATALOG_NOT_FOUND", "STARSG_MODEL_CATALOG_FAILED", "STARSG_VOICE_CATALOG_NOT_FOUND", "STARSG_VOICE_CATALOG_FAILED"].includes(error?.message)
+        ? error.message : "STARSG_CATALOG_FAILED";
+    }
     const result = models.map(model => {
-      const available = model.provider === "elevenlabs" ? eleven : (openRouter.find(item => item.model_id === model.model_id)?.voices || []);
+      const available = model.provider === "elevenlabs" ? eleven : model.provider === "starsg"
+        ? (starsg.find(item => item.model_id === model.model_id)?.voices || [])
+        : (openRouter.find(item => item.model_id === model.model_id)?.voices || []);
       const voiceMap = new Map(available.map(voice => [voice.key, { ...voice, enabled: false, stale: false }]));
       for (const [key, item] of approved) {
         if (item.model_id !== model.id) continue;
@@ -184,10 +331,12 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
         if (voice) voice.enabled = item.enabled === 1;
         else voiceMap.set(item.voice_id, { key: item.voice_id, label: item.label || item.voice_id, enabled: item.enabled === 1, stale: true });
       }
-      const catalogAvailable = model.provider === "elevenlabs" ? elevenAvailable : openRouterAvailable;
-      return { ...model, configured: modelConfigured(model), catalog_available: catalogAvailable, voices: [...voiceMap.values()] };
+      const catalogAvailable = model.provider === "elevenlabs" ? elevenAvailable
+        : model.provider === "starsg" ? starsgAvailable : openRouterAvailable;
+      return { ...model, configured: modelConfigured(model), catalog_available: catalogAvailable,
+        catalog_error_code: catalogErrors[model.provider] || null, voices: [...voiceMap.values()] };
     });
-    return { models: result, catalog_error: catalogError };
+    return { models: result, catalog_error: catalogError, catalog_errors: catalogErrors };
   }
   async function voices() {
     const apiKey = providerConfig.read().apiKey;
@@ -240,9 +389,11 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
   }
   function view(id) {
     const row = get(id);
+    const user = db.getUserById(id);
     return { enabled: Boolean(active(id)), configured: configured(), openrouter_configured: openRouterConfigured(), voice_id: row.voice_id,
       model_id: row.model_id || "elevenlabs/eleven-v4-turbo",
-      credit_balance: creditWallet.getBalance(db, id) };
+      credit_balance: creditWallet.getBalance(db, id),
+      credits_unlimited: user?.role === "admin" && user?.status === "active" };
   }
   function audit(id, event, category, level, details = {}) {
     const key = `${id}:${event}`;
@@ -263,7 +414,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
   app.get("/api/admin/tts/additional-models", auth.requireAdmin, async (req, res) => {
     const catalog = await adminVoiceCatalog();
     res.set("Cache-Control", "no-store").json({ success: true,
-      openrouter_configured: openRouterConfigured(), elevenlabs_configured: configured(), ...catalog });
+      openrouter_configured: openRouterConfigured(), starsg_configured: starsgConfigured(), elevenlabs_configured: configured(), ...catalog });
   });
   app.post("/api/admin/tts/voice-preview", auth.requireAdmin, async (req, res) => {
     const model = voiceModels.find(item => item.id === req.body?.model_id);
@@ -282,56 +433,62 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     const traceId = crypto.randomUUID();
     const providerStartedAt = Date.now();
     let providerUsageRecorded = false;
+    const previewText = "Olá! Aqui no Brasil, o número do TikPlay é vinte e três. Esta é uma prévia em português brasileiro.";
     try {
       if (!(await voicesForModel(model.id)).some(voice => voice.key === voiceId)) {
         audit(req.user.id, "tts.admin_voice_preview.rejected", "notice", "warning", { code: "VOICE_NOT_IN_CATALOG", model_id: model.id });
         return res.status(400).json({ success: false, error: "Esta voz não está disponível no catálogo do provedor." });
       }
-      const previewText = "Olá! Aqui no Brasil, o número do TikPlay é vinte e três. Esta é uma prévia em português brasileiro.";
-      const url = model.provider === "elevenlabs"
-        ? `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`
-        : "https://openrouter.ai/api/v1/audio/speech";
-      const headers = model.provider === "elevenlabs"
-        ? { "xi-api-key": providerConfig.read().apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" }
-        : { Authorization: `Bearer ${openRouterKey()}`,
-            "Content-Type": "application/json", Accept: "audio/mpeg, audio/wav, audio/pcm" };
-      const body = model.provider === "elevenlabs"
-        ? { text: previewText, model_id: model.model_id, language_code: "pt" }
-        : { model: model.model_id, input: previewText, ...(model.omit_voice_parameter ? {} : { voice: voiceId }),
-            response_format: model.response_format || (model.id === "heygen/heygen-voice-1-turbo" ? "pcm" : "mp3") };
-      const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
-      apiCosts.record(db.db, { provider: model.provider, model: model.model_id, resource: "admin_voice_preview",
-        unit: "character", quantity: previewText.length, status: response.ok ? "success" : "failed",
-        duration_ms: Date.now() - providerStartedAt, request_id: traceId,
-        provider_request_id: response.headers.get("x-request-id") || response.headers.get("request-id") });
-      providerUsageRecorded = true;
-      if (!response.ok) throw new Error("VOICE_PREVIEW_PROVIDER_FAILED");
-      const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-      if (!["audio/mpeg", "audio/mp3", "audio/wav", "audio/wave", "audio/x-wav", "audio/pcm"].includes(contentType))
-        throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
-      if (Number(response.headers.get("content-length")) > 5 * 1024 * 1024) throw new Error("VOICE_PREVIEW_AUDIO_TOO_LARGE");
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
-      const chunks = [];
-      let total = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        total += value.byteLength;
-        if (total > 5 * 1024 * 1024) { await reader.cancel(); throw new Error("VOICE_PREVIEW_AUDIO_TOO_LARGE"); }
-        chunks.push(Buffer.from(value));
-      }
-      if (!total) throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
-      let audio = Buffer.concat(chunks, total);
-      let audioType = contentType;
-      if (contentType === "audio/pcm") {
-        const sampleRate = Number(model.pcm_sample_rate) || 24000;
-        const header = Buffer.alloc(44);
-        header.write("RIFF", 0); header.writeUInt32LE(36 + audio.length, 4); header.write("WAVEfmt ", 8);
-        header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20); header.writeUInt16LE(1, 22);
-        header.writeUInt32LE(sampleRate, 24); header.writeUInt32LE(sampleRate * 2, 28);
-        header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34); header.write("data", 36);
-        header.writeUInt32LE(audio.length, 40); audio = Buffer.concat([header, audio]); audioType = "audio/wav";
+      let audio, audioType;
+      if (model.provider === "starsg") {
+        const generated = await starsgTts.synthesize({ modelId: model.model_id, voiceId, text: previewText,
+          apiKey: starsgKey(), sampleRate: Number(model.pcm_sample_rate) || 24000 });
+        audio = generated.audio; audioType = generated.contentType;
+        apiCosts.record(db.db, { provider: "starsg", model: model.model_id, resource: "admin_voice_preview",
+          unit: "character", quantity: previewText.length, status: "success",
+          duration_ms: Date.now() - providerStartedAt, request_id: traceId,
+          provider_request_id: generated.requestId, actual_cost_usd: generated.actualCostUsd });
+        providerUsageRecorded = true;
+      } else {
+        const url = model.provider === "elevenlabs"
+          ? `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`
+          : "https://openrouter.ai/api/v1/audio/speech";
+        const headers = model.provider === "elevenlabs"
+          ? { "xi-api-key": providerConfig.read().apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" }
+          : { Authorization: `Bearer ${openRouterKey()}`,
+              "Content-Type": "application/json", Accept: "audio/mpeg, audio/wav, audio/pcm" };
+        const body = model.provider === "elevenlabs"
+          ? { text: previewText, model_id: model.model_id, language_code: "pt" }
+          : { model: model.model_id, input: previewText, ...(model.omit_voice_parameter ? {} : { voice: voiceId }),
+              response_format: model.response_format || (model.id === "heygen/heygen-voice-1-turbo" ? "pcm" : "mp3") };
+        const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+        apiCosts.record(db.db, { provider: model.provider, model: model.model_id, resource: "admin_voice_preview",
+          unit: "character", quantity: previewText.length, status: response.ok ? "success" : "failed",
+          duration_ms: Date.now() - providerStartedAt, request_id: traceId,
+          provider_request_id: response.headers.get("x-request-id") || response.headers.get("request-id") });
+        providerUsageRecorded = true;
+        if (!response.ok) throw new Error("VOICE_PREVIEW_PROVIDER_FAILED");
+        audioType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+        if (!["audio/mpeg", "audio/mp3", "audio/wav", "audio/wave", "audio/x-wav", "audio/pcm"].includes(audioType))
+          throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
+        if (Number(response.headers.get("content-length")) > 5 * 1024 * 1024) throw new Error("VOICE_PREVIEW_AUDIO_TOO_LARGE");
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
+        const chunks = [];
+        let total = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          total += value.byteLength;
+          if (total > 5 * 1024 * 1024) { await reader.cancel(); throw new Error("VOICE_PREVIEW_AUDIO_TOO_LARGE"); }
+          chunks.push(Buffer.from(value));
+        }
+        if (!total) throw new Error("VOICE_PREVIEW_INVALID_AUDIO");
+        audio = Buffer.concat(chunks, total);
+        if (audioType === "audio/pcm") {
+          audio = starsgTts.wavFromPcm(audio, Number(model.pcm_sample_rate) || 24000);
+          audioType = "audio/wav";
+        }
       }
       audit(req.user.id, "tts.admin_voice_preview.completed", "diagnostic", "info", { model_id: model.id, provider: model.provider, trace_id: traceId });
       res.set({ "Cache-Control": "no-store", "Content-Type": audioType, "X-Content-Type-Options": "nosniff" }).send(audio);
@@ -341,6 +498,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
         status: error?.name === "TimeoutError" || error?.name === "AbortError" ? "timeout" : "failed",
         duration_ms: Date.now() - providerStartedAt, request_id: traceId });
       const code = ["VOICE_PREVIEW_INVALID_AUDIO", "VOICE_PREVIEW_AUDIO_TOO_LARGE"].includes(error?.message)
+        || String(error?.message || "").startsWith("STARS_TTS_")
         ? error.message : "VOICE_PREVIEW_PROVIDER_FAILED";
       audit(req.user.id, "tts.admin_voice_preview.failed", "error", "error", { model_id: model.id, provider: model.provider, code, trace_id: traceId });
       res.status(502).json({ success: false, error: "Não foi possível gerar a prévia desta voz agora." });

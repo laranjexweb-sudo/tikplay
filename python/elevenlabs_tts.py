@@ -80,7 +80,7 @@ def synthesize(tenant_id, text, out_dir, rate=1.0, emotion=None, credit_charger=
                 return str(output), "CACHE_HIT"
             if credit_charger:
                 _, charge_code = credit_charger()
-                if charge_code != "CHARGED":
+                if charge_code not in ("CHARGED", "ADMIN_EXEMPT"):
                     return None, charge_code
             else:
                 # Compatibility path for direct internal callers. Production chat

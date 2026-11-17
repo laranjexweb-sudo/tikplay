@@ -120,7 +120,10 @@
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${protocol}://${location.host}/browser?token=${encodeURIComponent(token)}`);
     state.socket = socket;
-    socket.onopen = loadSnapshot;
+    socket.onopen = () => {
+      loadLayout();
+      loadSnapshot();
+    };
     socket.onmessage = event => {
       try {
         const message = JSON.parse(event.data);
@@ -145,7 +148,7 @@
   }
 
   window.addEventListener('message', event => {
-    if (event.origin === location.origin && event.data?.type === 'gift-ranking-vertical-preview-config') applyLayout(event.data.layout || {});
+    if (event.source === window.parent && event.data?.type === 'gift-ranking-vertical-preview-config') applyLayout(event.data.layout || {});
   });
   window.addEventListener('pagehide', () => {
     state.closing = true;
@@ -169,7 +172,7 @@
     applyLayout();
     if (!token) render([]);
     else {
-      loadLayout().finally(() => loadSnapshot().finally(connect));
+      connect();
       setInterval(() => refreshRanking().catch(() => {}), 10000);
     }
   }

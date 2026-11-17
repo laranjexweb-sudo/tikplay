@@ -9,6 +9,8 @@
 
 > 2026-11-06 — A Palavra Secreta mantém checkpoint privado no SQLite enquanto a rodada está ativa. Se Node ou daemon Python reiniciar, reconecta-se à mesma Room ID e reidrata palavra, palpites, dicas e meta sem sortear outra rodada; Room ID diferente ou checkpoint com mais de 24 horas invalida a recuperação. Desconexões inesperadas não finalizam a rodada; encerramento explícito continua finalizando. O checkpoint não é difundido ao navegador nem registrado em logs.
 
+> 2026-11-16 — Contas ativas `role=admin` (Super Admin) usam vozes adicionais por API sem débito/limite de TikCoins. O daemon verifica o papel no banco; contas de streamer seguem com cobrança normal. O custo real dos fornecedores continua registrado para a gestão financeira. Ver `docs/tts-isencao-super-admin.md`.
+
 > 2026-10-16 — Catálogo administrável de palavras semeado de `python/words.json`;
 > novas entradas passam por revisão. Palavra Secreta e 3 Dicas reservam palavras
 > aleatórias sem repetição no ciclo de cada streamer; ciclos anteriores permanecem
@@ -279,3 +281,5 @@ no **mesmo daemon `service.py`** (comandos `public_*`, sem `tenant_id`; resposta
 - O espectador seleciona um anel pelo comentário `!anel <id>` e o desbloqueia enviando presentes TikTok cujo total de diamantes atinja o preço configurado. Presentes configurados pelo streamer também recuperam energia, com limite ou overcharge conforme a configuração.
 - O recurso requer habilitação explícita pelo Super Admin em contas com permissões individuais. Rotas autenticadas e eventos recebidos verificam a permissão no servidor.
 - Plano de eventos, limites de logs e arquivos ficam em `docs/arena-dos-aneis.md`.
+
+> 2026-11-16: Adicionada integração StarsG para síntese TTS realtime por WebSocket (Altair Mini e Vega Flash), com configuração/teste de chave no Super Admin, catálogo de vozes, prévia, narração do chat e registro de custos do fornecedor. Modelos começam desativados e com tarifa inicial de 120 TikCoins/150 caracteres (×0,8), editável no Super Admin; a validação de vozes/sotaque e disponibilidade real depende de uma chave StarsG ativa. Ver `docs/starsg-tts.md`.

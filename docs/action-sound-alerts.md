@@ -20,4 +20,5 @@
 - O ranking canônico da sala é acumulado no Node a partir de `likes_ranking_delta`, emitido somente após os filtros de acesso existentes.
 - `live_session.start` compara `room_id`: a mesma sala preserva o acumulado depois de uma reinicialização do daemon; uma sala diferente começa vazia.
 - IDs de evento repetidos são ignorados quando disponíveis; IDs ausentes (alguns eventos TikTools) permanecem best-effort.
-- O acumulador é memória do processo Node: uma reinicialização do Node ainda inicia estado novo. A solicitação coberta aqui é a queda/reinicialização isolada do daemon Python.
+- O acumulado e os IDs recentes dos eventos ficam no SQLite, associados à conta e ao `room_id`. O Node restaura esse estado ao iniciar e o mantém quando o processo Node ou o daemon Python reinicia durante a mesma live.
+- Uma sala diferente ou o sinal explícito `new_live` inicia um ranking limpo. Os IDs recentes restaurados também evitam contar novamente eventos que o conector reenvie após a retomada.

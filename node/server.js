@@ -21,6 +21,31 @@ const interactions = require("./lib/interactions");
 const levels = require("./lib/levels");
 const sessionGuard = require("./lib/session-guard");
 const liveLikesState = require("./lib/live-likes-state");
+const liveLikesPersistTimers = new Map();
+function persistLiveLikesState(tenant) {
+  if (!tenant) return;
+  const timer = liveLikesPersistTimers.get(tenant.id);
+  if (timer) clearTimeout(timer);
+  liveLikesPersistTimers.delete(tenant.id);
+  const snapshot = liveLikesState.serializeState(tenant);
+  if (!snapshot) return;
+  try {
+    db.saveLiveLikesState(tenant.id, snapshot);
+  } catch (error) {
+    console.error("[live-likes] persistence failed:", error && error.name || "Error");
+  }
+}
+function scheduleLiveLikesStatePersistence(tenant) {
+  if (!tenant) return;
+  const previous = liveLikesPersistTimers.get(tenant.id);
+  if (previous) clearTimeout(previous);
+  const timer = setTimeout(() => {
+    liveLikesPersistTimers.delete(tenant.id);
+    persistLiveLikesState(tenant);
+  }, 1000);
+  if (timer.unref) timer.unref();
+  liveLikesPersistTimers.set(tenant.id, timer);
+}
 const metrics = require("./lib/metrics");
 const monitor = require("./lib/monitor");
 const monitorSse = require("./lib/monitor-sse");
@@ -569,6 +594,7 @@ const DAEMON_ENV = {
   PYTHONIOENCODING: "utf-8",
   PYTHONUNBUFFERED: "1",
   OPENROUTER_API_KEY: integrationSecrets.read("openrouter").secret,
+  STARSG_API_KEY: integrationSecrets.read("starsg").secret,
 };
 
 let daemon = null;
@@ -778,6 +804,7 @@ function handleDaemonMessage(msg) {
           tenant.gameState.likes_ranking = [];
           tenant.gameState.likes_ranking_all = [];
         }
+        scheduleLiveLikesStatePersistence(tenant);
       }
     } else if (msg.type === "viewer_level") {
       // Sincroniza nível do usuário e, se subiu DURANTE a live, difunde level_up.
@@ -818,10 +845,17 @@ function handleDaemonMessage(msg) {
         return;
       }
       if (gameMsg.type === "likes_ranking_delta") {
-        if (liveLikesState.applyLikeDelta(tenant, gameMsg)) {
+        const previousRoomId = tenant.currentRoomId;
+        const changed = liveLikesState.applyLikeDelta(tenant, gameMsg);
+        if (tenant.currentRoomId !== previousRoomId) {
+          tenant.gameState.likes_ranking = [];
+          tenant.gameState.likes_ranking_all = [];
+        }
+        if (changed) {
           tenant.gameState.likes_ranking = liveLikesState.ranking(tenant, 5);
           tenant.gameState.likes_ranking_all = liveLikesState.ranking(tenant, 10);
         }
+        if (changed || tenant.currentRoomId !== previousRoomId) scheduleLiveLikesStatePersistence(tenant);
         return;
       }
       if (gameMsg.type === "likes_activity") {
@@ -916,9 +950,15 @@ function msgTenant(line) {
 }
 
 function killDaemon() {
+  // Os presentes do ranking de diamantes entram em lote para reduzir escrita
+  // no SQLite. Descarrega o lote pendente antes de encerrar o processo.
+  try { interactions.flush(); } catch (error) {
+    console.error("[interactions] shutdown flush failed:", error && error.name || "Error");
+  }
   // Em encerramento gracioso do Node, mantém a intenção de conexão para que
   // a próxima instância retome as lives sem depender de um clique no painel.
   for (const tenant of tenants.values()) {
+    persistLiveLikesState(tenant);
     if (tenant.sessionStarted && tenant.activeDaemonSessionId) db.saveActiveLiveConnection(tenant.id);
   }
   if (daemon) daemon.kill();
@@ -1084,7 +1124,8 @@ const ttsCreditRoutes = require("./routes/tts-credits")(app, { db, auth, mpFetch
 require("./routes/admin-finance")(app, { db, auth, log: processLog });
 
 require("./routes/admin-integrations")(app, { auth, integrationSecrets, providerConfig: require("./lib/elevenlabs-config"), checkoutConfig,
-  getDaemonOpenRouterKey: () => DAEMON_ENV.OPENROUTER_API_KEY, log: processLog });
+  getDaemonOpenRouterKey: () => DAEMON_ENV.OPENROUTER_API_KEY,
+  getDaemonStarsgKey: () => DAEMON_ENV.STARSG_API_KEY, log: processLog });
 
 app.get("/api/plans", (req, res) => {
   res.json({ success: true, plans: Object.values(PLANS).map(({ price_cents, ...p }) => ({ ...p, price: (price_cents / 100).toFixed(2) })) });

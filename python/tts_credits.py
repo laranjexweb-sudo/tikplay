@@ -34,7 +34,7 @@ def cost_for(model_id, character_count):
 
 
 def charge(tenant_id, model_id, character_count):
-    """Debit rounded whole TikCoins using each model's tariff per 150 characters."""
+    """Debit TikCoins for paid accounts; active admins are exempt from wallet charges."""
     cost, code = cost_for(model_id, character_count)
     if code != "OK":
         return None, code
@@ -42,6 +42,12 @@ def charge(tenant_id, model_id, character_count):
     try:
         with _connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            try:
+                account = conn.execute("SELECT role,status FROM users WHERE id=?", (tenant_id,)).fetchone()
+            except sqlite3.OperationalError:
+                account = None
+            if account and account[0] == "admin" and account[1] == "active":
+                return 0, "ADMIN_EXEMPT"
             conn.execute("INSERT OR IGNORE INTO tts_credit_wallets(tenant_id,balance) VALUES(?,0)", (tenant_id,))
             row = conn.execute("SELECT balance FROM tts_credit_wallets WHERE tenant_id=?", (tenant_id,)).fetchone()
             balance = int(row[0]) if row else 0

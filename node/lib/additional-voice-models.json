@@ -55,6 +55,30 @@
     "pcm_sample_rate": 24000
   },
   {
+    "id": "starsg/tts-altair-v1-mini",
+    "provider": "starsg",
+    "model_id": "tts-altair-v1-mini",
+    "label": "StarsG Altair Mini",
+    "voice_type": "padrao",
+    "description": "Síntese de voz StarsG com fluxo realtime de áudio.",
+    "admin_note": "Inclui 13 voice_ids consultados manualmente no catálogo StarsG. A voz padrão também pode ser usada sem voice_id.",
+    "pt_br_note": "As 13 vozes do catálogo indicam português (pt); valide a pronúncia PT-BR pela prévia.",
+    "response_format": "pcm",
+    "pcm_sample_rate": 24000
+  },
+  {
+    "id": "starsg/tts-vega-v1-flash",
+    "provider": "starsg",
+    "model_id": "tts-vega-v1-flash",
+    "label": "StarsG Vega Flash",
+    "voice_type": "padrao",
+    "description": "Síntese de voz StarsG com fluxo realtime de áudio.",
+    "admin_note": "Inclui 15 voice_ids recebidos do catálogo StarsG; faltam 15 dos 30 informados. A voz padrão também está disponível.",
+    "pt_br_note": "As vozes listadas indicam português (pt); valide a pronúncia PT-BR pela prévia.",
+    "response_format": "pcm",
+    "pcm_sample_rate": 24000
+  },
+  {
     "id": "fish-audio/drama-3",
     "provider": "openrouter",
     "model_id": "fish-audio/drama-3",

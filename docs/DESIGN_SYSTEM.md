@@ -701,6 +701,8 @@ node/public/
 
 - 2026-11-11 — Sobreposições → ranking vertical V4 de diamantes com seis posições tem controles e preferências próprias de posição/escala, separados do V3. O V3 mantém seu card, link e quantidade configurável. Mapa de persistência e eventos em `docs/ranking-vertical-6-overlay.md`.
 
+- 2026-11-11 — Ranking vertical V4: nomes das seis posições ampliados e dimensionados pela largura da moldura para manter leitura em fontes OBS estreitas.
+
 - 2026-11-06 — Narração do chat: escolha de voz padrão, expressiva ou ambas, com regra por prefixo nas opções de uma voz e roteamento entre as duas quando ambas estão ativas. Preferências aplicadas no painel web, PWA e daemon; contagens das rotas agregadas em `chat.tts.batch`, sem conteúdo por comentário. Mapa e critérios em `docs/narracao-chat-edge.md`.
 
 - 2026-10-17 — Caça Palavras: ações de iniciar/encerrar movidas para a mesma faixa do stepper de quantidade; em viewport estreita, os botões podem usar uma linha própria. IDs, handlers e estado desabilitado preservados.
@@ -1012,3 +1014,5 @@ node/public/
 > 2026-11-10: Ajuste do checkout após revisão visual: campos e espaçamentos do cartão compactados para evitar rolagem na altura usual do dispositivo; o símbolo de Pix substituído por ícone QR Code. Em viewports muito baixos, a rolagem interna continua disponível para não cortar campos. Ver `docs/tikcoins-wallet-ui.md`.
 
 > 2026-11-13: Super Admin ganhou a seção Gestão financeira para resumir recargas confirmadas/estornos, despesas pagas, resultado operacional e contas a pagar; despesas e fornecedores usam formulários compactos, filtros, paginação e tokens `--tp-*`. Ver `docs/admin-finance.md`.
+
+> 2026-11-16: Super Admin → Integrações ganhou configuração/teste da StarsG e o catálogo de vozes passou a oferecer Altair Mini e Vega Flash, inicialmente desativados até validação e liberação global. Veja `docs/starsg-tts.md`.
