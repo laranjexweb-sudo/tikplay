@@ -10,6 +10,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import additional_voice_tts as provider
+import cartesia_tts
+import tts_emotions
 import tts_credits
 
 
@@ -104,6 +106,46 @@ class AdditionalVoiceTests(unittest.TestCase):
         self.assertEqual(len(payload["input"]), 150)
         self.assertEqual(self.credits_spent(), 1)
         self.assertEqual(self.balance(), 999)
+
+    @patch("cartesia_tts.urllib.request.urlopen", return_value=AudioResponse(b"RIFFsynthetic-wav", "audio/wav"))
+    def test_cartesia_converts_clear_portuguese_laughter_without_charging_marker(self, network):
+        with closing(sqlite3.connect(self.database)) as conn, conn:
+            conn.execute("UPDATE tenant_elevenlabs SET model_id='cartesia/sonic-3.6',voice_id='cartesia-test' WHERE tenant_id=1")
+            conn.execute("INSERT INTO additional_voice_models VALUES('cartesia/sonic-3.6',1,3)")
+            conn.execute("INSERT INTO additional_voice_options VALUES('cartesia/sonic-3.6','cartesia-test','Voz teste',1)")
+        integrations = Path(self.temp.name) / "integrations"
+        integrations.mkdir()
+        (integrations / "cartesia.json").write_text(json.dumps({"secret": "cartesia-test-secret"}), encoding="utf-8")
+        with patch.dict(os.environ, {"INTEGRATIONS_CONFIG_DIR": str(integrations)}):
+            original = "Que piada hahaha e kkkkk."
+            path, code = provider.synthesize(1, original, self.audio)
+        self.assertEqual(code, "SYNTHESIZED")
+        self.assertTrue(Path(path).is_file())
+        payload = json.loads(network.call_args.args[0].data)
+        self.assertEqual(payload["transcript"], "Que piada [laughter] e [laughter].")
+        self.assertEqual(payload["model_id"], "sonic-3.6")
+        self.assertEqual(self.credits_spent(), 1)
+        with closing(sqlite3.connect(self.database)) as conn:
+            row = conn.execute("SELECT quantity,status FROM api_cost_usage WHERE provider='cartesia'").fetchone()
+        self.assertEqual(row, (len(original), "success"))
+
+        whisper_path, whisper_code = provider.synthesize(1, original, self.audio, emotion="sussurro")
+        self.assertEqual(whisper_code, "SYNTHESIZED")
+        self.assertNotEqual(whisper_path, path)  # emotion must be part of the audio cache key
+        whisper_payload = json.loads(network.call_args.args[0].data)
+        self.assertEqual(whisper_payload["transcript"], "Que piada [laughter] e [laughter].")
+        self.assertEqual(whisper_payload["generation_config"], {"speed": 1.0, "volume": 0.5})
+        self.assertEqual(network.call_count, 2)
+        self.assertEqual(self.credits_spent(), 2)
+
+    def test_portuguese_whisper_aliases_normalize_to_sussurro(self):
+        for alias in ("sussurro", "sussurrando", "sussurre", "cochicho", "baixinho"):
+            self.assertEqual(tts_emotions.canonical_emotion(alias), "sussurro")
+
+    def test_cartesia_laughter_normalizer_avoids_ambiguous_short_tokens(self):
+        self.assertEqual(cartesia_tts.normalize_laughter("kkkk hahaha rsrsrs huahuahua huehuehue"),
+                         "[laughter]")
+        self.assertEqual(cartesia_tts.normalize_laughter("kk livro de história"), "kk livro de história")
 
     @patch("additional_voice_tts.urllib.request.urlopen", return_value=AudioResponse())
     def test_drama3_uses_default_multilingual_voice_without_voice_parameter(self, network):

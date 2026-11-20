@@ -6,6 +6,7 @@ const voiceModels = require("../lib/additional-voice-models.json");
 const creditWallet = require("../lib/tts-credit-wallet");
 const apiCosts = require("../lib/api-costs");
 const starsgTts = require("../lib/starsg-tts");
+const cartesiaTts = require("../lib/cartesia-tts");
 
 module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, requireFeature }) {
   const chatFeature = typeof requireFeature === "function" ? requireFeature("chat") : (_req, _res, next) => next();
@@ -79,6 +80,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
   const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map();
   let openRouterCatalog = [], openRouterCatalogUntil = 0, pendingOpenRouterCatalog = null;
   let starsgCatalog = [], starsgCatalogUntil = 0, starsgCatalogKey = "", starsgCatalogErrorCode = null, pendingStarsgCatalog = null;
+  let cartesiaCatalog = [], cartesiaCatalogUntil = 0, cartesiaCatalogKey = "", pendingCartesiaCatalog = null;
   // IDs conferidos manualmente no catálogo oficial da StarsG para tts-altair-v1-mini.
   // Mantemos o catálogo utilizável mesmo quando os endpoints de listagem da API retornam 404.
   const STARSG_ALTAR_VOICES = [
@@ -127,6 +129,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
   function openRouterConfigured() { return Boolean(openRouterKey()); }
   function starsgKey() { return integrationSecrets.read("starsg").secret; }
   function starsgConfigured() { return Boolean(starsgKey()); }
+  function cartesiaKey() { return integrationSecrets.read("cartesia").secret; }
+  function cartesiaConfigured() { return Boolean(cartesiaKey()); }
   function getModelStates() {
     const states = new Map(db.db.prepare("SELECT model_id,enabled,credits_per_150_chars FROM additional_voice_models").all()
       .map(row => [row.model_id, { enabled: row.enabled === 1, credits_per_150_chars: row.credits_per_150_chars }]));
@@ -191,12 +195,56 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     if (!model) return [];
     if (model.provider === "elevenlabs") return await voices();
     if (model.provider === "starsg") return (await starsgVoices()).find(item => item.model_id === model.model_id)?.voices || [];
+    if (model.provider === "cartesia") return (await cartesiaVoices()).find(item => item.model_id === model.model_id)?.voices || [];
     return (await openRouterVoices()).find(item => item.model_id === model.model_id)?.voices || [];
   }
   function modelConfigured(model) {
     if (model.provider === "elevenlabs") return configured();
     if (model.provider === "starsg") return starsgConfigured();
+    if (model.provider === "cartesia") return cartesiaConfigured();
     return openRouterConfigured();
+  }
+  async function cartesiaVoices() {
+    const apiKey = cartesiaKey();
+    if (!apiKey) throw new Error("CARTESIA_NOT_CONFIGURED");
+    const fingerprint = crypto.createHash("sha256").update(apiKey).digest("hex");
+    if (Date.now() < cartesiaCatalogUntil && cartesiaCatalogKey === fingerprint) return cartesiaCatalog;
+    if (pendingCartesiaCatalog?.key === fingerprint) return pendingCartesiaCatalog.promise;
+    const task = (async () => {
+      const result = [];
+      let cursor = "";
+      for (let page = 0; page < 20; page++) {
+        const query = new URLSearchParams({ is_owner: "true", limit: "100" });
+        if (cursor) query.set("starting_after", cursor);
+        const response = await fetch(`https://api.cartesia.ai/voices?${query}`, {
+          headers: { Authorization: `Bearer ${apiKey}`, "Cartesia-Version": cartesiaTts.API_VERSION },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!response.ok) throw new Error("CARTESIA_CATALOG_FAILED");
+        const body = await response.json();
+        if (!Array.isArray(body.data)) throw new Error("CARTESIA_CATALOG_INVALID");
+        for (const voice of body.data) {
+          const id = voice?.id;
+          if (voice?.is_owner === false || voice?.status && voice.status !== "active"
+              || typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(id)) continue;
+          const name = typeof voice.name === "string" ? voice.name.trim() : "";
+          if (!name) continue;
+          const language = typeof voice.language === "string" ? voice.language.toLowerCase() : "";
+          result.push({ key: id, label: name.slice(0, 120),
+            language: language === "pt" ? "Português · teste PT-BR" : language ? language.toUpperCase() : "Idioma não informado" });
+        }
+        if (!body.has_more) break;
+        const lastId = body.data.at(-1)?.id;
+        if (!lastId || lastId === cursor) throw new Error("CARTESIA_CATALOG_INVALID");
+        cursor = lastId;
+      }
+      cartesiaCatalog = [{ model_id: "sonic-3.6", voices: result }];
+      cartesiaCatalogKey = fingerprint;
+      cartesiaCatalogUntil = Date.now() + 300000;
+      return cartesiaCatalog;
+    })();
+    pendingCartesiaCatalog = { key: fingerprint, promise: task };
+    try { return await task; } finally { if (pendingCartesiaCatalog?.promise === task) pendingCartesiaCatalog = null; }
   }
   async function starsgVoices() {
     const apiKey = starsgKey();
@@ -259,7 +307,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     const states = getModelStates().filter(model => model.enabled && modelConfigured(model));
     const approved = new Map(selectedVoiceOptions().map(item => [`${item.model_id}:${item.voice_id}`, item]));
     let catalog = [], catalogError = false;
-    let starsg = [];
+    let starsg = [], cartesia = [];
     if (states.some(model => model.provider === "openrouter") && openRouterConfigured()) {
       try { catalog = await openRouterVoices(); }
       catch {
@@ -290,13 +338,21 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
         audit(tenantId, "tts.provider.failed", "error", "error", { operation: "catalog", provider: "elevenlabs", code: "ELEVENLABS_CATALOG_FAILED" });
       }
     }
+    if (states.some(model => model.provider === "cartesia") && cartesiaConfigured()) {
+      try { cartesia = await cartesiaVoices(); }
+      catch {
+        catalogError = true;
+        audit(tenantId, "tts.provider.failed", "error", "error", { operation: "catalog", provider: "cartesia", code: "CARTESIA_CATALOG_FAILED" });
+      }
+    }
     const models = states.map(model => ({
       id: model.id, label: model.label, type: model.voice_type, provider: model.provider,
       credits_per_150_chars: model.credits_per_150_chars, credit_multiplier: model.credit_multiplier,
       configured: modelConfigured(model),
       voices: (model.provider === "elevenlabs" ? eleven : model.provider === "starsg"
         ? (starsg.find(item => item.model_id === model.model_id)?.voices || [])
-        : (catalog.find(item => item.model_id === model.model_id)?.voices || []))
+        : model.provider === "cartesia" ? (cartesia.find(item => item.model_id === model.model_id)?.voices || [])
+          : (catalog.find(item => item.model_id === model.model_id)?.voices || []))
         .filter(voice => approved.has(`${model.id}:${voice.key}`))
         .map(voice => ({ ...voice, credits_per_150_chars: model.credits_per_150_chars,
           credit_multiplier: model.credit_multiplier })),
@@ -307,9 +363,9 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     const approved = new Map(db.db.prepare("SELECT model_id,voice_id,label,enabled FROM additional_voice_options").all()
       .map(item => [`${item.model_id}:${item.voice_id}`, item]));
     const models = getModelStates();
-    let eleven = [], openRouter = [], starsg = [], catalogError = false;
+    let eleven = [], openRouter = [], starsg = [], cartesia = [], catalogError = false;
     const catalogErrors = {};
-    let elevenAvailable = false, openRouterAvailable = false, starsgAvailable = false;
+    let elevenAvailable = false, openRouterAvailable = false, starsgAvailable = false, cartesiaAvailable = false;
     if (configured()) try { eleven = await voices(); elevenAvailable = true; } catch { catalogError = true; }
     if (openRouterConfigured()) try { openRouter = await openRouterVoices(); openRouterAvailable = true; } catch { catalogError = true; }
     if (starsgConfigured()) try {
@@ -320,9 +376,12 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
       catalogErrors.starsg = ["STARSG_MODEL_CATALOG_NOT_FOUND", "STARSG_MODEL_CATALOG_FAILED", "STARSG_VOICE_CATALOG_NOT_FOUND", "STARSG_VOICE_CATALOG_FAILED"].includes(error?.message)
         ? error.message : "STARSG_CATALOG_FAILED";
     }
+    if (cartesiaConfigured()) try { cartesia = await cartesiaVoices(); cartesiaAvailable = true; }
+    catch { catalogError = true; catalogErrors.cartesia = "CARTESIA_CATALOG_FAILED"; }
     const result = models.map(model => {
       const available = model.provider === "elevenlabs" ? eleven : model.provider === "starsg"
         ? (starsg.find(item => item.model_id === model.model_id)?.voices || [])
+        : model.provider === "cartesia" ? (cartesia.find(item => item.model_id === model.model_id)?.voices || [])
         : (openRouter.find(item => item.model_id === model.model_id)?.voices || []);
       const voiceMap = new Map(available.map(voice => [voice.key, { ...voice, enabled: false, stale: false }]));
       for (const [key, item] of approved) {
@@ -332,7 +391,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
         else voiceMap.set(item.voice_id, { key: item.voice_id, label: item.label || item.voice_id, enabled: item.enabled === 1, stale: true });
       }
       const catalogAvailable = model.provider === "elevenlabs" ? elevenAvailable
-        : model.provider === "starsg" ? starsgAvailable : openRouterAvailable;
+        : model.provider === "starsg" ? starsgAvailable : model.provider === "cartesia" ? cartesiaAvailable : openRouterAvailable;
       return { ...model, configured: modelConfigured(model), catalog_available: catalogAvailable,
         catalog_error_code: catalogErrors[model.provider] || null, voices: [...voiceMap.values()] };
     });
@@ -414,7 +473,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
   app.get("/api/admin/tts/additional-models", auth.requireAdmin, async (req, res) => {
     const catalog = await adminVoiceCatalog();
     res.set("Cache-Control", "no-store").json({ success: true,
-      openrouter_configured: openRouterConfigured(), starsg_configured: starsgConfigured(), elevenlabs_configured: configured(), ...catalog });
+      openrouter_configured: openRouterConfigured(), starsg_configured: starsgConfigured(),
+      cartesia_configured: cartesiaConfigured(), elevenlabs_configured: configured(), ...catalog });
   });
   app.post("/api/admin/tts/voice-preview", auth.requireAdmin, async (req, res) => {
     const model = voiceModels.find(item => item.id === req.body?.model_id);
@@ -440,7 +500,16 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
         return res.status(400).json({ success: false, error: "Esta voz não está disponível no catálogo do provedor." });
       }
       let audio, audioType;
-      if (model.provider === "starsg") {
+      if (model.provider === "cartesia") {
+        const generated = await cartesiaTts.synthesize({ apiKey: cartesiaKey(), modelId: model.model_id,
+          voiceId, text: previewText, timeoutMs: 15000 });
+        audio = generated.audio;
+        audioType = generated.contentType;
+        apiCosts.record(db.db, { provider: "cartesia", model: model.model_id, resource: "admin_voice_preview",
+          unit: "character", quantity: previewText.length, status: "success",
+          duration_ms: Date.now() - providerStartedAt, request_id: traceId, provider_request_id: generated.requestId });
+        providerUsageRecorded = true;
+      } else if (model.provider === "starsg") {
         const generated = await starsgTts.synthesize({ modelId: model.model_id, voiceId, text: previewText,
           apiKey: starsgKey(), sampleRate: Number(model.pcm_sample_rate) || 24000 });
         audio = generated.audio; audioType = generated.contentType;

@@ -170,3 +170,49 @@ Diagnóstico do preview Gemini — 2026-10-16: o endpoint real do OpenRouter rej
 síntese de chat agora solicitam PCM e encapsulam o resultado em WAV mono 24 kHz. Teste
 real curto retornou HTTP 200, `audio/pcm` e 117120 bytes; teste de rota verifica o WAV.
 O servidor Node/Python foi reiniciado para carregar a correção.
+
+## Cartesia Sonic 3.6 — clones Instant criados no Cartesia
+
+O TikPlay usa a chave compartilhada Cartesia configurada em Super Admin → Integrações.
+Os clones são criados manualmente no workspace Cartesia por Instant Clone; não há
+upload de gravação ou criação de clone pelo TikPlay. A lista `GET /voices?is_owner=true`
+é consultada pela API e somente vozes próprias ativas entram no catálogo administrativo.
+O catálogo é armazenado em cache por cinco minutos. A chave aceita no painel começa
+com `sk_car_`, permanece no servidor e é lida pelo daemon Python a partir do arquivo
+protegido de integrações; salvar/remover não exige reiniciar o daemon.
+
+O Super Admin testa acesso ao catálogo, ouve a prévia fixa em PT-BR, configura a tarifa
+de TikCoins por 150 caracteres e libera individualmente cada clone. Sem tarifa positiva
+e sem voz aprovada, o modelo permanece inacessível aos streamers. A síntese usa
+`sonic-3.6`, `locale: pt-BR` e saída WAV PCM 44,1 kHz; cache e carteira seguem os mesmos
+limites e regras dos demais provedores. O catálogo inclui apenas vozes que a chave
+Cartesia consegue listar como próprias; confirme sotaque e autorização antes de liberar.
+
+Na narração Cartesia, risadas textuais inequívocas são convertidas no transcript para
+`[laughter]` (por exemplo, `hahaha`, `kkkkk`, `rsrsrs`, `huahuahua` e `huehuehue`).
+Tokens curtos/ambíguos como `kk` permanecem literais. A transformação só ocorre na
+chamada Cartesia; os demais provedores recebem o texto existente. Cache, cobrança TikCoin
+e medição de custo usam o texto limpo original, sem contar o marcador inserido. A
+observabilidade segue o resumo agregado `chat.tts.batch` e `api_cost_usage`; nenhum texto
+da mensagem ou transcript transformado é registrado.
+
+Para `#sussurro` (e aliases reconhecidos), o TikPlay envia `generation_config.volume=0.5`
+e separa essa variante no cache para não reutilizar áudio de fala normal. A Cartesia não
+documenta um modo de sussurro dedicado; volume reduzido é apenas a aproximação disponível,
+então o timbre sussurrado não é garantido. Consulte [Volume, Speed, and Emotion](https://docs.cartesia.ai/build-with-cartesia/capability-guides/volume-speed-emotion).
+
+Mapa de observabilidade: salvar chave usa `integrations.cartesia.saved` ou
+`integrations.cartesia.save_failed`; teste reutiliza `integrations.test.succeeded` e
+`integrations.test.failed`; catálogo reutiliza `tts.provider.failed` com
+`CARTESIA_CATALOG_FAILED`; prévia reutiliza `tts.admin_voice_preview.completed` e
+`tts.admin_voice_preview.failed`; seleção/liberação e cobrança reutilizam os eventos
+`tts.models.config_*`, `tts.provider.preference_saved`, `tts.credits.model_cost_saved`
+e a medição `api_cost_usage`. Detalhes contêm somente provedor, modelo, operação,
+status HTTP/código, quantidades e `trace_id`. Não registrar chave, texto narrado ou
+áudio. Mensagens são agregadas pelo fluxo existente `chat.tts.batch`.
+
+Limitação operacional: o painel de custos só estima Cartesia depois de o Super Admin
+cadastrar tarifas para `provider=cartesia`, `model=sonic-3.6`, recursos `chat_voice` e,
+se quiser estimar as prévias administrativas, `admin_voice_preview`, por caractere ou
+mil caracteres. A tarifa de TikCoins é uma configuração de cobrança do TikPlay e não
+substitui essa tarifa financeira.

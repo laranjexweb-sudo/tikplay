@@ -26,6 +26,8 @@ _ALIASES = {
     "triste": "triste", "deprimido": "triste", "deprimida": "triste",
     "raiva": "raiva", "bravo": "raiva", "brava": "raiva", "irritado": "raiva", "irritada": "raiva",
     "sussurro": "sussurro", "sussurrando": "sussurro", "sussurrar": "sussurro",
+    "sussurre": "sussurro", "sussurra": "sussurro", "cochicho": "sussurro",
+    "cochichando": "sussurro", "baixinho": "sussurro", "baixinha": "sussurro",
     "medo": "medo", "assustado": "medo", "assustada": "medo",
     "surpresa": "surpresa", "surpreso": "surpresa",
     "rindo": "rindo", "risada": "rindo", "rir": "rindo",

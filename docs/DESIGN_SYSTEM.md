@@ -1016,3 +1016,5 @@ node/public/
 > 2026-11-13: Super Admin ganhou a seção Gestão financeira para resumir recargas confirmadas/estornos, despesas pagas, resultado operacional e contas a pagar; despesas e fornecedores usam formulários compactos, filtros, paginação e tokens `--tp-*`. Ver `docs/admin-finance.md`.
 
 > 2026-11-16: Super Admin → Integrações ganhou configuração/teste da StarsG e o catálogo de vozes passou a oferecer Altair Mini e Vega Flash, inicialmente desativados até validação e liberação global. Veja `docs/starsg-tts.md`.
+
+> 2026-11-20: Super Admin → Integrações ganhou configuração/teste do Cartesia e catálogo Sonic 3.6 para clones Instant criados no workspace Cartesia. O card reutiliza os componentes e tokens existentes; prévia, tarifa e allowlist usam o fluxo de vozes adicionais. Ver `docs/modelos-voz-adicionais.md`.

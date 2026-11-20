@@ -11,6 +11,12 @@
 
 > 2026-11-16 — Contas ativas `role=admin` (Super Admin) usam vozes adicionais por API sem débito/limite de TikCoins. O daemon verifica o papel no banco; contas de streamer seguem com cobrança normal. O custo real dos fornecedores continua registrado para a gestão financeira. Ver `docs/tts-isencao-super-admin.md`.
 
+> 2026-11-20 — Cartesia Sonic 3.6 integrado ao catálogo de vozes adicionais. Clones Instant são criados manualmente no workspace Cartesia; o TikPlay lista vozes próprias ativas, permite prévia/liberação pelo Super Admin e usa a carteira existente na narração, sem receber ou armazenar gravações. Ver `docs/modelos-voz-adicionais.md`.
+
+> 2026-11-20 — Na síntese Cartesia, risadas digitadas inequívocas (`hahaha`, `kkkkk`, `rsrsrs`, `huahuahua`, `huehuehue`) viram o marcador documentado `[laughter]`; tokens ambíguos curtos permanecem literais. Cobrança e medição continuam usando o texto original limpo. Ver `docs/modelos-voz-adicionais.md`.
+
+> 2026-11-20 — `#sussurro` na Cartesia envia volume `0.5` e usa chave de cache própria. A Cartesia não oferece modo de sussurro documentado; o volume baixo é uma aproximação, sem garantia de timbre sussurrado. Ver `docs/modelos-voz-adicionais.md`.
+
 > 2026-10-16 — Catálogo administrável de palavras semeado de `python/words.json`;
 > novas entradas passam por revisão. Palavra Secreta e 3 Dicas reservam palavras
 > aleatórias sem repetição no ciclo de cada streamer; ciclos anteriores permanecem

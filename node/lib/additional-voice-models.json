@@ -91,5 +91,17 @@
     "catalog_voice_label": "Multilíngue",
     "omit_voice_parameter": true,
     "response_format": "mp3"
+  },
+  {
+    "id": "cartesia/sonic-3.6",
+    "provider": "cartesia",
+    "model_id": "sonic-3.6",
+    "label": "Cartesia Sonic 3.6",
+    "voice_type": "personalizada",
+    "description": "Vozes criadas pela plataforma no Instant Clone do Cartesia.",
+    "admin_note": "Crie clones Instant no Cartesia; o catálogo lista vozes próprias da conta conectada. Teste pronúncia PT-BR antes de liberar.",
+    "pt_br_note": "A língua do clone pode constar como português; confirme o sotaque brasileiro pela prévia.",
+    "response_format": "wav",
+    "pcm_sample_rate": 44100
   }
 ]

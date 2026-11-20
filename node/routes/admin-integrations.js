@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const maskSecret = require("../lib/mask-secret");
 
-const PROVIDERS = new Set(["elevenlabs", "openrouter", "starsg", "mercadopago"]);
+const PROVIDERS = new Set(["elevenlabs", "openrouter", "starsg", "cartesia", "mercadopago"]);
 
 module.exports = function registerAdminIntegrationRoutes(app, {
   auth, integrationSecrets, providerConfig, checkoutConfig, getDaemonOpenRouterKey, getDaemonStarsgKey = () => "", log,
@@ -16,6 +16,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
   const status = () => {
     const openrouter = integrationSecrets.read("openrouter");
     const starsg = integrationSecrets.read("starsg");
+    const cartesia = integrationSecrets.read("cartesia") || { secret: "", source: "none" };
     const mercadopago = integrationSecrets.read("mercadopago");
     const publicKey = integrationSecrets.read("mercadopago_public_key");
     const webhook = integrationSecrets.read("mercadopago_webhook");
@@ -32,6 +33,8 @@ module.exports = function registerAdminIntegrationRoutes(app, {
         starsg: { configured: Boolean(starsg.secret), source: starsg.source,
           api_key_masked: maskSecret(starsg.secret),
           daemon_restart_required: starsg.secret !== getDaemonStarsgKey() },
+        cartesia: { configured: Boolean(cartesia.secret), source: cartesia.source,
+          api_key_masked: maskSecret(cartesia.secret) },
         mercadopago: { configured: Boolean(mercadopago.secret), source: mercadopago.source,
           access_token_masked: maskSecret(mercadopago.secret),
           public_key_configured: Boolean(publicKey.secret), public_key_masked: maskSecret(publicKey.secret), public_key_source: publicKey.source,
@@ -77,6 +80,26 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       report(req.user.id, "integrations.starsg.save_failed", "error", "Falha ao salvar a StarsG.",
         { code: "CONFIG_SAVE_FAILED" }, "CONFIG_SAVE_FAILED", "error");
       res.status(500).json({ success: false, error: "Não foi possível salvar a configuração da StarsG." });
+    }
+  });
+
+  app.put("/api/admin/integrations/cartesia", auth.requireAdmin, (req, res) => {
+    const { api_key: apiKey, clear } = req.body || {};
+    const key = typeof apiKey === "string" ? apiKey.trim() : "";
+    if ((clear !== undefined && typeof clear !== "boolean") || (clear === true && key)
+        || (clear !== true && !/^[\x21-\x7e]{10,4096}$/.test(key)))
+      return res.status(400).json({ success: false, error: "Informe uma chave válida ou escolha remover a chave." });
+    if (clear !== true && !key.startsWith("sk_car_"))
+      return res.status(400).json({ success: false, error: "A chave Cartesia deve ser o segredo completo que começa com sk_car_." });
+    try {
+      integrationSecrets.save("cartesia", clear === true ? "" : key);
+      report(req.user.id, "integrations.cartesia.saved", "info", "Configuração do Cartesia atualizada.",
+        { operation: clear === true ? "clear" : "replace" }, undefined, "diagnostic");
+      res.set("Cache-Control", "no-store").json(status());
+    } catch {
+      report(req.user.id, "integrations.cartesia.save_failed", "error", "Falha ao salvar o Cartesia.",
+        { code: "CONFIG_SAVE_FAILED" }, "CONFIG_SAVE_FAILED", "error");
+      res.status(500).json({ success: false, error: "Não foi possível salvar a configuração do Cartesia." });
     }
   });
 
@@ -148,6 +171,9 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       else if (provider === "starsg") response = await fetch("https://api.starsg.ai/v1/models", {
         headers: { Authorization: `Bearer ${key}` }, signal: controller.signal,
       });
+      else if (provider === "cartesia") response = await fetch("https://api.cartesia.ai/voices?is_owner=true&limit=1", {
+        headers: { Authorization: `Bearer ${key}`, "Cartesia-Version": "2026-08-14" }, signal: controller.signal,
+      });
       else response = await fetch("https://api.mercadolibre.com/users/me", {
         headers: { Authorization: `Bearer ${key}` }, signal: controller.signal,
       });
@@ -192,6 +218,14 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       }
       if (provider === "openrouter") account = "Chave OpenRouter validada";
       if (provider === "starsg") account = "Chave autenticada; catálogo de vozes é validado separadamente";
+      if (provider === "cartesia") {
+        if (!Array.isArray(payload?.data)) {
+          report(req.user.id, "integrations.test.failed", "warning", "Resposta inválida no teste de integração.",
+            { provider, http_status: response.status, code: "PROVIDER_RESPONSE_INVALID" }, "PROVIDER_RESPONSE_INVALID");
+          return res.status(502).json({ success: false, error: "O Cartesia respondeu, mas não retornou o catálogo de vozes esperado." });
+        }
+        account = "Chave validada; catálogo de vozes próprias acessível";
+      }
       if (provider === "mercadopago") account = payload?.nickname || "Conta autenticada";
       report(req.user.id, "integrations.test.succeeded", "info", "Teste de integração concluído.",
         { provider, http_status: response.status });

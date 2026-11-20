@@ -123,6 +123,18 @@
           <div class="tp-admin-feedback" id="starsgGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div>
         </div></details>
       </article>
+      <article class="tp-admin-operation-block tp-integration-card" id="cartesiaIntegrationCard" aria-labelledby="cartesiaGlobalTitle">
+        <div class="tp-integration-card-head"><div><h4 id="cartesiaGlobalTitle">Cartesia</h4><p>Sonic 3.6 · clones criados pela própria conta Cartesia.</p></div><span class="tp-integration-state" id="cartesiaConnectionState" data-state="loading">Verificando…</span></div>
+        <div class="tp-integration-meta"><span id="cartesiaSourceSummary">Origem: verificando…</span><span id="cartesiaLastCheck">Ainda não testada nesta sessão</span></div>
+        <div class="tp-admin-feedback tp-integration-test-feedback" id="cartesiaTestFeedback" role="status" aria-live="polite"></div>
+        <div class="tp-integration-card-actions"><button class="btn btn-nb btn-dark" id="cartesiaGlobalTest" type="button" onclick="testIntegration('cartesia')">Testar conexão</button></div>
+        <details class="tp-integration-editor"><summary>Editar configuração</summary><div class="tp-integration-editor-body">
+          <p class="tp-integration-technical-note">Crie a voz em Cartesia → Instant Clone. As vozes próprias aparecerão no catálogo do TikPlay; não é necessário reiniciar as lives.</p>
+          <label class="tp-admin-field" for="cartesiaGlobalKey">Chave da API<input class="form-control" id="cartesiaGlobalKey" type="password" autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="sk_car_…"></label>
+          <div class="tp-admin-operation-actions"><button class="btn btn-nb btn-success" id="cartesiaGlobalSave" type="button" onclick="saveCartesiaGlobal()">Salvar chave</button><button class="btn btn-nb btn-danger" id="cartesiaGlobalClear" type="button" onclick="saveCartesiaGlobal(true)" disabled>Remover chave</button></div>
+          <div class="tp-admin-feedback" id="cartesiaGlobalStatus" role="status" aria-live="polite">Carregando configuração…</div>
+        </div></details>
+      </article>
       <article class="tp-admin-operation-block tp-integration-card" id="elevenIntegrationCard" aria-labelledby="elevenGlobalTitle">
         <div class="tp-integration-card-head"><div><h4 id="elevenGlobalTitle">ElevenLabs</h4><p>Integração usada pelas vozes expressivas disponíveis na plataforma.</p></div><span class="tp-integration-state" id="elevenConnectionState" data-state="loading">Verificando…</span></div>
         <div class="tp-integration-meta"><span id="elevenSourceSummary">Origem: verificando…</span><span id="elevenLastCheck">Ainda não testada nesta sessão</span></div>
@@ -1295,7 +1307,7 @@ function integrationSourceLabel(source) {
     : source === "default" ? "padrão da plataforma" : "não configurada";
 }
 
-const integrationUiState = { openrouter: null, starsg: null, elevenlabs: null, mercadopago: null };
+const integrationUiState = { openrouter: null, starsg: null, cartesia: null, elevenlabs: null, mercadopago: null };
 const integrationChecksInMemory = {};
 function updateIntegrationSummary() {
   const connected = Object.values(integrationUiState).filter(Boolean).length;
@@ -1305,7 +1317,7 @@ function updateIntegrationSummary() {
 function setIntegrationCardState(provider, connected, source, detail = "") {
   integrationUiState[provider] = connected === true;
   updateIntegrationSummary();
-  const ids = { openrouter: ["openRouterConnectionState", "openRouterSourceSummary"], starsg: ["starsgConnectionState", "starsgSourceSummary"], elevenlabs: ["elevenConnectionState", "elevenSourceSummary"], mercadopago: ["mercadoPagoConnectionState", "mercadoPagoSourceSummary"] }[provider];
+  const ids = { openrouter: ["openRouterConnectionState", "openRouterSourceSummary"], starsg: ["starsgConnectionState", "starsgSourceSummary"], cartesia: ["cartesiaConnectionState", "cartesiaSourceSummary"], elevenlabs: ["elevenConnectionState", "elevenSourceSummary"], mercadopago: ["mercadoPagoConnectionState", "mercadoPagoSourceSummary"] }[provider];
   if (!ids) return;
   const state = document.getElementById(ids[0]);
   state.dataset.state = connected ? "connected" : "missing";
@@ -1325,19 +1337,19 @@ function integrationLastCheck(provider) {
 
 function showIntegrationCheck(provider, success) {
   if (success === null) {
-    const targetId = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+    const targetId = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", cartesia: "cartesiaLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
     const target = document.getElementById(targetId);
     if (target) target.textContent = integrationLastCheck(provider);
     return;
   }
   integrationChecksInMemory[provider] = { at: Date.now(), success };
-  const id = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
+  const id = { openrouter: "openRouterLastCheck", starsg: "starsgLastCheck", cartesia: "cartesiaLastCheck", elevenlabs: "elevenLastCheck", mercadopago: "mercadoPagoLastCheck" }[provider];
   const target = document.getElementById(id);
   if (target) target.textContent = integrationLastCheck(provider);
 }
 
 function initializeIntegrationChecks() {
-  for (const provider of ["openrouter", "starsg", "elevenlabs", "mercadopago"]) showIntegrationCheck(provider, null);
+  for (const provider of ["openrouter", "starsg", "cartesia", "elevenlabs", "mercadopago"]) showIntegrationCheck(provider, null);
 }
 
 function showAdminIntegrationState(data) {
@@ -1358,6 +1370,14 @@ function showAdminIntegrationState(data) {
   setIntegrationCardState("starsg", starsg.configured, starsg.source,
     `Origem: ${integrationSourceLabel(starsg.source)}${starsg.api_key_masked ? ` · chave ${starsg.api_key_masked}` : ""}${starsg.daemon_restart_required ? " · reinício seguro pendente" : ""}`);
   document.getElementById("starsgLastCheck").textContent = integrationLastCheck("starsg");
+  const cartesia = integrations.cartesia || {};
+  document.getElementById("cartesiaGlobalStatus").textContent = cartesia.configured
+    ? `Chave ${cartesia.api_key_masked || "mascarada"} · ${integrationSourceLabel(cartesia.source)}. Clones próprios do Cartesia entram no catálogo após salvar.`
+    : "Nenhuma chave configurada.";
+  document.getElementById("cartesiaGlobalClear").disabled = !cartesia.configured;
+  setIntegrationCardState("cartesia", cartesia.configured, cartesia.source,
+    `Origem: ${integrationSourceLabel(cartesia.source)}${cartesia.api_key_masked ? ` · chave ${cartesia.api_key_masked}` : ""}`);
+  document.getElementById("cartesiaLastCheck").textContent = integrationLastCheck("cartesia");
   const mercado = integrations.mercadopago || {};
   document.getElementById("mercadoPagoPublicUrl").placeholder = mercado.public_base_url
     ? `${mercado.public_base_url} · endereço atual` : "https://painel.seudominio.com.br";
@@ -1429,6 +1449,26 @@ async function saveStarsgGlobal(clear = false) {
   finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
 }
 
+async function saveCartesiaGlobal(clear = false) {
+  const input = document.getElementById("cartesiaGlobalKey");
+  const status = document.getElementById("cartesiaGlobalStatus");
+  if (!clear && !input.value.trim()) { status.textContent = "Cole a chave da API antes de salvar."; input.focus(); return; }
+  const buttons = ["cartesiaGlobalSave", "cartesiaGlobalTest", "cartesiaGlobalClear"].map(id => document.getElementById(id));
+  buttons.forEach(button => { button.disabled = true; });
+  status.textContent = "Salvando configuração…";
+  let resultMessage = "";
+  try {
+    const data = await apiFetch("/api/admin/integrations/cartesia", { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clear ? { clear: true } : { api_key: input.value.trim() }) });
+    if (!data.success) throw new Error(data.error || "Falha ao salvar a chave.");
+    input.value = "";
+    showAdminIntegrationState(data);
+    await loadAdditionalVoiceModels();
+    resultMessage = clear ? "Chave removida." : "Chave salva. Teste a conexão e atualize o catálogo de vozes.";
+  } catch (error) { resultMessage = error.message || "Não foi possível salvar a chave."; }
+  finally { buttons.forEach(button => { button.disabled = false; }); await loadAdminIntegrationState(); status.textContent = resultMessage; }
+}
+
 async function saveMercadoPago(options = {}) {
   const accessInput = document.getElementById("mercadoPagoAccessToken");
   const publicKeyInput = document.getElementById("mercadoPagoPublicKey");
@@ -1462,9 +1502,9 @@ async function saveMercadoPago(options = {}) {
 }
 
 async function testIntegration(provider) {
-  const inputId = { elevenlabs: "elevenGlobalKey", openrouter: "openRouterGlobalKey", starsg: "starsgGlobalKey", mercadopago: "mercadoPagoAccessToken" }[provider];
-  const statusId = { elevenlabs: "elevenCardTestFeedback", openrouter: "openRouterTestFeedback", starsg: "starsgTestFeedback", mercadopago: "mercadoPagoCardTestFeedback" }[provider];
-  const buttonId = { elevenlabs: "elevenGlobalTest", openrouter: "openRouterGlobalTest", starsg: "starsgGlobalTest", mercadopago: "mercadoPagoTest" }[provider];
+  const inputId = { elevenlabs: "elevenGlobalKey", openrouter: "openRouterGlobalKey", starsg: "starsgGlobalKey", cartesia: "cartesiaGlobalKey", mercadopago: "mercadoPagoAccessToken" }[provider];
+  const statusId = { elevenlabs: "elevenCardTestFeedback", openrouter: "openRouterTestFeedback", starsg: "starsgTestFeedback", cartesia: "cartesiaTestFeedback", mercadopago: "mercadoPagoCardTestFeedback" }[provider];
+  const buttonId = { elevenlabs: "elevenGlobalTest", openrouter: "openRouterGlobalTest", starsg: "starsgGlobalTest", cartesia: "cartesiaGlobalTest", mercadopago: "mercadoPagoTest" }[provider];
   const input = document.getElementById(inputId), status = document.getElementById(statusId), button = document.getElementById(buttonId);
   button.disabled = true; status.textContent = "Testando conexão…";
   try {
@@ -1642,7 +1682,7 @@ function renderAdditionalVoiceModels() {
 }
 
 function voiceProviderLabel(provider) {
-  const labels = { elevenlabs: "ElevenLabs", openrouter: "OpenRouter", starsg: "StarsG", heygen: "HeyGen", kokoro: "Kokoro" };
+  const labels = { elevenlabs: "ElevenLabs", openrouter: "OpenRouter", starsg: "StarsG", cartesia: "Cartesia", heygen: "HeyGen", kokoro: "Kokoro" };
   return labels[String(provider || "").toLowerCase()] || provider || "Fornecedor";
 }
 
@@ -1738,8 +1778,9 @@ async function loadAdditionalVoiceModels() {
     const openRouter = data.openrouter_configured ? "OpenRouter conectado" : "OpenRouter sem chave";
     const starsg = data.starsg_configured ? "StarsG conectada" : "StarsG sem chave";
     const eleven = data.elevenlabs_configured ? "ElevenLabs conectada" : "ElevenLabs sem chave";
+    const cartesia = data.cartesia_configured ? "Cartesia conectada" : "Cartesia sem chave";
     const starsgCatalogUnavailable = data.catalog_errors?.starsg === "STARSG_MODEL_CATALOG_NOT_FOUND" || data.catalog_errors?.starsg === "STARSG_VOICE_CATALOG_NOT_FOUND";
-    status.textContent = `${openRouter} · ${starsg}${starsgCatalogUnavailable ? " · API de catálogo StarsG indisponível (404); Altair Mini usa 13 vozes manuais e Vega Flash 15 das 30 vozes informadas" : ""} · ${eleven}. O catálogo prioriza sotaque PT-BR identificado; vozes próprias da ElevenLabs sem idioma marcado aparecem para teste manual. Ative somente vozes aprovadas para os clientes.${data.catalog_error && !starsgCatalogUnavailable ? " Parte do catálogo não pôde ser carregada." : ""}`;
+    status.textContent = `${openRouter} · ${starsg}${starsgCatalogUnavailable ? " · API de catálogo StarsG indisponível (404); Altair Mini usa 13 vozes manuais e Vega Flash 15 das 30 vozes informadas" : ""} · ${cartesia} · ${eleven}. As vozes próprias do Cartesia e da ElevenLabs ficam disponíveis para prévia; confirme PT-BR e libere somente as vozes aprovadas.${data.catalog_error && !starsgCatalogUnavailable ? " Parte do catálogo não pôde ser carregada." : ""}`;
   } catch {
     status.textContent = "Não foi possível carregar o catálogo de vozes.";
     document.getElementById("additionalVoiceModelsMsg").textContent = "Atualize a página para tentar novamente.";
