@@ -139,7 +139,7 @@ module.exports = function registerAdminIntegrationRoutes(app, {
     const timer = setTimeout(() => controller.abort(), 10000);
     let response;
     try {
-      if (provider === "elevenlabs") response = await fetch("https://api.elevenlabs.io/v1/user", {
+      if (provider === "elevenlabs") response = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100", {
         headers: { "xi-api-key": key }, signal: controller.signal,
       });
       else if (provider === "openrouter") response = await fetch("https://openrouter.ai/api/v1/key", {
@@ -153,17 +153,43 @@ module.exports = function registerAdminIntegrationRoutes(app, {
       });
       const payload = response.headers.get("content-type")?.includes("application/json") ? await response.json() : null;
       if (!response.ok) {
-        const code = response.status === 401 || response.status === 403 ? "INVALID_CREDENTIALS"
+        const elevenKeyIdUsed = provider === "elevenlabs"
+          && payload?.detail?.code === "api_key_id_used_as_api_key";
+        const elevenInvalidKeyFormat = provider === "elevenlabs"
+          && payload?.detail?.code === "invalid_api_key";
+        const elevenVoicesPermissionMissing = provider === "elevenlabs"
+          && /missing the permission voices_read/i.test(String(payload?.detail?.message || ""));
+        const code = elevenKeyIdUsed ? "ELEVENLABS_KEY_ID_USED"
+          : elevenInvalidKeyFormat ? "ELEVENLABS_KEY_FORMAT_INVALID"
+          : elevenVoicesPermissionMissing ? "ELEVENLABS_VOICES_READ_MISSING"
+          : response.status === 401 || (response.status === 403 && provider !== "elevenlabs") ? "INVALID_CREDENTIALS"
+          : provider === "elevenlabs" && response.status === 403 ? "CREDENTIAL_RESTRICTED"
           : response.status === 429 ? "PROVIDER_RATE_LIMITED" : "PROVIDER_TEST_FAILED";
+        const keyLengthMismatch = typeof payload?.detail?.message === "string"
+          ? payload.detail.message.match(/exactly (\d+) characters, got (\d+)/i) : null;
         report(req.user.id, "integrations.test.failed", "warning", "Teste de integração recusado pelo provedor.",
           { provider, http_status: response.status, code }, code);
         return res.status(502).json({ success: false, error: code === "INVALID_CREDENTIALS"
-          ? "O provedor recusou a credencial. Confira se ela está correta e ativa."
+          ? provider === "elevenlabs" ? "A ElevenLabs não reconheceu esta chave. Confira se copiou a chave completa e se ela continua ativa."
+            : "O provedor recusou a credencial. Confira se ela está correta e ativa."
+          : code === "ELEVENLABS_KEY_ID_USED" ? "Você informou o ID da chave, não a chave secreta da API. Na ElevenLabs, crie ou gire uma chave e cole o valor secreto completo (ele começa com sk_)."
+          : code === "ELEVENLABS_KEY_FORMAT_INVALID" ? keyLengthMismatch
+            ? `A ElevenLabs rejeitou o tamanho da chave: esperava ${keyLengthMismatch[1]} caracteres e recebeu ${keyLengthMismatch[2]}. Confira se copiou somente o segredo completo, sem texto extra.`
+            : "A ElevenLabs rejeitou o formato da chave. Copie somente o segredo completo exibido ao criar ou girar a chave."
+          : code === "ELEVENLABS_VOICES_READ_MISSING" ? "A chave foi reconhecida, mas não tem a permissão voices_read. Edite ou crie uma chave na ElevenLabs com leitura de vozes habilitada e salve o novo segredo aqui."
+          : code === "CREDENTIAL_RESTRICTED" ? "A ElevenLabs recusou o acesso ao catálogo. Confira as permissões de leitura de vozes e a lista de IPs permitidos da chave."
           : code === "PROVIDER_RATE_LIMITED" ? "O provedor limitou os testes. Tente novamente em instantes."
             : "O provedor não concluiu o teste. Tente novamente mais tarde." });
       }
       let account = "Conexão validada";
-      if (provider === "elevenlabs") account = payload?.subscription?.tier || "Conta autenticada";
+      if (provider === "elevenlabs") {
+        if (!Array.isArray(payload?.voices)) {
+          report(req.user.id, "integrations.test.failed", "warning", "Resposta inválida no teste de integração.",
+            { provider, http_status: response.status, code: "PROVIDER_RESPONSE_INVALID" }, "PROVIDER_RESPONSE_INVALID");
+          return res.status(502).json({ success: false, error: "A ElevenLabs respondeu, mas não retornou o catálogo de vozes esperado." });
+        }
+        account = "Catálogo de vozes acessível";
+      }
       if (provider === "openrouter") account = "Chave OpenRouter validada";
       if (provider === "starsg") account = "Chave autenticada; catálogo de vozes é validado separadamente";
       if (provider === "mercadopago") account = payload?.nickname || "Conta autenticada";

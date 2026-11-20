@@ -1834,13 +1834,22 @@ function apiFetch(path, opts = {}) {
       logout();
       throw new Error("Sessão expirada");
     }
-    if (!res.ok) {
-      let data = null;
+    const contentType = res.headers.get("content-type") || "";
+    let data = null;
+    if (contentType.toLowerCase().includes("application/json")) {
       try { data = await res.json(); } catch {}
+    }
+    if (!res.ok) {
       throw new Error(typeof data?.error === "string" && data.error.trim()
         ? data.error : "Falha HTTP " + res.status);
     }
-    return res.json();
+    if (!data) {
+      const isHtml = contentType.toLowerCase().includes("text/html");
+      throw new Error(isHtml
+        ? `A API ${path} retornou uma página HTML em vez de JSON (HTTP ${res.status}). O servidor pode estar desatualizado ou o proxy pode não encaminhar essa rota.`
+        : `A API ${path} retornou uma resposta inválida (HTTP ${res.status}).`);
+    }
+    return data;
   });
 }
 

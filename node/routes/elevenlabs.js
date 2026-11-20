@@ -593,6 +593,11 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
       audit(req.user.id, "tts.provider.config_rejected", "notice", "warning", { code: "INVALID_CONFIG" });
       return res.status(400).json({ success: false, error: "Informe uma chave válida ou escolha remover a chave." });
     }
+    if (clear !== true && !key.startsWith("sk_")) {
+      audit(req.user.id, "tts.provider.config_rejected", "notice", "warning", { code: "API_KEY_ID_INSTEAD_OF_SECRET" });
+      return res.status(400).json({ success: false,
+        error: "Esse valor não começa com sk_ e parece ser o ID da chave. Cole o segredo completo da API, exibido ao criar ou girar a chave." });
+    }
     try {
       providerConfig.save(clear === true ? "" : key);
       catalogUntil = 0;

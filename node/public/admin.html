@@ -1525,8 +1525,8 @@ async function saveElevenGlobal(event, clear = false) {
     input.value = "";
     showElevenGlobalState(data);
     status.textContent = clear ? "Chave removida. Integração desativada." : "Chave salva. Integração pronta para as contas autorizadas.";
-  } catch {
-    status.textContent = "Não foi possível confirmar a configuração. Atualize a página para conferir o estado e tente novamente.";
+  } catch (error) {
+    status.textContent = error.message || "Não foi possível confirmar a configuração. Atualize a página para conferir o estado e tente novamente.";
   } finally {
     document.getElementById("elevenGlobalSave").disabled = false;
     document.getElementById("elevenGlobalClear").disabled = !elevenGlobalConfigured;
