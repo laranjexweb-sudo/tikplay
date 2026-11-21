@@ -19,6 +19,9 @@
 
 - O ranking canônico da sala é acumulado no Node a partir de `likes_ranking_delta`, emitido somente após os filtros de acesso existentes.
 - `live_session.start` compara `room_id`: a mesma sala preserva o acumulado depois de uma reinicialização do daemon; uma sala diferente começa vazia.
+- A identidade da sala do ranking fica em `likesRoomId`, independente de `currentRoomId`, que pode ser atualizado antes de chegar `live_session.start`. Snapshot persistido usa o ID da sala do ranking.
+- Cada reset em início de sessão ou delta que detecta nova sala emite `likes.ranking.reset` (`game`/`info`, `LIVE_LIKES_RANKING_RESET`) com causa enumerada (`new_room`, `same_room_restart`, `restore_mismatch`) e contagem de entradas, sem nomes/IDs de espectadores.
 - IDs de evento repetidos são ignorados quando disponíveis; IDs ausentes (alguns eventos TikTools) permanecem best-effort.
 - O acumulado e os IDs recentes dos eventos ficam no SQLite, associados à conta e ao `room_id`. O Node restaura esse estado ao iniciar e o mantém quando o processo Node ou o daemon Python reinicia durante a mesma live.
 - Uma sala diferente ou o sinal explícito `new_live` inicia um ranking limpo. Os IDs recentes restaurados também evitam contar novamente eventos que o conector reenvie após a retomada.
+- Snapshots que já foram gravados com ranking contaminado e com o `room_id` novo não podem ser distinguidos de um ranking válido apenas pelo campo de sala. A recuperação desse estado antigo requer reconstrução pelos eventos da sala ou limpeza administrativa do snapshot; não apagar as interações históricas.
