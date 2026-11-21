@@ -169,7 +169,8 @@
   </section>
   <div class="tp-integration-secondary-sections">
   <section class="tp-admin-operation-block tp-integration-voices" aria-labelledby="additionalVoiceModelsTitle">
-    <div class="tp-admin-operation-heading"><div><h3 id="additionalVoiceModelsTitle">Vozes liberadas</h3><p>Filtre por serviço, modelo, idioma ou estado. As liberações são salvas automaticamente; as prévias usam uma amostra fixa e o saldo da integração.</p></div></div>
+    <div class="tp-admin-operation-heading"><div><h3 id="additionalVoiceModelsTitle">Vozes liberadas</h3><p>Filtre por serviço, modelo, idioma ou estado. As liberações são salvas automaticamente; as prévias usam uma amostra fixa e o saldo da integração.</p></div><button class="btn btn-nb btn-dark" id="additionalVoiceSync" type="button">↻ Sincronizar vozes</button></div>
+    <div class="tp-admin-feedback" id="additionalVoiceSyncStatus" role="status" aria-live="polite"></div>
     <div class="tp-voice-model-provider-status" id="additionalVoiceProviderStatus" role="status" aria-live="polite">Carregando catálogo de vozes…</div>
     <div class="tp-voice-filter-toolbar" aria-label="Filtros de vozes">
       <label class="tp-voice-filter-search"><span class="visually-hidden">Buscar voz</span><input class="form-control" id="additionalVoiceSearch" type="search" placeholder="Buscar voz ou idioma…" autocomplete="off"></label>
@@ -1786,6 +1787,48 @@ async function loadAdditionalVoiceModels() {
     document.getElementById("additionalVoiceModelsMsg").textContent = "Atualize a página para tentar novamente.";
   }
 }
+
+async function syncAdditionalVoiceCatalogs() {
+  const button = document.getElementById("additionalVoiceSync");
+  const status = document.getElementById("additionalVoiceSyncStatus");
+  const modelList = document.getElementById("additionalVoiceModelsList");
+  const controls = Array.from(modelList.querySelectorAll("[data-voice-id], [data-credit-rate]"));
+  const controlStates = controls.map(control => [control, control.disabled]);
+  button.disabled = true;
+  for (const [control] of controlStates) control.disabled = true;
+  document.getElementById("additionalVoiceBulkEnable").disabled = true;
+  document.getElementById("additionalVoiceBulkDisable").disabled = true;
+  status.textContent = "Sincronizando catálogos das integrações configuradas…";
+  try {
+    await additionalVoiceSaveQueue;
+    const data = await apiFetch("/api/admin/tts/additional-models/sync", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    });
+    if (!data.success) throw new Error(data.error || "Não foi possível sincronizar as vozes.");
+    additionalVoiceModels = data.models || [];
+    renderAdditionalVoiceModels();
+    const labels = { openrouter: "OpenRouter", elevenlabs: "ElevenLabs", cartesia: "Cartesia", starsg: "StarsG" };
+    const outcomes = Object.entries(data.providers || {}).map(([provider, result]) => {
+      const label = labels[provider] || provider;
+      if (result.status === "not_configured") return `${label}: sem integração configurada`;
+      if (result.status === "synced") return `${label}: ${Number(result.voice_count || 0)} vozes`;
+      if (result.status === "fallback") return `${label}: catálogo alternativo (${Number(result.voice_count || 0)} vozes)`;
+      return `${label}: falha ao sincronizar`;
+    });
+    const partial = Object.values(data.providers || {}).some(item => ["failed", "fallback"].includes(item.status));
+    status.textContent = `${partial ? "Sincronização parcial." : "Sincronização concluída."} ${outcomes.join(" · ")}`;
+  } catch (error) {
+    status.textContent = error?.message || "Não foi possível sincronizar as vozes.";
+  } finally {
+    for (const [control, wasDisabled] of controlStates) {
+      if (control.isConnected) control.disabled = wasDisabled;
+    }
+    button.disabled = false;
+    updateAdditionalVoiceCounts();
+  }
+}
+
+document.getElementById("additionalVoiceSync").addEventListener("click", syncAdditionalVoiceCatalogs);
 
 function saveAdditionalVoiceModels(changedToggle) {
   const message = document.getElementById("additionalVoiceModelsMsg");

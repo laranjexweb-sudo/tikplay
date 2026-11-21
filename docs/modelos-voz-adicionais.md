@@ -216,3 +216,24 @@ cadastrar tarifas para `provider=cartesia`, `model=sonic-3.6`, recursos `chat_vo
 se quiser estimar as prévias administrativas, `admin_voice_preview`, por caractere ou
 mil caracteres. A tarifa de TikCoins é uma configuração de cobrança do TikPlay e não
 substitui essa tarifa financeira.
+
+## Sincronização manual dos catálogos
+
+Super Admin → Integrações → Vozes liberadas oferece **Sincronizar vozes**. A ação força
+uma nova leitura dos catálogos OpenRouter, ElevenLabs, StarsG e Cartesia quando a
+integração correspondente está configurada, ignorando o cache normal de cinco minutos.
+O resultado informa status e quantidade de vozes por provedor; falhas parciais não
+impedem a exibição dos catálogos que responderam. StarsG pode indicar fallback para as
+opções manuais mantidas quando o catálogo upstream não responde. A ação não altera tarifas
+nem a allowlist salva; vozes já liberadas permanecem como estão, inclusive as marcadas
+como fora do catálogo até o administrador removê-las explicitamente. A API restringe a
+ação a Super Admin e limita novas sincronizações a um intervalo de dez segundos por conta.
+
+Mapa de observabilidade: `tts.voice_catalog.sync.requested` (`connection`/`info`),
+`tts.voice_catalog.sync.completed` (`connection`/`info`),
+`tts.voice_catalog.sync.partial` (`notice`/`warning`),
+`tts.voice_catalog.sync.failed` (`error`/`error`) e
+`tts.voice_catalog.sync.rejected` (`notice`/`warning`, limitado pelo cooldown de dez
+segundos). Os eventos da execução compartilham `trace_id`; detalhes permitem apenas
+provedor, status, código, quantidade de modelos/vozes e duração. Chaves, IDs/nomes das
+vozes e respostas brutas dos provedores não são registrados.

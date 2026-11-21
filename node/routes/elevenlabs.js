@@ -77,7 +77,7 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     || { tenant_id: id, voice_id: "", model_id: "elevenlabs/eleven-v4-turbo" };
   const configured = () => Boolean(providerConfig.read().apiKey);
   let catalog = [], catalogUntil = 0, catalogKey = "", pendingCatalog = null;
-  const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map();
+  const lastTest = new Map(), lastAudit = new Map(), lastAdminPreview = new Map(), lastAdminCatalogSync = new Map();
   let openRouterCatalog = [], openRouterCatalogUntil = 0, pendingOpenRouterCatalog = null;
   let starsgCatalog = [], starsgCatalogUntil = 0, starsgCatalogKey = "", starsgCatalogErrorCode = null, pendingStarsgCatalog = null;
   let cartesiaCatalog = [], cartesiaCatalogUntil = 0, cartesiaCatalogKey = "", pendingCartesiaCatalog = null;
@@ -157,8 +157,8 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
       JOIN additional_voice_models m ON m.model_id=o.model_id
       WHERE o.enabled=1 AND m.enabled=1 AND m.credits_per_150_chars<=0`).get()?.count || 0);
   }
-  async function openRouterVoices() {
-    if (Date.now() < openRouterCatalogUntil) return openRouterCatalog;
+  async function openRouterVoices(forceRefresh = false) {
+    if (!forceRefresh && Date.now() < openRouterCatalogUntil) return openRouterCatalog;
     if (pendingOpenRouterCatalog) return pendingOpenRouterCatalog;
     const task = (async () => {
       const response = await fetch("https://openrouter.ai/api/v1/models?output_modalities=speech", {
@@ -204,11 +204,11 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     if (model.provider === "cartesia") return cartesiaConfigured();
     return openRouterConfigured();
   }
-  async function cartesiaVoices() {
+  async function cartesiaVoices(forceRefresh = false) {
     const apiKey = cartesiaKey();
     if (!apiKey) throw new Error("CARTESIA_NOT_CONFIGURED");
     const fingerprint = crypto.createHash("sha256").update(apiKey).digest("hex");
-    if (Date.now() < cartesiaCatalogUntil && cartesiaCatalogKey === fingerprint) return cartesiaCatalog;
+    if (!forceRefresh && Date.now() < cartesiaCatalogUntil && cartesiaCatalogKey === fingerprint) return cartesiaCatalog;
     if (pendingCartesiaCatalog?.key === fingerprint) return pendingCartesiaCatalog.promise;
     const task = (async () => {
       const result = [];
@@ -246,11 +246,11 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     pendingCartesiaCatalog = { key: fingerprint, promise: task };
     try { return await task; } finally { if (pendingCartesiaCatalog?.promise === task) pendingCartesiaCatalog = null; }
   }
-  async function starsgVoices() {
+  async function starsgVoices(forceRefresh = false) {
     const apiKey = starsgKey();
     if (!apiKey) throw new Error("STARSG_NOT_CONFIGURED");
     const fingerprint = crypto.createHash("sha256").update(apiKey).digest("hex");
-    if (Date.now() < starsgCatalogUntil && starsgCatalogKey === fingerprint) return starsgCatalog;
+    if (!forceRefresh && Date.now() < starsgCatalogUntil && starsgCatalogKey === fingerprint) return starsgCatalog;
     if (pendingStarsgCatalog?.key === fingerprint) return pendingStarsgCatalog.promise;
     const task = (async () => {
       try {
@@ -359,24 +359,26 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     })).filter(model => model.voices.length > 0);
     return { models, catalog_error: catalogError };
   }
-  async function adminVoiceCatalog() {
+  async function adminVoiceCatalog(forceRefresh = false) {
     const approved = new Map(db.db.prepare("SELECT model_id,voice_id,label,enabled FROM additional_voice_options").all()
       .map(item => [`${item.model_id}:${item.voice_id}`, item]));
     const models = getModelStates();
     let eleven = [], openRouter = [], starsg = [], cartesia = [], catalogError = false;
     const catalogErrors = {};
     let elevenAvailable = false, openRouterAvailable = false, starsgAvailable = false, cartesiaAvailable = false;
-    if (configured()) try { eleven = await voices(); elevenAvailable = true; } catch { catalogError = true; }
-    if (openRouterConfigured()) try { openRouter = await openRouterVoices(); openRouterAvailable = true; } catch { catalogError = true; }
+    if (configured()) try { eleven = await voices(forceRefresh); elevenAvailable = true; }
+    catch { catalogError = true; catalogErrors.elevenlabs = "ELEVENLABS_CATALOG_FAILED"; }
+    if (openRouterConfigured()) try { openRouter = await openRouterVoices(forceRefresh); openRouterAvailable = true; }
+    catch { catalogError = true; catalogErrors.openrouter = "OPENROUTER_CATALOG_FAILED"; }
     if (starsgConfigured()) try {
-      starsg = await starsgVoices(); starsgAvailable = true;
+      starsg = await starsgVoices(forceRefresh); starsgAvailable = true;
       if (starsgCatalogErrorCode) { catalogError = true; catalogErrors.starsg = starsgCatalogErrorCode; }
     } catch (error) {
       catalogError = true;
       catalogErrors.starsg = ["STARSG_MODEL_CATALOG_NOT_FOUND", "STARSG_MODEL_CATALOG_FAILED", "STARSG_VOICE_CATALOG_NOT_FOUND", "STARSG_VOICE_CATALOG_FAILED"].includes(error?.message)
         ? error.message : "STARSG_CATALOG_FAILED";
     }
-    if (cartesiaConfigured()) try { cartesia = await cartesiaVoices(); cartesiaAvailable = true; }
+    if (cartesiaConfigured()) try { cartesia = await cartesiaVoices(forceRefresh); cartesiaAvailable = true; }
     catch { catalogError = true; catalogErrors.cartesia = "CARTESIA_CATALOG_FAILED"; }
     const result = models.map(model => {
       const available = model.provider === "elevenlabs" ? eleven : model.provider === "starsg"
@@ -397,11 +399,11 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     });
     return { models: result, catalog_error: catalogError, catalog_errors: catalogErrors };
   }
-  async function voices() {
+  async function voices(forceRefresh = false) {
     const apiKey = providerConfig.read().apiKey;
     if (!apiKey) throw new Error("ELEVENLABS_NOT_CONFIGURED");
     const fingerprint = crypto.createHash("sha256").update(apiKey).digest("hex");
-    if (Date.now() < catalogUntil && catalogKey === fingerprint) return catalog;
+    if (!forceRefresh && Date.now() < catalogUntil && catalogKey === fingerprint) return catalog;
     if (pendingCatalog?.key === fingerprint) return pendingCatalog.promise;
     const task = (async () => {
       const result = [];
@@ -475,6 +477,49 @@ module.exports = function registerElevenLabs(app, { db, auth, daemonSend, log, r
     res.set("Cache-Control", "no-store").json({ success: true,
       openrouter_configured: openRouterConfigured(), starsg_configured: starsgConfigured(),
       cartesia_configured: cartesiaConfigured(), elevenlabs_configured: configured(), ...catalog });
+  });
+  app.post("/api/admin/tts/additional-models/sync", auth.requireAdmin, async (req, res) => {
+    const trace_id = crypto.randomUUID();
+    const now = Date.now();
+    if (now - (lastAdminCatalogSync.get(req.user.id) || 0) < 10000) {
+      audit(req.user.id, "tts.voice_catalog.sync.rejected", "notice", "warning", { code: "SYNC_RATE_LIMITED" });
+      return res.status(429).json({ success: false, error: "Aguarde alguns segundos antes de sincronizar novamente." });
+    }
+    lastAdminCatalogSync.set(req.user.id, now);
+    const startedAt = Date.now();
+    log(req.user.id, { event: "tts.voice_catalog.sync.requested", category: "connection", level: "info",
+      game: "tts", trace_id, message: "Sincronização manual do catálogo de vozes solicitada." });
+    try {
+      const catalog = await adminVoiceCatalog(true);
+      const configuredByProvider = {
+        openrouter: openRouterConfigured(), starsg: starsgConfigured(),
+        cartesia: cartesiaConfigured(), elevenlabs: configured(),
+      };
+      const providers = Object.fromEntries(Object.entries(configuredByProvider).map(([provider, isConfigured]) => {
+        const models = catalog.models.filter(model => model.provider === provider);
+        const code = catalog.catalog_errors?.[provider] || null;
+        const status = !isConfigured ? "not_configured" : code
+          ? (provider === "starsg" && models.some(model => model.catalog_available) ? "fallback" : "failed")
+          : "synced";
+        return [provider, { status, code, model_count: models.length,
+          voice_count: models.reduce((total, model) => total + model.voices.filter(voice => !voice.stale).length, 0) }];
+      }));
+      const hasIssues = Object.values(providers).some(item => item.status === "failed" || item.status === "fallback");
+      const duration_ms = Date.now() - startedAt;
+      log(req.user.id, { event: hasIssues ? "tts.voice_catalog.sync.partial" : "tts.voice_catalog.sync.completed",
+        category: hasIssues ? "notice" : "connection", level: hasIssues ? "warning" : "info",
+        game: "tts", trace_id, duration_ms,
+        code: hasIssues ? "VOICE_CATALOG_PARTIAL" : "VOICE_CATALOG_SYNCED",
+        message: hasIssues ? "Catálogo de vozes atualizado parcialmente." : "Catálogo de vozes sincronizado.",
+        details: { providers } });
+      res.set("Cache-Control", "no-store").json({ success: true, ...catalog, providers, duration_ms });
+    } catch (error) {
+      log(req.user.id, { event: "tts.voice_catalog.sync.failed", category: "error", level: "error",
+        game: "tts", trace_id, duration_ms: Date.now() - startedAt, code: "VOICE_CATALOG_SYNC_FAILED",
+        message: "Não foi possível sincronizar o catálogo de vozes.",
+        details: { error_type: error?.name || "Error" } });
+      res.status(500).json({ success: false, error: "Não foi possível sincronizar o catálogo de vozes." });
+    }
   });
   app.post("/api/admin/tts/voice-preview", auth.requireAdmin, async (req, res) => {
     const model = voiceModels.find(item => item.id === req.body?.model_id);
