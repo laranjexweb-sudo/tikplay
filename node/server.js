@@ -798,11 +798,22 @@ function handleDaemonMessage(msg) {
       // explicitamente quando a mesma sala iniciou uma nova transmissão.
       const p = msg.live_session || {};
       if (p.state === "start") {
+        const previousLikesRoomId = String(tenant.likesRoomId || "");
+        const entriesBefore = tenant.likesByUser instanceof Map ? tenant.likesByUser.size : 0;
+        const restoredState = tenant.likesStateRestored === true;
         if (p.room_id) tenant.currentRoomId = String(p.room_id);
         interactions.openSession(tenant, p);
-        if (liveLikesState.ensureRoomState(tenant, p.room_id, p.new_live === true)) {
+        const rankingReset = liveLikesState.ensureRoomState(tenant, p.room_id, p.new_live === true);
+        if (rankingReset) {
           tenant.gameState.likes_ranking = [];
           tenant.gameState.likes_ranking_all = [];
+          logStructuredEvent(tenant, { category: "game", level: "info", event: "likes.ranking.reset",
+            code: "LIVE_LIKES_RANKING_RESET", message: "Ranking de curtidas reiniciado para a nova transmissão.",
+            details: { room_id: String(p.room_id || ""), previous_room_id: previousLikesRoomId,
+              cause: p.new_live === true ? "same_room_restart"
+                : restoredState && previousLikesRoomId && previousLikesRoomId !== String(p.room_id || "")
+                  ? "restore_mismatch" : "new_room",
+              entries_before: entriesBefore, entries_after: 0 } });
         }
         scheduleLiveLikesStatePersistence(tenant);
       }
@@ -846,16 +857,26 @@ function handleDaemonMessage(msg) {
       }
       if (gameMsg.type === "likes_ranking_delta") {
         const previousRoomId = tenant.currentRoomId;
+        const previousLikesRoomId = String(tenant.likesRoomId || "");
+        const entriesBefore = tenant.likesByUser instanceof Map ? tenant.likesByUser.size : 0;
+        const restoredState = tenant.likesStateRestored === true;
         const changed = liveLikesState.applyLikeDelta(tenant, gameMsg);
-        if (tenant.currentRoomId !== previousRoomId) {
+        const rankingRoomChanged = previousLikesRoomId !== String(tenant.likesRoomId || "");
+        if (rankingRoomChanged) {
           tenant.gameState.likes_ranking = [];
           tenant.gameState.likes_ranking_all = [];
+          logStructuredEvent(tenant, { category: "game", level: "info", event: "likes.ranking.reset",
+            code: "LIVE_LIKES_RANKING_RESET", message: "Ranking de curtidas reiniciado após detectar outra transmissão.",
+            details: { room_id: String(tenant.likesRoomId || ""), previous_room_id: previousLikesRoomId,
+              cause: restoredState ? "restore_mismatch" : "new_room",
+              entries_before: entriesBefore, entries_after: tenant.likesByUser.size } });
         }
         if (changed) {
           tenant.gameState.likes_ranking = liveLikesState.ranking(tenant, 5);
           tenant.gameState.likes_ranking_all = liveLikesState.ranking(tenant, 10);
         }
-        if (changed || tenant.currentRoomId !== previousRoomId) scheduleLiveLikesStatePersistence(tenant);
+        if (changed || rankingRoomChanged || tenant.currentRoomId !== previousRoomId)
+          scheduleLiveLikesStatePersistence(tenant);
         return;
       }
       if (gameMsg.type === "likes_activity") {

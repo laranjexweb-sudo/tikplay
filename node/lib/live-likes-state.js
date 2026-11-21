@@ -3,10 +3,12 @@
 function ensureRoomState(tenant, roomId, forceReset = false) {
   const room = String(roomId || "").trim();
   if (!room) return false;
-  if (tenant.currentRoomId === room && !forceReset) return false;
+  if (tenant.likesRoomId === room && !forceReset) return false;
+  tenant.likesRoomId = room;
   tenant.currentRoomId = room;
   tenant.likesByUser = new Map();
   tenant.likeEventIds = new Set();
+  tenant.likesStateRestored = false;
   return true;
 }
 
@@ -48,6 +50,7 @@ function restoreState(tenant, state) {
   const roomId = String(state.room_id).trim();
   const rankingEntries = Array.isArray(state.ranking) ? state.ranking : [];
   const eventIds = Array.isArray(state.event_ids) ? state.event_ids : [];
+  tenant.likesRoomId = roomId;
   tenant.currentRoomId = roomId;
   tenant.likesByUser = new Map();
   for (const entry of rankingEntries) {
@@ -62,14 +65,15 @@ function restoreState(tenant, state) {
     });
   }
   tenant.likeEventIds = new Set(eventIds.map(value => String(value || "")).filter(Boolean).slice(-2000));
+  tenant.likesStateRestored = true;
   return true;
 }
 
 function serializeState(tenant) {
   ensureCollections(tenant);
-  if (!tenant || !String(tenant.currentRoomId || "").trim()) return null;
+  if (!tenant || !String(tenant.likesRoomId || "").trim()) return null;
   return {
-    room_id: String(tenant.currentRoomId),
+    room_id: String(tenant.likesRoomId),
     ranking: [...tenant.likesByUser.values()],
     event_ids: [...tenant.likeEventIds],
   };

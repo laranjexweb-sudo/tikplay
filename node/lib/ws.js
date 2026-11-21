@@ -78,6 +78,8 @@ function getTenant(id) {
       autoResumeSessionId: null,
       autoResumeExpectedRoomId: null,
       currentRoomId: savedLikes && savedLikes.room_id || recovery && recovery.room_id || null,
+      likesRoomId: savedLikes && savedLikes.room_id || null,
+      likesStateRestored: Boolean(savedLikes),
       gameRecoveryCheckpoint: recovery,
       currentSessionId: null,
       likesByUser: new Map(),
