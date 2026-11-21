@@ -171,6 +171,33 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
       limit: paged ? limit : null, offset: paged ? offset : 0, has_more: paged && offset + accounts.length < Number(total || 0) });
   });
 
+  app.post("/api/admin/tts/credit-report/sync", auth.requireAdmin, async (req, res) => {
+    const ids = Array.isArray(req.body?.purchase_ids) ? [...new Set(req.body.purchase_ids)] : [];
+    if (!ids.length || ids.length > 25 || ids.some(id => typeof id !== "string" || !/^[a-f0-9-]{36}$/i.test(id)))
+      return res.status(400).json({ success: false, error: "Selecione até 25 compras válidas para atualizar." });
+    if (!(typeof mpConfigured === "function" ? mpConfigured() : mpConfigured))
+      return res.status(503).json({ success: false, error: "Mercado Pago não está configurado." });
+    let synced = 0, unavailable = 0;
+    for (const id of ids) {
+      const purchase = db.db.prepare("SELECT id,payment_id,price_cents,status FROM tts_credit_purchases WHERE id=?").get(id);
+      if (!purchase?.payment_id || purchase.status === "refunded") { unavailable++; continue; }
+      try {
+        const result = await mpFetch(`/v1/payments/${encodeURIComponent(purchase.payment_id)}`);
+        const payment = result?.data;
+        const amount = Number(payment?.transaction_amount);
+        if (result?.status !== 200 || String(payment?.id || "") !== purchase.payment_id
+            || String(payment?.external_reference || "") !== `tts-credit:${purchase.id}`
+            || payment?.currency_id !== "BRL" || !Number.isFinite(amount)
+            || Math.abs(amount * 100 - purchase.price_cents) > 0.000001) { unavailable++; continue; }
+        if (wallet.persistPaymentDetails(db, payment, purchase.id)) synced++;
+        else unavailable++;
+      } catch { unavailable++; }
+    }
+    report("billing", "info", "tts.credits.payment_details_synced", "Dados financeiros das compras consultados no Mercado Pago.",
+      { actor_id: req.user.id, requested_count: ids.length, synced_count: synced, unavailable_count: unavailable });
+    res.set("Cache-Control", "no-store").json({ success: true, synced, unavailable });
+  });
+
   app.get("/api/admin/tts/credit-report", auth.requireAdmin, (req, res) => {
     const range = String(req.query?.range || "30d");
     const daysByRange = { "7d": 7, "30d": 30, "90d": 90 };
@@ -236,7 +263,8 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
     const purchaseOffset = Number.isSafeInteger(Number(req.query?.purchase_offset))
       ? Math.max(0, Math.min(1000000, Number(req.query.purchase_offset))) : offset;
     const purchaseRows = db.db.prepare(`SELECT p.id,p.tenant_id,p.package_id,p.package_name,p.credits,p.price_cents,
-      p.status,p.payment_id,p.created_at,p.paid_at,u.name AS streamer_name,u.email AS streamer_email
+      p.status,p.payment_id,p.payment_method_id,p.payment_type_id,p.fee_details_json,p.fee_cents,
+      p.net_received_cents,p.provider_details_synced_at,p.created_at,p.paid_at,u.name AS streamer_name,u.email AS streamer_email
       FROM tts_credit_purchases p JOIN users u ON u.id=p.tenant_id ${purchaseWhere}
       ORDER BY COALESCE(p.paid_at,p.created_at) DESC,p.id DESC LIMIT ? OFFSET ?`)
       .all(...purchaseParams, pageSize, purchaseOffset);

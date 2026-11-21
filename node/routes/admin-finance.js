@@ -79,6 +79,9 @@ module.exports = function registerAdminFinance(app, { db, auth, log }) {
     const income = db.db.prepare(`SELECT
       COALESCE(SUM(CASE WHEN l.kind='purchase' THEN p.price_cents ELSE 0 END),0) AS gross_cents,
       COALESCE(SUM(CASE WHEN l.kind='purchase_reversal' THEN p.price_cents ELSE 0 END),0) AS refunded_cents,
+      COALESCE(SUM(CASE WHEN l.kind='purchase' THEN COALESCE(p.net_received_cents,p.price_cents) ELSE 0 END),0) AS received_cents,
+      COALESCE(SUM(CASE WHEN l.kind='purchase' AND p.fee_cents IS NOT NULL THEN p.fee_cents ELSE 0 END),0) AS provider_fees_cents,
+      SUM(CASE WHEN l.kind='purchase' AND p.provider_details_synced_at IS NULL THEN 1 ELSE 0 END) AS fee_data_pending_count,
       SUM(CASE WHEN l.kind='purchase' THEN 1 ELSE 0 END) AS paid_count,
       SUM(CASE WHEN l.kind='purchase_reversal' THEN 1 ELSE 0 END) AS refund_count
       FROM tts_credit_ledger l LEFT JOIN tts_credit_purchases p ON p.payment_id=l.reference_id
@@ -88,12 +91,15 @@ module.exports = function registerAdminFinance(app, { db, auth, log }) {
     const payables = db.db.prepare(`SELECT COALESCE(SUM(amount_cents),0) AS cents,COUNT(*) AS count
       FROM finance_expenses WHERE status='pending'`).get();
     const pendingPurchases = db.db.prepare(`SELECT COUNT(*) AS count FROM tts_credit_purchases WHERE status IN ('pending','in_process','authorized','in_mediation')`).get();
-    const gross = Number(income.gross_cents || 0), refunds = Number(income.refunded_cents || 0), paidExpenses = Number(expenses.paid_cents || 0);
+    const gross = Number(income.gross_cents || 0), refunds = Number(income.refunded_cents || 0),
+      received = Number(income.received_cents || 0), providerFees = Number(income.provider_fees_cents || 0),
+      feeDataPending = Number(income.fee_data_pending_count || 0), paidExpenses = Number(expenses.paid_cents || 0);
     res.set("Cache-Control", "no-store").json({ success: true, range, summary: {
-      recharge_gross_cents: gross, recharge_refunds_cents: refunds, recharge_net_cents: gross - refunds,
+      recharge_gross_cents: gross, recharge_refunds_cents: refunds, recharge_provider_fees_cents: providerFees,
+      recharge_fee_data_pending_count: feeDataPending, recharge_net_cents: received - refunds,
       recharge_count: Number(income.paid_count || 0), refund_count: Number(income.refund_count || 0),
       paid_expenses_cents: paidExpenses, paid_expense_count: Number(expenses.paid_count || 0),
-      operating_result_cents: gross - refunds - paidExpenses,
+      operating_result_cents: received - refunds - paidExpenses,
       payable_cents: Number(payables.cents || 0), payable_count: Number(payables.count || 0),
       pending_recharges: Number(pendingPurchases.count || 0),
     } });

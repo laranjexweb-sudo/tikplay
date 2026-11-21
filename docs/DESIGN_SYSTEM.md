@@ -1022,3 +1022,5 @@ node/public/
 > 2026-11-20: Super Admin → Integrações ganhou configuração/teste do Cartesia e catálogo Sonic 3.6 para clones Instant criados no workspace Cartesia. O card reutiliza os componentes e tokens existentes; prévia, tarifa e allowlist usam o fluxo de vozes adicionais. Ver `docs/modelos-voz-adicionais.md`.
 
 > 2026-11-20: Catálogo de vozes em Super Admin → Integrações ganhou ação manual “Sincronizar vozes” que força a atualização dos provedores configurados, informa resultados por provedor e preserva tarifas e liberações. Ver `docs/modelos-voz-adicionais.md`.
+
+> 2026-11-21: Super Admin → Gestão financeira ganhou a aba Transações de recarga, com forma de pagamento, taxas do Mercado Pago e valor líquido. Os KPIs passam a descontar tarifas conhecidas e estornos; compras sem conciliação ficam sinalizadas e usam bruto temporariamente. Compras antigas podem sincronizar em lotes de até 25, após validar referência, moeda e valor. Dados financeiros e mapa de observabilidade em `docs/creditos-voz.md`.

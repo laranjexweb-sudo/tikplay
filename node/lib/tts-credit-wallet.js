@@ -40,10 +40,26 @@ function ensureSchema(db) {
       price_cents INTEGER NOT NULL CHECK(price_cents > 0),
       status TEXT NOT NULL DEFAULT 'pending',
       payment_id TEXT UNIQUE,
+      payment_method_id TEXT NOT NULL DEFAULT '',
+      payment_type_id TEXT NOT NULL DEFAULT '',
+      fee_details_json TEXT NOT NULL DEFAULT '[]',
+      fee_cents INTEGER,
+      net_received_cents INTEGER,
+      provider_details_synced_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       paid_at TEXT
     );
   `);
+  const purchaseColumns = new Set(db.db.prepare("PRAGMA table_info(tts_credit_purchases)").all().map(column => column.name));
+  for (const [name, definition] of Object.entries({
+    payment_method_id: "TEXT NOT NULL DEFAULT ''",
+    payment_type_id: "TEXT NOT NULL DEFAULT ''",
+    fee_details_json: "TEXT NOT NULL DEFAULT '[]'",
+    fee_cents: "INTEGER",
+    net_received_cents: "INTEGER",
+    provider_details_synced_at: "TEXT",
+  })) if (!purchaseColumns.has(name))
+    db.db.exec(`ALTER TABLE tts_credit_purchases ADD COLUMN ${name} ${definition}`);
   const ledgerColumns = new Set(db.db.prepare("PRAGMA table_info(tts_credit_ledger)").all().map(column => column.name));
   if (!ledgerColumns.has("reason"))
     db.db.exec("ALTER TABLE tts_credit_ledger ADD COLUMN reason TEXT NOT NULL DEFAULT ''");
@@ -54,6 +70,44 @@ function ensureSchema(db) {
     ["71000000-0000-4000-8000-000000000002", "Criador", 100000, 3990],
     ["71000000-0000-4000-8000-000000000003", "Pro", 300000, 9990],
   ].forEach(item => seedPackage.run(...item));
+}
+
+function paymentFinancialDetails(payment) {
+  const methodId = typeof payment?.payment_method_id === "string" && /^[a-z0-9_-]{1,40}$/i.test(payment.payment_method_id)
+    ? payment.payment_method_id.toLowerCase() : "";
+  const typeId = typeof payment?.payment_type_id === "string" && /^[a-z0-9_-]{1,40}$/i.test(payment.payment_type_id)
+    ? payment.payment_type_id.toLowerCase() : "";
+  const fees = (Array.isArray(payment?.fee_details) ? payment.fee_details : []).slice(0, 12).flatMap(item => {
+    const amount = item?.amount == null || item.amount === "" ? NaN : Number(item.amount), cents = Math.round(amount * 100);
+    const type = typeof item?.type === "string" && /^[a-z0-9_-]{1,48}$/i.test(item.type) ? item.type.toLowerCase() : "";
+    return type && Number.isFinite(amount) && cents >= 0 && Math.abs(amount * 100 - cents) < 0.000001
+      ? [{ type, amount_cents: cents }] : [];
+  });
+  const rawNet = payment?.transaction_details?.net_received_amount;
+  const net = rawNet == null || rawNet === "" ? NaN : Number(rawNet);
+  const netCents = Number.isFinite(net) && net >= 0 && Math.abs(net * 100 - Math.round(net * 100)) < 0.000001
+    ? Math.round(net * 100) : null;
+  const rawFees = payment?.fee_details;
+  const hasDetails = Boolean((methodId || typeId) && Array.isArray(rawFees)
+    && fees.length === rawFees.length && netCents !== null);
+  return { methodId, typeId, fees, feeCents: Array.isArray(payment?.fee_details)
+    ? fees.reduce((sum, fee) => sum + fee.amount_cents, 0) : null,
+    netCents, synced: hasDetails };
+}
+
+function persistPaymentDetails(db, payment, purchaseId) {
+  const details = paymentFinancialDetails(payment);
+  if (!details.synced) return false;
+  db.db.prepare(`UPDATE tts_credit_purchases SET
+    payment_method_id=CASE WHEN ?<>'' THEN ? ELSE payment_method_id END,
+    payment_type_id=CASE WHEN ?<>'' THEN ? ELSE payment_type_id END,
+    fee_details_json=CASE WHEN ? THEN ? ELSE fee_details_json END,
+    fee_cents=CASE WHEN ? THEN ? ELSE fee_cents END,
+    net_received_cents=COALESCE(?,net_received_cents), provider_details_synced_at=CURRENT_TIMESTAMP
+    WHERE id=?`).run(details.methodId, details.methodId, details.typeId, details.typeId,
+      Array.isArray(payment?.fee_details) ? 1 : 0, JSON.stringify(details.fees),
+      Array.isArray(payment?.fee_details) ? 1 : 0, details.feeCents, details.netCents, purchaseId);
+  return true;
 }
 
 function ensureWallet(db, tenantId) {
@@ -114,6 +168,7 @@ function settleApprovedPayment(db, payment, log) {
     const current = db.db.prepare("SELECT * FROM tts_credit_purchases WHERE id=?").get(purchaseId);
     if (!current) return { mismatch: true };
     if (current.payment_id && current.payment_id !== paymentId) return { mismatch: true };
+    if (!refunded) persistPaymentDetails(db, payment, purchaseId);
     if (refunded) {
       if (current.status === "refunded") return { duplicate: true, balance: getBalance(db, purchase.tenant_id) };
       if (current.status !== "approved" || current.payment_id !== paymentId) return { mismatch: true };
@@ -155,4 +210,4 @@ function settleApprovedPayment(db, payment, log) {
   return { handled: true, success: true, ...result, tenantId: purchase.tenant_id };
 }
 
-module.exports = { ensureSchema, ensureWallet, getBalance, ledger, adjust, settleApprovedPayment };
+module.exports = { ensureSchema, ensureWallet, getBalance, ledger, adjust, settleApprovedPayment, persistPaymentDetails };
