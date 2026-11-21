@@ -216,7 +216,7 @@
       <div class="tp-admin-feedback" id="ttsCreditPackagesStatus" role="status" aria-live="polite"></div>
     </section>
     <section class="tp-admin-credit-panel" id="creditPanelReport" role="tabpanel" aria-labelledby="creditTabReport" hidden>
-      <div class="tp-admin-credit-panel-head"><div><h3 id="adminCreditReportTitle">Relatório de recargas</h3><p>Indicadores de receita consideram somente compras confirmadas. Dados antigos podem ser buscados novamente no Mercado Pago.</p></div><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportSync" disabled>Sincronizar dados de pagamento</button> <button class="btn btn-nb btn-dark" type="button" id="adminCreditReportRefresh">Atualizar</button></div></div>
+      <div class="tp-admin-credit-panel-head"><div><h3 id="adminCreditReportTitle">Relatório de recargas</h3><p>Indicadores de receita consideram somente compras confirmadas. Reconsulta até 25 pagamentos da página atual no Mercado Pago.</p></div><div><button class="btn btn-nb btn-dark" type="button" id="adminCreditReportSync" disabled>↻ Reconsultar pagamentos</button> <button class="btn btn-nb btn-dark" type="button" id="adminCreditReportRefresh">Atualizar</button></div></div>
       <div class="tp-admin-credit-filters"><label>Período<select class="form-select" id="adminCreditReportRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><label>Streamer<select class="form-select" id="adminCreditReportStreamer"><option value="">Todos</option></select></label><label>Status<select class="form-select" id="adminCreditReportFilterStatus"><option value="">Todos</option><option value="approved">Confirmada</option><option value="pending">Pendente</option><option value="in_process">Em processamento</option><option value="authorized">Autorizada</option><option value="in_mediation">Em análise</option><option value="cancelled">Cancelada</option><option value="rejected">Recusada</option><option value="refunded">Estornada</option><option value="charged_back">Contestada</option><option value="checkout_failed">Falha no checkout</option></select></label><label>Pacote<select class="form-select" id="adminCreditReportPackage"><option value="">Todos</option></select></label></div>
       <div class="tp-admin-credit-kpis" id="adminCreditReportSummary"><article><span>Compras confirmadas</span><strong>—</strong></article><article><span>Receita bruta</span><strong>—</strong></article><article><span>TikCoins vendidos</span><strong>—</strong></article><article><span>Pendentes / canceladas</span><strong>—</strong></article></div>
       <div class="tp-admin-feedback" id="adminCreditReportStatus" role="status" aria-live="polite">Abra esta aba para carregar o relatório.</div>
@@ -274,7 +274,7 @@
   </section>
   <section class="tp-admin-credit-panel tp-finance-panel" id="financePanelTransactions" role="tabpanel" aria-labelledby="financeTabTransactions" hidden>
     <div class="tp-admin-credit-panel-head"><div><h3>Transações de recarga</h3><p>Forma de pagamento, tarifas cobradas pelo Mercado Pago e valor líquido recebido.</p></div><button class="btn btn-nb btn-dark" type="button" id="financeTransactionsRefresh">Atualizar</button></div>
-    <div class="tp-admin-credit-filters"><label>Período<select class="form-select" id="financeTransactionsRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><button class="btn btn-nb btn-dark" type="button" id="financeTransactionsSync" disabled>Sincronizar dados do Mercado Pago</button></div>
+    <div class="tp-admin-credit-filters"><label>Período<select class="form-select" id="financeTransactionsRange"><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="90d">Últimos 90 dias</option><option value="all">Todo o período</option></select></label><button class="btn btn-nb btn-dark" type="button" id="financeTransactionsSync" disabled>↻ Reconsultar pagamentos</button></div>
     <div class="tp-admin-feedback" id="financeTransactionsStatus" role="status" aria-live="polite">Abra esta aba para carregar transações.</div>
     <div class="table-responsive"><table class="table table-striped align-middle tp-admin-table"><thead><tr><th>Data</th><th>Streamer</th><th>Pacote</th><th>Valor bruto</th><th>Forma de pagamento</th><th>Taxas</th><th>Valor líquido</th><th>Status</th></tr></thead><tbody id="financeTransactionsRows"><tr><td colspan="8">Abra esta aba para carregar transações.</td></tr></tbody></table></div>
     <div class="tp-admin-credit-pagination"><span id="financeTransactionsPageStatus" class="text-secondary small"></span><div><button class="btn btn-nb btn-dark" type="button" id="financeTransactionsPrev" disabled>Anterior</button><button class="btn btn-nb btn-dark" type="button" id="financeTransactionsNext" disabled>Próxima</button></div></div>
@@ -1905,6 +1905,14 @@ let financeLoaded = false;
 let financeExpenses = [];
 const financeCategories = ["APIs e serviços", "Hospedagem", "Infraestrutura", "Software", "Tarifas e impostos", "Marketing", "Outros"];
 
+function selectCreditPurchasesForSync(rows) {
+  const feeMismatch = item => item.fee_cents != null && item.net_received_cents != null
+    && Number(item.fee_cents) !== Number(item.price_cents) - Number(item.net_received_cents);
+  const priority = item => feeMismatch(item) ? 0 : item.provider_details_synced_at ? 2 : 1;
+  return [...rows].filter(item => item.payment_id && item.status !== "refunded")
+    .sort((a, b) => priority(a) - priority(b)).slice(0, 25).map(item => item.id);
+}
+
 function fillFinanceSelect(select, includeEmpty = false, currentValue = "") {
   const first = includeEmpty ? '<option value="">Sem fornecedor vinculado</option>' : '';
   select.innerHTML = first + financeCategories.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join("");
@@ -2102,7 +2110,7 @@ async function loadFinanceTransactions(offset = financeTransactionOffset) {
     const body = document.getElementById("financeTransactionsRows"); body.replaceChildren();
     const typeNames = { pix: "Pix", bank_transfer: "Transferência", credit_card: "Cartão de crédito", debit_card: "Cartão de débito", ticket: "Boleto", account_money: "Saldo Mercado Pago", prepaid_card: "Cartão pré-pago" };
     const brandNames = { visa: "Visa", master: "Mastercard", mastercard: "Mastercard", elo: "Elo", amex: "American Express", hipercard: "Hipercard", pix: "Pix" };
-    const feeNames = { mercadopago_fee: "Tarifa Mercado Pago", financing_fee: "Custo de parcelamento", tax: "Imposto" };
+    const feeNames = { mercadopago_fee: "Tarifa Mercado Pago", financed_advance_fee: "Tarifa de antecipação de recebíveis", financing_fee: "Custo de parcelamento", tax: "Imposto" };
     const statusNames = { approved: "Confirmada", pending: "Pendente", in_process: "Em processamento", authorized: "Autorizada", in_mediation: "Em análise", cancelled: "Cancelada", rejected: "Recusada", refunded: "Estornada", charged_back: "Contestada", checkout_failed: "Falha no checkout" };
     for (const item of financeTransactionRows) {
       let fees = []; try { fees = JSON.parse(item.fee_details_json || "[]"); } catch {}
@@ -2122,7 +2130,7 @@ async function loadFinanceTransactions(offset = financeTransactionOffset) {
     document.getElementById("financeTransactionsPageStatus").textContent = `${total ? financeTransactionOffset + 1 : 0}–${Math.min(financeTransactionOffset + count, total)} de ${total.toLocaleString("pt-BR")}`;
     document.getElementById("financeTransactionsPrev").disabled = financeTransactionOffset <= 0;
     document.getElementById("financeTransactionsNext").disabled = !data.purchases_has_more;
-    document.getElementById("financeTransactionsSync").disabled = !financeTransactionRows.some(item => item.payment_id && item.status !== "refunded" && !item.provider_details_synced_at);
+    document.getElementById("financeTransactionsSync").disabled = !financeTransactionRows.some(item => item.payment_id && item.status !== "refunded");
   } catch (error) { status.textContent = error.message || "Não foi possível carregar as transações."; }
 }
 
@@ -2221,7 +2229,7 @@ function renderAdminCreditReport(data) {
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   adminCreditReportPurchases = data.purchases || [];
   const syncButton = document.getElementById("adminCreditReportSync");
-  syncButton.disabled = !adminCreditReportPurchases.some(item => item.payment_id && item.status !== "refunded" && !item.provider_details_synced_at);
+  syncButton.disabled = !adminCreditReportPurchases.some(item => item.payment_id && item.status !== "refunded");
   const body = document.getElementById("adminCreditReportRows"); body.replaceChildren();
   for (const item of data.purchases || []) {
     const tr = document.createElement("tr"), statusNames = { approved: "Confirmada", pending: "Pendente", in_process: "Em processamento", authorized: "Autorizada", in_mediation: "Em análise", cancelled: "Cancelada", rejected: "Recusada", refunded: "Estornada", charged_back: "Contestada", checkout_failed: "Falha no checkout" };
@@ -2229,7 +2237,7 @@ function renderAdminCreditReport(data) {
     try { fees = JSON.parse(item.fee_details_json || "[]"); } catch {}
     const methodTypes = { pix: "Pix", bank_transfer: "Transferência", credit_card: "Cartão de crédito", debit_card: "Cartão de débito", ticket: "Boleto", account_money: "Saldo Mercado Pago", prepaid_card: "Cartão pré-pago" };
     const methodBrands = { visa: "Visa", master: "Mastercard", mastercard: "Mastercard", elo: "Elo", amex: "American Express", hipercard: "Hipercard", pix: "Pix" };
-    const feeNames = { mercadopago_fee: "Tarifa Mercado Pago", financing_fee: "Custo de parcelamento", tax: "Imposto" };
+    const feeNames = { mercadopago_fee: "Tarifa Mercado Pago", financed_advance_fee: "Tarifa de antecipação de recebíveis", financing_fee: "Custo de parcelamento", tax: "Imposto" };
     const method = [methodTypes[item.payment_type_id] || "", methodBrands[item.payment_method_id] || (item.payment_method_id || "")].filter(Boolean).join(" · ") || (item.provider_details_synced_at ? "Não informado pelo provedor" : item.payment_id ? "Pendente de sincronização" : "—");
     const feeDisplay = item.fee_cents !== null && item.fee_cents !== undefined
       ? formatAdminCreditMoney(item.fee_cents) : "—";
@@ -2675,14 +2683,14 @@ for (const id of ["adminCreditReportStreamer", "adminCreditReportFilterStatus", 
 document.getElementById("adminCreditReportRefresh").addEventListener("click", () => loadAdminCreditReport());
 document.getElementById("adminCreditReportSync").addEventListener("click", async event => {
   const button = event.currentTarget, status = document.getElementById("adminCreditReportStatus");
-  const purchase_ids = adminCreditReportPurchases.filter(item => item.payment_id && item.status !== "refunded" && !item.provider_details_synced_at).slice(0, 25).map(item => item.id);
+  const purchase_ids = selectCreditPurchasesForSync(adminCreditReportPurchases);
   if (!purchase_ids.length) return;
   button.disabled = true; status.textContent = "Consultando os dados das transações no Mercado Pago…";
   try {
     const result = await apiFetch("/api/admin/tts/credit-report/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purchase_ids }) });
     if (!result.success) throw new Error(result.error || "Não foi possível sincronizar as transações.");
     await loadAdminCreditReport();
-    status.textContent = `${Number(result.synced || 0)} transação(ões) atualizada(s); ${Number(result.unavailable || 0)} sem dados financeiros disponíveis.`;
+    status.textContent = `${Number(result.synced || 0)} transação(ões) reconsultada(s); ${Number(result.unavailable || 0)} sem dados financeiros disponíveis.`;
   } catch (error) { status.textContent = error.message || "Não foi possível sincronizar as transações."; button.disabled = false; }
 });
 document.getElementById("adminCreditReportPrev").addEventListener("click", () => loadAdminCreditReport(Math.max(0, adminCreditReportOffset - adminCreditReportPageSize)));
@@ -2716,14 +2724,14 @@ document.getElementById("financeTransactionsPrev").addEventListener("click", () 
 document.getElementById("financeTransactionsNext").addEventListener("click", () => loadFinanceTransactions(financeTransactionOffset + 100));
 document.getElementById("financeTransactionsSync").addEventListener("click", async event => {
   const button = event.currentTarget, status = document.getElementById("financeTransactionsStatus");
-  const purchase_ids = financeTransactionRows.filter(item => item.payment_id && item.status !== "refunded" && !item.provider_details_synced_at).slice(0, 25).map(item => item.id);
+  const purchase_ids = selectCreditPurchasesForSync(financeTransactionRows);
   if (!purchase_ids.length) return;
   button.disabled = true; status.textContent = "Consultando transações no Mercado Pago…";
   try {
     const result = await apiFetch("/api/admin/tts/credit-report/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purchase_ids }) });
     if (!result.success) throw new Error(result.error || "Não foi possível sincronizar os dados.");
     await loadFinanceTransactions(financeTransactionOffset);
-    status.textContent = `${Number(result.synced || 0)} transação(ões) sincronizada(s); ${Number(result.unavailable || 0)} sem dados disponíveis.`;
+    status.textContent = `${Number(result.synced || 0)} transação(ões) reconsultada(s); ${Number(result.unavailable || 0)} sem dados disponíveis.`;
   } catch (error) { status.textContent = error.message || "Não foi possível sincronizar os dados."; button.disabled = false; }
 });
 document.getElementById("financeNewSupplier").addEventListener("click", () => openFinanceSupplierForm());

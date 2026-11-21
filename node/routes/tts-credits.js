@@ -185,10 +185,23 @@ module.exports = function registerTtsCredits(app, { db, auth, mpFetch, mpConfigu
         const result = await mpFetch(`/v1/payments/${encodeURIComponent(purchase.payment_id)}`);
         const payment = result?.data;
         const amount = Number(payment?.transaction_amount);
+        const amountCents = Number.isFinite(amount) ? Math.round(amount * 100) : null;
         if (result?.status !== 200 || String(payment?.id || "") !== purchase.payment_id
             || String(payment?.external_reference || "") !== `tts-credit:${purchase.id}`
             || payment?.currency_id !== "BRL" || !Number.isFinite(amount)
-            || Math.abs(amount * 100 - purchase.price_cents) > 0.000001) { unavailable++; continue; }
+            || Math.abs(amount * 100 - purchase.price_cents) > 0.000001) {
+          if (result?.status === 200 && Number.isFinite(amount) && amountCents !== purchase.price_cents)
+            report("notice", "warning", "tts.credits.payment_amount_mismatch", "Valor retornado pelo Mercado Pago diverge do valor registrado para a compra.",
+              { payment_id: purchase.payment_id, transaction_amount_cents: amountCents,
+                expected_price_cents: purchase.price_cents, source: "admin_sync" }, "PAYMENT_AMOUNT_MISMATCH");
+          unavailable++; continue;
+        }
+        const financial = wallet.paymentFinancialDetails(payment);
+        if (financial.feeReconciliationMismatch)
+          report("notice", "warning", "tts.credits.fee_reconciliation_warning", "A soma das tarifas informadas diverge do valor bruto menos o líquido recebido.",
+            { payment_id: purchase.payment_id, transaction_amount_cents: financial.amountCents,
+              net_received_cents: financial.netCents, listed_fee_total_cents: financial.listedFeeCents,
+              gross_net_difference_cents: financial.grossNetFeeCents, fee_source: financial.feeSource }, "FEE_RECONCILIATION_MISMATCH");
         if (wallet.persistPaymentDetails(db, payment, purchase.id)) synced++;
         else unavailable++;
       } catch { unavailable++; }

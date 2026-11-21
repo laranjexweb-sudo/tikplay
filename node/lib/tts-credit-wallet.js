@@ -77,27 +77,52 @@ function paymentFinancialDetails(payment) {
     ? payment.payment_method_id.toLowerCase() : "";
   const typeId = typeof payment?.payment_type_id === "string" && /^[a-z0-9_-]{1,40}$/i.test(payment.payment_type_id)
     ? payment.payment_type_id.toLowerCase() : "";
-  const fees = (Array.isArray(payment?.fee_details) ? payment.fee_details : []).slice(0, 12).flatMap(item => {
+  const normalizeFees = items => (Array.isArray(items) ? items : []).slice(0, 12).flatMap(item => {
     const amount = item?.amount == null || item.amount === "" ? NaN : Number(item.amount), cents = Math.round(amount * 100);
-    const type = typeof item?.type === "string" && /^[a-z0-9_-]{1,48}$/i.test(item.type) ? item.type.toLowerCase() : "";
+    const rawType = item?.type === "fee" ? item?.name : (item?.type || item?.name);
+    const type = typeof rawType === "string" && /^[a-z0-9_-]{1,48}$/i.test(rawType) ? rawType.toLowerCase() : "";
+    const from = typeof item?.accounts?.from === "string" ? item.accounts.from.toLowerCase()
+      : typeof item?.fee_payer === "string" ? item.fee_payer.toLowerCase() : "";
+    const knownFee = ["mercadopago_fee", "financed_advance_fee", "financing_fee", "shipping_fee", "installment_fee"]
+      .includes(type);
+    if (from && from !== "collector") return [];
+    if (!knownFee && !(item?.type === "fee" && from === "collector")) return [];
     return type && Number.isFinite(amount) && cents >= 0 && Math.abs(amount * 100 - cents) < 0.000001
-      ? [{ type, amount_cents: cents }] : [];
+      ? [{ type, amount_cents: cents, ...(typeof item?.source === "string" && /^[a-z0-9_-]{1,64}$/i.test(item.source)
+        ? { source: item.source.toLowerCase() } : {}) }] : [];
   });
+  const chargeFees = normalizeFees(payment?.charges_details);
   const rawNet = payment?.transaction_details?.net_received_amount;
   const net = rawNet == null || rawNet === "" ? NaN : Number(rawNet);
   const netCents = Number.isFinite(net) && net >= 0 && Math.abs(net * 100 - Math.round(net * 100)) < 0.000001
     ? Math.round(net * 100) : null;
-  const rawFees = payment?.fee_details;
-  const hasDetails = Boolean((methodId || typeId) && Array.isArray(rawFees)
-    && fees.length === rawFees.length && netCents !== null);
-  return { methodId, typeId, fees, feeCents: Array.isArray(payment?.fee_details)
-    ? fees.reduce((sum, fee) => sum + fee.amount_cents, 0) : null,
-    netCents, synced: hasDetails };
+  const amount = payment?.transaction_amount == null || payment.transaction_amount === "" ? NaN : Number(payment.transaction_amount);
+  const amountCents = Number.isFinite(amount) && amount >= 0 && Math.abs(amount * 100 - Math.round(amount * 100)) < 0.000001
+    ? Math.round(amount * 100) : null;
+  const hasChargeArray = Array.isArray(payment?.charges_details);
+  const hasFeeDetailsArray = Array.isArray(payment?.fee_details);
+  const useCharges = chargeFees.length > 0 || (hasChargeArray && !hasFeeDetailsArray);
+  const feeSource = useCharges ? "charges_details" : hasFeeDetailsArray ? "fee_details"
+    : hasChargeArray ? "charges_details" : "unavailable";
+  const fees = useCharges ? chargeFees : normalizeFees(payment?.fee_details);
+  const feeCents = fees.reduce((sum, fee) => sum + fee.amount_cents, 0);
+  const taxes = payment?.taxes_amount == null ? null : Number(payment.taxes_amount);
+  const coupon = payment?.coupon_amount == null ? null : Number(payment.coupon_amount);
+  const canReconcileFees = amountCents !== null && netCents !== null && amountCents >= netCents && taxes === 0 && coupon === 0;
+  const grossNetFeeCents = canReconcileFees ? amountCents - netCents : null;
+  const hasFeeArray = feeSource !== "unavailable";
+  const synced = Boolean((methodId || typeId) && hasFeeArray && netCents !== null && amountCents !== null);
+  return { methodId, typeId, fees, feeCents: hasFeeArray
+      ? canReconcileFees ? grossNetFeeCents : feeCents : null,
+    listedFeeCents: hasFeeArray ? feeCents : null,
+    netCents, amountCents, feeSource, grossNetFeeCents,
+    feeReconciliationMismatch: canReconcileFees && feeCents !== grossNetFeeCents, synced };
 }
 
 function persistPaymentDetails(db, payment, purchaseId) {
   const details = paymentFinancialDetails(payment);
   if (!details.synced) return false;
+  const hasFeeArray = details.feeSource !== "unavailable";
   db.db.prepare(`UPDATE tts_credit_purchases SET
     payment_method_id=CASE WHEN ?<>'' THEN ? ELSE payment_method_id END,
     payment_type_id=CASE WHEN ?<>'' THEN ? ELSE payment_type_id END,
@@ -105,8 +130,8 @@ function persistPaymentDetails(db, payment, purchaseId) {
     fee_cents=CASE WHEN ? THEN ? ELSE fee_cents END,
     net_received_cents=COALESCE(?,net_received_cents), provider_details_synced_at=CURRENT_TIMESTAMP
     WHERE id=?`).run(details.methodId, details.methodId, details.typeId, details.typeId,
-      Array.isArray(payment?.fee_details) ? 1 : 0, JSON.stringify(details.fees),
-      Array.isArray(payment?.fee_details) ? 1 : 0, details.feeCents, details.netCents, purchaseId);
+      hasFeeArray ? 1 : 0, JSON.stringify(details.fees),
+      hasFeeArray ? 1 : 0, details.feeCents, details.netCents, purchaseId);
   return true;
 }
 
@@ -210,4 +235,5 @@ function settleApprovedPayment(db, payment, log) {
   return { handled: true, success: true, ...result, tenantId: purchase.tenant_id };
 }
 
-module.exports = { ensureSchema, ensureWallet, getBalance, ledger, adjust, settleApprovedPayment, persistPaymentDetails };
+module.exports = { ensureSchema, ensureWallet, getBalance, ledger, adjust, settleApprovedPayment,
+  paymentFinancialDetails, persistPaymentDetails };
