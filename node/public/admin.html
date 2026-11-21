@@ -2107,10 +2107,13 @@ async function loadFinanceTransactions(offset = financeTransactionOffset) {
     for (const item of financeTransactionRows) {
       let fees = []; try { fees = JSON.parse(item.fee_details_json || "[]"); } catch {}
       const method = [typeNames[item.payment_type_id] || "", brandNames[item.payment_method_id] || item.payment_method_id || ""].filter(Boolean).join(" · ") || (item.provider_details_synced_at ? "Não informado pelo provedor" : item.payment_id ? "Pendente de sincronização" : "—");
-      const feeText = Array.isArray(fees) && fees.length ? fees.map(fee => `${feeNames[fee.type] || fee.type}: ${formatAdminCreditMoney(fee.amount_cents)}`).join(" · ") : item.fee_cents != null ? "Sem taxa" : item.payment_id && !item.provider_details_synced_at ? "Pendente de sincronização" : item.provider_details_synced_at ? "Não informado pelo provedor" : "—";
+      const feeDisplay = item.fee_cents != null ? formatAdminCreditMoney(item.fee_cents) : "—";
+      const feeDetails = Array.isArray(fees) && fees.length
+        ? fees.map(fee => `${feeNames[fee.type] || fee.type}: ${formatAdminCreditMoney(fee.amount_cents)}`).join(" · ")
+        : item.provider_details_synced_at ? "O provedor não informou o detalhamento das taxas." : "Taxas ainda não sincronizadas.";
       const net = item.net_received_cents != null ? formatAdminCreditMoney(item.net_received_cents) : item.payment_id && !item.provider_details_synced_at ? "Pendente de sincronização" : "—";
       const row = document.createElement("tr");
-      row.innerHTML = `<td>${esc(creditDate(item.paid_at || item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(item.package_name || "Pacote")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td>${esc(method)}</td><td>${esc(feeText)}</td><td>${esc(net)}</td><td><span class="badge ${item.status === "approved" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${esc(statusNames[item.status] || item.status)}</span></td>`;
+      row.innerHTML = `<td>${esc(creditDate(item.paid_at || item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(item.package_name || "Pacote")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td>${esc(method)}</td><td class="text-nowrap" title="${esc(feeDetails)}">${esc(feeDisplay)}</td><td>${esc(net)}</td><td><span class="badge ${item.status === "approved" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${esc(statusNames[item.status] || item.status)}</span></td>`;
       body.appendChild(row);
     }
     if (!body.children.length) body.innerHTML = '<tr><td colspan="8">Nenhuma transação neste período.</td></tr>';
@@ -2228,12 +2231,14 @@ function renderAdminCreditReport(data) {
     const methodBrands = { visa: "Visa", master: "Mastercard", mastercard: "Mastercard", elo: "Elo", amex: "American Express", hipercard: "Hipercard", pix: "Pix" };
     const feeNames = { mercadopago_fee: "Tarifa Mercado Pago", financing_fee: "Custo de parcelamento", tax: "Imposto" };
     const method = [methodTypes[item.payment_type_id] || "", methodBrands[item.payment_method_id] || (item.payment_method_id || "")].filter(Boolean).join(" · ") || (item.provider_details_synced_at ? "Não informado pelo provedor" : item.payment_id ? "Pendente de sincronização" : "—");
-    const feeText = Array.isArray(fees) && fees.length
+    const feeDisplay = item.fee_cents !== null && item.fee_cents !== undefined
+      ? formatAdminCreditMoney(item.fee_cents) : "—";
+    const feeDetails = Array.isArray(fees) && fees.length
       ? fees.map(fee => `${feeNames[fee.type] || fee.type}: ${formatAdminCreditMoney(fee.amount_cents)}`).join(" · ")
-      : item.fee_cents !== null && item.fee_cents !== undefined ? "Sem taxa" : item.payment_id && !item.provider_details_synced_at ? "Pendente de sincronização" : item.provider_details_synced_at ? "Não informado pelo provedor" : "—";
+      : item.provider_details_synced_at ? "O provedor não informou o detalhamento das taxas." : "Taxas ainda não sincronizadas.";
     const netText = item.net_received_cents !== null && item.net_received_cents !== undefined
       ? formatAdminCreditMoney(item.net_received_cents) : item.payment_id && !item.provider_details_synced_at ? "Pendente de sincronização" : "—";
-    tr.innerHTML = `<td>${esc(creditDate(item.paid_at || item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(item.package_name || "Pacote")}</td><td>${Number(item.credits || 0).toLocaleString("pt-BR")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td>${esc(method)}</td><td>${esc(feeText)}</td><td>${esc(netText)}</td><td><span class="badge ${item.status === "approved" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${esc(statusNames[item.status] || item.status)}</span></td>`;
+    tr.innerHTML = `<td>${esc(creditDate(item.paid_at || item.created_at))}</td><td><strong>${esc(item.streamer_name || "Streamer")}</strong><small class="tp-dashboard-email">${esc(item.streamer_email || "")}</small></td><td>${esc(item.package_name || "Pacote")}</td><td>${Number(item.credits || 0).toLocaleString("pt-BR")}</td><td>${esc(formatAdminCreditMoney(item.price_cents))}</td><td>${esc(method)}</td><td class="text-nowrap" title="${esc(feeDetails)}">${esc(feeDisplay)}</td><td>${esc(netText)}</td><td><span class="badge ${item.status === "approved" ? "text-bg-success" : "text-bg-secondary"} badge-outline">${esc(statusNames[item.status] || item.status)}</span></td>`;
     body.appendChild(tr);
   }
   if (!body.children.length) body.innerHTML = '<tr><td colspan="9">Nenhuma recarga encontrada com estes filtros.</td></tr>';
